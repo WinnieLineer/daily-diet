@@ -3,6 +3,7 @@ import PandaCoachCard from './components/PandaCoachCard';
 import Dashboard from './components/Dashboard';
 import FoodDetective from './components/FoodDetective';
 import WeightTracker from './components/WeightTracker';
+import GoalSettings from './components/GoalSettings';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary } from './db';
@@ -12,6 +13,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0 });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100 });
   const [recentLogs, setRecentLogs] = useState([]);
   const [advice, setAdvice] = useState('');
 
@@ -20,6 +22,15 @@ function App() {
     const dailySummary = await getDailySummary(today);
     setSummary(dailySummary);
 
+    // Fetch goals
+    const calGoal = await db.settings.get('calorie_goal');
+    const proGoal = await db.settings.get('protein_goal');
+    const currentGoals = {
+      calories: calGoal ? calGoal.value : 2000,
+      protein: proGoal ? proGoal.value : 100
+    };
+    setGoals(currentGoals);
+
     const logs = await db.dietLogs
       .where('date')
       .equals(today)
@@ -27,7 +38,7 @@ function App() {
       .sortBy('timestamp');
     setRecentLogs(logs);
 
-    setAdvice(getPandaAdvice(dailySummary.calories, 2000, dailySummary.protein, 100));
+    setAdvice(getPandaAdvice(dailySummary.calories, currentGoals.calories, dailySummary.protein, currentGoals.protein));
   };
 
   useEffect(() => {
@@ -43,14 +54,17 @@ function App() {
     <div className="min-h-screen bg-muted p-4 pb-20 max-w-lg mx-auto space-y-6">
       <header className="flex justify-between items-center py-4">
         <h1 className="text-3xl font-black italic tracking-tighter">DAILY DIET</h1>
-        <div className="bg-white border-4 border-black px-3 py-1 rounded-2xl font-bold shadow-neo-sm">
-          {new Date().toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
+        <div className="flex gap-2">
+          <div className="bg-white border-4 border-black px-3 py-1 rounded-2xl font-bold shadow-neo-sm flex items-center">
+            {new Date().toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
+          </div>
+          <GoalSettings onGoalsUpdated={refreshData} />
         </div>
       </header>
 
       <PandaCoachCard advice={advice} />
 
-      <Dashboard summary={summary} />
+      <Dashboard summary={summary} goals={goals} />
 
       <FoodDetective onLogAdded={refreshData} />
 

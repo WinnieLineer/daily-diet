@@ -31,9 +31,9 @@ const ProgressRing = ({ value, max, label, color = "bg-accent" }) => {
   );
 };
 
-const Dashboard = ({ summary }) => {
-  const CALORIE_GOAL = 2000;
-  const PROTEIN_GOAL = 100;
+const Dashboard = ({ summary, goals }) => {
+  const CALORIE_GOAL = goals.calories || 2000;
+  const PROTEIN_GOAL = goals.protein || 100;
 
   return (
     <NeoCard className="bg-white">
