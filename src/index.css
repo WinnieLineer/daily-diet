@@ -1,0 +1,43 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply antialiased text-foreground bg-white overflow-x-hidden;
+  }
+}
+
+@layer components {
+  .neo-card {
+    @apply border-4 border-black bg-white rounded-3xl shadow-neo transition-all duration-200;
+  }
+
+  .neo-button {
+    @apply border-4 border-black bg-white rounded-3xl shadow-neo px-6 py-2 font-bold 
+           transition-all duration-100 active:shadow-neo-active active:translate-x-[4px] active:translate-y-[4px];
+  }
+
+  .neo-button-accent {
+    @apply bg-accent;
+  }
+
+  .neo-button-black {
+    @apply bg-black text-white;
+  }
+}
+
+/* Custom Scrollbar for a cleaner look */
+::-webkit-scrollbar {
+  width: 10px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f1f1;
+}
+::-webkit-scrollbar-thumb {
+  background: #000;
+  border-radius: 5px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #333;
+}
