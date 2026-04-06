@@ -9,8 +9,10 @@ export async function analyzeFoodImage(base64Image) {
   if (!API_KEY) {
     throw new Error("Missing Gemini API Key");
   }
-
-  const model = genAI.getGenerativeModel({ model: GOAL_PI_MODEL });
+  const model = genAI.getGenerativeModel({ 
+    model: GOAL_PI_MODEL,
+    generationConfig: { temperature: 0 }
+  });
 
   const customPrompt = `Analyze this food image. Estimate calories and protein (g). Return strictly a JSON object in Traditional Chinese: { "dish_name": string, "calories": number, "protein": number, "description": string }.`;
 
@@ -41,8 +43,10 @@ export async function analyzeFoodImage(base64Image) {
 
 export async function suggestGoals(weight) {
   if (!API_KEY) throw new Error("Missing Gemini API Key");
-  
-  const model = genAI.getGenerativeModel({ model: GOAL_PI_MODEL });
+  const model = genAI.getGenerativeModel({ 
+    model: GOAL_PI_MODEL,
+    generationConfig: { temperature: 0 }
+  });
   const prompt = `My current weight is ${weight} kg. Based on this, suggest a daily calorie goal (kcal) and protein goal (g) for a healthy diet. Return strictly a JSON object: { "calories": number, "protein": number }.`;
 
   const result = await model.generateContent(prompt);
