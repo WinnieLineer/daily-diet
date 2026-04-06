@@ -72,3 +72,31 @@ export function getPandaAdvice(calories, calorieGoal, protein, proteinGoal) {
   if (calPercent <= 100) return "完美達標！今天你就是飲食達人！🐼";
   return "哎呀，今天吃得有點熱情喔！明天再努力調整吧！🐼";
 }
+
+export async function searchBarcodeWithAI(barcode) {
+  if (!API_KEY) throw new Error("Missing Gemini API Key");
+  
+  const model = genAI.getGenerativeModel({ 
+    model: GOAL_PI_MODEL,
+    generationConfig: { temperature: 0 }
+  });
+  
+  const prompt = `Lookup the product details for barcode: ${barcode}. 
+Identify the exact product name (especially for Taiwan/Asian products if possible), its estimated calories (kcal), and protein (g). 
+Return strictly a JSON object in Traditional Chinese: { "dish_name": string, "calories": number, "protein": number, "description": string }.`;
+
+  const result = await model.generateContent(prompt);
+  const response = await result.response;
+  const text = response.text();
+
+  try {
+    const jsonMatch = text.match(/\{[\s\S]*\}/);
+    if (jsonMatch) {
+      return JSON.parse(jsonMatch[0]);
+    }
+    return JSON.parse(text);
+  } catch (e) {
+    console.error("Failed to parse Gemini barcode response:", text);
+    throw new Error("AI 無法辨識此條碼。");
+  }
+}
