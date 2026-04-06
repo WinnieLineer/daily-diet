@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Barcode } from 'lucide-react';
-import { analyzeFoodImage } from '../lib/gemini';
+import { analyzeFoodImage, searchBarcodeWithAI } from '../lib/gemini';
 import { db } from '../db';
 import { twMerge } from 'tailwind-merge';
 import { Html5QrcodeScanner } from 'html5-qrcode';
@@ -64,8 +64,17 @@ const FoodDetective = ({ onLogAdded }) => {
           description: `條碼掃描: ${barcode}`
         });
       } else {
-        alert("找不到此商品的營養標示，請嘗試手動輸入。");
-        setMode('manual');
+        // AI Fallback
+        try {
+          const aiData = await searchBarcodeWithAI(barcode);
+          setResult({
+            ...aiData,
+            description: `AI 條碼預測: ${barcode} - ${aiData.description || ''}`
+          });
+        } catch (aiErr) {
+          alert("找不到此商品的營養標示，且 AI 無法辨識，請嘗試手動輸入。");
+          setMode('manual');
+        }
       }
     } catch (err) {
       alert("掃描查詢失敗，請檢查網路狀態。");
