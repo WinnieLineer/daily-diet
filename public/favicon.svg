@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512">
+  <!-- Left Ear -->
+  <circle cx="45" cy="65" r="35" fill="#000000" />
+  <!-- Right Ear -->
+  <circle cx="155" cy="65" r="35" fill="#000000" />
+  
+  <!-- Face -->
+  <ellipse cx="100" cy="115" rx="85" ry="70" fill="#FFFFFF" stroke="#000000" stroke-width="12" />
+  
+  <!-- Left Eye Patch -->
+  <ellipse cx="65" cy="110" rx="22" ry="30" fill="#000000" transform="rotate(-20 65 110)" />
+  <!-- Right Eye Patch -->
+  <ellipse cx="135" cy="110" rx="22" ry="30" fill="#000000" transform="rotate(20 135 110)" />
+  
+  <!-- Left Eye Sparkle -->
+  <circle cx="60" cy="100" r="6" fill="#FFFFFF" />
+  <!-- Right Eye Sparkle -->
+  <circle cx="130" cy="100" r="6" fill="#FFFFFF" />
+
+  <!-- Nose -->
+  <ellipse cx="100" cy="135" rx="12" ry="8" fill="#000000" />
+  
+  <!-- Mouth Line (vertical) -->
+  <line x1="100" y1="143" x2="100" y2="155" stroke="#000000" stroke-width="6" stroke-linecap="round" />
+  
+  <!-- Smile -->
+  <path d="M 80 150 Q 100 170 120 150" fill="none" stroke="#000000" stroke-width="6" stroke-linecap="round" />
+</svg>
