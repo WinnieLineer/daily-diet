@@ -78,12 +78,15 @@ export async function searchBarcodeWithAI(barcode) {
   
   const model = genAI.getGenerativeModel({ 
     model: GOAL_PI_MODEL,
-    generationConfig: { temperature: 0 }
+    generationConfig: { temperature: 0 },
+    tools: [{ googleSearch: {} }] // Enable Google Search Grounding
   });
   
-  const prompt = `Lookup the product details for barcode: ${barcode}. 
-Identify the exact product name (especially for Taiwan/Asian products if possible), its estimated calories (kcal), and protein (g). 
-Return strictly a JSON object in Traditional Chinese: { "dish_name": string, "calories": number, "protein": number, "description": string }.`;
+  const prompt = `Use Google Search to lookup this specific barcode: ${barcode}. 
+Find the exact product name matching this barcode (especially for Taiwan/Asian products if applicable). 
+Then, provide its estimated calories (kcal) and protein (g). 
+Return strictly a JSON object in Traditional Chinese (do NOT wrap in markdown blocks, just the JSON): { "dish_name": string, "calories": number, "protein": number, "description": string }.`;
+
 
   const result = await model.generateContent(prompt);
   const response = await result.response;
