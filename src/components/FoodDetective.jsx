@@ -5,7 +5,7 @@ import { Camera, Loader2, Check, Barcode } from 'lucide-react';
 import { analyzeFoodImage, searchBarcodeWithAI } from '../lib/gemini';
 import { db } from '../db';
 import { twMerge } from 'tailwind-merge';
-import { Html5QrcodeScanner } from 'html5-qrcode';
+import { Html5Qrcode } from 'html5-qrcode';
 
 const FoodDetective = ({ onLogAdded }) => {
   const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'barcode'
@@ -18,29 +18,39 @@ const FoodDetective = ({ onLogAdded }) => {
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '' });
 
   useEffect(() => {
-    let scanner = null;
+    let html5QrCode = null;
     
     if (mode === 'barcode') {
-      scanner = new Html5QrcodeScanner(
-        "reader",
-        { fps: 10, qrbox: { width: 250, height: 150 } },
-        false
-      );
+      html5QrCode = new Html5Qrcode("reader");
 
-      scanner.render(async (decodedText) => {
-        // Stop scanning after a successful scan
-        if (scanner) {
-          scanner.clear();
+      html5QrCode.start(
+        { 
+          facingMode: "environment" // Forces back camera, hides selection UI
+        },
+        {
+          fps: 15,
+          qrbox: { width: 250, height: 120 },
+          aspectRatio: 1.0
+        },
+        async (decodedText) => {
+          // Stop scanning on success
+          if (html5QrCode && html5QrCode.isScanning) {
+            await html5QrCode.stop();
+            html5QrCode.clear();
+          }
+          await handleBarcodeScan(decodedText);
+        },
+        (errorMessage) => {
+          // Ignore frame errors
         }
-        await handleBarcodeScan(decodedText);
-      }, (errorMessage) => {
-        // Ignore errors to avoid console spam during scanning
+      ).catch(err => {
+        console.warn("Failed to start scanner", err);
       });
     }
 
     return () => {
-      if (scanner) {
-        scanner.clear().catch(e => console.error("Failed to clear scanner", e));
+      if (html5QrCode && html5QrCode.isScanning) {
+        html5QrCode.stop().then(() => html5QrCode.clear()).catch(e => console.error("Failed to clear scanner", e));
       }
     };
   }, [mode]);
