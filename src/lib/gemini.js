@@ -14,7 +14,16 @@ export async function analyzeFoodImage(base64Image) {
     generationConfig: { temperature: 0 }
   });
 
-  const customPrompt = `Analyze this food image. Estimate calories and protein (g). Return strictly a JSON object in Traditional Chinese: { "dish_name": string, "calories": number, "protein": number, "description": string }.`;
+  const customPrompt = `Analyze this food image. Estimate calories and protein (g). Return strictly a JSON object in Traditional Chinese with exactly these fields:
+{
+  "dish_name": string,       // 食物名稱
+  "calories": number,        // 估計總熱量（kcal）
+  "protein": number,         // 估計總蛋白質（g）
+  "description": string,     // 一句簡短的食物描述
+  "fun_fact": string,        // 一句有趣又實用的食物健康/營養小知識（認真的，50字以內）
+  "roast": string            // 一句幽默又賤的吐槽，像嘴賤朋友在旁邊碎念（要好笑，50字以內）
+}
+Only return the JSON object, no markdown, no explanation.`;
 
   const result = await model.generateContent([
     customPrompt,
