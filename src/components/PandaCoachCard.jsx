@@ -98,7 +98,7 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
   const scaleY = isSquished ? 0.85 : 1;
 
   // Colors
-  const leftEyePatch  = expression === 'scared' ? '#1a1a1a' : '#1a1a1a';
+  const leftEyePatch  = '#1a1a1a';
   const rightEyePatch = '#1a1a1a';
 
   return (
@@ -111,8 +111,8 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
       {/* Ears */}
       <ellipse cx="18" cy="20" rx="14" ry="14" fill="#1a1a1a" />
       <ellipse cx="82" cy="20" rx="14" ry="14" fill="#1a1a1a" />
-      <ellipse cx="18" cy="20" rx="8"  ry="8"  fill="#444" />
-      <ellipse cx="82" cy="20" rx="8"  ry="8"  fill="#444" />
+      <ellipse cx="18" cy="20" rx="8"  ry="8"  fill="#333" />
+      <ellipse cx="82" cy="20" rx="8"  ry="8"  fill="#333" />
 
       {/* Face */}
       <ellipse cx="50" cy="55" rx="40" ry="38" fill="white" stroke="#1a1a1a" strokeWidth="3" />
@@ -148,8 +148,8 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
           <ellipse cx="34" cy="47" rx="3" ry="3" fill="#1a1a1a" />
           <ellipse cx="68" cy="47" rx="3" ry="3" fill="#1a1a1a" />
           {/* Shine */}
-          <ellipse cx="36" cy="44" rx="1.5" ry="1.5" fill="white" />
-          <ellipse cx="70" cy="44" rx="1.5" ry="1.5" fill="white" />
+          <circle cx="36" cy="44" r="1.5" fill="white" />
+          <circle cx="70" cy="44" r="1.5" fill="white" />
         </>
       )}
 
@@ -167,15 +167,16 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
         <>
           <path d={mouthPaths.open}
             fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" />
-          <ellipse cx="50" cy="68" rx="8" ry="5" fill="#ffb3b3" />
+          {/* Mouth open - used yellow/white instead of pink */}
+          <ellipse cx="50" cy="68" rx="8" ry="5" fill="#FDE047" />
         </>
       )}
 
-      {/* Rosy cheeks when tickled */}
+      {/* Rosy cheeks when tickled - changed from pink to yellow/gold */}
       {expression === 'happy' && (
         <>
-          <ellipse cx="24" cy="60" rx="8" ry="5" fill="#FFB3BA" opacity="0.6" />
-          <ellipse cx="76" cy="60" rx="8" ry="5" fill="#FFB3BA" opacity="0.6" />
+          <ellipse cx="24" cy="60" rx="8" ry="5" fill="#FDE047" opacity="0.4" />
+          <ellipse cx="76" cy="60" rx="8" ry="5" fill="#FDE047" opacity="0.4" />
         </>
       )}
     </svg>
@@ -195,7 +196,7 @@ const SpeechBubble = ({ text, visible }) => (
         className="absolute -top-14 left-1/2 -translate-x-1/2 whitespace-nowrap z-20"
         style={{ pointerEvents: 'none' }}
       >
-        <div className="bg-white border-3 border-black rounded-2xl px-3 py-1.5 text-xs font-bold shadow-neo-sm text-black max-w-[200px] text-center leading-tight"
+        <div className="bg-white border-3 border-black rounded-2xl px-3 py-1.5 text-xs font-black shadow-neo-sm text-black max-w-[220px] text-center leading-tight"
           style={{ border: '3px solid black' }}>
           {text}
         </div>
@@ -259,7 +260,7 @@ const PandaCoachCard = ({ advice }) => {
   const particleId = useRef(0);
 
   // ── helpers ──────────────────────────────────
-  const showBubble = useCallback((text, duration = 2200) => {
+  const showBubble = useCallback((text, duration = 2500) => {
     clearTimeout(bubbleTimer.current);
     setBubble(text);
     setBubbleVisible(true);
@@ -301,8 +302,9 @@ const PandaCoachCard = ({ advice }) => {
   const handleTickleStart = useCallback(() => {
     if (isDragging) return;
     setExpression('happy');
-    showBubble(getRandom(DIALOGUES.tickle), 3000);
-    addParticle('😂');
+    showBubble(getRandom(DIALOGUES.tickle), 3500);
+    // Use yellow/gold themed particles
+    addParticle('✨'); 
     controls.start({
       rotate: [-5, 5, -5, 5, 0],
       transition: { duration: 0.5, repeat: Infinity, repeatType: 'mirror' },
@@ -328,11 +330,9 @@ const PandaCoachCard = ({ advice }) => {
     const count = pokeCount.current;
 
     if (count >= 5) {
-      // SPAM POKE
       setExpression('scared');
       showBubble(getRandom(DIALOGUES.spamPoke), 2500);
-      addParticle('💢');
-      addParticle('🤬');
+      addParticle('⚡');
       await controls.start({
         x: [-8, 8, -8, 8, -4, 4, 0],
         y: [-4, 4, -4, 4, -2, 2, 0],
@@ -358,14 +358,13 @@ const PandaCoachCard = ({ advice }) => {
     setIsDragging(true);
     setExpression('dizzy');
     showBubble(getRandom(DIALOGUES.drag), 99999);
-    addParticle('😱');
+    addParticle('💫');
   }, [showBubble, addParticle]);
 
   const handleDragEnd = useCallback(async () => {
     setExpression('sad');
     showBubble(getRandom(DIALOGUES.release), 2500);
-    addParticle('😵');
-    // Spring back to centre
+    addParticle('🌀');
     await controls.start({
       x: 0, y: 0,
       transition: { type: 'spring', stiffness: 300, damping: 20 },
@@ -379,7 +378,7 @@ const PandaCoachCard = ({ advice }) => {
     const interval = setInterval(() => {
       if (!bubbleVisible && !isDragging) {
         if (Math.random() < 0.4) {
-          showBubble(advice || getRandom(DIALOGUES.idle), 3000);
+          showBubble(advice || getRandom(DIALOGUES.idle), 3500);
         }
       }
     }, 8000);
@@ -387,7 +386,7 @@ const PandaCoachCard = ({ advice }) => {
   }, [bubbleVisible, isDragging, advice, showBubble]);
 
   return (
-    <NeoCard className="bg-black text-white relative overflow-visible">
+    <NeoCard className="bg-black text-white relative overflow-visible border-4 border-black">
       <div className="flex items-center gap-4">
 
         {/* Interactive Panda */}
@@ -417,29 +416,26 @@ const PandaCoachCard = ({ advice }) => {
             onContextMenu={handlePoke}
             whileTap={{ scale: 0.92 }}
             style={{ cursor: isDragging ? 'grabbing' : 'grab', width: 80, height: 80, touchAction: 'none' }}
-            title="點我・右鍵戳我・拖我蹂躪我！"
           >
             <PandaFace expression={expression} isSquished={isSquished} />
           </motion.div>
 
-          {/* Interaction hints */}
-          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[9px] text-gray-400 font-mono select-none">
-            點·右鍵·拖·hover
+          <div className="absolute -bottom-5 left-1/2 -translate-x-1/2 whitespace-nowrap text-[8px] text-gray-500 font-black tracking-tighter select-none uppercase">
+            Interact with me!
           </div>
         </div>
 
         {/* Text content */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-xl font-bold mb-1 text-accent">熊貓教練 Panda Coach</h3>
-          <p className="text-sm italic opacity-90 leading-snug">
+          <h3 className="text-xl font-black mb-1 text-accent italic">熊貓教練 Panda Coach</h3>
+          <p className="text-sm font-bold opacity-90 leading-tight">
             {advice || '今天也要加油喔！趕快記錄一下你的飲食吧！'}
           </p>
         </div>
       </div>
 
       {/* Decorative ghost panda */}
-      <div className="absolute -bottom-4 -right-2 opacity-5 rotate-12 pointer-events-none select-none"
-        style={{ fontSize: 64 }}>
+      <div className="absolute -bottom-4 -right-2 opacity-10 rotate-12 pointer-events-none select-none text-6xl">
         🐼
       </div>
     </NeoCard>
