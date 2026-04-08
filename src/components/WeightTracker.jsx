@@ -41,17 +41,22 @@ const WeightTracker = () => {
         <h2 className="text-xl font-bold italic">⚖️ 體重追蹤</h2>
       </div>
 
-      <form onSubmit={addWeight} className="flex gap-2">
-        <input 
-          type="number" 
-          step="0.1"
-          value={weight}
-          onChange={(e) => setWeight(e.target.value)}
-          placeholder="輸入體重 (kg)"
-          className="flex-1 border-4 border-black p-2 rounded-2xl focus:outline-none focus:ring-2 ring-accent"
-        />
-        <NeoButton type="submit" variant="accent" className="px-4">
-          <Plus size={20} />
+      <form onSubmit={addWeight} className="flex items-stretch gap-2">
+        <div className="relative flex-1">
+          <input 
+            type="number" 
+            step="0.1"
+            value={weight}
+            onChange={(e) => setWeight(e.target.value)}
+            placeholder="輸入體重"
+            className="w-full border-4 border-black p-3.5 pr-12 rounded-2xl focus:outline-none focus:ring-4 ring-accent/20 text-lg font-black placeholder:text-gray-300 placeholder:italic"
+          />
+          <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-xs text-gray-400 pointer-events-none">
+            KG
+          </span>
+        </div>
+        <NeoButton type="submit" variant="accent" className="aspect-square flex items-center justify-center p-0 rounded-2xl shrink-0">
+          <Plus size={24} strokeWidth={3} />
         </NeoButton>
       </form>
 

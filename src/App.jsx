@@ -200,6 +200,13 @@ function App() {
     refreshData();
   };
 
+  const toggleGroup = (date) => {
+    setExpandedGroups(prev => ({
+      ...prev,
+      [date]: !prev[date]
+    }));
+  };
+
 
   return (
     <div className="min-h-screen bg-[#F3F4F6] p-4 pb-24 max-w-lg mx-auto space-y-6">
@@ -229,7 +236,6 @@ function App() {
             {recentLogs.length} 項
           </span>
         </div>
-        
         <div className="space-y-3">
           <AnimatePresence mode="popLayout">
             {recentLogs.length > 0 ? (
@@ -255,6 +261,8 @@ function App() {
           </AnimatePresence>
         </div>
       </NeoCard>
+
+      <WeightTracker />
 
       {/* History Logs */}
       {historyGroups.length > 0 && (
@@ -282,31 +290,48 @@ function App() {
                   {historyGroups.map((group) => {
                     const isExpanded = !!expandedGroups[group.date];
                     const calorieAchievement = Math.min((group.totalCalories / goals.calories) * 100, 100);
-                    const isGoalReached = group.totalCalories >= goals.calories;
+                    const proteinAchievement = Math.min((group.totalProtein / goals.protein) * 100, 100);
+                    const isCalorieReached = group.totalCalories >= goals.calories;
+                    const isProteinReached = group.totalProtein >= goals.protein;
 
                     return (
-                      <div key={group.date} className="border-b-2 border-gray-100 pb-2 last:border-0">
+                      <div key={group.date} className="border-b-2 border-gray-100 pb-3 last:border-0">
                         <button 
                           onClick={() => toggleGroup(group.date)}
                           className="w-full flex items-center justify-between group/header mb-2"
                         >
                           <div className="flex items-center gap-3">
                             <span className="text-xs font-black bg-gray-100 px-2 py-0.5 rounded-lg border-2 border-black/5">{group.date}</span>
-                            <div className="flex flex-col items-start translate-y-0.5">
-                              <div className="text-[10px] font-black italic flex items-center gap-1.5 uppercase tracking-wider text-gray-500">
-                                <span>🔥 {group.totalCalories} / {goals.calories} kcal</span>
-                                {isGoalReached && <span className="text-[8px] bg-green-500 text-white px-1 rounded uppercase tracking-tighter">Done</span>}
+                            <div className="flex flex-col gap-1 translate-y-0.5">
+                              {/* Calorie Stats */}
+                              <div className="flex items-center gap-2">
+                                <div className="text-[9px] font-black italic flex items-center gap-1 uppercase tracking-wider text-gray-500 min-w-[100px]">
+                                  <span>🔥 {group.totalCalories}/{goals.calories}</span>
+                                </div>
+                                <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full transition-all duration-500 ${isCalorieReached ? 'bg-amber-500' : 'bg-zinc-400'}`}
+                                    style={{ width: `${calorieAchievement}%` }}
+                                  />
+                                </div>
+                                {isCalorieReached && <span className="text-[8px] bg-amber-500 text-white px-1 rounded font-black uppercase tracking-tighter">Done</span>}
                               </div>
-                              {/* Mini progress bar */}
-                              <div className="w-24 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden">
-                                <div 
-                                  className={`h-full transition-all duration-500 ${isGoalReached ? 'bg-green-500' : 'bg-black'}`}
-                                  style={{ width: `${calorieAchievement}%` }}
-                                />
+                              {/* Protein Stats */}
+                              <div className="flex items-center gap-2">
+                                <div className="text-[9px] font-black italic flex items-center gap-1 uppercase tracking-wider text-gray-500 min-w-[100px]">
+                                  <span>🍗 {group.totalProtein}/{goals.protein}</span>
+                                </div>
+                                <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full transition-all duration-500 ${isProteinReached ? 'bg-blue-500' : 'bg-zinc-400'}`}
+                                    style={{ width: `${proteinAchievement}%` }}
+                                  />
+                                </div>
+                                {isProteinReached && <span className="text-[8px] bg-blue-500 text-white px-1 rounded font-black uppercase tracking-tighter">Peak</span>}
                               </div>
                             </div>
                           </div>
-                          <div className={`p-1 rounded-lg transition-colors ${isExpanded ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 group-hover/header:bg-gray-200'}`}>
+                          <div className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-black text-white' : 'bg-gray-100 text-gray-400 group-hover/header:bg-gray-200'}`}>
                             {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                           </div>
                         </button>
@@ -346,7 +371,6 @@ function App() {
         </NeoCard>
       )}
 
-      <WeightTracker />
 
       <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
         <div className="bg-black/95 backdrop-blur-md border-4 border-black text-white p-4 rounded-3xl shadow-neo flex justify-center items-center">
