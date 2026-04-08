@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Barcode, Lightbulb, Flame, MessageSquareQuote } from 'lucide-react';
+import { Camera, Loader2, Check, Barcode, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import { twMerge } from 'tailwind-merge';
@@ -13,60 +13,84 @@ const FoodDetective = ({ onLogAdded }) => {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
+  const [scannerError, setScannerError] = useState(null);
   const fileInputRef = useRef(null);
+  const scannerRef = useRef(null);
 
   // Manual input state
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '' });
 
-  useEffect(() => {
-    let html5QrCode = null;
-    let timeoutId = null;
+  const startScanner = async () => {
+    setScannerError(null);
     
-    if (mode === 'barcode') {
-      // Small delay to ensure the #reader element is rendered in DOM before starting scanner
-      timeoutId = setTimeout(() => {
-        const readerElement = document.getElementById("reader");
-        if (!readerElement) {
-          console.error("Reader element not found in DOM");
-          return;
-        }
-
-        html5QrCode = new Html5Qrcode("reader");
-        html5QrCode.start(
-          { 
-            facingMode: "environment",
-            width: { ideal: 1920 },
-            height: { ideal: 1080 }
-          },
-          {
-            fps: 10,
-            qrbox: { width: 300, height: 120 },
-            aspectRatio: 1.0,
-            formatsToSupport: [
-              Html5QrcodeSupportedFormats.EAN_13,
-              Html5QrcodeSupportedFormats.EAN_8,
-              Html5QrcodeSupportedFormats.UPC_A,
-              Html5QrcodeSupportedFormats.UPC_E
-            ]
-          },
-          async (decodedText) => {
-            if (html5QrCode && html5QrCode.isScanning) {
-              await html5QrCode.stop();
-              html5QrCode.clear();
+    // Ensure cleanup of previous instance
+    if (scannerRef.current) {
+        try {
+            if (scannerRef.current.isScanning) {
+                await scannerRef.current.stop();
             }
-            await handleBarcodeScan(decodedText);
-          },
-          () => {}
-        ).catch(err => {
-          console.warn("Failed to start scanner", err);
-        });
-      }, 200); // 200ms delay to be safe
+            scannerRef.current.clear();
+        } catch (e) {
+            console.warn("Cleanup error", e);
+        }
+    }
+
+    const readerElement = document.getElementById("reader");
+    if (!readerElement) {
+      // If element is not yet in DOM, wait a frame and retry once
+      requestAnimationFrame(() => {
+        if (document.getElementById("reader")) startScanner();
+      });
+      return;
+    }
+
+    try {
+      const html5QrCode = new Html5Qrcode("reader");
+      scannerRef.current = html5QrCode;
+
+      await html5QrCode.start(
+        { facingMode: "environment" },
+        {
+          fps: 10,
+          qrbox: { width: 280, height: 150 },
+          aspectRatio: 1.0,
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.EAN_13,
+            Html5QrcodeSupportedFormats.EAN_8,
+            Html5QrcodeSupportedFormats.UPC_A,
+            Html5QrcodeSupportedFormats.UPC_E,
+            Html5QrcodeSupportedFormats.CODE_128
+          ]
+        },
+        async (decodedText) => {
+          if (html5QrCode && html5QrCode.isScanning) {
+            await html5QrCode.stop();
+            html5QrCode.clear();
+          }
+          await handleBarcodeScan(decodedText);
+        },
+        (errorMessage) => {
+            // Optional: handle frame errors
+        }
+      );
+    } catch (err) {
+      console.error("Failed to start scanner", err);
+      setScannerError("無法啟動相機。請檢查瀏覽器權限，或嘗試重新整理頁面。");
+    }
+  };
+
+  useEffect(() => {
+    if (mode === 'barcode') {
+      startScanner();
+    } else {
+        if (scannerRef.current && scannerRef.current.isScanning) {
+            scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(e => console.error(e));
+        }
     }
 
     return () => {
-      clearTimeout(timeoutId);
-      if (html5QrCode && html5QrCode.isScanning) {
-        html5QrCode.stop().then(() => html5QrCode.clear()).catch(e => console.error("Failed to clear scanner", e));
+      if (scannerRef.current && scannerRef.current.isScanning) {
+        scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(e => console.error(e));
       }
     };
   }, [mode]);
@@ -176,6 +200,7 @@ const FoodDetective = ({ onLogAdded }) => {
               )}
               onClick={() => {
                 setMode(tab.id);
+                setScannerError(null);
                 if (tab.id !== mode) setResult(null);
               }}
             >
@@ -205,10 +230,30 @@ const FoodDetective = ({ onLogAdded }) => {
         <motion.div
           initial={{ opacity: 0, scale: 0.98 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="border-4 border-black rounded-3xl overflow-hidden bg-black mt-4"
+          className="border-4 border-black rounded-3xl overflow-hidden bg-black mt-4 min-h-[300px] flex flex-col"
         >
-          <div id="reader" width="100%"></div>
-          <p className="text-white text-xs text-center font-bold py-2 opacity-60">將條碼對準框框掃描</p>
+          <div id="reader" className="w-full flex-1"></div>
+          
+          <div className="bg-black p-3 space-y-2">
+            {scannerError ? (
+                <div className="bg-accent text-black p-3 rounded-2xl flex items-center gap-3">
+                    <AlertCircle size={24} className="flex-shrink-0" />
+                    <div className="flex-1">
+                        <p className="text-xs font-black leading-tight">{scannerError}</p>
+                        <button 
+                            onClick={startScanner}
+                            className="text-[10px] font-black underline mt-1 flex items-center gap-1"
+                        >
+                            <RefreshCw size={10} /> 點此重試
+                        </button>
+                    </div>
+                </div>
+            ) : (
+                <p className="text-white text-[10px] text-center font-black opacity-60 flex items-center justify-center gap-1.5 italic">
+                    <Barcode size={12} /> 將條碼對準框框內即可自動掃描
+                </p>
+            )}
+          </div>
         </motion.div>
       )}
 
