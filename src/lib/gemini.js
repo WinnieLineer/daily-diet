@@ -3,7 +3,7 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const GOAL_PI_MODEL = "gemini-1.5-flash-8b"; // Using 8b which is very fast and efficient
+const GOAL_PI_MODEL = "gemini-3.1-flash-lite-preview";
 
 /**
  * Exponential Backoff helper
