@@ -424,10 +424,6 @@ const PandaCoachCard = ({ advice }) => {
         </div>
       </div>
 
-      {/* Decorative ghost panda */}
-      <div className="absolute -bottom-4 -right-2 opacity-10 rotate-12 pointer-events-none select-none text-6xl">
-        🐼
-      </div>
         </div>
       </div>
     </motion.div>

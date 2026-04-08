@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { suggestGoals } from '../lib/gemini';
-import { Settings, Sparkles, Loader2, Star, X } from 'lucide-react';
+import { Settings, Sparkles, X, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GoalSettings = ({ onGoalsUpdated }) => {
@@ -21,23 +20,6 @@ const GoalSettings = ({ onGoalsUpdated }) => {
     const pro = await db.settings.get('protein_goal');
     if (cal && pro) {
       setGoals({ calories: cal.value, protein: pro.value });
-    }
-  };
-
-  const handleAIRequest = async () => {
-    setLoading(true);
-    try {
-      const latestWeight = await db.weightLogs.orderBy('timestamp').last();
-      if (!latestWeight) {
-        alert("請先記錄一次體重，熊貓才能給你建議喔！🐼");
-        return;
-      }
-      const suggested = await suggestGoals(latestWeight.weight);
-      setGoals(suggested);
-    } catch (err) {
-      alert("AI 建議失敗，請手動輸入設定。");
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -60,41 +42,51 @@ const GoalSettings = ({ onGoalsUpdated }) => {
 
       {isOpen && (
         <NeoCard className="absolute top-14 right-0 z-[60] w-72 space-y-4 animate-in fade-in slide-in-from-top-2">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between pb-2 border-b-2 border-zinc-100">
             <div className="flex items-center gap-2">
-              <h3 className="font-bold text-lg italic">🎯 目標設定</h3>
+              <h3 className="font-black text-lg italic tracking-tight">🎯 目標設定</h3>
               <button 
                 onClick={() => setShowTip(!showTip)} 
-                className="text-amber-500 hover:scale-110 transition-transform p-1"
-                title="建議說明"
+                className={`transition-all p-1.5 rounded-lg ${showTip ? 'bg-amber-100 text-amber-500 scale-110' : 'text-zinc-400 hover:text-amber-500'}`}
               >
-                <Star size={18} fill={showTip ? "currentColor" : "none"} />
+                <Sparkles size={18} fill={showTip ? "currentColor" : "none"} />
               </button>
             </div>
-            <button onClick={handleAIRequest} disabled={loading} className="text-accent hover:rotate-12 transition-transform p-1">
-              {loading ? <Loader2 className="animate-spin" size={20} /> : <Sparkles size={18} fill="currentColor" />}
+            <button onClick={() => setIsOpen(false)} className="text-zinc-300 hover:text-zinc-500">
+              <X size={20} />
             </button>
           </div>
 
           <AnimatePresence>
             {showTip && (
               <motion.div 
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="overflow-hidden"
+                initial={{ opacity: 0, scale: 0.95, y: -10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                exit={{ opacity: 0, scale: 0.95, y: -10 }}
               >
-                <div className="bg-amber-50/80 p-3 rounded-xl border-2 border-amber-200 text-[10px] leading-relaxed text-amber-900 font-bold space-y-1 relative">
-                   <button 
-                    onClick={() => setShowTip(false)}
-                    className="absolute top-2 right-2 text-amber-400 hover:text-amber-600"
-                   >
-                     <X size={12} />
-                   </button>
-                   <p className="flex items-center gap-1 text-sm mb-1">💡 熊貓精算公式</p>
-                   <p>• <span className="text-zinc-500 uppercase tracking-tighter mr-1">熱量:</span> 體重(kg) × 25-30 kcal (基礎建議)</p>
-                   <p>• <span className="text-zinc-500 uppercase tracking-tighter mr-1">蛋白質:</span> 體重(kg) × 1.2-2.0 g (視運動量提升)</p>
-                   <p>• <span className="text-zinc-500 uppercase tracking-tighter mr-1">調節:</span> 隨年齡增加或減脂需求，熱量可酌減 10%。</p>
+                <div className="bg-gradient-to-br from-amber-50 to-orange-50/50 p-4 rounded-2xl border-2 border-amber-200/50 text-[11px] leading-relaxed text-amber-900 font-bold space-y-3 shadow-inner">
+                   <div className="flex items-center gap-2 text-amber-600 mb-1">
+                     <Info size={14} strokeWidth={3} />
+                     <span className="text-xs font-black uppercase tracking-widest">目標制定指南</span>
+                   </div>
+                   
+                   <div className="space-y-2">
+                     <div className="p-2 bg-white/60 rounded-lg">
+                       <p className="text-zinc-500 text-[9px] uppercase mb-0.5">🔥 每日熱量 (TDEE)</p>
+                       <p className="leading-normal">公式：體重(kg) × 25 ~ 30 kcal</p>
+                       <p className="text-[9px] text-amber-700/70 italic mt-0.5">* 身高越高、年齡越輕可 +10%; 減脂需 -15%</p>
+                     </div>
+
+                     <div className="p-2 bg-white/60 rounded-lg">
+                       <p className="text-zinc-500 text-[9px] uppercase mb-0.5">🍗 蛋白質需求</p>
+                       <p className="leading-normal">基礎：體重(kg) × 1.2 g</p>
+                       <p className="leading-normal">增肌/高運動：體重(kg) × 1.6~2.2 g</p>
+                     </div>
+                   </div>
+
+                   <p className="text-[9px] text-zinc-400 font-medium pt-1 text-center border-t border-amber-200/30">
+                     ※ 建議每兩週依體重變化微調目標
+                   </p>
                 </div>
               </motion.div>
             )}
