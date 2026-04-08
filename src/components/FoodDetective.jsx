@@ -1,131 +1,22 @@
 import React, { useState, useRef, useEffect } from 'react';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Barcode, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import { twMerge } from 'tailwind-merge';
-import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const FoodDetective = ({ onLogAdded }) => {
-  const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'barcode'
+  const [mode, setMode] = useState('ai'); // 'ai' or 'manual'
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
-  const [scannerError, setScannerError] = useState(null);
   const fileInputRef = useRef(null);
-  const scannerRef = useRef(null);
 
   // Manual input state
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '' });
 
-  const startScanner = async () => {
-    setScannerError(null);
-    
-    // Ensure cleanup of previous instance
-    if (scannerRef.current) {
-        try {
-            if (scannerRef.current.isScanning) {
-                await scannerRef.current.stop();
-            }
-            scannerRef.current.clear();
-        } catch (e) {
-            console.warn("Cleanup error", e);
-        }
-    }
-
-    const readerElement = document.getElementById("reader");
-    if (!readerElement) {
-      // If element is not yet in DOM, wait a frame and retry once
-      requestAnimationFrame(() => {
-        if (document.getElementById("reader")) startScanner();
-      });
-      return;
-    }
-
-    try {
-      const html5QrCode = new Html5Qrcode("reader");
-      scannerRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: "environment" },
-        {
-          fps: 10,
-          qrbox: { width: 280, height: 150 },
-          aspectRatio: 1.0,
-          formatsToSupport: [
-            Html5QrcodeSupportedFormats.EAN_13,
-            Html5QrcodeSupportedFormats.EAN_8,
-            Html5QrcodeSupportedFormats.UPC_A,
-            Html5QrcodeSupportedFormats.UPC_E,
-            Html5QrcodeSupportedFormats.CODE_128
-          ]
-        },
-        async (decodedText) => {
-          if (html5QrCode && html5QrCode.isScanning) {
-            await html5QrCode.stop();
-            html5QrCode.clear();
-          }
-          await handleBarcodeScan(decodedText);
-        },
-        (errorMessage) => {
-            // Optional: handle frame errors
-        }
-      );
-    } catch (err) {
-      console.error("Failed to start scanner", err);
-      setScannerError("無法啟動相機。請檢查瀏覽器權限，或嘗試重新整理頁面。");
-    }
-  };
-
-  useEffect(() => {
-    if (mode === 'barcode') {
-      startScanner();
-    } else {
-        if (scannerRef.current && scannerRef.current.isScanning) {
-            scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(e => console.error(e));
-        }
-    }
-
-    return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        scannerRef.current.stop().then(() => scannerRef.current.clear()).catch(e => console.error(e));
-      }
-    };
-  }, [mode]);
-
-  const handleBarcodeScan = async (barcode) => {
-    setLoading(true);
-    try {
-      const response = await fetch(`https://world.openfoodfacts.org/api/v0/product/${barcode}.json`);
-      const data = await response.json();
-      
-      if (data.status === 1 && data.product) {
-        const product = data.product;
-        const name = product.product_name || product.generic_name || '未知名稱商品';
-        const calories = product.nutriments?.['energy-kcal_100g'] || product.nutriments?.['energy-kcal'] || 0;
-        const protein = product.nutriments?.['proteins_100g'] || product.nutriments?.['proteins'] || 0;
-
-        setResult({
-          dish_name: name,
-          calories: Math.round(Number(calories)),
-          protein: Math.round(Number(protein)),
-          description: `條碼掃描: ${barcode}`,
-          fun_fact: '條碼掃描僅提供每百克營養資訊，實際攝取量請依食用份量計算喔！',
-          roast: '掃個條碼就想知道熱量？你連包裝上的字都懶得看？ 😏',
-        });
-      } else {
-        alert("資料庫中找不到此商品的條碼。\n\n請切換至「📸 AI 鏡頭」直接拍攝商品背面的【營養標示表】，讓 AI 幫你精準讀取！");
-        setMode('ai');
-      }
-    } catch (err) {
-      alert("掃描查詢失敗，請檢查網路狀態。");
-      setMode('manual');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleImageUpload = async (e) => {
     const file = e.target.files[0];
@@ -152,7 +43,7 @@ const FoodDetective = ({ onLogAdded }) => {
 
   const saveLog = async () => {
     let dataToSave = null;
-    if ((mode === 'ai' || mode === 'barcode') && result) {
+    if (mode === 'ai' && result) {
       dataToSave = result;
     } else if (mode === 'manual' && manualEntry.dish_name) {
       dataToSave = {
@@ -176,7 +67,6 @@ const FoodDetective = ({ onLogAdded }) => {
     setPreview(null);
     setResult(null);
     setManualEntry({ dish_name: '', calories: '', protein: '' });
-    if (mode === 'barcode') setMode('ai');
     onLogAdded();
   };
 
@@ -188,7 +78,6 @@ const FoodDetective = ({ onLogAdded }) => {
           {[
             { id: 'ai',      label: '📸 AI 鏡頭' },
             { id: 'manual',  label: '✍️ 手動' },
-            { id: 'barcode', label: '📦 掃條碼' },
           ].map(tab => (
             <button
               key={tab.id}
@@ -200,7 +89,6 @@ const FoodDetective = ({ onLogAdded }) => {
               )}
               onClick={() => {
                 setMode(tab.id);
-                setScannerError(null);
                 if (tab.id !== mode) setResult(null);
               }}
             >
@@ -226,43 +114,6 @@ const FoodDetective = ({ onLogAdded }) => {
         </motion.div>
       )}
 
-      {mode === 'barcode' && !result && !loading && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="border-4 border-black rounded-3xl overflow-hidden bg-black mt-4 min-h-[300px] flex flex-col"
-        >
-          <div id="reader" className="w-full flex-1"></div>
-          
-          <div className="bg-black p-3 space-y-2">
-            {scannerError ? (
-                <div className="bg-accent text-black p-3 rounded-2xl flex items-center gap-3">
-                    <AlertCircle size={24} className="flex-shrink-0" />
-                    <div className="flex-1">
-                        <p className="text-xs font-black leading-tight">{scannerError}</p>
-                        <button 
-                            onClick={startScanner}
-                            className="text-[10px] font-black underline mt-1 flex items-center gap-1"
-                        >
-                            <RefreshCw size={10} /> 點此重試
-                        </button>
-                    </div>
-                </div>
-            ) : (
-                <p className="text-white text-[10px] text-center font-black opacity-60 flex items-center justify-center gap-1.5 italic">
-                    <Barcode size={12} /> 將條碼對準框框內即可自動掃描
-                </p>
-            )}
-          </div>
-        </motion.div>
-      )}
-
-      {loading && mode === 'barcode' && (
-        <div className="aspect-video border-4 border-black rounded-3xl flex flex-col items-center justify-center bg-black">
-          <Loader2 className="animate-spin text-accent mb-3" size={44} />
-          <span className="text-white font-bold animate-pulse">正在查詢營養成分...</span>
-        </div>
-      )}
 
       {mode === 'ai' && preview && (
         <div className="w-full space-y-4">
@@ -279,7 +130,7 @@ const FoodDetective = ({ onLogAdded }) => {
       )}
 
       <AnimatePresence>
-        {((mode === 'ai' || mode === 'barcode') && result) && (
+        {(mode === 'ai' && result) && (
           <motion.div
             key="result"
             initial={{ opacity: 0, y: 16 }}
@@ -333,7 +184,7 @@ const FoodDetective = ({ onLogAdded }) => {
             <div className="flex gap-2 pt-2">
               <NeoButton 
                 className="flex-1" 
-                onClick={() => { setPreview(null); setResult(null); if(mode === 'barcode') setMode('ai'); }}
+                onClick={() => { setPreview(null); setResult(null); }}
                 disabled={loading}
               >
                 取消

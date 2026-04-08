@@ -88,95 +88,95 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
     scared: { d: 'M 0 0 a 8 8 0 1 1 16 0 a 8 8 0 1 1 -16 0' },
   };
 
-  const mouthPaths = {
-    normal: 'M 36 64 Q 50 72 64 64',
-    happy:  'M 32 60 Q 50 76 68 60',
-    sad:    'M 34 70 Q 50 58 66 70',
-    open:   'M 36 60 Q 50 76 64 60',
-  };
 
   const scaleY = isSquished ? 0.85 : 1;
-
-  // Colors
-  const leftEyePatch  = '#1a1a1a';
-  const rightEyePatch = '#1a1a1a';
 
   return (
     <svg
       viewBox="0 0 100 100"
       width="100%"
       height="100%"
-      style={{ transform: `scaleY(${scaleY})`, transition: 'transform 0.1s' }}
+      className="drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]"
+      style={{ transform: `scaleY(${scaleY})`, transition: 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
     >
+      <defs>
+        <radialGradient id="faceGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+          <stop offset="0%" stopColor="#ffffff" />
+          <stop offset="100%" stopColor="#f8f8f8" />
+        </radialGradient>
+        <linearGradient id="earGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#2c2c2c" />
+          <stop offset="100%" stopColor="#0a0a0a" />
+        </linearGradient>
+      </defs>
+
       {/* Ears */}
-      <ellipse cx="18" cy="20" rx="14" ry="14" fill="#1a1a1a" />
-      <ellipse cx="82" cy="20" rx="14" ry="14" fill="#1a1a1a" />
-      <ellipse cx="18" cy="20" rx="8"  ry="8"  fill="#333" />
-      <ellipse cx="82" cy="20" rx="8"  ry="8"  fill="#333" />
+      <ellipse cx="18" cy="22" rx="15" ry="15" fill="url(#earGradient)" />
+      <ellipse cx="82" cy="22" rx="15" ry="15" fill="url(#earGradient)" />
+      <ellipse cx="18" cy="22" rx="7"  ry="7"  fill="#1a1a1a" opacity="0.3" />
+      <ellipse cx="82" cy="22" rx="7"  ry="7"  fill="#1a1a1a" opacity="0.3" />
 
-      {/* Face */}
-      <ellipse cx="50" cy="55" rx="40" ry="38" fill="white" stroke="#1a1a1a" strokeWidth="3" />
+      {/* Face Body */}
+      <ellipse cx="50" cy="55" rx="42" ry="40" fill="url(#faceGradient)" stroke="#000" strokeWidth="2.5" />
 
-      {/* Eye patches */}
-      <ellipse cx="33" cy="46" rx="13" ry="12" fill={leftEyePatch} />
-      <ellipse cx="67" cy="46" rx="13" ry="12" fill={rightEyePatch} />
+      {/* Eye patches - more organic shape */}
+      <path d="M 22 46 Q 22 35 34 35 Q 46 35 46 46 Q 46 57 34 57 Q 22 57 22 46" fill="#0c0c0c" />
+      <path d="M 54 46 Q 54 35 66 35 Q 78 35 78 46 Q 78 57 66 57 Q 54 57 54 46" fill="#0c0c0c" />
 
       {/* Eyes */}
       {expression === 'happy' ? (
         <>
-          <path d="M 24 46 Q 33 38 42 46" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
-          <path d="M 58 46 Q 67 38 76 46" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <path d="M 27 46 Q 34 38 41 46" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <path d="M 59 46 Q 66 38 73 46" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
         </>
       ) : expression === 'dizzy' ? (
         <>
-          <line x1="27" y1="40" x2="38" y2="51" stroke="white" strokeWidth="3" strokeLinecap="round" />
-          <line x1="38" y1="40" x2="27" y2="51" stroke="white" strokeWidth="3" strokeLinecap="round" />
-          <line x1="62" y1="40" x2="73" y2="51" stroke="white" strokeWidth="3" strokeLinecap="round" />
-          <line x1="73" y1="40" x2="62" y2="51" stroke="white" strokeWidth="3" strokeLinecap="round" />
+          <line x1="29" y1="41" x2="39" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="39" y1="41" x2="29" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="61" y1="41" x2="71" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
+          <line x1="71" y1="41" x2="61" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
         </>
       ) : expression === 'scared' ? (
         <>
-          <ellipse cx="33" cy="46" rx="7" ry="7" fill="white" />
-          <ellipse cx="67" cy="46" rx="7" ry="7" fill="white" />
-          <ellipse cx="33" cy="46" rx="3" ry="3" fill="#1a1a1a" />
-          <ellipse cx="67" cy="46" rx="3" ry="3" fill="#1a1a1a" />
+          <circle cx="34" cy="46" r="7" fill="white" />
+          <circle cx="66" cy="46" r="7" fill="white" />
+          <circle cx="34" cy="46" r="2.5" fill="#000" />
+          <circle cx="66" cy="46" r="2.5" fill="#000" />
         </>
       ) : (
         <>
-          <ellipse cx="33" cy="46" rx="6" ry="6" fill="white" />
-          <ellipse cx="67" cy="46" rx="6" ry="6" fill="white" />
-          <ellipse cx="34" cy="47" rx="3" ry="3" fill="#1a1a1a" />
-          <ellipse cx="68" cy="47" rx="3" ry="3" fill="#1a1a1a" />
-          {/* Shine */}
-          <circle cx="36" cy="44" r="1.5" fill="white" />
-          <circle cx="70" cy="44" r="1.5" fill="white" />
+          <circle cx="34" cy="46" r="5" fill="white" />
+          <circle cx="66" cy="46" r="5" fill="white" />
+          <circle cx="35" cy="47" r="2.5" fill="#000" />
+          <circle cx="67" cy="47" r="2.5" fill="#000" />
+          <circle cx="33" cy="44" r="1.2" fill="white" />
+          <circle cx="65" cy="44" r="1.2" fill="white" />
         </>
       )}
 
       {/* Nose */}
-      <ellipse cx="50" cy="60" rx="5" ry="3.5" fill="#1a1a1a" />
+      <path d="M 45 61 Q 50 64 55 61 Q 55 58 50 58 Q 45 58 45 61" fill="#000" />
 
       {/* Mouth */}
       {expression === 'happy' || expression === 'normal' ? (
-        <path d={mouthPaths[expression === 'happy' ? 'happy' : 'normal']}
-          fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" />
+        <path d={expression === 'happy' ? 'M 38 65 Q 50 75 62 65' : 'M 42 67 Q 50 71 58 67'}
+          fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
       ) : expression === 'sad' || expression === 'dizzy' ? (
-        <path d={mouthPaths.sad}
-          fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" />
+        <path d="M 40 72 Q 50 64 60 72"
+          fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
       ) : (
         <>
-          <path d={mouthPaths.open}
-            fill="none" stroke="#1a1a1a" strokeWidth="2.5" strokeLinecap="round" />
-          {/* Mouth open - used yellow/white instead of pink */}
-          <ellipse cx="50" cy="68" rx="8" ry="5" fill="#FDE047" />
+          <path d="M 40 65 Q 50 75 60 65"
+            fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
+          <ellipse cx="50" cy="69" rx="6" ry="4" fill="#fbbf24" />
         </>
       )}
 
-      {/* Rosy cheeks when tickled - changed from pink to yellow/gold */}
+      {/* Cheeks */}
       {expression === 'happy' && (
         <>
-          <ellipse cx="24" cy="60" rx="8" ry="5" fill="#FDE047" opacity="0.4" />
-          <ellipse cx="76" cy="60" rx="8" ry="5" fill="#FDE047" opacity="0.4" />
+          <circle cx="28" cy="62" r="6" fill="#fbbf24" opacity="0.3" />
+          <circle cx="72" cy="62" r="6" fill="#fbbf24" opacity="0.3" />
         </>
       )}
     </svg>
@@ -196,8 +196,7 @@ const SpeechBubble = ({ text, visible }) => (
         className="absolute -top-14 left-1/2 -translate-x-1/2 whitespace-nowrap z-20"
         style={{ pointerEvents: 'none' }}
       >
-        <div className="bg-white border-3 border-black rounded-2xl px-3 py-1.5 text-xs font-black shadow-neo-sm text-black max-w-[220px] text-center leading-tight"
-          style={{ border: '3px solid black' }}>
+        <div className="bg-white/90 backdrop-blur-xl border-2 border-black/10 rounded-2xl px-4 py-2 text-[11px] font-bold shadow-[0_8px_16px_rgba(0,0,0,0.1)] text-black max-w-[220px] text-center leading-snug">
           {text}
         </div>
         {/* Tail */}
@@ -212,7 +211,7 @@ const SpeechBubble = ({ text, visible }) => (
             width: 0, height: 0,
             borderLeft: '5px solid transparent',
             borderRight: '5px solid transparent',
-            borderTop: '6px solid white',
+            borderTop: '6px solid rgba(255,255,255,0.9)',
             position: 'absolute', top: '0px', left: '-5px',
           }} />
         </div>
@@ -386,8 +385,13 @@ const PandaCoachCard = ({ advice }) => {
   }, [bubbleVisible, isDragging, advice, showBubble]);
 
   return (
-    <NeoCard className="bg-black text-white relative overflow-visible border-4 border-black">
-      <div className="flex items-center gap-4">
+    <NeoCard className="relative overflow-visible border-none bg-gradient-to-br from-zinc-900 to-black p-6 shadow-2xl overflow-hidden group">
+      {/* Premium background texture */}
+      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
+      <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-[80px]" />
+      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-zinc-500/10 rounded-full blur-[80px]" />
+
+      <div className="flex items-center gap-6 relative z-10">
 
         {/* Interactive Panda */}
         <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
@@ -427,8 +431,10 @@ const PandaCoachCard = ({ advice }) => {
 
         {/* Text content */}
         <div className="flex-1 min-w-0">
-          <h3 className="text-xl font-black mb-1 text-accent italic">熊貓教練 Panda Coach</h3>
-          <p className="text-sm font-bold opacity-90 leading-tight">
+          <h3 className="text-sm font-black tracking-[0.2em] mb-2 text-amber-400 uppercase italic opacity-80">
+            Panda Coach
+          </h3>
+          <p className="text-lg font-medium text-zinc-100 leading-tight tracking-tight">
             {advice || '今天也要加油喔！趕快記錄一下你的飲食吧！'}
           </p>
         </div>

@@ -201,8 +201,6 @@ function App() {
 
       <FoodDetective onLogAdded={refreshData} />
 
-      <WeightTracker />
-
       {/* Today's Logs */}
       <NeoCard className="bg-white">
         <div className="flex items-center justify-between mb-4">
@@ -262,9 +260,11 @@ function App() {
         </NeoCard>
       )}
 
+      <WeightTracker />
+
       <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
         <div className="bg-black/95 backdrop-blur-md border-4 border-black text-white p-4 rounded-3xl shadow-neo flex justify-center items-center">
-          <p className="text-[10px] font-bold text-accent tracking-widest uppercase">© 2026 DailyDiet - 可愛萬歲 🐼</p>
+          <p className="text-[10px] font-bold text-accent tracking-widest uppercase">© 2026 DailyDiet - 飲控萬歲 🐼</p>
         </div>
       </footer>
     </div>
