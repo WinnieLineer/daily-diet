@@ -4,7 +4,8 @@
 
 @layer base {
   body {
-    @apply antialiased text-foreground bg-white overflow-x-hidden;
+    @apply antialiased text-zinc-900 bg-[#F3F4F6] overflow-x-hidden;
+    font-family: 'Zen Maru Gothic', 'Noto Sans TC', sans-serif !important;
   }
 }
 

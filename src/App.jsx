@@ -16,11 +16,108 @@ const getLocalDateString = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
+const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog }) => {
+  const isEditing = editingId === log.id;
+
+  if (isEditing) {
+    return (
+      <motion.div
+        layout
+        initial={{ opacity: 0, scale: 0.95 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="p-4 border-4 border-black rounded-2xl bg-accent/10 space-y-3"
+      >
+        <div>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">編輯食物名稱</label>
+          <input 
+            type="text" 
+            value={editValues.dish_name}
+            onChange={(e) => setEditValues({ ...editValues, dish_name: e.target.value })}
+            className="w-full border-4 border-black p-2 rounded-xl font-bold bg-white"
+          />
+        </div>
+        <div className="flex gap-3">
+          <div className="flex-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">熱量 (kcal)</label>
+            <input 
+              type="number" 
+              value={editValues.calories}
+              onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
+              className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+            />
+          </div>
+          <div className="flex-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">蛋白質 (g)</label>
+            <input 
+              type="number" 
+              value={editValues.protein}
+              onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
+              className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+            />
+          </div>
+        </div>
+        <div className="flex gap-2 pt-1">
+          <button 
+            onClick={cancelEditing}
+            className="flex-1 bg-white border-4 border-black font-black py-2 rounded-xl hover:bg-gray-100 flex items-center justify-center gap-1"
+          >
+            <X size={16} /> 取消
+          </button>
+          <button 
+            onClick={() => saveEdit(log.id)}
+            className="flex-1 bg-black text-white border-4 border-black font-black py-2 rounded-xl hover:bg-black/90 flex items-center justify-center gap-1"
+          >
+            <Check size={16} /> 儲存
+          </button>
+        </div>
+      </motion.div>
+    );
+  }
+
+  return (
+    <motion.div
+      layout
+      initial={{ opacity: 0, x: -10 }}
+      animate={{ opacity: 1, x: 0 }}
+      exit={{ opacity: 0, x: 10 }}
+      className={`flex items-center justify-between p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-accent/5 transition-colors group ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
+    >
+      <div className="flex-1">
+        <div className="flex items-center gap-2">
+          {!isRecent && <span className="text-[9px] font-mono font-black bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">{log.date}</span>}
+          <div className="font-black text-sm">{log.dish_name}</div>
+        </div>
+        <div className="text-[11px] font-mono font-bold mt-1 inline-flex gap-2">
+           <span className="bg-accent/20 px-1.5 rounded">🔥 {log.calories} kcal</span>
+           <span className="bg-gray-100 px-1.5 rounded text-gray-500">🍗 {log.protein}g</span>
+        </div>
+      </div>
+      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+        <button 
+          onClick={() => startEditing(log)}
+          className="p-2.5 hover:bg-accent hover:text-black transition-all rounded-xl border-2 border-transparent"
+          title="編輯"
+        >
+          <Pencil size={15} />
+        </button>
+        <button 
+          onClick={() => deleteLog(log.id)}
+          className="p-2.5 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+          title="刪除"
+        >
+          <Trash2 size={15} />
+        </button>
+      </div>
+    </motion.div>
+  );
+};
+
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0 });
   const [goals, setGoals] = useState({ calories: 2000, protein: 100 });
   const [recentLogs, setRecentLogs] = useState([]);
-  const [historyLogs, setHistoryLogs] = useState([]);
+  const [historyGroups, setHistoryGroups] = useState([]); // Array of { date, logs, totalCalories, totalProtein }
+  const [expandedGroups, setExpandedGroups] = useState({}); // Record of date -> boolean
   const [showHistory, setShowHistory] = useState(false);
   const [advice, setAdvice] = useState('');
   
@@ -47,8 +144,24 @@ function App() {
       .reverse()
       .sortBy('timestamp');
     
+    // Categorize logs
     setRecentLogs(allLogs.filter(log => log.date === today));
-    setHistoryLogs(allLogs.filter(log => log.date !== today));
+    
+    const historyEntries = allLogs.filter(log => log.date !== today);
+    const groups = historyEntries.reduce((acc, log) => {
+      const date = log.date;
+      if (!acc[date]) {
+        acc[date] = { date, logs: [], totalCalories: 0, totalProtein: 0 };
+      }
+      acc[date].logs.push(log);
+      acc[date].totalCalories += log.calories || 0;
+      acc[date].totalProtein += log.protein || 0;
+      return acc;
+    }, {});
+
+    // Convert to sorted array
+    const sortedGroups = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
+    setHistoryGroups(sortedGroups);
 
     setAdvice(getPandaAdvice(dailySummary.calories, currentGoals.calories, dailySummary.protein, currentGoals.protein));
   };
@@ -87,101 +200,6 @@ function App() {
     refreshData();
   };
 
-  const LogItem = ({ log, isRecent = true }) => {
-    const isEditing = editingId === log.id;
-
-    if (isEditing) {
-      return (
-        <motion.div
-          layout
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="p-4 border-4 border-black rounded-2xl bg-accent/10 space-y-3"
-        >
-          <div>
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">編輯食物名稱</label>
-            <input 
-              type="text" 
-              value={editValues.dish_name}
-              onChange={(e) => setEditValues({ ...editValues, dish_name: e.target.value })}
-              className="w-full border-4 border-black p-2 rounded-xl font-bold bg-white"
-            />
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">熱量 (kcal)</label>
-              <input 
-                type="number" 
-                value={editValues.calories}
-                onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
-                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
-              />
-            </div>
-            <div className="flex-1">
-              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">蛋白質 (g)</label>
-              <input 
-                type="number" 
-                value={editValues.protein}
-                onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
-                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
-              />
-            </div>
-          </div>
-          <div className="flex gap-2 pt-1">
-            <button 
-              onClick={cancelEditing}
-              className="flex-1 bg-white border-4 border-black font-black py-2 rounded-xl hover:bg-gray-100 flex items-center justify-center gap-1"
-            >
-              <X size={16} /> 取消
-            </button>
-            <button 
-              onClick={() => saveEdit(log.id)}
-              className="flex-1 bg-black text-white border-4 border-black font-black py-2 rounded-xl hover:bg-black/90 flex items-center justify-center gap-1"
-            >
-              <Check size={16} /> 儲存
-            </button>
-          </div>
-        </motion.div>
-      );
-    }
-
-    return (
-      <motion.div
-        layout
-        initial={{ opacity: 0, x: -10 }}
-        animate={{ opacity: 1, x: 0 }}
-        exit={{ opacity: 0, x: 10 }}
-        className={`flex items-center justify-between p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-accent/5 transition-colors group ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
-      >
-        <div className="flex-1">
-          <div className="flex items-center gap-2">
-            {!isRecent && <span className="text-[9px] font-mono font-black bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">{log.date}</span>}
-            <div className="font-black text-sm">{log.dish_name}</div>
-          </div>
-          <div className="text-[11px] font-mono font-bold mt-1 inline-flex gap-2">
-             <span className="bg-accent/20 px-1.5 rounded">🔥 {log.calories} kcal</span>
-             <span className="bg-gray-100 px-1.5 rounded text-gray-500">🍗 {log.protein}g</span>
-          </div>
-        </div>
-        <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-          <button 
-            onClick={() => startEditing(log)}
-            className="p-2.5 hover:bg-accent hover:text-black transition-all rounded-xl border-2 border-transparent"
-            title="編輯"
-          >
-            <Pencil size={15} />
-          </button>
-          <button 
-            onClick={() => deleteLog(log.id)}
-            className="p-2.5 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
-            title="刪除"
-          >
-            <Trash2 size={15} />
-          </button>
-        </div>
-      </motion.div>
-    );
-  };
 
   return (
     <div className="min-h-screen bg-[#F3F4F6] p-4 pb-24 max-w-lg mx-auto space-y-6">
@@ -216,7 +234,18 @@ function App() {
           <AnimatePresence mode="popLayout">
             {recentLogs.length > 0 ? (
               recentLogs.map((log) => (
-                <LogItem key={log.id} log={log} isRecent={true} />
+                <LogItem 
+                  key={log.id} 
+                  log={log} 
+                  isRecent={true}
+                  editingId={editingId}
+                  editValues={editValues}
+                  setEditValues={setEditValues}
+                  cancelEditing={cancelEditing}
+                  saveEdit={saveEdit}
+                  startEditing={startEditing}
+                  deleteLog={deleteLog}
+                />
               ))
             ) : (
               <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
@@ -228,7 +257,7 @@ function App() {
       </NeoCard>
 
       {/* History Logs */}
-      {historyLogs.length > 0 && (
+      {historyGroups.length > 0 && (
         <NeoCard className="bg-gray-50/50 border-gray-300">
           <button 
             onClick={() => setShowHistory(!showHistory)}
@@ -249,10 +278,67 @@ function App() {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="space-y-3 pt-4">
-                  {historyLogs.map((log) => (
-                    <LogItem key={log.id} log={log} isRecent={false} />
-                  ))}
+                <div className="space-y-4 pt-4">
+                  {historyGroups.map((group) => {
+                    const isExpanded = !!expandedGroups[group.date];
+                    const calorieAchievement = Math.min((group.totalCalories / goals.calories) * 100, 100);
+                    const isGoalReached = group.totalCalories >= goals.calories;
+
+                    return (
+                      <div key={group.date} className="border-b-2 border-gray-100 pb-2 last:border-0">
+                        <button 
+                          onClick={() => toggleGroup(group.date)}
+                          className="w-full flex items-center justify-between group/header mb-2"
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-xs font-black bg-gray-100 px-2 py-0.5 rounded-lg border-2 border-black/5">{group.date}</span>
+                            <div className="flex flex-col items-start translate-y-0.5">
+                              <div className="text-[10px] font-black italic flex items-center gap-1.5 uppercase tracking-wider text-gray-500">
+                                <span>🔥 {group.totalCalories} / {goals.calories} kcal</span>
+                                {isGoalReached && <span className="text-[8px] bg-green-500 text-white px-1 rounded uppercase tracking-tighter">Done</span>}
+                              </div>
+                              {/* Mini progress bar */}
+                              <div className="w-24 h-1 bg-gray-100 rounded-full mt-1 overflow-hidden">
+                                <div 
+                                  className={`h-full transition-all duration-500 ${isGoalReached ? 'bg-green-500' : 'bg-black'}`}
+                                  style={{ width: `${calorieAchievement}%` }}
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <div className={`p-1 rounded-lg transition-colors ${isExpanded ? 'bg-black text-white' : 'bg-gray-50 text-gray-400 group-hover/header:bg-gray-200'}`}>
+                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                          </div>
+                        </button>
+
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              className="overflow-hidden space-y-2 px-1 pb-2"
+                            >
+                              {group.logs.map((log) => (
+                                <LogItem 
+                                  key={log.id} 
+                                  log={log} 
+                                  isRecent={false}
+                                  editingId={editingId}
+                                  editValues={editValues}
+                                  setEditValues={setEditValues}
+                                  cancelEditing={cancelEditing}
+                                  saveEdit={saveEdit}
+                                  startEditing={startEditing}
+                                  deleteLog={deleteLog}
+                                />
+                              ))}
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </div>
+                    );
+                  })}
                 </div>
               </motion.div>
             )}

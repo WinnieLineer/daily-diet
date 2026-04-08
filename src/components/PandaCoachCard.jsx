@@ -59,17 +59,17 @@ const DIALOGUES = {
     '老娘要去告你！！！ 🐼💢',
   ],
   drag: [
-    '放……放开我！！ 😱',
+    '請……請放開我 😱',
     '你在做什麼？！我暈了！',
-    '救命啊有人綁架熊貓！！',
+    '哎呀，這是在做什麼？ 🥀',
     '再拖下去我要出螢幕了！',
-    '嗚嗚嗚好可怕蹂躪我 😭',
+    '救命啊，有人在開玩笑嗎？ 😭',
     '放我回去！！我要回家！',
   ],
   release: [
     '終於放開了……可惡 😤',
     '下次不給你拖了！哼！',
-    '頭好暈……賤人！ 😵',
+    '頭好暈……哎呀 😵',
     '謝謝你「關愛」我……才怪',
     '再來一次我就咬人了！',
   ],
@@ -81,104 +81,87 @@ function getRandom(arr) {
 
 // SVG Panda face – scalable, cute, pure SVG so we can animate it
 const PandaFace = ({ expression = 'normal', isSquished = false }) => {
-  const eyeVariants = {
-    normal: { d: 'M 0 0 a 7 7 0 1 1 14 0 a 7 7 0 1 1 -14 0' },
-    happy:  { d: 'M 0 4 Q 7 -4 14 4' },
-    dizzy:  { d: 'M 2 2 L 5 -1 M 9 -1 L 12 2' },
-    scared: { d: 'M 0 0 a 8 8 0 1 1 16 0 a 8 8 0 1 1 -16 0' },
-  };
-
-
-  const scaleY = isSquished ? 0.85 : 1;
+  const scaleY = isSquished ? 0.92 : 1;
 
   return (
     <svg
       viewBox="0 0 100 100"
-      width="100%"
-      height="100%"
-      className="drop-shadow-[0_4px_6px_rgba(0,0,0,0.3)]"
-      style={{ transform: `scaleY(${scaleY})`, transition: 'transform 0.15s cubic-bezier(0.34, 1.56, 0.64, 1)' }}
+      className="w-full h-full drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)]"
+      style={{ transform: `scaleY(${scaleY})`, transition: 'transform 0.4s cubic-bezier(0.23, 1, 0.32, 1)' }}
     >
       <defs>
-        <radialGradient id="faceGradient" cx="50%" cy="50%" r="50%" fx="50%" fy="50%">
+        <radialGradient id="faceBodyGrad" cx="50%" cy="35%" r="65%">
           <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="100%" stopColor="#f8f8f8" />
+          <stop offset="60%" stopColor="#f3f4f6" />
+          <stop offset="100%" stopColor="#d1d5db" />
         </radialGradient>
-        <linearGradient id="earGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#2c2c2c" />
-          <stop offset="100%" stopColor="#0a0a0a" />
+        <linearGradient id="earGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#27272a" />
+          <stop offset="100%" stopColor="#09090b" />
         </linearGradient>
+        <linearGradient id="goldHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
+          <stop offset="0%" stopColor="#c5a059" />
+          <stop offset="50%" stopColor="#f3e1b7" />
+          <stop offset="100%" stopColor="#c5a059" />
+        </linearGradient>
+        <filter id="premiumGlow" x="-20%" y="-20%" width="140%" height="140%">
+          <feGaussianBlur stdDeviation="1.5" result="blur" />
+          <feComposite in="SourceGraphic" in2="blur" operator="over" />
+        </filter>
+        <filter id="noise">
+          <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
+          <feColorMatrix type="saturate" values="0" />
+          <feComponentTransfer>
+            <feFuncA type="linear" slope="0.05" />
+          </feComponentTransfer>
+        </filter>
       </defs>
 
       {/* Ears */}
-      <ellipse cx="18" cy="22" rx="15" ry="15" fill="url(#earGradient)" />
-      <ellipse cx="82" cy="22" rx="15" ry="15" fill="url(#earGradient)" />
-      <ellipse cx="18" cy="22" rx="7"  ry="7"  fill="#1a1a1a" opacity="0.3" />
-      <ellipse cx="82" cy="22" rx="7"  ry="7"  fill="#1a1a1a" opacity="0.3" />
+      <circle cx="22" cy="25" r="14" fill="url(#earGrad)" />
+      <circle cx="78" cy="25" r="14" fill="url(#earGrad)" />
+      <circle cx="22" cy="25" r="14" fill="url(#noise)" opacity="0.3" />
+      <circle cx="78" cy="25" r="14" fill="url(#noise)" opacity="0.3" />
 
       {/* Face Body */}
-      <ellipse cx="50" cy="55" rx="42" ry="40" fill="url(#faceGradient)" stroke="#000" strokeWidth="2.5" />
+      <ellipse cx="50" cy="55" rx="42" ry="40" fill="url(#faceBodyGrad)" filter="url(#premiumGlow)" />
+      <ellipse cx="50" cy="55" rx="42" ry="40" fill="none" stroke="url(#goldHighlight)" strokeWidth="0.5" opacity="0.3" />
 
-      {/* Eye patches - more organic shape */}
-      <path d="M 22 46 Q 22 35 34 35 Q 46 35 46 46 Q 46 57 34 57 Q 22 57 22 46" fill="#0c0c0c" />
-      <path d="M 54 46 Q 54 35 66 35 Q 78 35 78 46 Q 78 57 66 57 Q 54 57 54 46" fill="#0c0c0c" />
-
-      {/* Eyes */}
-      {expression === 'happy' ? (
-        <>
-          <path d="M 27 46 Q 34 38 41 46" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
-          <path d="M 59 46 Q 66 38 73 46" fill="none" stroke="white" strokeWidth="3" strokeLinecap="round" />
-        </>
-      ) : expression === 'dizzy' ? (
-        <>
-          <line x1="29" y1="41" x2="39" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="39" y1="41" x2="29" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="61" y1="41" x2="71" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-          <line x1="71" y1="41" x2="61" y2="51" stroke="white" strokeWidth="2.5" strokeLinecap="round" />
-        </>
-      ) : expression === 'scared' ? (
-        <>
-          <circle cx="34" cy="46" r="7" fill="white" />
-          <circle cx="66" cy="46" r="7" fill="white" />
-          <circle cx="34" cy="46" r="2.5" fill="#000" />
-          <circle cx="66" cy="46" r="2.5" fill="#000" />
-        </>
-      ) : (
-        <>
-          <circle cx="34" cy="46" r="5" fill="white" />
-          <circle cx="66" cy="46" r="5" fill="white" />
-          <circle cx="35" cy="47" r="2.5" fill="#000" />
-          <circle cx="67" cy="47" r="2.5" fill="#000" />
-          <circle cx="33" cy="44" r="1.2" fill="white" />
-          <circle cx="65" cy="44" r="1.2" fill="white" />
-        </>
-      )}
+      {/* Eyes & Patches */}
+      <g opacity="0.95">
+        <ellipse cx="65" cy="48" rx="14" ry="12" fill="#09090b" />
+        <ellipse cx="35" cy="48" rx="14" ry="12" fill="#09090b" />
+        
+        <g fill="white" opacity="0.9">
+          {expression === 'happy' ? (
+            <>
+              <path d="M 28 48 Q 35 40 42 48" fill="none" stroke="url(#goldHighlight)" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M 58 48 Q 65 40 72 48" fill="none" stroke="url(#goldHighlight)" strokeWidth="2.5" strokeLinecap="round" />
+            </>
+          ) : expression === 'dizzy' ? (
+            <>
+              <path d="M 32 45 L 38 51 M 38 45 L 32 51" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+              <path d="M 62 45 L 68 51 M 68 45 L 62 51" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+            </>
+          ) : (
+            <>
+              <circle cx="35" cy="48" r="4.5" fill="#18181b" />
+              <circle cx="65" cy="48" r="4.5" fill="#18181b" />
+              <circle cx="34" cy="47" r="1.5" fill="white" opacity="0.4" />
+              <circle cx="64" cy="47" r="1.5" fill="white" opacity="0.4" />
+            </>
+          )}
+        </g>
+      </g>
 
       {/* Nose */}
-      <path d="M 45 61 Q 50 64 55 61 Q 55 58 50 58 Q 45 58 45 61" fill="#000" />
+      <path d="M 47 62 Q 50 65 53 62" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" />
 
       {/* Mouth */}
-      {expression === 'happy' || expression === 'normal' ? (
-        <path d={expression === 'happy' ? 'M 38 65 Q 50 75 62 65' : 'M 42 67 Q 50 71 58 67'}
-          fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
-      ) : expression === 'sad' || expression === 'dizzy' ? (
-        <path d="M 40 72 Q 50 64 60 72"
-          fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
-      ) : (
-        <>
-          <path d="M 40 65 Q 50 75 60 65"
-            fill="none" stroke="#000" strokeWidth="2.5" strokeLinecap="round" />
-          <ellipse cx="50" cy="69" rx="6" ry="4" fill="#fbbf24" />
-        </>
-      )}
+      <path d="M 42 70 Q 50 74 58 70" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" opacity="0.5" />
 
-      {/* Cheeks */}
-      {expression === 'happy' && (
-        <>
-          <circle cx="28" cy="62" r="6" fill="#fbbf24" opacity="0.3" />
-          <circle cx="72" cy="62" r="6" fill="#fbbf24" opacity="0.3" />
-        </>
-      )}
+      {/* Subliminal artistic marks */}
+      <circle cx="50" cy="55" r="41" fill="none" stroke="#fbbf24" strokeWidth="0.5" opacity="0.2" />
     </svg>
   );
 };
@@ -193,28 +176,19 @@ const SpeechBubble = ({ text, visible }) => (
         animate={{ opacity: 1, y: 0, scale: 1 }}
         exit={{ opacity: 0, y: -8, scale: 0.85 }}
         transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="absolute -top-14 left-1/2 -translate-x-1/2 whitespace-nowrap z-20"
+        className="absolute -top-10 left-1/2 -translate-x-1/2 whitespace-nowrap z-20"
         style={{ pointerEvents: 'none' }}
       >
-        <div className="bg-white/90 backdrop-blur-xl border-2 border-black/10 rounded-2xl px-4 py-2 text-[11px] font-bold shadow-[0_8px_16px_rgba(0,0,0,0.1)] text-black max-w-[220px] text-center leading-snug">
+        <div className="bg-white/95 backdrop-blur-3xl border border-white/40 rounded-full px-6 py-2.5 text-[11px] font-bold shadow-[0_20px_40px_-12px_rgba(0,0,0,0.3)] text-zinc-900 max-w-[260px] text-center leading-relaxed tracking-wide font-sans">
           {text}
         </div>
         {/* Tail */}
-        <div className="absolute bottom-0 left-1/2 -translate-x-1/2 translate-y-full">
           <div style={{
             width: 0, height: 0,
             borderLeft: '6px solid transparent',
             borderRight: '6px solid transparent',
-            borderTop: '7px solid black',
+            borderTop: '6px solid rgba(255,255,255,0.95)',
           }} />
-          <div style={{
-            width: 0, height: 0,
-            borderLeft: '5px solid transparent',
-            borderRight: '5px solid transparent',
-            borderTop: '6px solid rgba(255,255,255,0.9)',
-            position: 'absolute', top: '0px', left: '-5px',
-          }} />
-        </div>
       </motion.div>
     )}
   </AnimatePresence>
@@ -245,6 +219,7 @@ const FloatingEmoji = ({ emoji, id, onDone }) => {
 // Main Component
 // ──────────────────────────────────────────────
 const PandaCoachCard = ({ advice }) => {
+  const constraintsRef = useRef(null);
   const [expression, setExpression]     = useState('normal');
   const [bubble, setBubble]             = useState('');
   const [bubbleVisible, setBubbleVisible] = useState(false);
@@ -385,17 +360,30 @@ const PandaCoachCard = ({ advice }) => {
   }, [bubbleVisible, isDragging, advice, showBubble]);
 
   return (
-    <NeoCard className="relative overflow-visible border-none bg-gradient-to-br from-zinc-900 to-black p-6 shadow-2xl overflow-hidden group">
-      {/* Premium background texture */}
-      <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/carbon-fibre.png')]" />
-      <div className="absolute -top-24 -left-24 w-48 h-48 bg-amber-500/10 rounded-full blur-[80px]" />
-      <div className="absolute -bottom-24 -right-24 w-48 h-48 bg-zinc-500/10 rounded-full blur-[80px]" />
+    <motion.div 
+      ref={constraintsRef}
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      className="relative z-10"
+    >
+      {/* Outer Card with visible overflow for bubble */}
+      <div className="relative bg-[#09090b] border-[1px] border-zinc-800/50 rounded-[2.5rem] shadow-[0_24px_48px_-12px_rgba(0,0,0,0.6)]">
+        
+        {/* Inner texture layer with overflow-hidden */}
+        <div className="absolute inset-0 rounded-[2.5rem] overflow-hidden pointer-events-none">
+          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-10" />
+          <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/20 via-transparent to-black" />
+        </div>
+
+        <div className="p-6 relative z-10">
 
       <div className="flex items-center gap-6 relative z-10">
 
         {/* Interactive Panda */}
-        <div className="relative flex-shrink-0" style={{ width: 80, height: 80 }}>
-          <SpeechBubble text={bubble} visible={bubbleVisible} />
+        <div className="relative flex-shrink-0 z-50 group/panda" style={{ width: 90, height: 90 }}>
+          <div className="absolute -top-12 left-1/2 -translate-x-1/2 transition-transform duration-500 scale-100 group-hover/panda:scale-105">
+             <SpeechBubble text={bubble} visible={bubbleVisible} />
+          </div>
 
           {/* Particles */}
           {particles.map(({ id, emoji }) => (
@@ -429,14 +417,15 @@ const PandaCoachCard = ({ advice }) => {
           </div>
         </div>
 
-        {/* Text content */}
-        <div className="flex-1 min-w-0">
-          <h3 className="text-sm font-black tracking-[0.2em] mb-2 text-amber-400 uppercase italic opacity-80">
+        {/* Text content - Luxury Boutique Style */}
+        <div className="flex-1 min-w-0 space-y-1 relative z-10">
+          <h3 className="text-[9px] font-light tracking-[0.5em] text-amber-500/60 uppercase">
             Panda Coach
           </h3>
-          <p className="text-lg font-medium text-zinc-100 leading-tight tracking-tight">
-            {advice || '今天也要加油喔！趕快記錄一下你的飲食吧！'}
+          <p className="text-xl font-medium text-zinc-100 leading-tight tracking-wide italic">
+            {advice || '每一刻的節制，都是對生活的極致追求。'}
           </p>
+          <div className="h-[1px] w-12 bg-gradient-to-r from-amber-500/40 to-transparent mt-3" />
         </div>
       </div>
 
@@ -444,7 +433,9 @@ const PandaCoachCard = ({ advice }) => {
       <div className="absolute -bottom-4 -right-2 opacity-10 rotate-12 pointer-events-none select-none text-6xl">
         🐼
       </div>
-    </NeoCard>
+        </div>
+      </div>
+    </motion.div>
   );
 };
 

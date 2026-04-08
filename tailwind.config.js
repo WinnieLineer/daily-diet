@@ -24,6 +24,7 @@ export default {
         '4': '4px',
       },
       fontFamily: {
+        sans: ['"Zen Maru Gothic"', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'monospace'],
       },
     },
