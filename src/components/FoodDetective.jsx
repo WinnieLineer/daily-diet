@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import { twMerge } from 'tailwind-merge';
@@ -12,7 +12,9 @@ const FoodDetective = ({ onLogAdded }) => {
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
-  const fileInputRef = useRef(null);
+  const cameraInputRef = useRef(null);
+  const galleryInputRef = useRef(null);
+  const [showActionSheet, setShowActionSheet] = useState(false);
 
   // Manual input state
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '' });
@@ -102,7 +104,7 @@ const FoodDetective = ({ onLogAdded }) => {
         <motion.div
           initial={{ opacity: 0, y: 8 }}
           animate={{ opacity: 1, y: 0 }}
-          onClick={() => fileInputRef.current.click()}
+          onClick={() => setShowActionSheet(true)}
           className="aspect-video border-4 border-dashed border-black rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all bg-gradient-to-br from-white to-gray-50 hover:bg-accent/10 hover:border-accent hover:shadow-[0_0_0_4px_rgba(253,224,71,0.2)] group mt-2"
         >
           <div className="bg-black text-white rounded-2xl p-3 mb-3 group-hover:scale-110 transition-transform shadow-neo-sm">
@@ -110,9 +112,89 @@ const FoodDetective = ({ onLogAdded }) => {
           </div>
           <p className="font-bold text-sm text-black">拍下或上傳食物照</p>
           <p className="text-xs text-gray-500 mt-1">讓 AI 幫你分析熱量！</p>
-          <input type="file" ref={fileInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+          
+          {/* Hidden inputs for different purposes */}
+          <input 
+            type="file" 
+            ref={cameraInputRef} 
+            onChange={handleImageUpload} 
+            accept="image/*" 
+            capture="environment" 
+            className="hidden" 
+          />
+          <input 
+            type="file" 
+            ref={galleryInputRef} 
+            onChange={handleImageUpload} 
+            accept="image/*" 
+            className="hidden" 
+          />
         </motion.div>
       )}
+
+      {/* Premium Photo Action Sheet */}
+      <AnimatePresence>
+        {showActionSheet && (
+          <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-10 sm:pb-20">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowActionSheet(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div 
+              initial={{ y: "100%", opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: "100%", opacity: 0 }}
+              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
+              className="relative w-full max-w-sm bg-white border-4 border-black rounded-[2.5rem] p-6 shadow-neo overflow-hidden"
+            >
+              {/* Decorative background element */}
+              <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-32 h-32 bg-accent/20 rounded-full blur-3xl pointer-events-none" />
+              
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="font-black text-xl italic tracking-tight">📸 選擇照片來源</h3>
+                <button onClick={() => setShowActionSheet(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
+                  <X size={20} />
+                </button>
+              </div>
+
+              <div className="grid gap-3">
+                <button 
+                  onClick={() => { setShowActionSheet(false); setTimeout(() => cameraInputRef.current?.click(), 100); }}
+                  className="w-full group flex items-center gap-4 p-4 bg-black text-white rounded-3xl border-4 border-black hover:bg-zinc-800 transition-all active:scale-95"
+                >
+                  <div className="bg-accent text-black p-3 rounded-2xl group-hover:scale-110 transition-transform">
+                    <Camera size={24} />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-black text-lg leading-tight italic">拍照模式</div>
+                    <div className="text-[10px] uppercase tracking-widest text-white/50 font-bold">開啟相機直接拍攝</div>
+                  </div>
+                </button>
+
+                <button 
+                  onClick={() => { setShowActionSheet(false); setTimeout(() => galleryInputRef.current?.click(), 100); }}
+                  className="w-full group flex items-center gap-4 p-4 bg-white text-black rounded-3xl border-4 border-black hover:bg-gray-50 transition-all active:scale-95"
+                >
+                  <div className="bg-gray-100 text-black p-3 rounded-2xl group-hover:scale-110 transition-transform border-2 border-black/5">
+                    <ImageIcon size={24} />
+                  </div>
+                  <div className="text-left">
+                    <div className="font-black text-lg leading-tight italic">從相簿選擇</div>
+                    <div className="text-[10px] uppercase tracking-widest text-black/40 font-bold">上傳手機內的照片</div>
+                  </div>
+                </button>
+              </div>
+
+              <div className="mt-6 text-center">
+                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Powered by AI Detective 🐼</p>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
 
       {mode === 'ai' && preview && (
