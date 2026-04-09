@@ -83,7 +83,7 @@ const FoodDetective = ({ onLogAdded }) => {
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-xl font-black italic">📝 飲食紀錄</h2>
+          <h2 className="text-xl font-black italic">📝 覓食</h2>
           <button 
             onClick={async () => {
               const now = new Date();

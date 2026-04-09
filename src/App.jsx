@@ -91,15 +91,12 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       exit={{ opacity: 0, x: 10 }}
       className={`flex items-center justify-between p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-accent/5 transition-colors group ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className="flex-1">
-        <div className="flex items-center gap-2">
-          {!isRecent && <span className="text-[9px] font-mono font-black bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">{log.date}</span>}
-          <div className="font-black text-sm">{log.dish_name}</div>
-        </div>
-        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-[10px] font-bold mt-1.5 font-mono">
-           <span className="text-black bg-accent px-1 rounded flex items-center gap-0.5">🔥{log.calories}</span>
-           <span className="text-white bg-black px-1 rounded flex items-center gap-0.5">🍖{log.protein}g</span>
-           <span className="text-black border-2 border-black px-1 rounded flex items-center gap-0.5">🥛{log.water}ml</span>
+      <div className="flex-1 min-w-0 flex items-center justify-between gap-2 overflow-x-hidden">
+        <div className="font-black text-sm truncate shrink-0 max-w-[40%]">{log.dish_name}</div>
+        <div className="flex items-center gap-x-2 text-[10px] font-bold font-mono">
+           <span className="text-black bg-accent px-1 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
+           <span className="text-white bg-black px-1 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}g</span>
+           <span className="text-black border-2 border-black px-1 rounded flex items-center gap-0.5 whitespace-nowrap">🥛{log.water}ml</span>
         </div>
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -233,7 +230,7 @@ function App() {
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
       <header className="flex justify-between items-center py-4">
-        <h1 className="text-3xl font-black italic tracking-tighter">DAILY DIET</h1>
+        <h1 className="text-xl font-black italic tracking-tighter">DAILY DIET</h1>
         <div className="flex gap-2">
           <div className="bg-white border-4 border-black px-3 py-1.5 rounded-2xl font-black shadow-neo-sm flex items-center text-sm">
             {new Date().toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}

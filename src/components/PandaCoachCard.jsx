@@ -226,7 +226,8 @@ const PandaCoachCard = ({ advice }) => {
   }, []);
 
   // ── CLICK ────────────────────────────────────
-  const handleClick = useCallback(async () => {
+  const handleClick = useCallback(async (e) => {
+    e.stopPropagation();
     if (isDragging) return;
     setExpression('scared');
     setIsSquished(true);
@@ -315,8 +316,13 @@ const PandaCoachCard = ({ advice }) => {
     resetExpression(2000);
   }, [controls, showBubble, addParticle, resetExpression]);
 
-  // ── IDLE chatter ─────────────────────────────
+  // ── IDLE chatter & Click-away ──────────────────
   useEffect(() => {
+    const handleGlobalClick = () => {
+      if (bubbleVisible) setBubbleVisible(false);
+    };
+    document.addEventListener('click', handleGlobalClick);
+
     const interval = setInterval(() => {
       if (!bubbleVisible && !isDragging) {
         if (Math.random() < 0.4) {
@@ -324,7 +330,10 @@ const PandaCoachCard = ({ advice }) => {
         }
       }
     }, 8000);
-    return () => clearInterval(interval);
+    return () => {
+      clearInterval(interval);
+      document.removeEventListener('click', handleGlobalClick);
+    };
   }, [bubbleVisible, isDragging, advice, showBubble]);
 
   return (
