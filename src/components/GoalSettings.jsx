@@ -6,7 +6,7 @@ import { Settings, Sparkles, X, Info } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const GoalSettings = ({ onGoalsUpdated }) => {
-  const [goals, setGoals] = useState({ calories: 2000, protein: 100 });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showTip, setShowTip] = useState(false);
@@ -18,14 +18,20 @@ const GoalSettings = ({ onGoalsUpdated }) => {
   const fetchGoals = async () => {
     const cal = await db.settings.get('calorie_goal');
     const pro = await db.settings.get('protein_goal');
+    const wat = await db.settings.get('water_goal');
     if (cal && pro) {
-      setGoals({ calories: cal.value, protein: pro.value });
+      setGoals({ 
+        calories: cal.value, 
+        protein: pro.value,
+        water: wat ? wat.value : 2500 
+      });
     }
   };
 
   const saveGoals = async () => {
     await db.settings.put({ key: 'calorie_goal', value: Number(goals.calories) });
     await db.settings.put({ key: 'protein_goal', value: Number(goals.protein) });
+    await db.settings.put({ key: 'water_goal', value: Number(goals.water) });
     setIsOpen(false);
     onGoalsUpdated();
   };
@@ -82,6 +88,12 @@ const GoalSettings = ({ onGoalsUpdated }) => {
                        <p className="leading-normal">基礎：體重(kg) × 1.2 g</p>
                        <p className="leading-normal">增肌/高運動：體重(kg) × 1.6~2.2 g</p>
                      </div>
+
+                     <div className="p-2 bg-white/60 rounded-lg">
+                       <p className="text-zinc-500 text-[9px] uppercase mb-0.5">💧 飲水建議</p>
+                       <p className="leading-normal">公式：體重(kg) × 30~40 ml</p>
+                       <p className="text-[9px] text-amber-700/70 italic mt-0.5">* 運動流汗或天氣熱需再加計 500ml</p>
+                     </div>
                    </div>
 
                    <p className="text-[9px] text-zinc-400 font-medium pt-1 text-center border-t border-amber-200/30">
@@ -108,6 +120,15 @@ const GoalSettings = ({ onGoalsUpdated }) => {
                 type="number"
                 value={goals.protein}
                 onChange={(e) => setGoals({ ...goals, protein: e.target.value })}
+                className="w-full border-4 border-black p-2 rounded-xl font-mono focus:outline-none"
+              />
+            </div>
+            <div>
+              <label className="text-xs font-bold block mb-1">每日飲水 (ml)</label>
+              <input 
+                type="number"
+                value={goals.water}
+                onChange={(e) => setGoals({ ...goals, water: e.target.value })}
                 className="w-full border-4 border-black p-2 rounded-xl font-mono focus:outline-none"
               />
             </div>

@@ -38,24 +38,33 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
         </div>
         <div className="flex gap-3">
           <div className="flex-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">熱量 (kcal)</label>
-            <input 
-              type="number" 
-              value={editValues.calories}
-              onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
-              className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
-            />
-          </div>
-          <div className="flex-1">
-            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">蛋白質 (g)</label>
-            <input 
-              type="number" 
-              value={editValues.protein}
-              onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
-              className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
-            />
-          </div>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">熱量 (kcal)</label>
+          <input 
+            type="number" 
+            value={editValues.calories}
+            onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
+            className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+          />
         </div>
+        <div className="flex-1">
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">蛋白質 (g)</label>
+          <input 
+            type="number" 
+            value={editValues.protein}
+            onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
+            className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+          />
+        </div>
+        <div className="flex-1">
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">水量 (ml)</label>
+          <input 
+            type="number" 
+            value={editValues.water}
+            onChange={(e) => setEditValues({ ...editValues, water: e.target.value })}
+            className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+          />
+        </div>
+      </div>
         <div className="flex gap-2 pt-1">
           <button 
             onClick={cancelEditing}
@@ -90,6 +99,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
         <div className="text-[11px] font-mono font-bold mt-1 inline-flex gap-2">
            <span className="bg-accent/20 px-1.5 rounded">🔥 {log.calories} kcal</span>
            <span className="bg-gray-100 px-1.5 rounded text-gray-500">🍗 {log.protein}g</span>
+           <span className="bg-blue-50 px-1.5 rounded text-blue-500">💧 {log.water}ml</span>
         </div>
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -113,8 +123,8 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
 };
 
 function App() {
-  const [summary, setSummary] = useState({ calories: 0, protein: 0 });
-  const [goals, setGoals] = useState({ calories: 2000, protein: 100 });
+  const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
   const [recentLogs, setRecentLogs] = useState([]);
   const [historyGroups, setHistoryGroups] = useState([]); // Array of { date, logs, totalCalories, totalProtein }
   const [expandedGroups, setExpandedGroups] = useState({}); // Record of date -> boolean
@@ -123,7 +133,7 @@ function App() {
   
   // Editing state
   const [editingId, setEditingId] = useState(null);
-  const [editValues, setEditValues] = useState({ dish_name: '', calories: '', protein: '' });
+  const [editValues, setEditValues] = useState({ dish_name: '', calories: '', protein: '', water: '' });
 
   const refreshData = async () => {
     const today = getLocalDateString();
@@ -133,9 +143,11 @@ function App() {
     // Fetch goals
     const calGoal = await db.settings.get('calorie_goal');
     const proGoal = await db.settings.get('protein_goal');
+    const watGoal = await db.settings.get('water_goal');
     const currentGoals = {
       calories: calGoal ? calGoal.value : 2000,
-      protein: proGoal ? proGoal.value : 100
+      protein: proGoal ? proGoal.value : 100,
+      water: watGoal ? watGoal.value : 2500
     };
     setGoals(currentGoals);
 
@@ -151,11 +163,12 @@ function App() {
     const groups = historyEntries.reduce((acc, log) => {
       const date = log.date;
       if (!acc[date]) {
-        acc[date] = { date, logs: [], totalCalories: 0, totalProtein: 0 };
+        acc[date] = { date, logs: [], totalCalories: 0, totalProtein: 0, totalWater: 0 };
       }
       acc[date].logs.push(log);
       acc[date].totalCalories += log.calories || 0;
       acc[date].totalProtein += log.protein || 0;
+      acc[date].totalWater += log.water || 0;
       return acc;
     }, {});
 
@@ -163,7 +176,14 @@ function App() {
     const sortedGroups = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
     setHistoryGroups(sortedGroups);
 
-    setAdvice(getPandaAdvice(dailySummary.calories, currentGoals.calories, dailySummary.protein, currentGoals.protein));
+    setAdvice(getPandaAdvice(
+      dailySummary.calories, 
+      currentGoals.calories, 
+      dailySummary.protein, 
+      currentGoals.protein,
+      dailySummary.water,
+      currentGoals.water
+    ));
   };
 
   useEffect(() => {
@@ -182,7 +202,8 @@ function App() {
     setEditValues({
       dish_name: log.dish_name,
       calories: log.calories,
-      protein: log.protein
+      protein: log.protein,
+      water: log.water || 0
     });
   };
 
@@ -194,7 +215,8 @@ function App() {
     await db.dietLogs.update(id, {
       dish_name: editValues.dish_name,
       calories: Number(editValues.calories) || 0,
-      protein: Number(editValues.protein) || 0
+      protein: Number(editValues.protein) || 0,
+      water: Number(editValues.water) || 0
     });
     setEditingId(null);
     refreshData();
@@ -328,6 +350,18 @@ function App() {
                                   />
                                 </div>
                                 {isProteinReached && <span className="text-[8px] bg-blue-500 text-white px-1 rounded font-black uppercase tracking-tighter">Peak</span>}
+                              </div>
+                              {/* Water Stats */}
+                              <div className="flex items-center gap-2">
+                                <div className="text-[9px] font-black italic flex items-center gap-1 uppercase tracking-wider text-gray-500 min-w-[100px]">
+                                  <span>💧 {group.totalWater || 0}/{goals.water}</span>
+                                </div>
+                                <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div 
+                                    className={`h-full transition-all duration-500 ${group.totalWater >= goals.water ? 'bg-cyan-500' : 'bg-zinc-400'}`}
+                                    style={{ width: `${Math.min(((group.totalWater || 0) / goals.water) * 100, 100)}%` }}
+                                  />
+                                </div>
                               </div>
                             </div>
                           </div>

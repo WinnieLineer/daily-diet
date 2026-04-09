@@ -51,6 +51,7 @@ export async function analyzeFoodImage(base64Image) {
   "dish_name": string,       // 食物名稱
   "calories": number,        // 估計總熱量（kcal）
   "protein": number,         // 估計總蛋白質（g）
+  "water": number,           // 估計水分攝取（ml，例如飲料、湯品或含水量高的食物）
   "description": string,     // 一句簡短的食物描述
   "fun_fact": string,        // 一句有趣又實用的食物健康/營養小知識（認真的，50字以內）
   "roast": string            // 一句幽默又賤的吐槽，像嘴賤朋友在旁邊碎念（要好笑，50字以內）
@@ -91,7 +92,12 @@ export async function suggestGoals(weight) {
       model: GOAL_PI_MODEL,
       generationConfig: { temperature: 0 }
     });
-    const prompt = `My current weight is ${weight} kg. Based on this, suggest a daily calorie goal (kcal) and protein goal (g) for a healthy diet. Return strictly a JSON object: { "calories": number, "protein": number }.`;
+    const prompt = `My current weight is ${weight} kg. Based on this, suggest a daily calorie goal (kcal), protein goal (g), and water intake goal (ml) for a healthy diet. 
+    Notes: 
+    - Calorie: approx weight * 30
+    - Protein: approx weight * 1.5
+    - Water: approx weight * 35 (ml)
+    Return strictly a JSON object: { "calories": number, "protein": number, "water": number }.`;
 
     const result = await model.generateContent(prompt);
     const response = await result.response;
@@ -102,7 +108,11 @@ export async function suggestGoals(weight) {
       return JSON.parse(jsonMatch ? jsonMatch[0] : text);
     } catch (e) {
       console.error("Failed to parse goals:", text);
-      return { calories: Math.round(weight * 30), protein: Math.round(weight * 1.5) };
+      return { 
+        calories: Math.round(weight * 30), 
+        protein: Math.round(weight * 1.5),
+        water: Math.round(weight * 35)
+      };
     }
   });
 }
@@ -110,9 +120,11 @@ export async function suggestGoals(weight) {
 /**
  * Pure local advice logic - no API calls here.
  */
-export function getPandaAdvice(calories, calorieGoal, protein, proteinGoal) {
+export function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal) {
   const calPercent = (calories / calorieGoal) * 100;
+  const waterPercent = (water / waterGoal) * 100;
   
+  if (waterPercent < 40) return "多喝點水啦！身體都枯竭了 💧";
   if (calPercent === 0) return "別害羞，快吃點東西補補！🐼";
   if (calPercent < 50) return "進度才一半，再吃一點點沒關係的！🐼";
   if (calPercent < 90) return "接近目標了，你是最棒的！🐼";

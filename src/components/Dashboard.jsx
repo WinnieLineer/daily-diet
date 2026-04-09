@@ -13,7 +13,7 @@ const ProgressRing = ({ value, max, label, color = "bg-accent" }) => {
           <circle 
             cx="48" cy="48" r="40" 
             fill="none" 
-            stroke="black" 
+            stroke={color} 
             strokeWidth="8" 
             strokeDasharray="251.2"
             strokeDashoffset={251.2 - (251.2 * percentage) / 100}
@@ -34,20 +34,29 @@ const ProgressRing = ({ value, max, label, color = "bg-accent" }) => {
 const Dashboard = ({ summary, goals }) => {
   const CALORIE_GOAL = goals.calories || 2000;
   const PROTEIN_GOAL = goals.protein || 100;
+  const WATER_GOAL   = goals.water   || 2500;
 
   return (
     <NeoCard className="bg-white">
       <h2 className="text-xl font-bold italic mb-6">📅 今日摘要</h2>
-      <div className="flex justify-around items-center">
+      <div className="flex flex-wrap justify-around items-center gap-6">
         <ProgressRing 
           value={summary.calories} 
           max={CALORIE_GOAL} 
-          label="卡路里 (kcal)" 
+          label="卡路里" 
+          color="black"
         />
         <ProgressRing 
           value={summary.protein} 
           max={PROTEIN_GOAL} 
-          label="蛋白質 (g)" 
+          label="蛋白質" 
+          color="#3b82f6"
+        />
+        <ProgressRing 
+          value={summary.water} 
+          max={WATER_GOAL} 
+          label="飲水量" 
+          color="#06b6d4"
         />
       </div>
     </NeoCard>

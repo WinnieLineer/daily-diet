@@ -17,7 +17,7 @@ const FoodDetective = ({ onLogAdded }) => {
   const [showActionSheet, setShowActionSheet] = useState(false);
 
   // Manual input state
-  const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '' });
+  const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '', water: '' });
 
   // Auto-close menu when preview starts
   useEffect(() => {
@@ -58,6 +58,7 @@ const FoodDetective = ({ onLogAdded }) => {
         dish_name: manualEntry.dish_name,
         calories: Number(manualEntry.calories) || 0,
         protein: Number(manualEntry.protein) || 0,
+        water: Number(manualEntry.water) || 0,
         description: "手動紀錄"
       };
     }
@@ -74,7 +75,7 @@ const FoodDetective = ({ onLogAdded }) => {
     
     setPreview(null);
     setResult(null);
-    setManualEntry({ dish_name: '', calories: '', protein: '' });
+    setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
     onLogAdded();
   };
 
@@ -104,6 +105,26 @@ const FoodDetective = ({ onLogAdded }) => {
             </button>
           ))}
         </div>
+        <NeoButton 
+          variant="white" 
+          size="sm" 
+          onClick={async () => {
+            const now = new Date();
+            const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+            await db.dietLogs.add({
+              dish_name: "純水 💧",
+              calories: 0,
+              protein: 0,
+              water: 250,
+              date: localDate,
+              timestamp: Date.now()
+            });
+            onLogAdded();
+          }}
+          className="h-8 px-2 text-[10px] sm:text-xs gap-1 border-blue-200 text-blue-600 hover:bg-blue-50"
+        >
+          💧 +250ml
+        </NeoButton>
       </div>
 
       {mode === 'ai' && !preview && (
@@ -235,6 +256,9 @@ const FoodDetective = ({ onLogAdded }) => {
                 <span className="flex items-center gap-1.5 bg-white text-black px-3 py-1.5 rounded-2xl font-bold">
                   🍗 {result.protein}g 蛋白質
                 </span>
+                <span className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-2xl font-bold">
+                  💧 {result.water}ml 水分
+                </span>
               </div>
               
               <div className="border-t-2 border-white/20 pt-3 flex gap-2">
@@ -299,6 +323,10 @@ const FoodDetective = ({ onLogAdded }) => {
             <div className="flex-1">
               <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">蛋白質 (g)</label>
               <input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({...manualEntry, protein: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
+            </div>
+            <div className="flex-1">
+              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">水分 (ml)</label>
+              <input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({...manualEntry, water: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
             </div>
           </div>
           <NeoButton className="w-full mt-1" variant="black" disabled={!manualEntry.dish_name} onClick={saveLog}>
