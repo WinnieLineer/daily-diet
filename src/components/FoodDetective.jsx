@@ -19,8 +19,14 @@ const FoodDetective = ({ onLogAdded }) => {
   // Manual input state
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '' });
 
+  // Auto-close menu when preview starts
+  useEffect(() => {
+    if (preview) setShowActionSheet(false);
+  }, [preview]);
+
 
   const handleImageUpload = async (e) => {
+    setShowActionSheet(false);
     const file = e.target.files[0];
     if (!file) return;
 
@@ -162,7 +168,7 @@ const FoodDetective = ({ onLogAdded }) => {
 
               <div className="grid gap-3">
                 <button 
-                  onClick={() => { setShowActionSheet(false); setTimeout(() => cameraInputRef.current?.click(), 100); }}
+                  onClick={() => { setShowActionSheet(false); setTimeout(() => cameraInputRef.current?.click(), 150); }}
                   className="w-full group flex items-center gap-4 p-4 bg-black text-white rounded-3xl border-4 border-black hover:bg-zinc-800 transition-all active:scale-95"
                 >
                   <div className="bg-accent text-black p-3 rounded-2xl group-hover:scale-110 transition-transform">
@@ -175,7 +181,7 @@ const FoodDetective = ({ onLogAdded }) => {
                 </button>
 
                 <button 
-                  onClick={() => { setShowActionSheet(false); setTimeout(() => galleryInputRef.current?.click(), 100); }}
+                  onClick={() => { setShowActionSheet(false); setTimeout(() => galleryInputRef.current?.click(), 150); }}
                   className="w-full group flex items-center gap-4 p-4 bg-white text-black rounded-3xl border-4 border-black hover:bg-gray-50 transition-all active:scale-95"
                 >
                   <div className="bg-gray-100 text-black p-3 rounded-2xl group-hover:scale-110 transition-transform border-2 border-black/5">
