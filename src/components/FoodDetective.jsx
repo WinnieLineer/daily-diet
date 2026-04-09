@@ -83,17 +83,17 @@ const FoodDetective = ({ onLogAdded }) => {
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-base sm:text-xl font-black italic tracking-tight truncate">🍽️ 偵探</h2>
+          <h2 className="text-xl font-black italic">📝 飲食紀錄</h2>
           <button 
             onClick={async () => {
               const now = new Date();
               const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-              await db.dietLogs.add({ dish_name: "純水 💧", calories: 0, protein: 0, water: 250, date: localDate, timestamp: Date.now() });
+              await db.dietLogs.add({ dish_name: "純水 🥛", calories: 0, protein: 0, water: 250, date: localDate, timestamp: Date.now() });
               onLogAdded();
             }}
-            className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-xl border-2 border-blue-200 active:scale-95 transition-all whitespace-nowrap"
+            className="text-[10px] font-black bg-white text-black px-2 py-1 rounded-xl border-2 border-black active:scale-95 transition-all whitespace-nowrap shadow-neo-sm hover:bg-zinc-50"
           >
-            💧 +250ml
+            🥛 +250ml
           </button>
         </div>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0">
@@ -251,8 +251,8 @@ const FoodDetective = ({ onLogAdded }) => {
                   <span className="mb-0.5 text-base">🍖</span>
                   <span>{result.protein}g 蛋白質</span>
                 </div>
-                <div className="flex flex-col items-center justify-center bg-blue-500 text-white p-2 rounded-2xl font-bold border-2 border-black/10">
-                  <span className="mb-0.5 text-base">💧</span>
+                <div className="flex flex-col items-center justify-center bg-black text-white p-2 rounded-2xl font-bold border-2 border-black/10">
+                  <span className="mb-0.5 text-base">🥛</span>
                   <span>{result.water}ml 水分</span>
                 </div>
               </div>

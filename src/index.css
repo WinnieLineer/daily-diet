@@ -23,7 +23,7 @@
 
 @layer components {
   .neo-card {
-    @apply border-4 border-black bg-white rounded-[2rem] shadow-neo transition-all duration-200 overflow-hidden;
+    @apply border-4 border-black bg-white rounded-[2rem] shadow-neo transition-all duration-200;
   }
 
   .neo-button {

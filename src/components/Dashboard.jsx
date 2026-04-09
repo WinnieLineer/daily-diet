@@ -48,20 +48,20 @@ const Dashboard = ({ summary, goals }) => {
         <ProgressRing 
           value={summary.calories} 
           max={CALORIE_GOAL} 
-          label="卡路里" 
-          color="black"
+          label="🔥熱量" 
+          color="#FDE047"
         />
         <ProgressRing 
           value={summary.protein} 
           max={PROTEIN_GOAL} 
-          label="蛋白質" 
-          color="#3b82f6"
+          label="🍖蛋白質" 
+          color="black"
         />
         <ProgressRing 
           value={summary.water} 
           max={WATER_GOAL} 
-          label="飲水量" 
-          color="#06b6d4"
+          label="🥛飲水" 
+          color="#FDE047"
         />
       </div>
     </NeoCard>

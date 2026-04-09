@@ -86,82 +86,55 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
   return (
     <svg
       viewBox="0 0 100 100"
-      className="w-full h-full drop-shadow-[0_12px_24px_rgba(0,0,0,0.5)]"
+      className="w-full h-full"
       style={{ transform: `scaleY(${scaleY})`, transition: 'transform 0.4s cubic-bezier(0.23, 1, 0.32, 1)' }}
     >
       <defs>
-        <radialGradient id="faceBodyGrad" cx="50%" cy="35%" r="65%">
-          <stop offset="0%" stopColor="#ffffff" />
-          <stop offset="60%" stopColor="#f3f4f6" />
-          <stop offset="100%" stopColor="#d1d5db" />
-        </radialGradient>
         <linearGradient id="earGrad" x1="0%" y1="0%" x2="100%" y2="100%">
           <stop offset="0%" stopColor="#27272a" />
           <stop offset="100%" stopColor="#09090b" />
         </linearGradient>
-        <linearGradient id="goldHighlight" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#c5a059" />
-          <stop offset="50%" stopColor="#f3e1b7" />
-          <stop offset="100%" stopColor="#c5a059" />
-        </linearGradient>
-        <filter id="premiumGlow" x="-20%" y="-20%" width="140%" height="140%">
-          <feGaussianBlur stdDeviation="1.5" result="blur" />
-          <feComposite in="SourceGraphic" in2="blur" operator="over" />
-        </filter>
-        <filter id="noise">
-          <feTurbulence type="fractalNoise" baseFrequency="0.8" numOctaves="4" stitchTiles="stitch" />
-          <feColorMatrix type="saturate" values="0" />
-          <feComponentTransfer>
-            <feFuncA type="linear" slope="0.05" />
-          </feComponentTransfer>
-        </filter>
       </defs>
 
       {/* Ears */}
-      <circle cx="22" cy="25" r="14" fill="url(#earGrad)" />
-      <circle cx="78" cy="25" r="14" fill="url(#earGrad)" />
-      <circle cx="22" cy="25" r="14" fill="url(#noise)" opacity="0.3" />
-      <circle cx="78" cy="25" r="14" fill="url(#noise)" opacity="0.3" />
+      <circle cx="22" cy="25" r="14" fill="url(#earGrad)" stroke="black" strokeWidth="2" />
+      <circle cx="78" cy="25" r="14" fill="url(#earGrad)" stroke="black" strokeWidth="2" />
 
       {/* Face Body */}
-      <ellipse cx="50" cy="55" rx="42" ry="40" fill="url(#faceBodyGrad)" filter="url(#premiumGlow)" />
-      <ellipse cx="50" cy="55" rx="42" ry="40" fill="none" stroke="url(#goldHighlight)" strokeWidth="0.5" opacity="0.3" />
+      <ellipse cx="50" cy="55" rx="42" ry="40" fill="white" stroke="black" strokeWidth="3" />
 
       {/* Eyes & Patches */}
-      <g opacity="0.95">
-        <ellipse cx="65" cy="48" rx="14" ry="12" fill="#09090b" />
-        <ellipse cx="35" cy="48" rx="14" ry="12" fill="#09090b" />
+      <g>
+        <ellipse cx="65" cy="48" rx="14" ry="12" fill="#09090b" stroke="black" strokeWidth="1" />
+        <ellipse cx="35" cy="48" rx="14" ry="12" fill="#09090b" stroke="black" strokeWidth="1" />
         
-        <g fill="white" opacity="0.9">
+        <g fill="white">
           {expression === 'happy' ? (
             <>
-              <path d="M 28 48 Q 35 40 42 48" fill="none" stroke="url(#goldHighlight)" strokeWidth="2.5" strokeLinecap="round" />
-              <path d="M 58 48 Q 65 40 72 48" fill="none" stroke="url(#goldHighlight)" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M 28 48 Q 35 40 42 48" fill="none" stroke="#FDE047" strokeWidth="3" strokeLinecap="round" />
+              <path d="M 58 48 Q 65 40 72 48" fill="none" stroke="#FDE047" strokeWidth="3" strokeLinecap="round" />
             </>
           ) : expression === 'dizzy' ? (
             <>
-              <path d="M 32 45 L 38 51 M 38 45 L 32 51" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
-              <path d="M 62 45 L 68 51 M 68 45 L 62 51" fill="none" stroke="#fff" strokeWidth="2" strokeLinecap="round" />
+              <path d="M 32 45 L 38 51 M 38 45 L 32 51" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
+              <path d="M 62 45 L 68 51 M 68 45 L 62 51" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
             </>
           ) : (
             <>
-              <circle cx="35" cy="48" r="4.5" fill="#18181b" />
-              <circle cx="65" cy="48" r="4.5" fill="#18181b" />
-              <circle cx="34" cy="47" r="1.5" fill="white" opacity="0.4" />
-              <circle cx="64" cy="47" r="1.5" fill="white" opacity="0.4" />
+              <circle cx="35" cy="48" r="4" fill="#000" />
+              <circle cx="65" cy="48" r="4" fill="#000" />
+              <circle cx="33" cy="46" r="1.5" fill="white" />
+              <circle cx="63" cy="46" r="1.5" fill="white" />
             </>
           )}
         </g>
       </g>
 
       {/* Nose */}
-      <path d="M 47 62 Q 50 65 53 62" fill="none" stroke="#000" strokeWidth="2" strokeLinecap="round" />
+      <path d="M 47 62 Q 50 65 53 62" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" />
 
       {/* Mouth */}
-      <path d="M 42 70 Q 50 74 58 70" fill="none" stroke="#000" strokeWidth="1" strokeLinecap="round" opacity="0.5" />
-
-      {/* Subliminal artistic marks */}
-      <circle cx="50" cy="55" r="41" fill="none" stroke="#fbbf24" strokeWidth="0.5" opacity="0.2" />
+      <path d="M 42 70 Q 50 74 58 70" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
     </svg>
   );
 };
@@ -175,13 +148,13 @@ const SpeechBubble = ({ text, visible }) => (
         initial={{ opacity: 0, scale: 0.85, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.85 }}
-        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center pointer-events-none w-[200px] sm:w-[280px]"
+        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center pointer-events-none w-[200px] sm:w-[280px]"
       >
-        <div className="bg-black text-white border-2 border-black rounded-2xl px-4 py-2 text-xs font-bold shadow-neo-sm text-center leading-relaxed tracking-tight">
+        <div className="bg-black text-white border-4 border-black rounded-2xl px-5 py-3 text-sm font-black shadow-neo-sm text-center leading-relaxed tracking-tight italic">
           {text}
         </div>
         <div 
-          className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black"
+          className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-black"
         />
       </motion.div>
 
