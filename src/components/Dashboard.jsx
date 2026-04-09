@@ -7,26 +7,31 @@ const ProgressRing = ({ value, max, label, color = "bg-accent" }) => {
   
   return (
     <div className="flex flex-col items-center">
-      <div className="w-24 h-24 relative flex items-center justify-center">
-        <div className="absolute inset-0 rounded-full border-8 border-muted"></div>
+      <div className="w-20 h-20 sm:w-24 sm:h-24 relative flex items-center justify-center">
+        <div className="absolute inset-0 rounded-full border-4 sm:border-8 border-gray-100"></div>
         <svg className="w-full h-full -rotate-90">
           <circle 
-            cx="48" cy="48" r="40" 
+            cx="50%" cy="50%" r="35%"
             fill="none" 
             stroke={color} 
             strokeWidth="8" 
             strokeDasharray="251.2"
-            strokeDashoffset={251.2 - (251.2 * percentage) / 100}
+            style={{ 
+              strokeDasharray: '251.2',
+              strokeDashoffset: 251.2 - (251.2 * percentage) / 100,
+              strokeWidth: '8px',
+              r: '40%'
+            }}
             strokeLinecap="round"
             className="transition-all duration-1000 ease-out"
           />
         </svg>
         <div className="absolute flex flex-col items-center">
-          <span className="text-xl font-bold">{Math.round(percentage)}%</span>
+          <span className="text-sm sm:text-lg font-black">{Math.round(percentage)}%</span>
         </div>
       </div>
-      <span className="mt-2 font-bold text-sm">{label}</span>
-      <span className="text-xs opacity-60 font-mono">{value} / {max}</span>
+      <span className="mt-2 font-black text-[10px] sm:text-xs uppercase tracking-tight text-gray-500">{label}</span>
+      <span className="text-[9px] sm:text-[10px] opacity-40 font-mono font-bold mt-0.5">{value}/{max}</span>
     </div>
   );
 };
@@ -39,7 +44,7 @@ const Dashboard = ({ summary, goals }) => {
   return (
     <NeoCard className="bg-white">
       <h2 className="text-xl font-bold italic mb-6">📅 今日摘要</h2>
-      <div className="flex flex-wrap justify-around items-center gap-6">
+      <div className="grid grid-cols-3 items-center w-full">
         <ProgressRing 
           value={summary.calories} 
           max={CALORIE_GOAL} 

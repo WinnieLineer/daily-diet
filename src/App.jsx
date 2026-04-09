@@ -96,10 +96,10 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
           {!isRecent && <span className="text-[9px] font-mono font-black bg-gray-100 px-1.5 py-0.5 rounded border border-gray-300">{log.date}</span>}
           <div className="font-black text-sm">{log.dish_name}</div>
         </div>
-        <div className="text-[11px] font-mono font-bold mt-1 inline-flex gap-2">
-           <span className="bg-accent/20 px-1.5 rounded">🔥 {log.calories} kcal</span>
-           <span className="bg-gray-100 px-1.5 rounded text-gray-500">🍗 {log.protein}g</span>
-           <span className="bg-blue-50 px-1.5 rounded text-blue-500">💧 {log.water}ml</span>
+        <div className="flex items-center gap-x-3 gap-y-1 flex-wrap text-[10px] font-bold mt-1.5 font-mono">
+           <span className="text-amber-600 flex items-center gap-0.5">🔥{log.calories}</span>
+           <span className="text-blue-600 flex items-center gap-0.5">🍖{log.protein}g</span>
+           <span className="text-cyan-600 flex items-center gap-0.5">💧{log.water}ml</span>
         </div>
       </div>
       <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -231,7 +231,7 @@ function App() {
 
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6] p-4 pb-24 max-w-lg mx-auto space-y-6">
+    <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
       <header className="flex justify-between items-center py-4">
         <h1 className="text-3xl font-black italic tracking-tighter">DAILY DIET</h1>
         <div className="flex gap-2">
@@ -325,42 +325,22 @@ function App() {
                           <div className="flex items-center gap-3">
                             <span className="text-xs font-black bg-gray-100 px-2 py-0.5 rounded-lg border-2 border-black/5">{group.date}</span>
                             <div className="flex flex-col gap-1 translate-y-0.5">
-                              {/* Calorie Stats */}
-                              <div className="flex items-center gap-2">
-                                <div className="text-[9px] font-black italic flex items-center gap-1 uppercase tracking-wider text-gray-500 min-w-[100px]">
-                                  <span>🔥 {group.totalCalories}/{goals.calories}</span>
-                                </div>
-                                <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full transition-all duration-500 ${isCalorieReached ? 'bg-amber-500' : 'bg-zinc-400'}`}
-                                    style={{ width: `${calorieAchievement}%` }}
-                                  />
-                                </div>
-                                {isCalorieReached && <span className="text-[8px] bg-amber-500 text-white px-1 rounded font-black uppercase tracking-tighter">Done</span>}
+                              {/* Metrics Row */}
+                              <div className="flex items-center gap-3 mt-1 text-[9px] font-black italic uppercase tracking-wider text-gray-400">
+                                <span>🔥 {group.totalCalories}/{goals.calories}</span>
+                                <span>🍖 {group.totalProtein}/{goals.protein}</span>
+                                <span>💧 {group.totalWater || 0}/{goals.water}</span>
                               </div>
-                              {/* Protein Stats */}
-                              <div className="flex items-center gap-2">
-                                <div className="text-[9px] font-black italic flex items-center gap-1 uppercase tracking-wider text-gray-500 min-w-[100px]">
-                                  <span>🍗 {group.totalProtein}/{goals.protein}</span>
+                              {/* Progress Bars */}
+                              <div className="flex gap-1 w-24 mt-0.5">
+                                <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className={`h-full transition-all ${isCalorieReached ? 'bg-amber-500' : 'bg-zinc-300'}`} style={{ width: `${calorieAchievement}%` }} />
                                 </div>
-                                <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full transition-all duration-500 ${isProteinReached ? 'bg-blue-500' : 'bg-zinc-400'}`}
-                                    style={{ width: `${proteinAchievement}%` }}
-                                  />
+                                <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className={`h-full transition-all ${isProteinReached ? 'bg-blue-500' : 'bg-zinc-300'}`} style={{ width: `${proteinAchievement}%` }} />
                                 </div>
-                                {isProteinReached && <span className="text-[8px] bg-blue-500 text-white px-1 rounded font-black uppercase tracking-tighter">Peak</span>}
-                              </div>
-                              {/* Water Stats */}
-                              <div className="flex items-center gap-2">
-                                <div className="text-[9px] font-black italic flex items-center gap-1 uppercase tracking-wider text-gray-500 min-w-[100px]">
-                                  <span>💧 {group.totalWater || 0}/{goals.water}</span>
-                                </div>
-                                <div className="w-16 h-1 bg-gray-100 rounded-full overflow-hidden">
-                                  <div 
-                                    className={`h-full transition-all duration-500 ${group.totalWater >= goals.water ? 'bg-cyan-500' : 'bg-zinc-400'}`}
-                                    style={{ width: `${Math.min(((group.totalWater || 0) / goals.water) * 100, 100)}%` }}
-                                  />
+                                <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                  <div className={`h-full transition-all ${group.totalWater >= goals.water ? 'bg-cyan-500' : 'bg-zinc-300'}`} style={{ width: `${Math.min(((group.totalWater || 0) / goals.water) * 100, 100)}%` }} />
                                 </div>
                               </div>
                             </div>

@@ -172,23 +172,19 @@ const SpeechBubble = ({ text, visible }) => (
     {visible && text && (
       <motion.div
         key={text}
-        initial={{ opacity: 0, y: 8, scale: 0.85 }}
-        animate={{ opacity: 1, y: 0, scale: 1 }}
-        exit={{ opacity: 0, y: -8, scale: 0.85 }}
-        transition={{ type: 'spring', stiffness: 400, damping: 25 }}
-        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center pointer-events-none w-max max-w-[280px]"
+        initial={{ opacity: 0, scale: 0.85, y: 10 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.85 }}
+        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center pointer-events-none w-[200px] sm:w-[280px]"
       >
-        <div className="bg-white/95 backdrop-blur-3xl border border-white/40 rounded-[20px] px-5 py-2.5 text-[13px] font-bold shadow-[0_20px_50px_-12px_rgba(0,0,0,0.5)] text-zinc-900 text-center leading-relaxed tracking-wider font-sans text-wrap">
+        <div className="bg-black text-white border-2 border-black rounded-2xl px-4 py-2 text-xs font-bold shadow-neo-sm text-center leading-relaxed tracking-tight">
           {text}
         </div>
-        {/* Tail */}
-        <div style={{
-          width: 0, height: 0,
-          borderLeft: '8px solid transparent',
-          borderRight: '8px solid transparent',
-          borderTop: '8px solid rgba(255,255,255,0.95)',
-        }} />
+        <div 
+          className="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[6px] border-t-black"
+        />
       </motion.div>
+
     )}
   </AnimatePresence>
 );
@@ -365,67 +361,54 @@ const PandaCoachCard = ({ advice }) => {
       animate={{ opacity: 1, y: 0 }}
       className="relative z-10"
     >
-      {/* Outer Card with visible overflow for bubble */}
-      <div className="relative bg-[#09090b] border-[1px] border-white/5 rounded-[2rem] sm:rounded-[2.5rem] shadow-[0_15px_35px_-10px_rgba(0,0,0,0.8)]">
-        
-        {/* Inner texture layer */}
-        <div className="absolute inset-0 rounded-[2rem] sm:rounded-[2.5rem] overflow-hidden pointer-events-none">
-          <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/dark-matter.png')] opacity-10" />
-          <div className="absolute inset-0 bg-gradient-to-br from-zinc-800/20 via-transparent to-black" />
+      <NeoCard className="bg-white p-4 sm:p-5">
+        <div className="flex items-center gap-4 sm:gap-6 relative z-10">
+          {/* Interactive Panda */}
+          <div className="relative flex-shrink-0 z-50 group/panda w-16 h-16 sm:w-20 sm:h-20">
+            <SpeechBubble text={bubble} visible={bubbleVisible} />
+
+            {/* Particles */}
+            {particles.map(({ id, emoji }) => (
+              <FloatingEmoji
+                key={id}
+                id={id}
+                emoji={emoji}
+                onDone={() => removeParticle(id)}
+              />
+            ))}
+
+            <motion.div
+              drag
+              dragMomentum={false}
+              dragElastic={0.3}
+              onDragStart={handleDragStart}
+              onDragEnd={handleDragEnd}
+              animate={controls}
+              onClick={handleClick}
+              onHoverStart={handleTickleStart}
+              onHoverEnd={handleTickleEnd}
+              onContextMenu={handlePoke}
+              whileTap={{ scale: 0.92 }}
+              className="w-full h-full"
+              style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
+            >
+              <PandaFace expression={expression} isSquished={isSquished} />
+            </motion.div>
+          </div>
+
+          {/* Text content */}
+          <div className="flex-1 min-w-0 space-y-1 relative z-10">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="text-[10px] font-black uppercase tracking-wider text-gray-400 bg-gray-100 px-1.5 py-0.5 rounded border border-gray-200">
+                Panda Coach
+              </span>
+            </div>
+            <p className="text-base sm:text-lg font-bold text-black leading-tight italic text-balance">
+              {advice || '每一刻的節制，都是對生活的極致追求。'}
+            </p>
+          </div>
         </div>
-
-        <div className="p-4 sm:p-6 relative z-10">
-
-      <div className="flex items-center gap-4 sm:gap-6 relative z-10">
-
-        {/* Interactive Panda */}
-        <div className="relative flex-shrink-0 z-50 group/panda w-16 h-16 sm:w-20 sm:h-20">
-          <SpeechBubble text={bubble} visible={bubbleVisible} />
-
-          {/* Particles */}
-          {particles.map(({ id, emoji }) => (
-            <FloatingEmoji
-              key={id}
-              id={id}
-              emoji={emoji}
-              onDone={() => removeParticle(id)}
-            />
-          ))}
-
-          <motion.div
-            drag
-            dragMomentum={false}
-            dragElastic={0.3}
-            onDragStart={handleDragStart}
-            onDragEnd={handleDragEnd}
-            animate={controls}
-            onClick={handleClick}
-            onHoverStart={handleTickleStart}
-            onHoverEnd={handleTickleEnd}
-            onContextMenu={handlePoke}
-            whileTap={{ scale: 0.92 }}
-            className="w-full h-full"
-            style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none' }}
-          >
-            <PandaFace expression={expression} isSquished={isSquished} />
-          </motion.div>
-
-        </div>
-
-        {/* Text content - Luxury Boutique Style */}
-        <div className="flex-1 min-w-0 space-y-1 relative z-10">
-          <h3 className="text-[8px] sm:text-[9px] font-light tracking-[0.4em] sm:tracking-[0.5em] text-amber-500/60 uppercase">
-            Panda Coach
-          </h3>
-          <p className="text-lg sm:text-xl font-medium text-zinc-100 leading-tight tracking-wide italic">
-            {advice || '每一刻的節制，都是對生活的極致追求。'}
-          </p>
-          <div className="h-[1px] w-10 sm:w-12 bg-gradient-to-r from-amber-500/40 to-transparent mt-2 sm:mt-3" />
-        </div>
-      </div>
-
-        </div>
-      </div>
+      </NeoCard>
     </motion.div>
   );
 };

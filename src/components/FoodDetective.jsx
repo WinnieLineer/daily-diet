@@ -81,19 +81,32 @@ const FoodDetective = ({ onLogAdded }) => {
 
   return (
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm">
-      <div className="flex items-center justify-between mb-2 flex-wrap gap-2">
-        <h2 className="text-xl font-black italic tracking-tight">🍽️ 飲食偵探</h2>
-        <div className="flex gap-1.5 bg-gray-100 p-1 rounded-2xl border-2 border-black overflow-x-auto w-full sm:w-auto overflow-y-hidden">
+      <div className="flex items-center justify-between gap-2 mb-2">
+        <div className="flex items-center gap-2 min-w-0">
+          <h2 className="text-base sm:text-xl font-black italic tracking-tight truncate">🍽️ 偵探</h2>
+          <button 
+            onClick={async () => {
+              const now = new Date();
+              const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+              await db.dietLogs.add({ dish_name: "純水 💧", calories: 0, protein: 0, water: 250, date: localDate, timestamp: Date.now() });
+              onLogAdded();
+            }}
+            className="text-[10px] font-black bg-blue-50 text-blue-600 px-2 py-1 rounded-xl border-2 border-blue-200 active:scale-95 transition-all whitespace-nowrap"
+          >
+            💧 +250ml
+          </button>
+        </div>
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0">
           {[
-            { id: 'ai',      label: '📸 AI 鏡頭' },
+            { id: 'ai',      label: '📸 AI' },
             { id: 'manual',  label: '✍️ 手動' },
           ].map(tab => (
             <button
               key={tab.id}
               className={twMerge(
-                "px-3 py-1.5 text-xs font-bold rounded-xl transition-all whitespace-nowrap border-2 border-transparent",
+                "px-2 py-1 text-[10px] sm:text-xs font-bold rounded-xl transition-all whitespace-nowrap border-2 border-transparent",
                 mode === tab.id
-                  ? "bg-black text-white border-black shadow-sm scale-[1.02]"
+                  ? "bg-black text-white border-black"
                   : "hover:bg-white text-gray-600"
               )}
               onClick={() => {
@@ -105,26 +118,6 @@ const FoodDetective = ({ onLogAdded }) => {
             </button>
           ))}
         </div>
-        <NeoButton 
-          variant="white" 
-          size="sm" 
-          onClick={async () => {
-            const now = new Date();
-            const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-            await db.dietLogs.add({
-              dish_name: "純水 💧",
-              calories: 0,
-              protein: 0,
-              water: 250,
-              date: localDate,
-              timestamp: Date.now()
-            });
-            onLogAdded();
-          }}
-          className="h-8 px-2 text-[10px] sm:text-xs gap-1 border-blue-200 text-blue-600 hover:bg-blue-50"
-        >
-          💧 +250ml
-        </NeoButton>
       </div>
 
       {mode === 'ai' && !preview && (
@@ -249,16 +242,19 @@ const FoodDetective = ({ onLogAdded }) => {
           >
             <div className="p-4 bg-black text-white rounded-3xl border-4 border-black shadow-neo-sm">
               <h3 className="font-black text-lg leading-tight mb-3">{result.dish_name}</h3>
-              <div className="flex flex-wrap gap-2 font-mono text-sm mb-4">
-                <span className="flex items-center gap-1.5 bg-accent text-black px-3 py-1.5 rounded-2xl font-bold">
-                  <Flame size={14} /> {result.calories} kcal
-                </span>
-                <span className="flex items-center gap-1.5 bg-white text-black px-3 py-1.5 rounded-2xl font-bold">
-                  🍗 {result.protein}g 蛋白質
-                </span>
-                <span className="flex items-center gap-1.5 bg-blue-500 text-white px-3 py-1.5 rounded-2xl font-bold">
-                  💧 {result.water}ml 水分
-                </span>
+              <div className="grid grid-cols-3 gap-2 font-mono text-[10px] sm:text-xs mb-4">
+                <div className="flex flex-col items-center justify-center bg-accent text-black p-2 rounded-2xl font-bold border-2 border-black/10">
+                  <Flame size={14} className="mb-0.5" />
+                  <span>{result.calories} kcal</span>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-white text-black p-2 rounded-2xl font-bold border-2 border-black/10">
+                  <span className="mb-0.5 text-base">🍖</span>
+                  <span>{result.protein}g 蛋白質</span>
+                </div>
+                <div className="flex flex-col items-center justify-center bg-blue-500 text-white p-2 rounded-2xl font-bold border-2 border-black/10">
+                  <span className="mb-0.5 text-base">💧</span>
+                  <span>{result.water}ml 水分</span>
+                </div>
               </div>
               
               <div className="border-t-2 border-white/20 pt-3 flex gap-2">
