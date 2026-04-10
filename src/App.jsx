@@ -18,6 +18,7 @@ const getLocalDateString = () => {
 
 const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog }) => {
   const isEditing = editingId === log.id;
+  const [showActions, setShowActions] = React.useState(false);
 
   if (isEditing) {
     return (
@@ -89,32 +90,51 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 10 }}
-      className={`flex items-center justify-between p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-accent/5 transition-colors group ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
+      onMouseEnter={() => setShowActions(true)}
+      onMouseLeave={() => setShowActions(false)}
+      onClick={() => setShowActions(!showActions)}
+      className={`relative overflow-hidden flex items-center justify-between p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className="flex-1 min-w-0 flex items-center justify-between gap-2 overflow-x-hidden">
-        <div className="font-black text-sm truncate shrink-0 max-w-[40%]">{log.dish_name}</div>
-        <div className="flex items-center gap-x-2 text-[10px] font-bold font-mono">
-           <span className="text-black bg-accent px-1 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
-           <span className="text-white bg-black px-1 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}g</span>
-           <span className="text-black border-2 border-black px-1 rounded flex items-center gap-0.5 whitespace-nowrap">🥛{log.water}ml</span>
+      <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
+        <div className="font-black text-sm flex-1 leading-tight break-words">{log.dish_name}</div>
+        <div className="flex items-center gap-x-1.5 text-[10px] font-bold font-mono shrink-0">
+           <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
+           <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}g</span>
+           <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🥛{log.water}ml</span>
         </div>
       </div>
-      <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-        <button 
-          onClick={() => startEditing(log)}
-          className="p-2.5 hover:bg-accent hover:text-black transition-all rounded-xl border-2 border-transparent"
-          title="編輯"
-        >
-          <Pencil size={15} />
-        </button>
-        <button 
-          onClick={() => deleteLog(log.id)}
-          className="p-2.5 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
-          title="刪除"
-        >
-          <Trash2 size={15} />
-        </button>
-      </div>
+
+      <AnimatePresence>
+        {showActions && (
+          <motion.div 
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 20 }}
+            className="absolute inset-y-0 right-0 flex items-center gap-1 bg-accent border-l-4 border-black px-2 z-10"
+          >
+            <button 
+              onClick={(e) => { e.stopPropagation(); startEditing(log); }}
+              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+              title="編輯"
+            >
+              <Pencil size={18} />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }}
+              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+              title="刪除"
+            >
+              <Trash2 size={18} />
+            </button>
+            <button 
+              onClick={(e) => { e.stopPropagation(); setShowActions(false); }}
+              className="p-2 hover:bg-black/10 transition-all rounded-xl border-2 border-transparent"
+            >
+              <X size={18} />
+            </button>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </motion.div>
   );
 };
@@ -126,6 +146,7 @@ function App() {
   const [historyGroups, setHistoryGroups] = useState([]); // Array of { date, logs, totalCalories, totalProtein }
   const [expandedGroups, setExpandedGroups] = useState({}); // Record of date -> boolean
   const [showHistory, setShowHistory] = useState(false);
+  const [showToday, setShowToday] = useState(true);
   const [advice, setAdvice] = useState('');
   
   // Editing state
@@ -247,38 +268,54 @@ function App() {
 
       {/* Today's Logs */}
       <NeoCard className="bg-white">
-        <div className="flex items-center justify-between mb-4">
+        <button 
+          onClick={() => setShowToday(!showToday)}
+          className="w-full flex items-center justify-between mb-0"
+        >
           <div className="flex items-center gap-2">
             <h2 className="text-xl font-black italic">📝 今日紀錄</h2>
+            <span className="bg-black text-white px-2 py-0.5 rounded-xl text-[10px] font-bold">
+              {recentLogs.length} 項
+            </span>
           </div>
-          <span className="bg-black text-white px-2.5 py-1 rounded-xl text-[10px] font-bold">
-            {recentLogs.length} 項
-          </span>
-        </div>
-        <div className="space-y-3">
-          <AnimatePresence mode="popLayout">
-            {recentLogs.length > 0 ? (
-              recentLogs.map((log) => (
-                <LogItem 
-                  key={log.id} 
-                  log={log} 
-                  isRecent={true}
-                  editingId={editingId}
-                  editValues={editValues}
-                  setEditValues={setEditValues}
-                  cancelEditing={cancelEditing}
-                  saveEdit={saveEdit}
-                  startEditing={startEditing}
-                  deleteLog={deleteLog}
-                />
-              ))
-            ) : (
-              <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
-                <p className="text-gray-400 italic text-sm font-bold">今天還沒有紀錄喔 🐼</p>
+          <div className={`p-1.5 rounded-lg transition-colors ${showToday ? 'bg-black text-white' : 'bg-gray-100 text-gray-400'}`}>
+            {showToday ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+          </div>
+        </button>
+
+        <AnimatePresence>
+          {showToday && (
+            <motion.div
+              initial={{ height: 0, opacity: 0 }}
+              animate={{ height: "auto", opacity: 1 }}
+              exit={{ height: 0, opacity: 0 }}
+              className="overflow-hidden"
+            >
+              <div className="space-y-3 pt-4">
+                {recentLogs.length > 0 ? (
+                  recentLogs.map((log) => (
+                    <LogItem 
+                      key={log.id} 
+                      log={log} 
+                      isRecent={true}
+                      editingId={editingId}
+                      editValues={editValues}
+                      setEditValues={setEditValues}
+                      cancelEditing={cancelEditing}
+                      saveEdit={saveEdit}
+                      startEditing={startEditing}
+                      deleteLog={deleteLog}
+                    />
+                  ))
+                ) : (
+                  <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
+                    <p className="text-gray-400 italic text-sm font-bold">今天還沒有紀錄喔 🐼</p>
+                  </div>
+                )}
               </div>
-            )}
-          </AnimatePresence>
-        </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </NeoCard>
 
       <WeightTracker />
@@ -323,10 +360,10 @@ function App() {
                             <span className="text-xs font-black bg-gray-100 px-2 py-0.5 rounded-lg border-2 border-black/5">{group.date}</span>
                             <div className="flex flex-col gap-1 translate-y-0.5">
                               {/* Metrics Row */}
-                              <div className="flex items-center gap-3 mt-1 text-[9px] font-black italic uppercase tracking-wider text-gray-400">
-                                <span>🔥 {group.totalCalories}/{goals.calories}</span>
-                                <span>🍖 {group.totalProtein}/{goals.protein}</span>
-                                <span>💧 {group.totalWater || 0}/{goals.water}</span>
+                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[9px] font-black italic uppercase tracking-wider text-gray-400">
+                                <span className="whitespace-nowrap">🔥 {group.totalCalories}/{goals.calories}</span>
+                                <span className="whitespace-nowrap">🍖 {group.totalProtein}/{goals.protein}</span>
+                                <span className="whitespace-nowrap">🥛 {group.totalWater || 0}/{goals.water}</span>
                               </div>
                               {/* Progress Bars */}
                               <div className="flex gap-1 w-24 mt-0.5">

@@ -219,10 +219,10 @@ const FoodDetective = ({ onLogAdded }) => {
 
       {mode === 'ai' && preview && (
         <div className="w-full space-y-4">
-          <div className="aspect-video border-4 border-black rounded-3xl overflow-hidden relative">
-            <img src={preview} alt="Preview" className="w-full h-full object-cover" />
+          <div className="min-h-[200px] max-h-[500px] border-4 border-black rounded-3xl overflow-hidden relative bg-zinc-100 flex items-center justify-center">
+            <img src={preview} alt="Preview" className="max-w-full max-h-[500px] object-contain" />
             {loading && (
-              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-sm">
+              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md">
                 <Loader2 className="animate-spin text-accent mb-3" size={48} />
                 <span className="text-white font-bold animate-pulse text-sm">🔍 AI 正在神算中...</span>
               </div>
