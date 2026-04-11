@@ -96,16 +96,16 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       onClick={() => setShowActions(!showActions)}
       className={`relative overflow-hidden flex flex-col p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 w-full">
-        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
-          <div className="font-black text-sm leading-tight break-words">{log.dish_name}</div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5">
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 w-full">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-1 min-w-0">
+          <div className="font-black text-sm leading-tight break-words min-w-fit">{log.dish_name}</div>
+          <div className="flex items-center gap-2 shrink-0">
+            <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5 bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
               <Clock size={10} />
               {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
             </span>
             {log.location && (
-              <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[100px]">
+              <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[120px] bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
                 <MapPin size={10} />
                 {log.location}
               </span>
@@ -409,15 +409,15 @@ function App() {
                                 <span className="whitespace-nowrap">🥛 {group.totalWater || 0}/{goals.water}</span>
                               </div>
                               {/* Progress Bars */}
-                              <div className="flex gap-1.5 w-full max-w-[140px] mt-1.5">
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black/5">
+                              <div className="flex gap-1.5 w-full max-w-[180px] mt-2">
+                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
                                   <div className={`h-full transition-all ${isCalorieReached ? 'bg-accent' : 'bg-black/20'}`} style={{ width: `${calorieAchievement}%` }} />
                                 </div>
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black/5">
+                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
                                   <div className={`h-full transition-all ${isProteinReached ? 'bg-black' : 'bg-black/20'}`} style={{ width: `${proteinAchievement}%` }} />
                                 </div>
-                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black/5">
-                                  <div className={`h-full transition-all ${group.totalWater >= goals.water ? 'bg-black' : 'bg-black/20'}`} style={{ width: `${Math.min(((group.totalWater || 0) / goals.water) * 100, 100)}%` }} />
+                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
+                                  <div className={`h-full transition-all ${group.totalWater >= goals.water ? 'bg-[#3b82f6]' : 'bg-black/20'}`} style={{ width: `${Math.min(((group.totalWater || 0) / goals.water) * 100, 100)}%` }} />
                                 </div>
                               </div>
                             </div>
