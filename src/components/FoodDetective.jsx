@@ -160,8 +160,8 @@ const FoodDetective = ({ onLogAdded }) => {
         </div>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0">
           {[
-            { id: 'ai',      label: '📸 AI' },
-            { id: 'manual',  label: '✍️ 手動' },
+            { id: 'ai',      label: t('ai_mode') },
+            { id: 'manual',  label: t('manual_mode') },
           ].map(tab => (
             <button
               key={tab.id}
