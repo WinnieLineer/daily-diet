@@ -4,6 +4,7 @@ import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
 import { Plus } from 'lucide-react';
+import { t } from '../lib/translations';
 
 const WeightTracker = () => {
   const [weight, setWeight] = useState('');
@@ -38,7 +39,7 @@ const WeightTracker = () => {
   return (
     <NeoCard className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold italic">⚖️ 體重追蹤</h2>
+        <h2 className="text-xl font-bold italic">⚖️ {t('weight_tracker_title')}</h2>
       </div>
 
       <form onSubmit={addWeight} className="flex items-stretch gap-2">
@@ -48,8 +49,8 @@ const WeightTracker = () => {
             step="0.1"
             value={weight}
             onChange={(e) => setWeight(e.target.value)}
-            placeholder="輸入體重"
-            className="w-full border-4 border-black p-3.5 pr-12 rounded-2xl focus:outline-none focus:ring-4 ring-accent/20 text-lg font-black placeholder:text-gray-300 placeholder:italic"
+            placeholder={t('weight_placeholder')}
+            className="w-full border-4 border-black p-3.5 pr-12 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 text-lg font-black placeholder:text-gray-300 placeholder:italic"
           />
           <span className="absolute right-4 top-1/2 -translate-y-1/2 font-black text-xs text-gray-400 pointer-events-none">
             KG
@@ -94,7 +95,7 @@ const WeightTracker = () => {
           </ResponsiveContainer>
         ) : (
           <div className="h-full flex items-center justify-center text-gray-400 italic text-sm">
-            暫無數據，快來記錄第一次體重吧！
+            {t('weight_no_data')}
           </div>
         )}
       </div>

@@ -2,8 +2,8 @@ import Dexie from 'dexie';
 
 export const db = new Dexie('dailyDietDB');
 
-db.version(3).stores({
-  dietLogs: '++id, date, dish_name, calories, protein, water, timestamp',
+db.version(4).stores({
+  dietLogs: '++id, date, dish_name, calories, protein, water, timestamp, location',
   weightLogs: '++id, date, weight, timestamp',
   settings: 'key' // key-value store for goals
 });

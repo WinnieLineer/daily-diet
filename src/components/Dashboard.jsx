@@ -1,6 +1,7 @@
 import React from 'react';
 import NeoCard from './NeoCard';
 import { motion } from 'framer-motion';
+import { t } from '../lib/translations';
 
 const ProgressRing = ({ value, max, label, color = "bg-accent" }) => {
   const percentage = Math.min((value / max) * 100, 100);
@@ -43,24 +44,24 @@ const Dashboard = ({ summary, goals }) => {
 
   return (
     <NeoCard className="bg-white">
-      <h2 className="text-xl font-bold italic mb-6">📅 今日摘要</h2>
+      <h2 className="text-xl font-bold italic mb-6">📅 {t('dashboard_title')}</h2>
       <div className="grid grid-cols-3 items-center w-full">
         <ProgressRing 
           value={summary.calories} 
           max={CALORIE_GOAL} 
-          label="🔥熱量" 
+          label={`🔥${t('dashboard_calories')}`} 
           color="#FDE047"
         />
         <ProgressRing 
           value={summary.protein} 
           max={PROTEIN_GOAL} 
-          label="🍖蛋白質" 
+          label={`🍖${t('dashboard_protein')}`} 
           color="black"
         />
         <ProgressRing 
           value={summary.water} 
           max={WATER_GOAL} 
-          label="🥛飲水" 
+          label={`🥛${t('dashboard_water')}`} 
           color="#FDE047"
         />
       </div>

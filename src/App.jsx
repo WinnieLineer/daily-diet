@@ -8,8 +8,9 @@ import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary } from './db';
 import { getPandaAdvice } from './lib/gemini';
-import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { t, getLanguage } from './lib/translations';
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -29,7 +30,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
         className="p-4 border-4 border-black rounded-2xl bg-accent/10 space-y-3"
       >
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">編輯食物名稱</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('food_name')}</label>
           <input 
             type="text" 
             value={editValues.dish_name}
@@ -39,7 +40,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
         </div>
         <div className="flex gap-3">
           <div className="flex-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">熱量 (kcal)</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('calories')} (kcal)</label>
           <input 
             type="number" 
             value={editValues.calories}
@@ -48,7 +49,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
           />
         </div>
         <div className="flex-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">蛋白質 (g)</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('protein')} (g)</label>
           <input 
             type="number" 
             value={editValues.protein}
@@ -57,7 +58,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
           />
         </div>
         <div className="flex-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">水量 (ml)</label>
+          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('water_unit')} (ml)</label>
           <input 
             type="number" 
             value={editValues.water}
@@ -71,13 +72,13 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             onClick={cancelEditing}
             className="flex-1 bg-white border-4 border-black font-black py-2 rounded-xl hover:bg-gray-100 flex items-center justify-center gap-1"
           >
-            <X size={16} /> 取消
+            <X size={16} /> {t('cancel')}
           </button>
           <button 
             onClick={() => saveEdit(log.id)}
             className="flex-1 bg-black text-white border-4 border-black font-black py-2 rounded-xl hover:bg-black/90 flex items-center justify-center gap-1"
           >
-            <Check size={16} /> 儲存
+            <Check size={16} /> {t('save')}
           </button>
         </div>
       </motion.div>
@@ -93,14 +94,35 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
       onClick={() => setShowActions(!showActions)}
-      className={`relative overflow-hidden flex items-center justify-between p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
+      className={`relative overflow-hidden flex flex-col p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className="flex-1 min-w-0 flex items-center justify-between gap-3">
-        <div className="font-black text-sm flex-1 leading-tight break-words">{log.dish_name}</div>
+      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-3 w-full">
+        <div className="flex flex-wrap items-center gap-2 flex-1 min-w-0">
+          <div className="font-black text-sm leading-tight break-words">{log.dish_name}</div>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5">
+              <Clock size={10} />
+              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+            </span>
+            {log.location && (
+              <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[100px]">
+                <MapPin size={10} />
+                {log.location}
+              </span>
+            )}
+          </div>
+        </div>
+
         <div className="flex items-center gap-x-1.5 text-[10px] font-bold font-mono shrink-0">
-           <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
-           <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}g</span>
-           <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🥛{log.water}ml</span>
+           {log.calories > 0 && (
+             <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
+           )}
+           {log.protein > 0 && (
+             <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}g</span>
+           )}
+           {log.water > 0 && (
+             <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🚰{log.water}ml</span>
+           )}
         </div>
       </div>
 
@@ -148,6 +170,15 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showToday, setShowToday] = useState(true);
   const [advice, setAdvice] = useState('');
+  const [now, setNow] = useState(new Date());
+  const [lastLocation, setLastLocation] = useState(null);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
   
   // Editing state
   const [editingId, setEditingId] = useState(null);
@@ -177,6 +208,10 @@ function App() {
     // Categorize logs
     setRecentLogs(allLogs.filter(log => log.date === today));
     
+    // Find last location
+    const lastWithLocation = allLogs.find(log => log.location);
+    setLastLocation(lastWithLocation ? lastWithLocation.location : null);
+    
     const historyEntries = allLogs.filter(log => log.date !== today);
     const groups = historyEntries.reduce((acc, log) => {
       const date = log.date;
@@ -200,7 +235,8 @@ function App() {
       dailySummary.protein, 
       currentGoals.protein,
       dailySummary.water,
-      currentGoals.water
+      currentGoals.water,
+      getLanguage()
     ));
   };
 
@@ -209,7 +245,7 @@ function App() {
   }, []);
 
   const deleteLog = async (id) => {
-    if (confirm('確定要刪除這筆紀錄嗎？')) {
+    if (confirm(t('confirm_delete'))) {
       await db.dietLogs.delete(id);
       refreshData();
     }
@@ -251,10 +287,17 @@ function App() {
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
       <header className="flex justify-between items-center py-4">
-        <h1 className="text-xl font-black italic tracking-tighter">DAILY DIET</h1>
+        <h1 className="text-xl font-black italic tracking-tighter">{t('app_title')}</h1>
         <div className="flex gap-2">
-          <div className="bg-white border-4 border-black px-3 py-1.5 rounded-2xl font-black shadow-neo-sm flex items-center text-sm">
-            {new Date().toLocaleDateString('zh-TW', { month: 'short', day: 'numeric' })}
+          <div className="bg-white border-4 border-black px-3 py-1.5 rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center">
+            <div className="text-[11px] sm:text-xs">
+              {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
+            </div>
+            {lastLocation && (
+              <div className="text-[8px] sm:text-[9px] text-gray-400 italic truncate max-w-[120px]">
+                📍 {lastLocation}
+              </div>
+            )}
           </div>
           <GoalSettings onGoalsUpdated={refreshData} />
         </div>
@@ -273,9 +316,9 @@ function App() {
           className="w-full flex items-center justify-between mb-0"
         >
           <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black italic">📝 今日紀錄</h2>
+            <h2 className="text-xl font-black italic">📝 {t('today_record')}</h2>
             <span className="bg-black text-white px-2 py-0.5 rounded-xl text-[10px] font-bold">
-              {recentLogs.length} 項
+              {recentLogs.length} {t('items')}
             </span>
           </div>
           <div className={`p-1.5 rounded-lg transition-colors ${showToday ? 'bg-black text-white' : 'bg-gray-100 text-gray-400'}`}>
@@ -309,7 +352,7 @@ function App() {
                   ))
                 ) : (
                   <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
-                    <p className="text-gray-400 italic text-sm font-bold">今天還沒有紀錄喔 🐼</p>
+                    <p className="text-gray-400 italic text-sm font-bold">{t('no_logs_today')}</p>
                   </div>
                 )}
               </div>
@@ -329,7 +372,7 @@ function App() {
           >
             <div className="flex items-center gap-2">
               <History size={18} />
-              <h2 className="text-lg font-black italic">📚 歷史紀錄</h2>
+              <h2 className="text-lg font-black italic">📚 {t('history_record')}</h2>
             </div>
             {showHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
           </button>
@@ -366,14 +409,14 @@ function App() {
                                 <span className="whitespace-nowrap">🥛 {group.totalWater || 0}/{goals.water}</span>
                               </div>
                               {/* Progress Bars */}
-                              <div className="flex gap-1 w-24 mt-0.5">
-                                <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                              <div className="flex gap-1.5 w-full max-w-[140px] mt-1.5">
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black/5">
                                   <div className={`h-full transition-all ${isCalorieReached ? 'bg-accent' : 'bg-black/20'}`} style={{ width: `${calorieAchievement}%` }} />
                                 </div>
-                                <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black/5">
                                   <div className={`h-full transition-all ${isProteinReached ? 'bg-black' : 'bg-black/20'}`} style={{ width: `${proteinAchievement}%` }} />
                                 </div>
-                                <div className="flex-1 h-1 bg-gray-100 rounded-full overflow-hidden">
+                                <div className="flex-1 h-1.5 bg-gray-200 rounded-full overflow-hidden border border-black/5">
                                   <div className={`h-full transition-all ${group.totalWater >= goals.water ? 'bg-black' : 'bg-black/20'}`} style={{ width: `${Math.min(((group.totalWater || 0) / goals.water) * 100, 100)}%` }} />
                                 </div>
                               </div>

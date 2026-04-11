@@ -35,7 +35,7 @@ async function withRetry(fn, maxRetries = 3) {
   throw lastError;
 }
 
-export async function analyzeFoodImage(base64Image) {
+export async function analyzeFoodImage(base64Image, language = 'zh') {
   if (!API_KEY) {
     throw new Error("Missing Gemini API Key");
   }
@@ -46,15 +46,16 @@ export async function analyzeFoodImage(base64Image) {
       generationConfig: { temperature: 0 }
     });
 
-    const customPrompt = `Analyze this food image. Estimate calories and protein (g). Return strictly a JSON object in Traditional Chinese with exactly these fields:
+    const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
+    const customPrompt = `Analyze this food image. Estimate calories and protein (g). Return strictly a JSON object in ${langDisplay} with exactly these fields:
 {
-  "dish_name": string,       // 食物名稱
-  "calories": number,        // 估計總熱量（kcal）
-  "protein": number,         // 估計總蛋白質（g）
-  "water": number,           // 估計水分攝取（ml，例如飲料、湯品或含水量高的食物）
-  "description": string,     // 一句簡短的食物描述
-  "fun_fact": string,        // 一句有趣又實用的食物健康/營養小知識（認真的，50字以內）
-  "roast": string            // 一句幽默又賤的吐槽，像嘴賤朋友在旁邊碎念（要好笑，50字以內）
+  "dish_name": string,       // Food name
+  "calories": number,        // Estimated total calories (kcal)
+  "protein": number,         // Estimated total protein (g)
+  "water": number,           // Estimated water intake (ml)
+  "description": string,     // A short food description
+  "fun_fact": string,        // An interesting and useful food health/nutrition fact (serious, under 50 words)
+  "roast": string            // A humorous and slightly sarcastic remark, like a witty friend (funny, under 50 words)
 }
 Only return the JSON object, no markdown, no explanation.`;
 
@@ -120,14 +121,33 @@ export async function suggestGoals(weight) {
 /**
  * Pure local advice logic - no API calls here.
  */
-export function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal) {
+export function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language = 'zh') {
   const calPercent = (calories / calorieGoal) * 100;
   const waterPercent = (water / waterGoal) * 100;
   
-  if (waterPercent < 40) return "多喝點水啦！身體都枯竭了 💧";
-  if (calPercent === 0) return "別害羞，快吃點東西補補！🐼";
-  if (calPercent < 50) return "進度才一半，再吃一點點沒關係的！🐼";
-  if (calPercent < 90) return "接近目標了，你是最棒的！🐼";
-  if (calPercent <= 100) return "完美達標！今天你就是飲食達人！🐼";
-  return "哎呀，今天吃得有點熱情喔！明天再努力調整吧！🐼";
+  const advice = {
+    zh: {
+      low_water: "多喝點水啦！身體都枯竭了 💧",
+      zero_cal: "別害羞，快吃點東西補補！🐼",
+      low_cal: "進度才一半，再吃一點點沒關係的！🐼",
+      mid_cal: "接近目標了，你是最棒的！🐼",
+      goal_reached: "完美達標！今天你就是飲食達人！🐼",
+      over_cal: "哎呀，今天吃得有點熱情喔！明天再努力調整吧！🐼"
+    },
+    en: {
+      low_water: "Drink more water! Your body is thirsty 💧",
+      zero_cal: "Don't be shy, eat something! 🐼",
+      low_cal: "Halfway there, a little more won't hurt! 🐼",
+      mid_cal: "Almost at the goal, you're doing great! 🐼",
+      goal_reached: "Perfect! You're a diet expert today! 🐼",
+      over_cal: "Oops, a bit too enthusiastic today! Let's adjust tomorrow! 🐼"
+    }
+  }[language];
+  
+  if (waterPercent < 40) return advice.low_water;
+  if (calPercent === 0) return advice.zero_cal;
+  if (calPercent < 50) return advice.low_cal;
+  if (calPercent < 90) return advice.mid_cal;
+  if (calPercent <= 100) return advice.goal_reached;
+  return advice.over_cal;
 }

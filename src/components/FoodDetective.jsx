@@ -4,6 +4,8 @@ import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
+import exifr from 'exifr';
+import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 
@@ -24,11 +26,44 @@ const FoodDetective = ({ onLogAdded }) => {
     if (preview) setShowActionSheet(false);
   }, [preview]);
 
+  const getCurrentLocation = () => {
+    // We will no longer use browser geolocation for manual/water
+    return Promise.resolve(null);
+  };
+
+  const reverseGeocode = async (lat, lon) => {
+    try {
+      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
+        headers: {
+          'Accept-Language': 'zh-TW,zh;q=0.9',
+          'User-Agent': 'DailyDietApp/1.0'
+        }
+      });
+      const data = await response.json();
+      // Try to get a meaningful name
+      const name = data.address.suburb || data.address.town || data.address.city || data.address.road || "未知地點";
+      return name;
+    } catch (err) {
+      console.error("Geocoding error:", err);
+      return "未知地點";
+    }
+  };
 
   const handleImageUpload = async (e) => {
     setShowActionSheet(false);
     const file = e.target.files[0];
     if (!file) return;
+
+    // Try to extract GPS from EXIF
+    let exifLocation = null;
+    try {
+      const gps = await exifr.gps(file);
+      if (gps && gps.latitude && gps.longitude) {
+        exifLocation = await reverseGeocode(gps.latitude, gps.longitude);
+      }
+    } catch (err) {
+      console.warn("EXIF extraction failed:", err);
+    }
 
     const reader = new FileReader();
     reader.onloadend = async () => {
@@ -38,8 +73,8 @@ const FoodDetective = ({ onLogAdded }) => {
       setResult(null);
 
       try {
-        const data = await analyzeFoodImage(base64);
-        setResult(data);
+        const data = await analyzeFoodImage(base64, getLanguage());
+        setResult({ ...data, location: exifLocation });
       } catch (err) {
         alert(err.message);
       } finally {
@@ -59,11 +94,12 @@ const FoodDetective = ({ onLogAdded }) => {
         calories: Number(manualEntry.calories) || 0,
         protein: Number(manualEntry.protein) || 0,
         water: Number(manualEntry.water) || 0,
-        description: "手動紀錄"
+        description: t('manual_desc')
       };
     }
     if (!dataToSave) return;
     
+    setLoading(true);
     const now = new Date();
     const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     
@@ -71,6 +107,7 @@ const FoodDetective = ({ onLogAdded }) => {
       ...dataToSave,
       date: localDate,
       timestamp: Date.now(),
+      location: dataToSave.location || null
     });
     
     setPreview(null);
@@ -83,17 +120,42 @@ const FoodDetective = ({ onLogAdded }) => {
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-xl font-black italic">📝 覓食</h2>
+          <h2 className="text-xl font-black italic">📝 {t('food_detective')}</h2>
           <button 
             onClick={async () => {
               const now = new Date();
+              const timestamp = now.getTime();
               const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-              await db.dietLogs.add({ dish_name: "純水 🥛", calories: 0, protein: 0, water: 250, date: localDate, timestamp: Date.now() });
+              
+              // Find if there's a water log within the last 2 minutes
+              const twoMinutesAgo = timestamp - (2 * 60 * 1000);
+              const lastWaterLog = await db.dietLogs
+                .where('timestamp')
+                .above(twoMinutesAgo)
+                .filter(log => log.dish_name.includes(t('water')))
+                .last();
+
+              if (lastWaterLog) {
+                await db.dietLogs.update(lastWaterLog.id, {
+                  water: (lastWaterLog.water || 0) + 250,
+                  timestamp: timestamp // Update timestamp to keep it "recent"
+                });
+              } else {
+                await db.dietLogs.add({ 
+                  dish_name: `🚰 ${t('water')}`, 
+                  calories: 0, 
+                  protein: 0, 
+                  water: 250, 
+                  date: localDate, 
+                  timestamp: timestamp,
+                  location: null
+                });
+              }
               onLogAdded();
             }}
             className="text-[10px] font-black bg-white text-black px-2 py-1 rounded-xl border-2 border-black active:scale-95 transition-all whitespace-nowrap shadow-neo-sm hover:bg-zinc-50"
           >
-            🥛 +250ml
+            {t('add_water')}
           </button>
         </div>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0">
@@ -130,8 +192,8 @@ const FoodDetective = ({ onLogAdded }) => {
           <div className="bg-black text-white rounded-2xl p-3 mb-3 group-hover:scale-110 transition-transform shadow-neo-sm">
             <Camera size={28} />
           </div>
-          <p className="font-bold text-sm text-black">拍下或上傳食物照</p>
-          <p className="text-xs text-gray-500 mt-1">讓 AI 幫你分析熱量！</p>
+          <p className="font-bold text-sm text-black">{t('upload_hint')}</p>
+          <p className="text-xs text-gray-500 mt-1">{t('ai_sub_hint')}</p>
           
           {/* Hidden inputs for different purposes */}
           <input 
@@ -174,7 +236,7 @@ const FoodDetective = ({ onLogAdded }) => {
               <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-32 h-32 bg-accent/20 rounded-full blur-3xl pointer-events-none" />
               
               <div className="flex items-center justify-between mb-6">
-                <h3 className="font-black text-xl italic tracking-tight">📸 選擇照片來源</h3>
+                <h3 className="font-black text-xl italic tracking-tight">{t('photo_source')}</h3>
                 <button onClick={() => setShowActionSheet(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
                   <X size={20} />
                 </button>
@@ -189,8 +251,8 @@ const FoodDetective = ({ onLogAdded }) => {
                     <Camera size={24} />
                   </div>
                   <div className="text-left">
-                    <div className="font-black text-lg leading-tight italic">拍照模式</div>
-                    <div className="text-[10px] uppercase tracking-widest text-white/50 font-bold">開啟相機直接拍攝</div>
+                    <div className="font-black text-lg leading-tight italic">{t('camera')}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-white/50 font-bold">{t('camera_sub')}</div>
                   </div>
                 </button>
 
@@ -202,8 +264,8 @@ const FoodDetective = ({ onLogAdded }) => {
                     <ImageIcon size={24} />
                   </div>
                   <div className="text-left">
-                    <div className="font-black text-lg leading-tight italic">從相簿選擇</div>
-                    <div className="text-[10px] uppercase tracking-widest text-black/40 font-bold">上傳手機內的照片</div>
+                    <div className="font-black text-lg leading-tight italic">{t('gallery')}</div>
+                    <div className="text-[10px] uppercase tracking-widest text-black/40 font-bold">{t('gallery_sub')}</div>
                   </div>
                 </button>
               </div>
@@ -224,7 +286,7 @@ const FoodDetective = ({ onLogAdded }) => {
             {loading && (
               <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md">
                 <Loader2 className="animate-spin text-accent mb-3" size={48} />
-                <span className="text-white font-bold animate-pulse text-sm">🔍 AI 正在神算中...</span>
+                <span className="text-white font-bold animate-pulse text-sm">{t('ai_calculating')}</span>
               </div>
             )}
           </div>
@@ -249,11 +311,11 @@ const FoodDetective = ({ onLogAdded }) => {
                 </div>
                 <div className="flex flex-col items-center justify-center bg-white text-black p-2 rounded-2xl font-bold border-2 border-black/10">
                   <span className="mb-0.5 text-base">🍖</span>
-                  <span>{result.protein}g 蛋白質</span>
+                  <span>{result.protein}g {t('protein')}</span>
                 </div>
                 <div className="flex flex-col items-center justify-center bg-black text-white p-2 rounded-2xl font-bold border-2 border-black/10">
                   <span className="mb-0.5 text-base">🥛</span>
-                  <span>{result.water}ml 水分</span>
+                  <span>{result.water}ml {t('water_unit')}</span>
                 </div>
               </div>
               
@@ -270,7 +332,7 @@ const FoodDetective = ({ onLogAdded }) => {
                     <Lightbulb size={18} className="text-black" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">食物小知識</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('food_fact')}</span>
                     <p className="text-sm font-bold leading-relaxed">{result.fun_fact}</p>
                   </div>
                 </div>
@@ -282,7 +344,7 @@ const FoodDetective = ({ onLogAdded }) => {
                     <MessageSquareQuote size={18} className="text-white" />
                   </div>
                   <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-black/40 block mb-1">熊貓嘴砲</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-black/40 block mb-1">{t('panda_roast')}</span>
                     <p className="text-sm font-bold leading-relaxed italic">"{result.roast}"</p>
                   </div>
                 </div>
@@ -295,10 +357,10 @@ const FoodDetective = ({ onLogAdded }) => {
                 onClick={() => { setPreview(null); setResult(null); }}
                 disabled={loading}
               >
-                取消
+                {t('cancel')}
               </NeoButton>
               <NeoButton className="flex-1" variant="black" disabled={loading || !result} onClick={saveLog}>
-                <Check size={16} className="inline mr-1" /> 儲存紀錄
+                <Check size={16} className="inline mr-1" /> {t('save_record')}
               </NeoButton>
             </div>
           </motion.div>
@@ -308,25 +370,25 @@ const FoodDetective = ({ onLogAdded }) => {
       {mode === 'manual' && (
         <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 bg-white border-4 border-black p-4 rounded-3xl mt-2">
           <div>
-            <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">食物名稱</label>
-            <input type="text" placeholder="例如：地瓜球、水煮雞胸..." value={manualEntry.dish_name} onChange={(e) => setManualEntry({...manualEntry, dish_name: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-medium" />
+            <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('food_name')}</label>
+            <input type="text" placeholder={t('food_placeholder')} value={manualEntry.dish_name} onChange={(e) => setManualEntry({...manualEntry, dish_name: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-medium" />
           </div>
           <div className="flex gap-3">
             <div className="flex-1">
-              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">熱量 (kcal)</label>
+              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('calories')} (kcal)</label>
               <input type="number" placeholder="0" value={manualEntry.calories} onChange={(e) => setManualEntry({...manualEntry, calories: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
             </div>
             <div className="flex-1">
-              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">蛋白質 (g)</label>
+              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('protein')} (g)</label>
               <input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({...manualEntry, protein: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
             </div>
             <div className="flex-1">
-              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">水分 (ml)</label>
+              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('water_unit')} (ml)</label>
               <input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({...manualEntry, water: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
             </div>
           </div>
           <NeoButton className="w-full mt-1" variant="black" disabled={!manualEntry.dish_name} onClick={saveLog}>
-            <Check size={16} className="inline mr-1" /> 儲存紀錄
+            <Check size={16} className="inline mr-1" /> {t('save_record')}
           </NeoButton>
         </motion.div>
       )}
