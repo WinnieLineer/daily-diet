@@ -14,7 +14,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
     return await html2canvas(cardRef.current, {
       scale: 3,
       useCORS: true,
-      backgroundColor: '#F8FAFC',
+      backgroundColor: null,
       logging: false,
     });
   };
@@ -84,11 +84,11 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
           exit={{ opacity: 0, scale: 0.9, y: 20 }}
           className="relative w-full max-w-sm flex flex-col gap-4"
         >
-          {/* Capture Area */}
-          <div 
-            ref={cardRef}
-            className="bg-[#F8FAFC] border-8 border-black p-6 rounded-[2.5rem] shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden"
-          >
+          {/* Capture Wrapper to preserve shadow box */}
+          <div ref={cardRef} className="p-4 pr-6 pb-6">
+            <div 
+              className="bg-[#F8FAFC] border-8 border-black p-6 rounded-[2.5rem] shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden"
+            >
             {/* Background Decor */}
             <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-accent/20 rounded-full blur-3xl" />
             <div className="absolute bottom-[-5%] left-[-5%] w-32 h-32 bg-rose-500/10 rounded-full blur-2xl" />
@@ -168,6 +168,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
                <div className="text-[10px] font-black text-zinc-300 uppercase letter tracking-[0.2em]">
                  winnie-lin.space/daily-diet
                </div>
+            </div>
             </div>
           </div>
 
