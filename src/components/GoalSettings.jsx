@@ -50,35 +50,30 @@ const GoalSettings = ({ onGoalsUpdated }) => {
 
   const handleContactSubmit = async () => {
     if (submitStatus === 'sending') return;
+    if (!contactForm.subject.trim() || !contactForm.message.trim()) return;
     
     setSubmitStatus('sending');
     
     try {
-      // NOTE: Replace 'FORM_ID' with your actual Formspree ID to make this functional.
-      // Formspree offers a generous free tier (50 submissions/month).
-      const FORM_ID = 'PLACEHOLDER'; 
+      const response = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+          subject: `[Daily-Diet] ${contactForm.subject}`,
+          message: contactForm.message,
+          from_name: 'Daily Diet App User',
+        })
+      });
       
-      if (FORM_ID === 'PLACEHOLDER') {
-        // Mock simulation for demonstration if no ID is set
-        await new Promise(r => setTimeout(r, 1500));
-        console.log("Feedback submitted (MOCK):", contactForm);
+      const data = await response.json();
+      if (data.success) {
         setSubmitStatus('success');
+        setContactForm({ subject: '', message: '' });
+        setTimeout(() => setSubmitStatus('idle'), 3000);
       } else {
-        const response = await fetch(`https://formspree.io/f/${FORM_ID}`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(contactForm)
-        });
-        
-        if (response.ok) {
-          setSubmitStatus('success');
-        } else {
-          throw new Error('Submission failed');
-        }
+        throw new Error('Submission failed');
       }
-      
-      setContactForm({ subject: '', message: '' });
-      setTimeout(() => setSubmitStatus('idle'), 3000);
     } catch (err) {
       setSubmitStatus('error');
       setTimeout(() => setSubmitStatus('idle'), 4000);
