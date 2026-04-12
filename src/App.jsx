@@ -171,6 +171,10 @@ function App() {
   // Force reload on version change to clear cache
   useEffect(() => {
     const checkVersion = async () => {
+      // Guard: only check once per session to prevent infinite loop
+      const lastChecked = sessionStorage.getItem('version_checked');
+      if (lastChecked === APP_VERSION) return;
+      
       try {
         // Fetch version.json with a unique timestamp to bypass all caches
         const response = await fetch(`/daily-diet/version.json?t=${Date.now()}`, {
@@ -181,6 +185,9 @@ function App() {
 
         if (remoteVersion && remoteVersion !== APP_VERSION) {
           console.log(`New version detected: ${remoteVersion}. Clearing cache and reloading...`);
+          
+          // Mark as reloading so we don't loop after the reload completes
+          sessionStorage.setItem('version_checked', remoteVersion);
           
           // 1. Clear Service Worker caches if possible
           if ('caches' in window) {
@@ -198,6 +205,9 @@ function App() {
            
           // 3. Final Hard Reload
           window.location.reload(true);
+        } else {
+          // Versions match; record this so we don't check again this session
+          sessionStorage.setItem('version_checked', APP_VERSION);
         }
       } catch (err) {
         console.error("Version check failed:", err);
