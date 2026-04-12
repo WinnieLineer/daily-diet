@@ -178,6 +178,24 @@ const FoodDetective = ({ onLogAdded }) => {
       console.warn("EXIF extraction failed:", err);
     }
 
+    // Auto-location fallback if no EXIF data but permission already granted
+    let autoLocation = null;
+    if (!exifLocation && navigator.geolocation) {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        if (permission.state === 'granted') {
+          autoLocation = await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+              const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+              resolve(loc);
+            }, () => resolve(null), { timeout: 5000 });
+          });
+        }
+      } catch (err) { console.warn("Auto-location check failed:", err); }
+    }
+
+    const finalLocation = exifLocation || autoLocation;
+
     const reader = new FileReader();
     reader.onloadend = async () => {
       const base64 = reader.result;
@@ -187,13 +205,11 @@ const FoodDetective = ({ onLogAdded }) => {
 
       try {
         const data = await analyzeFoodImage(base64, getLanguage());
-        setResult({ ...data, location: exifLocation });
+        setResult({ ...data, location: finalLocation });
       } catch (err) {
         alert(err.message);
       } finally {
         setLoading(false);
-        // Ensure location loading is off if analyze fails
-        if (!exifLocation) setLocationLoading(false);
       }
     };
     reader.readAsDataURL(file);
@@ -205,9 +221,25 @@ const FoodDetective = ({ onLogAdded }) => {
     setLoading(true);
     setResult(null);
 
+    // Auto-location for camera capture
+    let autoLocation = null;
+    if (navigator.geolocation) {
+      try {
+        const permission = await navigator.permissions.query({ name: 'geolocation' });
+        if (permission.state === 'granted') {
+          autoLocation = await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+              const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+              resolve(loc);
+            }, () => resolve(null), { timeout: 5000 });
+          });
+        }
+      } catch (err) { console.warn("Auto-location check failed:", err); }
+    }
+
     try {
       const data = await analyzeFoodImage(base64, getLanguage());
-      setResult({ ...data, location: null });
+      setResult({ ...data, location: autoLocation });
     } catch (err) {
       alert(err.message);
     } finally {
