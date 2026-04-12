@@ -12,6 +12,7 @@ import { getPandaAdvice } from './lib/gemini';
 import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
+import versionData from '../public/version.json';
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -161,7 +162,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-const APP_VERSION = '1.0.8';
+const APP_VERSION = versionData.version;
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
