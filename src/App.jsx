@@ -162,7 +162,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-const APP_VERSION = '1.0.3';
+const APP_VERSION = '1.0.6';
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
@@ -289,7 +289,7 @@ function App() {
     const sortedGroups = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
     setHistoryGroups(sortedGroups);
 
-    setAdvice(getPandaAdvice(
+    const currentAdvice = await getPandaAdvice(
       dailySummary.calories, 
       currentGoals.calories, 
       dailySummary.protein, 
@@ -297,7 +297,8 @@ function App() {
       dailySummary.water,
       currentGoals.water,
       getLanguage()
-    ));
+    );
+    setAdvice(currentAdvice);
   };
 
   useEffect(() => {
@@ -305,10 +306,8 @@ function App() {
   }, []);
 
   const deleteLog = async (id) => {
-    if (confirm(t('confirm_delete'))) {
-      await db.dietLogs.delete(id);
-      refreshData();
-    }
+    await db.dietLogs.delete(id);
+    refreshData();
   };
 
   const startEditing = (log) => {

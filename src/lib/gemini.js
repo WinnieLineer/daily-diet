@@ -119,9 +119,46 @@ export async function suggestGoals(weight) {
 }
 
 /**
- * Pure local advice logic - no API calls here.
+ * Dynamic AI-powered Panda Advice
  */
-export function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language = 'zh') {
+export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language = 'zh') {
+  if (!API_KEY) return getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language);
+
+  try {
+    return await withRetry(async () => {
+      const model = genAI.getGenerativeModel({ 
+        model: GOAL_PI_MODEL,
+        generationConfig: { temperature: 0.8 } // A bit of creativity
+      });
+      
+      const calStatus = (calories / calorieGoal) * 100;
+      const proStatus = (protein / proteinGoal) * 100;
+      const watStatus = (water / waterGoal) * 100;
+      
+      const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
+      
+      const prompt = `You are a witty, slightly sarcastic, but helpful Panda Coach for a fitness app. 
+      Today's Stats for the user:
+      - Calories: ${calories}/${calorieGoal} kcal (${calStatus.toFixed(1)}%)
+      - Protein: ${protein}/${proteinGoal} g (${proStatus.toFixed(1)}%)
+      - Water: ${water}/${waterGoal} ml (${watStatus.toFixed(1)}%)
+      
+      Give a ONE-SENTENCE, PUNCHY, and CHARACTER-DRIVEN comment in ${langDisplay} about their progress. 
+      Be supportive if they are doing well, and wittily firm if they are lacking. 
+      Mention specific metrics if they are particularly good or bad.
+      Do not use more than 20 words.`;
+
+      const result = await model.generateContent(prompt);
+      const response = await result.response;
+      return response.text().trim().replace(/^"|"$/g, '');
+    });
+  } catch (err) {
+    console.error("Dynamic advice failed, falling back to local:", err);
+    return getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language);
+  }
+}
+
+function getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language = 'zh') {
   const calPercent = (calories / calorieGoal) * 100;
   const waterPercent = (water / waterGoal) * 100;
   
