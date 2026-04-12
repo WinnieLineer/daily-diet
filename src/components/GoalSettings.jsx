@@ -66,7 +66,7 @@ const GoalSettings = ({ onGoalsUpdated }) => {
         {isOpen && (
           <>
             <div className="fixed inset-0 z-[55] bg-black/40 backdrop-blur-md transition-opacity" onClick={() => setIsOpen(false)} />
-            <NeoCard className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:translate-x-0 sm:translate-y-0 z-[60] w-[calc(100%-2rem)] sm:w-80 space-y-4 animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden p-0">
+            <NeoCard className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:translate-x-0 sm:translate-y-0 z-[60] w-[calc(100%-2rem)] sm:w-80 max-h-[85vh] sm:max-h-none space-y-4 animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden p-0 flex flex-col">
               
               {/* Header */}
               <div className="flex items-center justify-between p-4 bg-zinc-50 border-b-2 border-black">
