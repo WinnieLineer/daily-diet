@@ -1,4 +1,4 @@
 {
-  "version": "1.1.0",
-  "comment": "Fix double flash on modal AnimatePresence"
+  "version": "1.1.1",
+  "comment": "Add native web share API to Sharing Card"
 }

@@ -1,25 +1,29 @@
 import React, { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, Download, Share2, Sparkles, Flame, MapPin, Calendar } from 'lucide-react';
+import { X, Download, Share2, Sparkles, Flame, MapPin, Calendar, Loader2 } from 'lucide-react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
 const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
   const cardRef = useRef(null);
-  const [exporting, setExporting] = useState(false);
+  const [exportState, setExportState] = useState(null); // 'download' | 'share' | null
+
+  const generateCanvas = async () => {
+    return await html2canvas(cardRef.current, {
+      scale: 3,
+      useCORS: true,
+      backgroundColor: '#F8FAFC',
+      logging: false,
+    });
+  };
 
   const handleDownload = async () => {
     if (!cardRef.current) return;
-    setExporting(true);
+    setExportState('download');
     try {
-      const canvas = await html2canvas(cardRef.current, {
-        scale: 3, // High quality
-        useCORS: true,
-        backgroundColor: '#F8FAFC',
-        logging: false,
-      });
+      const canvas = await generateCanvas();
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
       link.download = `daily-diet-summary-${new Date().toISOString().split('T')[0]}.png`;
@@ -28,7 +32,33 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
     } catch (err) {
       console.error("Export error:", err);
     } finally {
-      setExporting(false);
+      setExportState(null);
+    }
+  };
+
+  const handleShare = async () => {
+    if (!cardRef.current) return;
+    setExportState('share');
+    try {
+      const canvas = await generateCanvas();
+      const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
+      if (!blob) return;
+      
+      const file = new File([blob], `daily-diet-summary-${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+      
+      if (navigator.canShare && navigator.canShare({ files: [file] })) {
+        await navigator.share({
+          files: [file],
+          title: t('app_title') || 'Daily Diet',
+          text: 'My Daily Diet 🐼'
+        });
+      } else {
+        alert(t('share_not_supported') || 'Native sharing is not supported on your browser. Please save as image instead.');
+      }
+    } catch (err) {
+      if (err.name !== 'AbortError') console.error("Share error:", err);
+    } finally {
+      setExportState(null);
     }
   };
 
@@ -142,25 +172,34 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
           </div>
 
           {/* Action Buttons */}
-          <div className="flex gap-3 mt-4">
+          <div className="flex gap-2.5 mt-4">
             <button 
               onClick={onClose}
-              className="flex-1 bg-white border-4 border-black p-4 rounded-2xl font-black italic transition-all active:scale-95 shadow-neo-sm"
+              disabled={!!exportState}
+              className="px-4 bg-white border-4 border-black p-3 rounded-2xl font-black italic transition-all active:scale-95 shadow-neo-sm flex items-center justify-center disabled:opacity-50 text-sm sm:text-base"
             >
-              CANCEL
+              <X size={20} />
             </button>
             <button 
               onClick={handleDownload}
-              disabled={exporting}
-              className="flex-[2] bg-accent border-4 border-black p-4 rounded-2xl font-black italic flex items-center justify-center gap-2 transition-all active:scale-95 shadow-neo-sm disabled:opacity-50"
+              disabled={!!exportState}
+              className="flex-1 bg-white border-4 border-black p-3 rounded-2xl font-black italic flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-neo-sm disabled:opacity-50 text-sm sm:text-base"
             >
-              {exporting ? (
-                <div className="w-5 h-5 border-2 border-black border-t-transparent rounded-full animate-spin" />
+              {exportState === 'download' ? (
+                <Loader2 size={18} className="animate-spin" />
               ) : (
-                <>
-                  <Download size={20} />
-                  SAVE AS IMAGE
-                </>
+                <><Download size={18} /> SAVE</>
+              )}
+            </button>
+            <button 
+              onClick={handleShare}
+              disabled={!!exportState}
+              className="flex-[1.2] bg-accent border-4 border-black p-3 rounded-2xl font-black italic flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-neo-sm disabled:opacity-50 text-sm sm:text-base"
+            >
+              {exportState === 'share' ? (
+                <Loader2 size={18} className="animate-spin" />
+              ) : (
+                <><Share2 size={18} /> SHARE</>
               )}
             </button>
           </div>
