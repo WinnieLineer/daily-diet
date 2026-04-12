@@ -411,8 +411,8 @@ const PandaCoachCard = ({ advice }) => {
       animate={{ opacity: 1, y: 0 }}
       className="relative z-10"
     >
-      <NeoCard className="bg-white p-4 sm:p-5">
-        <div className="flex items-center gap-4 sm:gap-6 relative z-10">
+      <NeoCard className="bg-white p-4 sm:p-5 overflow-hidden">
+        <div className="flex items-center gap-4 sm:gap-6 relative z-10 selection:bg-transparent" style={{ WebkitTapHighlightColor: 'transparent' }}>
           {/* Interactive Panda */}
           <div className="relative flex-shrink-0 z-50 group/panda w-16 h-16 sm:w-20 sm:h-20">
             <SpeechBubble text={bubble} visible={bubbleVisible} />

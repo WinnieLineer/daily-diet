@@ -107,10 +107,12 @@ const GoalSettings = ({ onGoalsUpdated }) => {
             />
             <NeoCard 
               disableHover
-              className="relative z-[70] w-full max-w-sm max-h-[85vh] space-y-4 animate-in fade-in zoom-in-95 duration-200 shadow-2xl overflow-hidden p-0 flex flex-col sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:w-80 sm:max-h-none sm:translate-y-0"
+              className="relative z-[70] w-full max-w-sm max-h-[85vh] space-y-4 shadow-2xl overflow-hidden p-0 flex flex-col sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:w-80 sm:max-h-none sm:translate-y-0"
               initial={{ opacity: 0, scale: 0.95, y: 10 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut" }}
+              style={{ willChange: 'transform, opacity' }}
             >
               
               {/* Header */}
