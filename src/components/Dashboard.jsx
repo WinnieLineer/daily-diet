@@ -44,7 +44,7 @@ const Dashboard = ({ summary, goals }) => {
 
   return (
     <NeoCard className="bg-white">
-      <h2 className="text-xl font-bold italic mb-6">📅 {t('dashboard_title')}</h2>
+      <h2 className="text-xl font-black italic mb-6">📅 {t('dashboard_title')}</h2>
       <div className="grid grid-cols-3 items-center w-full">
         <ProgressRing 
           value={summary.calories} 
@@ -61,7 +61,7 @@ const Dashboard = ({ summary, goals }) => {
         <ProgressRing 
           value={summary.water} 
           max={WATER_GOAL} 
-          label={`🥛${t('dashboard_water')}`} 
+          label={`🚰${t('dashboard_water')}`} 
           color="#FDE047"
         />
       </div>

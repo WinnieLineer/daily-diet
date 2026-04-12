@@ -265,7 +265,7 @@ const FoodDetective = ({ onLogAdded }) => {
                   <span>{result.protein}g {t('protein')}</span>
                 </div>
                 <div className="flex flex-col items-center justify-center bg-black text-white p-2 rounded-2xl font-bold border-2 border-black/10">
-                  <span className="mb-0.5 text-base">🥛</span>
+                  <span className="mb-0.5 text-base">🚰</span>
                   <span>{result.water}ml {t('water_unit')}</span>
                 </div>
               </div>

@@ -39,7 +39,7 @@ const WeightTracker = () => {
   return (
     <NeoCard className="space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold italic">⚖️ {t('weight_tracker_title')}</h2>
+        <h2 className="text-xl font-black italic">⚖️ {t('weight_tracker_title')}</h2>
       </div>
 
       <form onSubmit={addWeight} className="flex items-stretch gap-2">

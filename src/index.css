@@ -5,7 +5,7 @@
 @layer base {
   body {
     @apply antialiased text-zinc-900 bg-[#F8FAFC] overflow-x-hidden;
-    font-family: 'Zen Maru Gothic', 'Noto Sans TC', sans-serif !important;
+    font-family: 'Inter', 'Outfit', 'Zen Maru Gothic', 'Noto Sans TC', sans-serif !important;
   }
 }
 

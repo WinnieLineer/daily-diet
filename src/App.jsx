@@ -161,9 +161,23 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
+const APP_VERSION = '1.0.1';
+
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
+  
+  // Force reload on version change to clear cache
+  useEffect(() => {
+    const savedVersion = localStorage.getItem('app_version');
+    if (savedVersion !== APP_VERSION) {
+      localStorage.setItem('app_version', APP_VERSION);
+      // Only reload if this isn't the first time the app is run
+      if (savedVersion) {
+        window.location.reload();
+      }
+    }
+  }, []);
   const [recentLogs, setRecentLogs] = useState([]);
   const [historyGroups, setHistoryGroups] = useState([]); // Array of { date, logs, totalCalories, totalProtein }
   const [expandedGroups, setExpandedGroups] = useState({}); // Record of date -> boolean
@@ -406,7 +420,7 @@ function App() {
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[9px] font-black italic uppercase tracking-wider text-gray-400">
                                 <span className="whitespace-nowrap">🔥 {group.totalCalories}/{goals.calories}</span>
                                 <span className="whitespace-nowrap">🍖 {group.totalProtein}/{goals.protein}</span>
-                                <span className="whitespace-nowrap">🥛 {group.totalWater || 0}/{goals.water}</span>
+                                <span className="whitespace-nowrap">🚰 {group.totalWater || 0}/{goals.water}</span>
                               </div>
                               {/* Progress Bars */}
                               <div className="flex gap-1.5 w-full max-w-[180px] mt-2">
