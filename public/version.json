@@ -1,4 +1,4 @@
 {
-  "version": "1.0.7",
-  "comment": "Fix jitter, auto-location, panda text wrapping"
+  "version": "1.0.8",
+  "comment": "Fix settings modal visual flash"
 }

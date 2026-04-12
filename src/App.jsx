@@ -161,7 +161,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-const APP_VERSION = '1.0.7';
+const APP_VERSION = '1.0.8';
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });

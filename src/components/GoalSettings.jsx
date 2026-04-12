@@ -97,7 +97,7 @@ const GoalSettings = ({ onGoalsUpdated }) => {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 bg-black/40 backdrop-blur-md transition-opacity" 
+              className="fixed inset-0 bg-black/40 backdrop-blur-md" 
               onClick={() => setIsOpen(false)} 
             />
             <NeoCard 
@@ -107,7 +107,6 @@ const GoalSettings = ({ onGoalsUpdated }) => {
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 10 }}
               transition={{ duration: 0.2, ease: "easeOut" }}
-              style={{ willChange: 'transform, opacity' }}
             >
               
               {/* Header */}
