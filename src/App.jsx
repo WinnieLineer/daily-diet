@@ -161,7 +161,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-const APP_VERSION = '1.0.1';
+const APP_VERSION = '1.0.2';
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
@@ -169,13 +169,44 @@ function App() {
   
   // Force reload on version change to clear cache
   useEffect(() => {
+    const checkVersion = async () => {
+      try {
+        // Fetch version.json with a unique timestamp to bypass all caches
+        const response = await fetch(`/daily-diet/version.json?t=${Date.now()}`, {
+          cache: 'no-store'
+        });
+        const data = await response.json();
+        const remoteVersion = data.version;
+
+        if (remoteVersion && remoteVersion !== APP_VERSION) {
+          console.log(`New version detected: ${remoteVersion}. Clearing cache and reloading...`);
+          
+          // 1. Clear Service Worker caches if possible
+          if ('caches' in window) {
+            const cacheNames = await caches.keys();
+            await Promise.all(cacheNames.map(name => caches.delete(name)));
+          }
+
+          // 2. Unregister Service Workers
+          if ('serviceWorker' in navigator) {
+            const registrations = await navigator.serviceWorker.getRegistrations();
+            await Promise.all(registrations.map(r => r.unregister()));
+          }
+
+          // 3. Force hard reload
+          window.location.reload();
+        }
+      } catch (err) {
+        console.error("Version check failed:", err);
+      }
+    };
+
+    checkVersion();
+    
+    // Also perform the legacy localStorage check for double-safety
     const savedVersion = localStorage.getItem('app_version');
     if (savedVersion !== APP_VERSION) {
       localStorage.setItem('app_version', APP_VERSION);
-      // Only reload if this isn't the first time the app is run
-      if (savedVersion) {
-        window.location.reload();
-      }
     }
   }, []);
   const [recentLogs, setRecentLogs] = useState([]);
