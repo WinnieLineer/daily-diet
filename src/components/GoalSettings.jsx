@@ -15,6 +15,7 @@ const GoalSettings = ({ onGoalsUpdated }) => {
   
   // Contact form state
   const [contactForm, setContactForm] = useState({ subject: '', message: '' });
+  const [submitStatus, setSubmitStatus] = useState('idle'); // 'idle', 'sending', 'success', 'error'
 
   useEffect(() => {
     fetchGoals();
@@ -47,9 +48,41 @@ const GoalSettings = ({ onGoalsUpdated }) => {
     // Force refresh might be needed for some components
   };
 
-  const handleContactSubmit = () => {
-    const mailto = `mailto:hi@winnie-lin.space?subject=${encodeURIComponent(contactForm.subject)}&body=${encodeURIComponent(contactForm.message)}`;
-    window.location.href = mailto;
+  const handleContactSubmit = async () => {
+    if (submitStatus === 'sending') return;
+    
+    setSubmitStatus('sending');
+    
+    try {
+      // NOTE: Replace 'FORM_ID' with your actual Formspree ID to make this functional.
+      // Formspree offers a generous free tier (50 submissions/month).
+      const FORM_ID = 'PLACEHOLDER'; 
+      
+      if (FORM_ID === 'PLACEHOLDER') {
+        // Mock simulation for demonstration if no ID is set
+        await new Promise(r => setTimeout(r, 1500));
+        console.log("Feedback submitted (MOCK):", contactForm);
+        setSubmitStatus('success');
+      } else {
+        const response = await fetch(`https://formspree.io/f/${FORM_ID}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(contactForm)
+        });
+        
+        if (response.ok) {
+          setSubmitStatus('success');
+        } else {
+          throw new Error('Submission failed');
+        }
+      }
+      
+      setContactForm({ subject: '', message: '' });
+      setTimeout(() => setSubmitStatus('idle'), 3000);
+    } catch (err) {
+      setSubmitStatus('error');
+      setTimeout(() => setSubmitStatus('idle'), 4000);
+    }
   };
 
   return (
@@ -269,11 +302,38 @@ const GoalSettings = ({ onGoalsUpdated }) => {
 
                     <button 
                       onClick={handleContactSubmit}
-                      disabled={!contactForm.subject || !contactForm.message}
-                      className="w-full bg-black text-white border-4 border-black py-4 rounded-2xl font-black italic tracking-tight hover:bg-zinc-800 disabled:bg-zinc-200 disabled:border-zinc-300 disabled:text-zinc-400 transition-all active:scale-95 shadow-neo-sm"
+                      disabled={!contactForm.subject || !contactForm.message || submitStatus === 'sending'}
+                      className={`w-full border-4 border-black py-4 rounded-2xl font-black italic tracking-tight transition-all active:scale-95 shadow-neo-sm flex items-center justify-center gap-2 ${
+                        submitStatus === 'success' ? 'bg-emerald-500 text-white border-emerald-600' :
+                        submitStatus === 'error' ? 'bg-rose-500 text-white border-rose-600' :
+                        submitStatus === 'sending' ? 'bg-zinc-100 text-zinc-400 border-zinc-200' :
+                        'bg-black text-white hover:bg-zinc-800 disabled:bg-zinc-200 disabled:border-zinc-300 disabled:text-zinc-400'
+                      }`}
                     >
-                      <Mail size={18} className="inline mr-2" />
-                      {t('contact_send')}
+                      {submitStatus === 'idle' && (
+                        <>
+                          <Mail size={18} />
+                          {t('contact_send')}
+                        </>
+                      )}
+                      {submitStatus === 'sending' && (
+                        <>
+                          <div className="w-4 h-4 border-2 border-zinc-400 border-t-transparent rounded-full animate-spin" />
+                          {t('contact_sending')}
+                        </>
+                      )}
+                      {submitStatus === 'success' && (
+                        <>
+                          <Check size={18} strokeWidth={4} />
+                          {t('contact_success')}
+                        </>
+                      )}
+                      {submitStatus === 'error' && (
+                        <>
+                          <X size={18} strokeWidth={4} />
+                          {t('contact_error')}
+                        </>
+                      )}
                     </button>
                   </div>
                 )}
