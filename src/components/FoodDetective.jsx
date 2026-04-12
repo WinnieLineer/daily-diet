@@ -72,39 +72,39 @@ const DesktopCamera = ({ onCapture, onClose }) => {
             <canvas ref={canvasRef} className="hidden" />
             
             {/* UI Overlays */}
-            <div className="absolute inset-0 p-6 pointer-events-none flex flex-col justify-between">
-              {/* Header */}
-              <div className="flex justify-between items-start">
-                <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-white/10 flex items-center gap-2">
-                  <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
-                  <span className="text-white text-[10px] font-black uppercase tracking-widest">{t('ai_mode')}</span>
+            <div className="absolute inset-0 pointer-events-none">
+              {/* Top Controls */}
+              <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start">
+                <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
+                  <span className="text-white text-[9px] font-black uppercase tracking-widest">{t('ai_mode')}</span>
                 </div>
                 
                 <button 
                   onClick={onClose} 
-                  className="pointer-events-auto bg-black/40 hover:bg-black text-white p-3 rounded-full backdrop-blur-md border-2 border-white/20 transition-all active:scale-95 shadow-xl"
+                  className="pointer-events-auto bg-black/40 hover:bg-black text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-95 shadow-xl"
                 >
-                  <X size={24} />
+                  <X size={20} />
                 </button>
               </div>
 
-              {/* Viewfinder Corners - Fixed and Consistent */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[75%] max-w-4xl max-h-[80vh] border-2 border-white/10 rounded-[3rem] pointer-events-none shadow-[0_0_100px_rgba(0,0,0,0.5)]">
-                <div className="absolute -top-1 -left-1 w-12 h-12 border-t-8 border-l-8 border-accent rounded-tl-[2rem]" />
-                <div className="absolute -top-1 -right-1 w-12 h-12 border-t-8 border-r-8 border-accent rounded-tr-[2rem]" />
-                <div className="absolute -bottom-1 -left-1 w-12 h-12 border-b-8 border-l-8 border-accent rounded-bl-[2rem]" />
-                <div className="absolute -bottom-1 -right-1 w-12 h-12 border-b-8 border-r-8 border-accent rounded-br-[2rem]" />
+              {/* Viewfinder Corners - Subtle and Semi-transparent */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[80%] max-w-5xl max-h-[85vh] pointer-events-none">
+                <div className="absolute top-0 left-0 w-10 h-10 border-t-2 border-l-2 border-accent/40 rounded-tl-[2rem]" />
+                <div className="absolute top-0 right-0 w-10 h-10 border-t-2 border-r-2 border-accent/40 rounded-tr-[2rem]" />
+                <div className="absolute bottom-0 left-0 w-10 h-10 border-b-2 border-l-2 border-accent/40 rounded-bl-[2rem]" />
+                <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-accent/40 rounded-br-[2rem]" />
               </div>
 
-              {/* Shutter Button - Moved to bottom and shrunk */}
-              <div className="flex justify-center pb-10">
+              {/* Shutter Button - Absolute Bottom and Very Small */}
+              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 pb-4">
                 <button 
                   onClick={capture}
-                  className="pointer-events-auto group relative w-20 h-20 flex items-center justify-center transition-all active:scale-90"
+                  className="pointer-events-auto group relative w-16 h-16 flex items-center justify-center transition-all active:scale-90"
                 >
-                  <div className="absolute inset-0 bg-white/20 rounded-full scale-125 backdrop-blur-sm" />
-                  <div className="absolute inset-2 bg-white rounded-full border-4 border-black/10 group-hover:bg-zinc-100 transition-colors" />
-                  <div className="w-12 h-12 bg-white rounded-full border-2 border-black/5" />
+                  <div className="absolute inset-0 bg-white/10 rounded-full scale-125 backdrop-blur-sm border border-white/5" />
+                  <div className="absolute inset-1.5 bg-white rounded-full border-2 border-black/10 group-hover:bg-zinc-100 transition-colors" />
+                  <div className="w-8 h-8 bg-white/50 rounded-full border border-black/5" />
                 </button>
               </div>
             </div>
