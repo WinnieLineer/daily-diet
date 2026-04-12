@@ -1,78 +1,146 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
+import { getLanguage } from '../lib/translations';
 
 // ──────────────────────────────────────────────
 // Dialogue banks per interaction type
 // ──────────────────────────────────────────────
 const DIALOGUES = {
-  idle: [
-    // 🧠 nutrition knowledge nuggets
-    '💡 蛋白質每克4大卡，脂肪每克9大卡，你猜哪個更撐？',
-    '💡 吃飯慢一點，大腦收到飽足感要20分鐘！',
-    '💡 水喝夠，代謝才快！今天喝了幾杯？ 💧',
-    '💡 肌肉量越高，躺著燃燒的熱量越多喔！',
-    '💡 深色蔬菜含鐵豐富，菠菜不只大力水手吃的！',
-    '💡 早餐吃蛋白質，可以減少整天的食慾！',
-    '💡 膳食纖維幫助腸胃蠕動，益生菌的最愛食物！',
-    '💡 運動後30分鐘補充蛋白質，肌肉合成最有效率！',
-    // 😈 snarky roasts
-    '我在看你喔，別想偷吃宵夜 👀',
-    '少吃點炸物行不行，我都替你難過了 😤',
-    '你上次喝水是幾年前的事？ 💧',
-    '吃那麼少記錄什麼？還是吃那麼多不敢記錄？ 😏',
-    '你的熱量目標在哭泣中 🥲',
-    '辛苦了，吃這麼「養生」……欸等等，那是炸雞嗎？ 🍗',
-    '記錄飲食的第一步是：承認你剛才吃了那個 🙄',
-    '你以為不記錄熱量就不存在？ 哈，天真！',
-  ],
-  click: [
-    '你按我幹嘛啦！ 😤',
-    '有事說事，不要亂點！',
-    '痛啦！！你是故意的嗎？',
-    '我是熊貓，不是按鈕！',
-    '……再按一次試試看 😒',
-    '你現在應該去記錄飲食，不是按我！',
-  ],
-  tickle: [
-    '哈哈哈哈哈停！！ 😂',
-    '癢癢癢癢不行了哈哈！',
-    '嗚嗚嗚你最壞了啦 🤣',
-    '哈——停——哈——停——！',
-    '再搔我就咬你手指！ 😆',
-    '笑死我了啦！！快去記錄飲食！ 🤣',
-  ],
-  poke: [
-    '戳什麼戳！沒禮貌！ 😠',
-    '你再戳一下試試看！！',
-    '這不是在玩耍的時間！',
-    '欸！！幹嘛啦！！ 😡',
-    '繼續戳，我不客氣了！',
-  ],
-  spamPoke: [
-    '好了好了受夠了！！ 🤬',
-    '警告！再戳告你家長！',
-    '你有毛病吧真的！！！',
-    'STOP STOP STOP 停！！！',
-    '…你是不是第一次養熊貓 💀',
-    '我要罷工了！！！ 😤',
-    '老娘要去告你！！！ 🐼💢',
-  ],
-  drag: [
-    '請……請放開我 😱',
-    '你在做什麼？！我暈了！',
-    '哎呀，這是在做什麼？ 🥀',
-    '再拖下去我要出螢幕了！',
-    '救命啊，有人在開玩笑嗎？ 😭',
-    '放我回去！！我要回家！',
-  ],
-  release: [
-    '終於放開了……可惡 😤',
-    '下次不給你拖了！哼！',
-    '頭好暈……哎呀 😵',
-    '謝謝你「關愛」我……才怪',
-    '再來一次我就咬人了！',
-  ],
+  zh: {
+    idle: [
+      '💡 蛋白質每克4大卡，脂肪每克9大卡，你猜哪個更撐？',
+      '💡 吃飯慢一點，大腦收到飽足感要20分鐘！',
+      '💡 水喝夠，代謝才快！今天喝了幾杯？ 💧',
+      '💡 肌肉量越高，躺著燃燒的熱量越多喔！',
+      '💡 深色蔬菜含鐵豐富，菠菜不只大力水手吃的！',
+      '💡 早餐吃蛋白質，可以減少整天的食慾！',
+      '💡 膳食纖維幫助腸胃蠕動，益生菌的最愛食物！',
+      '💡 運動後30分鐘補充蛋白質，肌肉合成最有效率！',
+      '我在看你喔，別想偷吃宵夜 👀',
+      '少吃點炸物行不行，我都替你難過了 😤',
+      '你上次喝水是幾年前的事？ 💧',
+      '吃那麼少記錄什麼？還是吃那麼多不敢記錄？ 😏',
+      '你的熱量目標在哭泣中 🥲',
+      '辛苦了，吃這麼「養生」……欸等等，那是炸雞嗎？ 🍗',
+      '記錄飲食的第一步是：承認你剛才吃了那個 🙄',
+      '你以為不記錄熱量就不存在？ 哈，天真！',
+    ],
+    click: [
+      '你按我幹嘛啦！ 😤',
+      '有事說事，不要亂點！',
+      '痛啦！！你是故意的嗎？',
+      '我是熊貓，不是按鈕！',
+      '……再按一次試試看 😒',
+      '你現在應該去記錄飲食，不是按我！',
+    ],
+    tickle: [
+      '哈哈哈哈哈停！！ 😂',
+      '癢癢癢癢不行了哈哈！',
+      '嗚嗚嗚你最壞了啦 🤣',
+      '哈——停——哈——停——！',
+      '再搔我就咬你手指！ 😆',
+      '笑死我了啦！！快去記錄飲食！ 🤣',
+    ],
+    poke: [
+      '戳什麼戳！沒禮貌！ 😠',
+      '你再戳一下試試看！！',
+      '這不是在玩耍的時間！',
+      '欸！！幹嘛啦！！ 😡',
+      '繼續戳，我不客氣了！',
+    ],
+    spamPoke: [
+      '好了好了受夠了！！ 🤬',
+      '警告！再戳告你家長！',
+      '你有毛病吧真的！！！',
+      'STOP STOP STOP 停！！！',
+      '…你是不是第一次養熊貓 💀',
+      '我要罷工了！！！ 😤',
+      '老娘要去告你！！！ 🐼💢',
+    ],
+    drag: [
+      '請……請放開我 😱',
+      '你在做什麼？！我暈了！',
+      '哎呀，這是在做什麼？ 🥀',
+      '再拖下去我要出螢幕了！',
+      '救命啊，有人在開玩笑嗎？ 😭',
+      '放我回去！！我要回家！',
+    ],
+    release: [
+      '終於放開了……可惡 😤',
+      '下次不給你拖了！哼！',
+      '頭好暈……哎呀 😵',
+      '謝謝你「關愛」我……才怪',
+      '再來一次我就咬人了！',
+    ],
+  },
+  en: {
+    idle: [
+      '💡 1g protein is 4kcal, 1g fat is 9kcal. Guess which is more filling?',
+      '💡 Eat slower! It takes 20 mins for your brain to feel full.',
+      '💡 Drink enough water to boost metabolism! How many glasses today? 💧',
+      '💡 Higher muscle mass means more calories burned while resting!',
+      '💡 Dark greens are rich in iron. Spinach isn\'t just for Popeye!',
+      '💡 Eating protein for breakfast can reduce appetite all day!',
+      '💡 Fiber helps digestion—it\'s the favorite food for probiotics!',
+      '💡 Protein 30 mins after a workout is best for muscle synthesis!',
+      'I\'m watching you... don\'t even think about that midnight snack 👀',
+      'Could you eat fewer fried foods? I\'m feeling sad for you 😤',
+      'When was the last time you drank water? Years ago? 💧',
+      'Recording so little? Or are you just afraid to record everything? 😏',
+      'Your calorie goal is crying 🥲',
+      'Hard work! Eating so "healthy"... wait, is that fried chicken? 🍗',
+      'Step one of tracking: admit you just ate that 🙄',
+      'You think calories don\'t exist if you don\'t track them? Ha, naive!',
+    ],
+    click: [
+      'Why are you clicking me? 😤',
+      'Talk to me, don\'t just tap!',
+      'Ouch! Was that on purpose?',
+      'I\'m a panda, not a button!',
+      '...try that one more time 😒',
+      'You should be logging food, not clicking me!',
+    ],
+    tickle: [
+      'Hahahaha stop!! 😂',
+      'It tickles! Hahaha!',
+      'You\'re the worst! 🤣',
+      'Ha—stop—ha—stop—!',
+      'I\'ll bite your finger if you keep tickling! 😆',
+      'This is too much!! Go log your food! 🤣',
+    ],
+    poke: [
+      'Stop poking! So rude! 😠',
+      'Try poking me one more time!!',
+      'This isn\'t playtime!',
+      'Hey!! What gives?! 😡',
+      'Keep poking and I won\'t be nice!',
+    ],
+    spamPoke: [
+      'OK OK enough!! 🤬',
+      'Warning! I\'m telling your parents!',
+      'Is something wrong with you? Seriously!!!',
+      'STOP STOP STOP!!!',
+      '...is this your first time raising a panda? 💀',
+      'I\'m going on strike!!! 😤',
+      'I\'m gonna sue you!!! 🐼💢',
+    ],
+    drag: [
+      'Please... let me go 😱',
+      'What are you doing?! I\'m dizzy!',
+      'Oh my, what is this? 🥀',
+      'Any further and I\'ll be off the screen!',
+      'Help, is someone joking? 😭',
+      'Put me back!! I want to go home!',
+    ],
+    release: [
+      'Finally let go... hmph 😤',
+      'Not letting you drag me next time! 🐼',
+      'So dizzy... oh boy 😵',
+      'Thanks for "caring" about me... not!',
+      'I\'ll bite next time!',
+    ],
+  }
 };
 
 function getRandom(arr) {
@@ -231,7 +299,7 @@ const PandaCoachCard = ({ advice }) => {
     if (isDragging) return;
     setExpression('scared');
     setIsSquished(true);
-    showBubble(getRandom(DIALOGUES.click));
+    showBubble(getRandom(DIALOGUES[getLanguage()].click));
     addParticle('💥');
     await controls.start({
       scale: [1, 1.15, 0.9, 1.05, 1],
@@ -245,7 +313,7 @@ const PandaCoachCard = ({ advice }) => {
   const handleTickleStart = useCallback(() => {
     if (isDragging) return;
     setExpression('happy');
-    showBubble(getRandom(DIALOGUES.tickle), 3500);
+    showBubble(getRandom(DIALOGUES[getLanguage()].tickle), 3500);
     // Use yellow/gold themed particles
     addParticle('✨'); 
     controls.start({
@@ -274,7 +342,7 @@ const PandaCoachCard = ({ advice }) => {
 
     if (count >= 5) {
       setExpression('scared');
-      showBubble(getRandom(DIALOGUES.spamPoke), 2500);
+      showBubble(getRandom(DIALOGUES[getLanguage()].spamPoke), 2500);
       addParticle('⚡');
       await controls.start({
         x: [-8, 8, -8, 8, -4, 4, 0],
@@ -284,7 +352,7 @@ const PandaCoachCard = ({ advice }) => {
       pokeCount.current = 0;
     } else {
       setExpression('scared');
-      showBubble(getRandom(DIALOGUES.poke));
+      showBubble(getRandom(DIALOGUES[getLanguage()].poke));
       addParticle('👆');
       await controls.start({
         x: [0, -6, 6, -3, 0],
@@ -300,13 +368,13 @@ const PandaCoachCard = ({ advice }) => {
   const handleDragStart = useCallback(() => {
     setIsDragging(true);
     setExpression('dizzy');
-    showBubble(getRandom(DIALOGUES.drag), 99999);
+    showBubble(getRandom(DIALOGUES[getLanguage()].drag), 99999);
     addParticle('💫');
   }, [showBubble, addParticle]);
 
   const handleDragEnd = useCallback(async () => {
     setExpression('sad');
-    showBubble(getRandom(DIALOGUES.release), 2500);
+    showBubble(getRandom(DIALOGUES[getLanguage()].release), 2500);
     addParticle('🌀');
     await controls.start({
       x: 0, y: 0,
@@ -326,7 +394,7 @@ const PandaCoachCard = ({ advice }) => {
     const interval = setInterval(() => {
       if (!bubbleVisible && !isDragging) {
         if (Math.random() < 0.4) {
-          showBubble(advice || getRandom(DIALOGUES.idle), 3500);
+          showBubble(advice || getRandom(DIALOGUES[getLanguage()].idle), 3500);
         }
       }
     }, 8000);
