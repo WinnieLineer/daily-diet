@@ -67,6 +67,7 @@ const translations = {
     location_hint: "照片若無座標，可點擊上方按鈕取得目前位置",
     no_location_found: "未偵測到座標",
     geocoding: "📍 正在分析地點...",
+    camera_error: "無法啟動相機，請檢查權限設定。",
   },
   en: {
     app_title: "DAILY DIET",
@@ -136,6 +137,7 @@ const translations = {
     location_hint: "No GPS in photo? Use current location instead.",
     no_location_found: "No GPS detected",
     geocoding: "📍 Geocoding...",
+    camera_error: "Could not start camera. Please check permissions.",
   }
 };
 

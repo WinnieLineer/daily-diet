@@ -9,6 +9,85 @@ import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const DesktopCamera = ({ onCapture, onClose }) => {
+  const videoRef = useRef(null);
+  const canvasRef = useRef(null);
+  const [stream, setStream] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    async function setupCamera() {
+      try {
+        const s = await navigator.mediaDevices.getUserMedia({ 
+          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+        });
+        setStream(s);
+        if (videoRef.current) videoRef.current.srcObject = s;
+      } catch (err) {
+        console.error("Camera access failed", err);
+        setError(t('camera_error') || "Camera access denied or not found");
+      }
+    }
+    setupCamera();
+    return () => {
+      if (stream) stream.getTracks().forEach(t => t.stop());
+    };
+  }, []);
+
+  const capture = () => {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (video && canvas) {
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      canvas.getContext('2d').drawImage(video, 0, 0);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      onCapture(dataUrl);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        className="relative w-full max-w-xl aspect-[4/3] sm:aspect-video bg-zinc-900 rounded-[2.5rem] overflow-hidden border-8 border-black shadow-2xl"
+      >
+        {error ? (
+          <div className="flex flex-col items-center justify-center h-full text-white p-8 text-center">
+            <AlertCircle size={48} className="text-rose-500 mb-4" />
+            <p className="font-black italic text-lg">{error}</p>
+            <button onClick={onClose} className="mt-6 bg-white text-black px-6 py-2 rounded-xl font-black italic border-2 border-black">{t('cancel')}</button>
+          </div>
+        ) : (
+          <>
+            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <canvas ref={canvasRef} className="hidden" />
+            <button onClick={onClose} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black transition-all border-2 border-white/20">
+              <X size={24} />
+            </button>
+            <div className="absolute inset-0 border-[40px] border-black/20 pointer-events-none rounded-[2rem]">
+              <div className="w-full h-full border-2 border-white/30 rounded-xl dashed" />
+            </div>
+          </>
+        )}
+      </motion.div>
+      
+      {!error && (
+        <div className="mt-8 flex flex-col items-center gap-4">
+          <button 
+            onClick={capture}
+            className="w-24 h-24 bg-white rounded-full border-[12px] border-white/20 active:scale-90 transition-all shadow-2xl flex items-center justify-center hover:bg-zinc-50"
+          >
+            <div className="w-14 h-14 bg-black rounded-full border-4 border-accent animate-pulse" />
+          </button>
+          <p className="text-white/40 font-black italic tracking-widest text-[10px] uppercase">{t('ai_mode')}</p>
+        </div>
+      )}
+    </div>
+  );
+};
+
 const FoodDetective = ({ onLogAdded }) => {
   const [mode, setMode] = useState('ai'); // 'ai' or 'manual'
   const [loading, setLoading] = useState(false);
@@ -18,6 +97,7 @@ const FoodDetective = ({ onLogAdded }) => {
   const galleryInputRef = useRef(null);
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '', water: '' });
   const [locationLoading, setLocationLoading] = useState(false);
+  const [showDesktopCamera, setShowDesktopCamera] = useState(false);
 
   const getCurrentLocation = () => {
     // We will no longer use browser geolocation for manual/water
@@ -90,6 +170,22 @@ const FoodDetective = ({ onLogAdded }) => {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  const handleCameraCapture = async (base64) => {
+    setShowDesktopCamera(false);
+    setPreview(base64);
+    setLoading(true);
+    setResult(null);
+
+    try {
+      const data = await analyzeFoodImage(base64, getLanguage());
+      setResult({ ...data, location: null });
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setLoading(false);
+    }
   };
 
   const saveLog = async () => {
@@ -197,7 +293,14 @@ const FoodDetective = ({ onLogAdded }) => {
           className="grid grid-cols-2 gap-3 mt-2"
         >
           <button 
-            onClick={() => cameraInputRef.current?.click()}
+            onClick={() => {
+              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+              if (isMobile) {
+                cameraInputRef.current?.click();
+              } else {
+                setShowDesktopCamera(true);
+              }
+            }}
             className="group flex flex-col items-center justify-center p-6 bg-black text-white rounded-[2.5rem] border-4 border-black hover:bg-zinc-800 transition-all active:scale-95 shadow-neo-sm"
           >
             <div className="bg-accent text-black p-4 rounded-2xl mb-3 group-hover:scale-110 transition-transform">
@@ -226,6 +329,13 @@ const FoodDetective = ({ onLogAdded }) => {
           <input type="file" ref={cameraInputRef} onChange={handleImageUpload} accept="image/*" capture="environment" className="hidden" />
           <input type="file" ref={galleryInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
         </motion.div>
+      )}
+
+      {showDesktopCamera && (
+        <DesktopCamera 
+          onCapture={handleCameraCapture} 
+          onClose={() => setShowDesktopCamera(false)} 
+        />
       )}
 
 
