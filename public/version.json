@@ -1,4 +1,4 @@
 {
-  "version": "1.0.9",
-  "comment": "Fix iOS Safari auto location bug"
+  "version": "1.1.0",
+  "comment": "Fix double flash on modal AnimatePresence"
 }
