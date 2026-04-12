@@ -161,7 +161,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-const APP_VERSION = '1.0.2';
+const APP_VERSION = '1.0.3';
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
@@ -187,14 +187,16 @@ function App() {
             await Promise.all(cacheNames.map(name => caches.delete(name)));
           }
 
-          // 2. Unregister Service Workers
+          // 2. Unregister Service Workers completely
           if ('serviceWorker' in navigator) {
             const registrations = await navigator.serviceWorker.getRegistrations();
-            await Promise.all(registrations.map(r => r.unregister()));
+            for (let registration of registrations) {
+              await registration.unregister();
+            }
           }
-
-          // 3. Force hard reload
-          window.location.reload();
+           
+          // 3. Final Hard Reload
+          window.location.reload(true);
         }
       } catch (err) {
         console.error("Version check failed:", err);
