@@ -31,16 +31,31 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
     setupCamera();
 
     // Silently start fetching location in the background if permission is granted
+    // iOS Safari oftens throws error on navigator.permissions.query('geolocation'), so we fallback to a localStorage flag tracking previous consent
+    const permissionGranted = localStorage.getItem('location_granted') === 'true';
     if (navigator.geolocation && onLocationReady) {
-      navigator.permissions.query({ name: 'geolocation' }).then(permission => {
-        if (permission.state === 'granted') {
-          navigator.geolocation.getCurrentPosition(
-            pos => onLocationReady(pos.coords),
-            () => {}, // silent fail
-            { timeout: 8000, maximumAge: 30000 }
-          );
-        }
-      }).catch(() => {});
+      try {
+        navigator.permissions.query({ name: 'geolocation' }).then(permission => {
+          if (permission.state === 'granted' || permissionGranted) {
+            fetchBackground();
+          }
+        }).catch(() => {
+          if (permissionGranted) fetchBackground();
+        });
+      } catch (err) {
+        if (permissionGranted) fetchBackground();
+      }
+    }
+
+    function fetchBackground() {
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          localStorage.setItem('location_granted', 'true');
+          onLocationReady(pos.coords);
+        },
+        () => {}, // silent fail
+        { timeout: 8000, maximumAge: 30000 }
+      );
     }
 
     return () => {
@@ -170,6 +185,7 @@ const FoodDetective = ({ onLogAdded }) => {
     if (!navigator.geolocation) return;
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(async (pos) => {
+      localStorage.setItem('location_granted', 'true');
       const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
       setResult(prev => ({ ...prev, location: loc }));
     }, (err) => {
@@ -243,13 +259,23 @@ const FoodDetective = ({ onLogAdded }) => {
       if (coords) {
         autoLocation = await reverseGeocode(coords.latitude, coords.longitude);
       } else if (navigator.geolocation) {
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        if (permission.state === 'granted') {
+        const checkPermission = async () => {
+          try {
+            const p = await navigator.permissions.query({ name: 'geolocation' });
+            return p.state === 'granted';
+          } catch (e) {
+            return false;
+          }
+        };
+        const hasPerm = await checkPermission() || localStorage.getItem('location_granted') === 'true';
+        
+        if (hasPerm) {
           autoLocation = await new Promise((resolve) => {
             navigator.geolocation.getCurrentPosition(async (pos) => {
+              localStorage.setItem('location_granted', 'true');
               const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
               resolve(loc);
-            }, () => resolve(null), { timeout: 5000 });
+            }, () => resolve(null), { timeout: 5000, maximumAge: 30000 });
           });
         }
       }

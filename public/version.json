@@ -1,4 +1,4 @@
 {
-  "version": "1.0.8",
-  "comment": "Fix settings modal visual flash"
+  "version": "1.0.9",
+  "comment": "Fix iOS Safari auto location bug"
 }
