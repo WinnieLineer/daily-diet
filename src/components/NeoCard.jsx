@@ -3,10 +3,10 @@ import { motion } from 'framer-motion';
 import { clsx } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
-const NeoCard = ({ children, className, ...props }) => {
+const NeoCard = ({ children, className, disableHover = false, ...props }) => {
   return (
     <motion.div
-      whileHover={{ y: -2, x: -2 }}
+      whileHover={disableHover ? {} : { y: -2, x: -2 }}
       className={twMerge('neo-card p-6', className)}
       {...props}
     >
