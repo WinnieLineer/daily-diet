@@ -47,43 +47,70 @@ const DesktopCamera = ({ onCapture, onClose }) => {
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/95 flex flex-col items-center justify-center p-4 backdrop-blur-xl">
+    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
       <motion.div 
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="relative w-full max-w-xl aspect-[4/3] sm:aspect-video bg-zinc-900 rounded-[2.5rem] overflow-hidden border-8 border-black shadow-2xl"
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden"
       >
         {error ? (
-          <div className="flex flex-col items-center justify-center h-full text-white p-8 text-center">
+          <div className="flex flex-col items-center justify-center h-full text-white p-8 text-center max-w-md">
             <AlertCircle size={48} className="text-rose-500 mb-4" />
             <p className="font-black italic text-lg">{error}</p>
-            <button onClick={onClose} className="mt-6 bg-white text-black px-6 py-2 rounded-xl font-black italic border-2 border-black">{t('cancel')}</button>
+            <button onClick={onClose} className="mt-6 bg-white text-black px-8 py-3 rounded-2xl font-black italic border-4 border-black shadow-neo">
+              {t('cancel')}
+            </button>
           </div>
         ) : (
           <>
-            <video ref={videoRef} autoPlay playsInline className="w-full h-full object-cover" />
+            <video 
+              ref={videoRef} 
+              autoPlay 
+              playsInline 
+              className="w-full h-full object-cover" 
+            />
             <canvas ref={canvasRef} className="hidden" />
-            <button onClick={onClose} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full hover:bg-black transition-all border-2 border-white/20">
-              <X size={24} />
-            </button>
-            <div className="absolute inset-0 border-[40px] border-black/20 pointer-events-none rounded-[2rem]">
-              <div className="w-full h-full border-2 border-white/30 rounded-xl dashed" />
+            
+            {/* UI Overlays */}
+            <div className="absolute inset-0 p-6 pointer-events-none flex flex-col justify-between">
+              {/* Header */}
+              <div className="flex justify-between items-start">
+                <div className="bg-black/60 backdrop-blur-md px-4 py-2 rounded-2xl border-2 border-white/10 flex items-center gap-2">
+                  <div className="w-2 h-2 bg-rose-500 rounded-full animate-pulse" />
+                  <span className="text-white text-[10px] font-black uppercase tracking-widest">{t('ai_mode')}</span>
+                </div>
+                
+                <button 
+                  onClick={onClose} 
+                  className="pointer-events-auto bg-black/40 hover:bg-black text-white p-3 rounded-full backdrop-blur-md border-2 border-white/20 transition-all active:scale-95 shadow-xl"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {/* Viewfinder Corners - Fixed and Consistent */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[85%] h-[75%] max-w-4xl max-h-[80vh] border-2 border-white/10 rounded-[3rem] pointer-events-none shadow-[0_0_100px_rgba(0,0,0,0.5)]">
+                <div className="absolute -top-1 -left-1 w-12 h-12 border-t-8 border-l-8 border-accent rounded-tl-[2rem]" />
+                <div className="absolute -top-1 -right-1 w-12 h-12 border-t-8 border-r-8 border-accent rounded-tr-[2rem]" />
+                <div className="absolute -bottom-1 -left-1 w-12 h-12 border-b-8 border-l-8 border-accent rounded-bl-[2rem]" />
+                <div className="absolute -bottom-1 -right-1 w-12 h-12 border-b-8 border-r-8 border-accent rounded-br-[2rem]" />
+              </div>
+
+              {/* Shutter Button - Moved to bottom and shrunk */}
+              <div className="flex justify-center pb-10">
+                <button 
+                  onClick={capture}
+                  className="pointer-events-auto group relative w-20 h-20 flex items-center justify-center transition-all active:scale-90"
+                >
+                  <div className="absolute inset-0 bg-white/20 rounded-full scale-125 backdrop-blur-sm" />
+                  <div className="absolute inset-2 bg-white rounded-full border-4 border-black/10 group-hover:bg-zinc-100 transition-colors" />
+                  <div className="w-12 h-12 bg-white rounded-full border-2 border-black/5" />
+                </button>
+              </div>
             </div>
           </>
         )}
       </motion.div>
-      
-      {!error && (
-        <div className="mt-8 flex flex-col items-center gap-4">
-          <button 
-            onClick={capture}
-            className="w-24 h-24 bg-white rounded-full border-[12px] border-white/20 active:scale-90 transition-all shadow-2xl flex items-center justify-center hover:bg-zinc-50"
-          >
-            <div className="w-14 h-14 bg-black rounded-full border-4 border-accent animate-pulse" />
-          </button>
-          <p className="text-white/40 font-black italic tracking-widest text-[10px] uppercase">{t('ai_mode')}</p>
-        </div>
-      )}
     </div>
   );
 };
