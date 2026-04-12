@@ -95,21 +95,22 @@ const GoalSettings = ({ onGoalsUpdated }) => {
           <motion.div 
             key="settings-modal"
             className="fixed inset-0 z-[60] flex items-center justify-center p-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: 0.2 }}
           >
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
+            <div 
               className="absolute inset-0 bg-black/40 backdrop-blur-md" 
               onClick={() => setIsOpen(false)} 
             />
             <NeoCard 
               disableHover
               className="relative z-[70] w-full max-w-sm max-h-[85vh] space-y-4 shadow-2xl overflow-hidden p-0 flex flex-col sm:absolute sm:top-14 sm:right-0 sm:left-auto sm:w-80 sm:max-h-none sm:translate-y-0"
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2, ease: "easeOut" }}
+              initial={{ scale: 0.95, y: 10 }}
+              animate={{ scale: 1, y: 0 }}
+              exit={{ scale: 0.95, y: 10 }}
+              transition={{ duration: 0.2, ease: "easeOut", delay: 0.05 }}
             >
               
               {/* Header */}
