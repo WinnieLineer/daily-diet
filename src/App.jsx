@@ -6,9 +6,10 @@ import WeightTracker from './components/WeightTracker';
 import GoalSettings from './components/GoalSettings';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
-import { db, getDailySummary } from './db';
+import { db, getDailySummary, calculateStreak } from './db';
+import SharingCard from './components/SharingCard';
 import { getPandaAdvice } from './lib/gemini';
-import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 
@@ -205,11 +206,17 @@ function App() {
 
     checkVersion();
     
-    // Also perform the legacy localStorage check for double-safety
-    const savedVersion = localStorage.getItem('app_version');
-    if (savedVersion !== APP_VERSION) {
-      localStorage.setItem('app_version', APP_VERSION);
-    }
+    // Check version whenever the app is brought to the foreground
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        checkVersion();
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, []);
   const [recentLogs, setRecentLogs] = useState([]);
   const [historyGroups, setHistoryGroups] = useState([]); // Array of { date, logs, totalCalories, totalProtein }
@@ -219,6 +226,8 @@ function App() {
   const [advice, setAdvice] = useState('');
   const [now, setNow] = useState(new Date());
   const [lastLocation, setLastLocation] = useState(null);
+  const [streak, setStreak] = useState(0);
+  const [showShare, setShowShare] = useState(false);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -246,6 +255,10 @@ function App() {
       water: watGoal ? watGoal.value : 2500
     };
     setGoals(currentGoals);
+
+    // Fetch streak
+    const currentStreak = await calculateStreak();
+    setStreak(currentStreak);
 
     // Fetch all logs and categorize
     const allLogs = await db.dietLogs
@@ -346,11 +359,21 @@ function App() {
               </div>
             )}
           </div>
-          <GoalSettings onGoalsUpdated={refreshData} />
+          <div className="flex items-center gap-2">
+            <NeoButton 
+              variant="black" 
+              className="w-10 h-10 p-0 flex items-center justify-center"
+              onClick={() => setShowShare(true)}
+              title="Share Card"
+            >
+              <Share2 size={18} />
+            </NeoButton>
+            <GoalSettings onGoalsUpdated={refreshData} />
+          </div>
         </div>
       </header>
 
-      <PandaCoachCard advice={advice} />
+      <PandaCoachCard advice={advice} streak={streak} />
 
       <Dashboard summary={summary} goals={goals} />
 
@@ -409,6 +432,15 @@ function App() {
       </NeoCard>
 
       <WeightTracker />
+      
+      <SharingCard 
+        isOpen={showShare}
+        onClose={() => setShowShare(false)}
+        summary={summary}
+        goals={goals}
+        streak={streak}
+        advice={advice}
+      />
 
       {/* History Logs */}
       {historyGroups.length > 0 && (
