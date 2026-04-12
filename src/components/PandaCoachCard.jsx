@@ -460,7 +460,7 @@ const PandaCoachCard = ({ advice, streak = 0 }) => {
                 </div>
               )}
             </div>
-            <p className="text-base sm:text-lg font-bold text-black leading-tight italic whitespace-nowrap overflow-hidden text-ellipsis">
+            <p className="text-base sm:text-lg font-bold text-black leading-snug italic">
               {advice || '每一刻的節制，都是對生活的極致追求。'}
             </p>
           </div>

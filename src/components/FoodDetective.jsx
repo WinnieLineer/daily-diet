@@ -9,7 +9,7 @@ import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const DesktopCamera = ({ onCapture, onClose }) => {
+const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
@@ -29,6 +29,20 @@ const DesktopCamera = ({ onCapture, onClose }) => {
       }
     }
     setupCamera();
+
+    // Silently start fetching location in the background if permission is granted
+    if (navigator.geolocation && onLocationReady) {
+      navigator.permissions.query({ name: 'geolocation' }).then(permission => {
+        if (permission.state === 'granted') {
+          navigator.geolocation.getCurrentPosition(
+            pos => onLocationReady(pos.coords),
+            () => {}, // silent fail
+            { timeout: 8000, maximumAge: 30000 }
+          );
+        }
+      }).catch(() => {});
+    }
+
     return () => {
       if (stream) stream.getTracks().forEach(t => t.stop());
     };
@@ -125,6 +139,7 @@ const FoodDetective = ({ onLogAdded }) => {
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '', water: '' });
   const [locationLoading, setLocationLoading] = useState(false);
   const [showDesktopCamera, setShowDesktopCamera] = useState(false);
+  const pendingCoordsRef = useRef(null); // stores pre-fetched coords from camera open
 
   const getCurrentLocation = () => {
     // We will no longer use browser geolocation for manual/water
@@ -221,10 +236,13 @@ const FoodDetective = ({ onLogAdded }) => {
     setLoading(true);
     setResult(null);
 
-    // Auto-location for camera capture
+    // Use pre-fetched coords from camera open; fall back to fresh fetch if needed
     let autoLocation = null;
-    if (navigator.geolocation) {
-      try {
+    try {
+      const coords = pendingCoordsRef.current;
+      if (coords) {
+        autoLocation = await reverseGeocode(coords.latitude, coords.longitude);
+      } else if (navigator.geolocation) {
         const permission = await navigator.permissions.query({ name: 'geolocation' });
         if (permission.state === 'granted') {
           autoLocation = await new Promise((resolve) => {
@@ -234,8 +252,9 @@ const FoodDetective = ({ onLogAdded }) => {
             }, () => resolve(null), { timeout: 5000 });
           });
         }
-      } catch (err) { console.warn("Auto-location check failed:", err); }
-    }
+      }
+    } catch (err) { console.warn("Auto-location check failed:", err); }
+    finally { pendingCoordsRef.current = null; }
 
     try {
       const data = await analyzeFoodImage(base64, getLanguage());
@@ -394,6 +413,7 @@ const FoodDetective = ({ onLogAdded }) => {
         <DesktopCamera 
           onCapture={handleCameraCapture} 
           onClose={() => setShowDesktopCamera(false)} 
+          onLocationReady={(coords) => { pendingCoordsRef.current = coords; }}
         />
       )}
 
