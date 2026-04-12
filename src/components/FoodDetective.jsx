@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import exifr from 'exifr';
@@ -16,15 +16,8 @@ const FoodDetective = ({ onLogAdded }) => {
   const [result, setResult] = useState(null);
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
-  const [showActionSheet, setShowActionSheet] = useState(false);
-
-  // Manual input state
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '', water: '' });
-
-  // Auto-close menu when preview starts
-  useEffect(() => {
-    if (preview) setShowActionSheet(false);
-  }, [preview]);
+  const [locationLoading, setLocationLoading] = useState(false);
 
   const getCurrentLocation = () => {
     // We will no longer use browser geolocation for manual/water
@@ -32,6 +25,7 @@ const FoodDetective = ({ onLogAdded }) => {
   };
 
   const reverseGeocode = async (lat, lon) => {
+    setLocationLoading(true);
     try {
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
         headers: {
@@ -40,17 +34,29 @@ const FoodDetective = ({ onLogAdded }) => {
         }
       });
       const data = await response.json();
-      // Try to get a meaningful name
-      const name = data.address.suburb || data.address.town || data.address.city || data.address.road || "未知地點";
+      const name = data.address.suburb || data.address.town || data.address.city || data.address.road || t('unknown');
       return name;
     } catch (err) {
       console.error("Geocoding error:", err);
-      return "未知地點";
+      return t('unknown');
+    } finally {
+      setLocationLoading(false);
     }
   };
 
+  const fetchCurrentLocation = () => {
+    if (!navigator.geolocation) return;
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(async (pos) => {
+      const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+      setResult(prev => ({ ...prev, location: loc }));
+    }, (err) => {
+      console.error("Geolocation error:", err);
+      setLocationLoading(false);
+    }, { timeout: 10000 });
+  };
+
   const handleImageUpload = async (e) => {
-    setShowActionSheet(false);
     const file = e.target.files[0];
     if (!file) return;
 
@@ -79,6 +85,8 @@ const FoodDetective = ({ onLogAdded }) => {
         alert(err.message);
       } finally {
         setLoading(false);
+        // Ensure location loading is off if analyze fails
+        if (!exifLocation) setLocationLoading(false);
       }
     };
     reader.readAsDataURL(file);
@@ -184,99 +192,42 @@ const FoodDetective = ({ onLogAdded }) => {
 
       {mode === 'ai' && !preview && (
         <motion.div
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          onClick={() => setShowActionSheet(true)}
-          className="aspect-video border-4 border-dashed border-black rounded-3xl flex flex-col items-center justify-center cursor-pointer transition-all bg-gradient-to-br from-white to-gray-50 hover:bg-accent/10 hover:border-accent hover:shadow-[0_0_0_4px_rgba(253,224,71,0.2)] group mt-2"
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="grid grid-cols-2 gap-3 mt-2"
         >
-          <div className="bg-black text-white rounded-2xl p-3 mb-3 group-hover:scale-110 transition-transform shadow-neo-sm">
-            <Camera size={28} />
-          </div>
-          <p className="font-bold text-sm text-black">{t('upload_hint')}</p>
-          <p className="text-xs text-gray-500 mt-1">{t('ai_sub_hint')}</p>
-          
-          {/* Hidden inputs for different purposes */}
-          <input 
-            type="file" 
-            ref={cameraInputRef} 
-            onChange={handleImageUpload} 
-            accept="image/*" 
-            capture="environment" 
-            className="hidden" 
-          />
-          <input 
-            type="file" 
-            ref={galleryInputRef} 
-            onChange={handleImageUpload} 
-            accept="image/*" 
-            className="hidden" 
-          />
+          <button 
+            onClick={() => cameraInputRef.current?.click()}
+            className="group flex flex-col items-center justify-center p-6 bg-black text-white rounded-[2.5rem] border-4 border-black hover:bg-zinc-800 transition-all active:scale-95 shadow-neo-sm"
+          >
+            <div className="bg-accent text-black p-4 rounded-2xl mb-3 group-hover:scale-110 transition-transform">
+              <Camera size={28} />
+            </div>
+            <div className="text-center">
+              <div className="font-black text-lg italic">{t('camera')}</div>
+              <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold">{t('camera_sub')}</div>
+            </div>
+          </button>
+
+          <button 
+            onClick={() => galleryInputRef.current?.click()}
+            className="group flex flex-col items-center justify-center p-6 bg-white text-black rounded-[2.5rem] border-4 border-black hover:bg-gray-50 transition-all active:scale-95 shadow-neo-sm"
+          >
+            <div className="bg-gray-100 text-black p-4 rounded-2xl mb-3 group-hover:scale-110 transition-transform border-2 border-black/5">
+              <ImageIcon size={28} />
+            </div>
+            <div className="text-center">
+              <div className="font-black text-lg italic">{t('gallery')}</div>
+              <div className="text-[10px] uppercase tracking-widest text-black/40 font-bold">{t('gallery_sub')}</div>
+            </div>
+          </button>
+
+          {/* Hidden inputs */}
+          <input type="file" ref={cameraInputRef} onChange={handleImageUpload} accept="image/*" capture="environment" className="hidden" />
+          <input type="file" ref={galleryInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
         </motion.div>
       )}
 
-      {/* Premium Photo Action Sheet */}
-      <AnimatePresence>
-        {showActionSheet && (
-          <div className="fixed inset-0 z-[100] flex items-end justify-center px-4 pb-10 sm:pb-20">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              onClick={() => setShowActionSheet(false)}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-            />
-            <motion.div 
-              initial={{ y: "100%", opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: "100%", opacity: 0 }}
-              transition={{ type: 'spring', damping: 25, stiffness: 350 }}
-              className="relative w-full max-w-sm bg-white border-4 border-black rounded-[2.5rem] p-6 shadow-neo overflow-hidden"
-            >
-              {/* Decorative background element */}
-              <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/2 w-32 h-32 bg-accent/20 rounded-full blur-3xl pointer-events-none" />
-              
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="font-black text-xl italic tracking-tight">{t('photo_source')}</h3>
-                <button onClick={() => setShowActionSheet(false)} className="bg-gray-100 p-2 rounded-full hover:bg-gray-200 transition-colors">
-                  <X size={20} />
-                </button>
-              </div>
-
-              <div className="grid gap-3">
-                <button 
-                  onClick={() => { setShowActionSheet(false); setTimeout(() => cameraInputRef.current?.click(), 150); }}
-                  className="w-full group flex items-center gap-4 p-4 bg-black text-white rounded-3xl border-4 border-black hover:bg-zinc-800 transition-all active:scale-95"
-                >
-                  <div className="bg-accent text-black p-3 rounded-2xl group-hover:scale-110 transition-transform">
-                    <Camera size={24} />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-black text-lg leading-tight italic">{t('camera')}</div>
-                    <div className="text-[10px] uppercase tracking-widest text-white/50 font-bold">{t('camera_sub')}</div>
-                  </div>
-                </button>
-
-                <button 
-                  onClick={() => { setShowActionSheet(false); setTimeout(() => galleryInputRef.current?.click(), 150); }}
-                  className="w-full group flex items-center gap-4 p-4 bg-white text-black rounded-3xl border-4 border-black hover:bg-gray-50 transition-all active:scale-95"
-                >
-                  <div className="bg-gray-100 text-black p-3 rounded-2xl group-hover:scale-110 transition-transform border-2 border-black/5">
-                    <ImageIcon size={24} />
-                  </div>
-                  <div className="text-left">
-                    <div className="font-black text-lg leading-tight italic">{t('gallery')}</div>
-                    <div className="text-[10px] uppercase tracking-widest text-black/40 font-bold">{t('gallery_sub')}</div>
-                  </div>
-                </button>
-              </div>
-
-              <div className="mt-6 text-center">
-                <p className="text-[10px] font-black uppercase tracking-[0.2em] text-gray-400">Powered by AI Detective 🐼</p>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
 
 
       {mode === 'ai' && preview && (
@@ -322,6 +273,33 @@ const FoodDetective = ({ onLogAdded }) => {
               <div className="border-t-2 border-white/20 pt-3 flex gap-2">
                 <span className="text-accent flex-shrink-0 mt-0.5">📝</span>
                 <p className="text-sm opacity-90 italic">"{result.description}"</p>
+              </div>
+
+              {/* Location Feedback */}
+              <div className="mt-4 pt-3 border-t-2 border-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <MapPin size={14} className={locationLoading ? "animate-bounce text-accent" : "text-gray-400"} />
+                    <div className="flex flex-col">
+                      <span className="text-[9px] font-black uppercase tracking-widest text-white/50">{t('location')}</span>
+                      <span className="text-xs font-bold truncate">
+                        {locationLoading ? t('geocoding') : (result.location || t('no_location_found'))}
+                      </span>
+                    </div>
+                  </div>
+                  
+                  {!result.location && !locationLoading && (
+                    <button 
+                      onClick={fetchCurrentLocation}
+                      className="bg-white/10 hover:bg-white/20 text-[10px] font-black px-2 py-1 rounded-lg transition-colors border border-white/20 flex items-center gap-1"
+                    >
+                      <RefreshCw size={10} /> {t('get_current_location')}
+                    </button>
+                  )}
+                </div>
+                {!result.location && !locationLoading && (
+                  <p className="text-[9px] text-white/30 italic mt-1">{t('location_hint')}</p>
+                )}
               </div>
             </div>
 

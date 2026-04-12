@@ -59,6 +59,11 @@ const translations = {
     weight_tracker_title: "體重追蹤",
     weight_placeholder: "輸入體重",
     weight_no_data: "暫無數據，快來記錄第一次體重吧！",
+    location_found: "📍 偵測地點：",
+    get_current_location: "取得當前位置",
+    location_hint: "照片若無座標，可點擊上方按鈕取得目前位置",
+    no_location_found: "未偵測到座標",
+    geocoding: "📍 正在分析地點...",
   },
   en: {
     app_title: "DAILY DIET",
@@ -120,6 +125,11 @@ const translations = {
     weight_tracker_title: "Weight Tracker",
     weight_placeholder: "Enter weight",
     weight_no_data: "No data yet, record your first weight!",
+    location_found: "📍 Detected:",
+    get_current_location: "Get Current Location",
+    location_hint: "No GPS in photo? Use current location instead.",
+    no_location_found: "No GPS detected",
+    geocoding: "📍 Geocoding...",
   }
 };
 
