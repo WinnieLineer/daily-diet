@@ -64,10 +64,10 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
             <div className="absolute bottom-[-5%] left-[-5%] w-32 h-32 bg-rose-500/10 rounded-full blur-2xl" />
 
             {/* Header */}
-            <div className="flex justify-between items-start mb-6">
+            <div className="flex justify-between items-start mb-8">
               <div>
-                <h1 className="text-3xl font-black italic tracking-tighter leading-none mb-1">DAILY<br/>DIET</h1>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+                <h1 className="text-3xl font-black italic tracking-tighter leading-[0.85] mb-3">DAILY<br/>DIET</h1>
+                <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-0.5">
                   <Calendar size={10} />
                   {new Date().toLocaleDateString()}
                 </div>
@@ -137,11 +137,6 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
             <div className="flex justify-between items-center pt-4 border-t-2 border-black/5">
                <div className="text-[10px] font-black text-zinc-300 uppercase letter tracking-[0.2em]">
                  winnie-lin.space/daily-diet
-               </div>
-               <div className="flex gap-2">
-                 <div className="w-2 h-2 bg-black rounded-full" />
-                 <div className="w-2 h-2 bg-black rounded-full opacity-20" />
-                 <div className="w-2 h-2 bg-black rounded-full opacity-10" />
                </div>
             </div>
           </div>
