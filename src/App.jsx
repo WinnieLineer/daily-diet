@@ -88,7 +88,6 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
 
   return (
     <motion.div
-      layout
       initial={{ opacity: 0, x: -10 }}
       animate={{ opacity: 1, x: 0 }}
       exit={{ opacity: 0, x: 10 }}
@@ -162,7 +161,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-const APP_VERSION = '1.0.6';
+const APP_VERSION = '1.0.7';
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
