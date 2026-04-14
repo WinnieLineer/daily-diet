@@ -349,6 +349,7 @@ const FoodDetective = ({ onLogAdded }) => {
     setResult(null);
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
     onLogAdded();
+    setLoading(false);
   };
 
   return (
