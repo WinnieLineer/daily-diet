@@ -147,6 +147,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
 const FoodDetective = ({ onLogAdded }) => {
   const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'favorites'
   const [loading, setLoading] = useState(false);
+  const [loadTime, setLoadTime] = useState(0);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
   const cameraInputRef = useRef(null);
@@ -163,6 +164,20 @@ const FoodDetective = ({ onLogAdded }) => {
     const items = await db.favorites.toArray();
     setFavorites(items);
   };
+
+  // Timer for loading state
+  useEffect(() => {
+    let interval;
+    if (loading) {
+      setLoadTime(0);
+      interval = setInterval(() => {
+        setLoadTime(prev => prev + 1);
+      }, 1000);
+    } else {
+      setLoadTime(0);
+    }
+    return () => clearInterval(interval);
+  }, [loading]);
 
   useEffect(() => {
     if (mode === 'favorites') loadFavorites();
@@ -466,6 +481,9 @@ const FoodDetective = ({ onLogAdded }) => {
               <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md">
                 <Loader2 className="animate-spin text-accent mb-3" size={48} />
                 <span className="text-white font-bold animate-pulse text-sm">{t('ai_calculating')}</span>
+                <span className="text-white/70 font-mono text-xs mt-2 bg-black/50 px-2 py-1 rounded-lg border border-white/10">
+                  {loadTime}s
+                </span>
               </div>
             )}
           </div>

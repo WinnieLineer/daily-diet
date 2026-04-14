@@ -1,4 +1,4 @@
 {
-  "version": "1.2.1",
-  "comment": "Switch primary model to gemma-4-31b-it, fix panda coach verbosity"
+  "version": "1.2.2",
+  "comment": "Refactor panda coach prompt, add AI loading timer"
 }

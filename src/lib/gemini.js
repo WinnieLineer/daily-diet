@@ -209,13 +209,22 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
       
       const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
       
-      const prompt = `You are a Panda Coach. Reply with EXACTLY ONE short sentence in ${langDisplay}. MAXIMUM 15 words. No extra text.
-Calories: ${calories}/${calorieGoal} (${calStatus.toFixed(0)}%), Protein: ${protein}/${proteinGoal} (${proStatus.toFixed(0)}%), Water: ${water}/${waterGoal} (${watStatus.toFixed(0)}%)
-Be witty and sarcastic. Comment on their worst metric. ONLY output the single sentence, nothing else.`;
+      const prompt = `Calories: ${calories}/${calorieGoal} (${calStatus.toFixed(0)}%)
+Protein: ${protein}/${proteinGoal} (${proStatus.toFixed(0)}%)
+Water: ${water}/${waterGoal} (${watStatus.toFixed(0)}%)
 
-      return model.generateContent(prompt).then(async (result) => {
+Give me the 1-sentence comment now in ${langDisplay}.`;
+
+      return model.generateContent({
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        systemInstruction: `You are a sarcastic Panda Coach. Reply with EXACTLY ONE short sentence. MAXIMUM 15 words. DO NOT output your role. DO NOT say "Role: Panda Coach". Be witty and comment on their worst metric.`
+      }).then(async (result) => {
         const response = await result.response;
-        let text = response.text().trim().replace(/^"|"$/g, '').replace(/\n.*/s, '');
+        let text = response.text().trim()
+          .replace(/^"|"$/g, '')
+          .replace(/\n.*/s, '') // remove extra lines
+          .replace(/^(Role:.*?|Panda Coach:.*?|Coach:.*?)\s*/i, ''); // Strip leaked roles
+          
         // Hard truncate: keep only the first sentence
         const sentenceEnd = text.search(/[。！？!?.]/)
         if (sentenceEnd > 0 && sentenceEnd < text.length - 1) {
