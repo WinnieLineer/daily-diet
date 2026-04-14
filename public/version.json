@@ -1,4 +1,4 @@
 {
-  "version": "1.2.3",
-  "comment": "Change timer to countdown, remove prefix noise from GPT output"
+  "version": "1.2.4",
+  "comment": "Force Panda Coach to return strict JSON to eliminate conversational filler"
 }

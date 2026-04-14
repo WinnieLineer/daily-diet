@@ -199,8 +199,7 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
   try {
     return await withRetryAndFallback((modelName) => {
       const model = genAI.getGenerativeModel({ 
-        model: modelName,
-        generationConfig: { temperature: 0.8, maxOutputTokens: 60 }
+        model: modelName
       });
       
       const calStatus = (calories / calorieGoal) * 100;
@@ -213,30 +212,35 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
 Protein: ${protein}/${proteinGoal} (${proStatus.toFixed(0)}%)
 Water: ${water}/${waterGoal} (${watStatus.toFixed(0)}%)
 
-Give me the 1-sentence comment now in ${langDisplay}.`;
+You are a sarcastic Panda Coach. Comment on their worst metric.
+Output EXACTLY a JSON object with a single key "comment", containing ONE short sentence (max 15 words) in ${langDisplay}.`;
 
       return model.generateContent({
         contents: [{ role: "user", parts: [{ text: prompt }] }],
-        systemInstruction: `You are a sarcastic Panda Coach. Reply with EXACTLY ONE short sentence. MAXIMUM 15 words. DO NOT output your role. DO NOT say "Role: Panda Coach". Be witty and comment on their worst metric.`
+        generationConfig: { 
+          temperature: 0.8, 
+          maxOutputTokens: 60,
+          responseMimeType: "application/json"
+        }
       }).then(async (result) => {
         const response = await result.response;
-        let text = response.text().trim()
-          .replace(/^"|"$/g, '')
-          .replace(/\n.*/s, '') // remove extra lines
-          .replace(/^(\*.*?\*|Role:.*?|Panda Coach:.*?|Coach:.*?|User's.*?:.*?)\s*/i, '') // Strip leaked roles and markdown thoughts
-          .replace(/^[-*]\s*/, ''); // Strip leading bullet points
-          
-        // Hard truncate: keep only the first sentence
-        const sentenceEnd = text.search(/[。！？!?.]/)
-        if (sentenceEnd > 0 && sentenceEnd < text.length - 1) {
-          text = text.slice(0, sentenceEnd + 1);
+        const text = response.text().trim();
+        
+        let comment = "";
+        try {
+          const parsed = JSON.parse(text);
+          comment = parsed.comment || "吃飽飽才有力氣減肥啦！🐼";
+        } catch (e) {
+          console.error("Failed to parse Panda Advice JSON:", text);
+          comment = "吃飽飽才有力氣減肥啦！🐼";
         }
-        // Fallback: if still too long (>50 chars for zh, >120 for en), truncate
+
+        // Hard truncate just in case
         const maxLen = language === 'zh' ? 50 : 120;
-        if (text.length > maxLen) {
-          text = text.slice(0, maxLen) + '…';
+        if (comment.length > maxLen) {
+          comment = comment.slice(0, maxLen) + '…';
         }
-        return text;
+        return comment;
       });
     });
   } catch (err) {
