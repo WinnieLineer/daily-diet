@@ -1,4 +1,4 @@
 {
-  "version": "1.2.0",
-  "comment": "AI fallback on 429, favorites system, auto-update fix for old versions"
+  "version": "1.2.1",
+  "comment": "Switch primary model to gemma-4-31b-it, fix panda coach verbosity"
 }

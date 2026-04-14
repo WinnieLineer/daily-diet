@@ -4,8 +4,8 @@ const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Primary model and fallback
-const PRIMARY_MODEL = "gemini-3.1-flash-lite-preview";
-const FALLBACK_MODEL = "gemma-4-31b-it";
+const PRIMARY_MODEL = "gemma-4-31b-it";
+const FALLBACK_MODEL = "gemini-3.1-flash-lite-preview";
 
 /**
  * Get the current date string in UTC-8 / PST (Google API rate limit reset timezone)
@@ -190,7 +190,7 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
     return await withRetryAndFallback((modelName) => {
       const model = genAI.getGenerativeModel({ 
         model: modelName,
-        generationConfig: { temperature: 0.8 }
+        generationConfig: { temperature: 0.8, maxOutputTokens: 60 }
       });
       
       const calStatus = (calories / calorieGoal) * 100;
@@ -199,20 +199,24 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
       
       const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
       
-      const prompt = `You are a witty, slightly sarcastic, but helpful Panda Coach for a fitness app. 
-      Today's Stats for the user:
-      - Calories: ${calories}/${calorieGoal} kcal (${calStatus.toFixed(1)}%)
-      - Protein: ${protein}/${proteinGoal} g (${proStatus.toFixed(1)}%)
-      - Water: ${water}/${waterGoal} ml (${watStatus.toFixed(1)}%)
-      
-      Give a ONE-SENTENCE, PUNCHY, and CHARACTER-DRIVEN comment in ${langDisplay} about their progress. 
-      Be supportive if they are doing well, and wittily firm if they are lacking. 
-      Mention specific metrics if they are particularly good or bad.
-      Do not use more than 20 words.`;
+      const prompt = `You are a Panda Coach. Reply with EXACTLY ONE short sentence in ${langDisplay}. MAXIMUM 15 words. No extra text.
+Calories: ${calories}/${calorieGoal} (${calStatus.toFixed(0)}%), Protein: ${protein}/${proteinGoal} (${proStatus.toFixed(0)}%), Water: ${water}/${waterGoal} (${watStatus.toFixed(0)}%)
+Be witty and sarcastic. Comment on their worst metric. ONLY output the single sentence, nothing else.`;
 
       return model.generateContent(prompt).then(async (result) => {
         const response = await result.response;
-        return response.text().trim().replace(/^"|"$/g, '');
+        let text = response.text().trim().replace(/^"|"$/g, '').replace(/\n.*/s, '');
+        // Hard truncate: keep only the first sentence
+        const sentenceEnd = text.search(/[。！？!?.]/)
+        if (sentenceEnd > 0 && sentenceEnd < text.length - 1) {
+          text = text.slice(0, sentenceEnd + 1);
+        }
+        // Fallback: if still too long (>50 chars for zh, >120 for en), truncate
+        const maxLen = language === 'zh' ? 50 : 120;
+        if (text.length > maxLen) {
+          text = text.slice(0, maxLen) + '…';
+        }
+        return text;
       });
     });
   } catch (err) {
