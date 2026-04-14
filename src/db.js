@@ -8,6 +8,13 @@ db.version(4).stores({
   settings: 'key' // key-value store for goals
 });
 
+db.version(5).stores({
+  dietLogs: '++id, date, dish_name, calories, protein, water, timestamp, location',
+  weightLogs: '++id, date, weight, timestamp',
+  settings: 'key',
+  favorites: '++id, dish_name'
+});
+
 export async function getDailySummary(date) {
   const logs = await db.dietLogs.where('date').equals(date).toArray();
   return logs.reduce((acc, log) => {

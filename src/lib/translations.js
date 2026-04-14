@@ -68,6 +68,13 @@ const translations = {
     no_location_found: "未偵測到座標",
     geocoding: "📍 正在分析地點...",
     camera_error: "無法啟動相機，請檢查權限設定。",
+    favorites_mode: "⭐ 常用",
+    favorites_empty: "長按任一紀錄即可加入常用清單 🐼",
+    added_to_favorites: "已加入常用！",
+    already_in_favorites: "已在常用清單中",
+    remove_favorite: "移除常用",
+    quick_add: "快速新增",
+    favorite_added_toast: "✅ 已新增至今日紀錄",
   },
   en: {
     app_title: "DAILY DIET",
@@ -138,6 +145,13 @@ const translations = {
     no_location_found: "No GPS detected",
     geocoding: "📍 Geocoding...",
     camera_error: "Could not start camera. Please check permissions.",
+    favorites_mode: "⭐ Saved",
+    favorites_empty: "Long-press any record to add to favorites 🐼",
+    added_to_favorites: "Added to favorites!",
+    already_in_favorites: "Already in favorites",
+    remove_favorite: "Remove",
+    quick_add: "Quick Add",
+    favorite_added_toast: "✅ Added to today's log",
   }
 };
 

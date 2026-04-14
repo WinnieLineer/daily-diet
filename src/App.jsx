@@ -9,7 +9,7 @@ import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
 import SharingCard from './components/SharingCard';
 import { getPandaAdvice } from './lib/gemini';
-import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2 } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import versionData from '../public/version.json';
@@ -19,9 +19,11 @@ const getLocalDateString = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
-const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog }) => {
+const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite }) => {
   const isEditing = editingId === log.id;
   const [showActions, setShowActions] = React.useState(false);
+  const longPressTimer = React.useRef(null);
+  const didLongPress = React.useRef(false);
 
   if (isEditing) {
     return (
@@ -94,7 +96,20 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       exit={{ opacity: 0, x: 10 }}
       onMouseEnter={() => setShowActions(true)}
       onMouseLeave={() => setShowActions(false)}
-      onClick={() => setShowActions(!showActions)}
+      onClick={() => {
+        if (didLongPress.current) { didLongPress.current = false; return; }
+        setShowActions(!showActions);
+      }}
+      onTouchStart={() => {
+        didLongPress.current = false;
+        longPressTimer.current = setTimeout(() => {
+          didLongPress.current = true;
+          if (onAddToFavorite) onAddToFavorite(log);
+        }, 600);
+      }}
+      onTouchEnd={() => { clearTimeout(longPressTimer.current); }}
+      onTouchMove={() => { clearTimeout(longPressTimer.current); }}
+      onContextMenu={(e) => { e.preventDefault(); }}
       className={`relative overflow-hidden flex flex-col p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
       <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 w-full">
@@ -150,6 +165,13 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
               <Trash2 size={18} />
             </button>
             <button 
+              onClick={(e) => { e.stopPropagation(); if (onAddToFavorite) onAddToFavorite(log); setShowActions(false); }}
+              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+              title="加入常用"
+            >
+              <Star size={18} />
+            </button>
+            <button 
               onClick={(e) => { e.stopPropagation(); setShowActions(false); }}
               className="p-2 hover:bg-black/10 transition-all rounded-xl border-2 border-transparent"
             >
@@ -171,10 +193,6 @@ function App() {
   // Force reload on version change to clear cache
   useEffect(() => {
     const checkVersion = async () => {
-      // Guard: only check once per session to prevent infinite loop
-      const lastChecked = sessionStorage.getItem('version_checked');
-      if (lastChecked === APP_VERSION) return;
-      
       try {
         // Fetch version.json with a unique timestamp to bypass all caches
         const response = await fetch(`/daily-diet/version.json?t=${Date.now()}`, {
@@ -186,8 +204,13 @@ function App() {
         if (remoteVersion && remoteVersion !== APP_VERSION) {
           console.log(`New version detected: ${remoteVersion}. Clearing cache and reloading...`);
           
-          // Mark as reloading so we don't loop after the reload completes
-          sessionStorage.setItem('version_checked', remoteVersion);
+          // Prevent infinite loop: if we already tried reloading for this remote version, skip
+          const lastReloadAttempt = localStorage.getItem('last_reload_version');
+          if (lastReloadAttempt === remoteVersion) {
+            console.log('Already attempted reload for this version, skipping.');
+            return;
+          }
+          localStorage.setItem('last_reload_version', remoteVersion);
           
           // 1. Clear Service Worker caches if possible
           if ('caches' in window) {
@@ -205,9 +228,6 @@ function App() {
            
           // 3. Final Hard Reload
           window.location.reload(true);
-        } else {
-          // Versions match; record this so we don't check again this session
-          sessionStorage.setItem('version_checked', APP_VERSION);
         }
       } catch (err) {
         console.error("Version check failed:", err);
@@ -238,6 +258,7 @@ function App() {
   const [lastLocation, setLastLocation] = useState(null);
   const [streak, setStreak] = useState(0);
   const [showShare, setShowShare] = useState(false);
+  const [toast, setToast] = useState(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -352,9 +373,44 @@ function App() {
     }));
   };
 
+  const showToast = (msg) => {
+    setToast(msg);
+    setTimeout(() => setToast(null), 1800);
+  };
+
+  const addToFavorite = async (log) => {
+    // Check if already in favorites
+    const existing = await db.favorites.where('dish_name').equals(log.dish_name).first();
+    if (existing) {
+      showToast(t('already_in_favorites'));
+      return;
+    }
+    await db.favorites.add({
+      dish_name: log.dish_name,
+      calories: log.calories || 0,
+      protein: log.protein || 0,
+      water: log.water || 0,
+      description: log.description || ''
+    });
+    showToast(t('added_to_favorites'));
+  };
+
 
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
+      {/* Toast notification */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            initial={{ opacity: 0, y: -30, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: -20, scale: 0.9 }}
+            className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-black text-white px-5 py-2.5 rounded-2xl font-black text-sm shadow-neo border-4 border-accent"
+          >
+            {toast}
+          </motion.div>
+        )}
+      </AnimatePresence>
       <header className="flex justify-between items-center py-4">
         <h1 className="text-xl font-black italic tracking-tighter">{t('app_title')}</h1>
         <div className="flex gap-2">
@@ -427,6 +483,7 @@ function App() {
                       saveEdit={saveEdit}
                       startEditing={startEditing}
                       deleteLog={deleteLog}
+                      onAddToFavorite={addToFavorite}
                     />
                   ))
                 ) : (
@@ -535,6 +592,7 @@ function App() {
                                   saveEdit={saveEdit}
                                   startEditing={startEditing}
                                   deleteLog={deleteLog}
+                                  onAddToFavorite={addToFavorite}
                                 />
                               ))}
                             </motion.div>

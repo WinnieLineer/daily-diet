@@ -3,33 +3,94 @@ import { GoogleGenerativeAI } from "@google/generative-ai";
 const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const genAI = new GoogleGenerativeAI(API_KEY);
 
-const GOAL_PI_MODEL = "gemini-3.1-flash-lite-preview";
+// Primary model and fallback
+const PRIMARY_MODEL = "gemini-3.1-flash-lite-preview";
+const FALLBACK_MODEL = "gemma-3-1b-it";
 
 /**
- * Exponential Backoff helper
- * @param {Function} fn - The async function to retry
- * @param {number} maxRetries - Maximum number of retries
+ * Get the current date string in UTC-8 / PST (Google API rate limit reset timezone)
  */
-async function withRetry(fn, maxRetries = 3) {
+function getUTC8DateString() {
+  const now = new Date();
+  const utcMs = now.getTime() + now.getTimezoneOffset() * 60000;
+  const pstMs = utcMs - 8 * 3600000;
+  const pstDate = new Date(pstMs);
+  return `${pstDate.getFullYear()}-${String(pstDate.getMonth() + 1).padStart(2, '0')}-${String(pstDate.getDate()).padStart(2, '0')}`;
+}
+
+/**
+ * Get the current model name.
+ * If we previously fell back today (UTC-8), keep using fallback.
+ * At midnight UTC-8, reset to primary.
+ */
+function getCurrentModel() {
+  const today = getUTC8DateString();
+  const savedDate = localStorage.getItem('ai_fallback_date');
+  if (savedDate === today) {
+    return FALLBACK_MODEL;
+  }
+  // New day or no fallback — use primary
+  localStorage.removeItem('ai_fallback_date');
+  return PRIMARY_MODEL;
+}
+
+/**
+ * Switch to fallback model and remember for the rest of the day (UTC-8).
+ */
+function switchToFallback() {
+  const today = getUTC8DateString();
+  localStorage.setItem('ai_fallback_date', today);
+  console.warn(`⚡ Switched to fallback model: ${FALLBACK_MODEL} until UTC-8 midnight`);
+  return FALLBACK_MODEL;
+}
+
+/**
+ * Retry helper with fallback on 429 (rate limit).
+ * On 429, switches to gemma-3-1b-it for the rest of the day (UTC-8).
+ * On 503, retries with exponential backoff.
+ * @param {Function} fnFactory - Takes a model name, returns a Promise
+ * @param {number} maxRetries - Max retries for 503
+ */
+async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   let lastError;
-  for (let n = 0; n <= maxRetries; n++) {
-    try {
-      return await fn();
-    } catch (error) {
-      lastError = error;
-      // 503 is often "Service Unavailable" or "Overloaded"
-      // We also check for broad "fetch" or "network" errors which might be 503s in disguise
-      const isOverloaded = error.message?.includes("503") || 
-                           error.message?.includes("Overloaded") || 
-                           error.message?.includes("Service Unavailable");
-      
-      if (isOverloaded && n < maxRetries) {
-        const waitTime = Math.pow(2, n) * 1000;
-        console.warn(`Gemini overloaded (503). Retrying in ${waitTime}ms... (Attempt ${n + 1}/${maxRetries})`);
-        await new Promise(resolve => setTimeout(resolve, waitTime));
-        continue;
+
+  // Try up to 2 rounds: primary model, then fallback
+  for (let round = 0; round < 2; round++) {
+    const modelName = getCurrentModel();
+
+    for (let n = 0; n <= maxRetries; n++) {
+      try {
+        return await fnFactory(modelName);
+      } catch (error) {
+        lastError = error;
+        const is429 = error.message?.includes("429") ||
+                      error.message?.includes("Resource has been exhausted") ||
+                      error.message?.includes("Too Many Requests") ||
+                      error.message?.includes("RESOURCE_EXHAUSTED");
+        const is503 = error.message?.includes("503") ||
+                      error.message?.includes("Overloaded") ||
+                      error.message?.includes("Service Unavailable");
+
+        if (is429) {
+          console.warn(`🚫 Model ${modelName} hit 429 rate limit.`);
+          if (modelName !== FALLBACK_MODEL) {
+            switchToFallback();
+            break; // break inner retry loop → outer loop picks up fallback
+          }
+          // Already on fallback and still 429 → give up
+          console.error("❌ Fallback model also rate-limited.");
+          throw error;
+        }
+
+        if (is503 && n < maxRetries) {
+          const waitTime = Math.pow(2, n) * 1000;
+          console.warn(`Gemini overloaded (503). Retrying in ${waitTime}ms... (Attempt ${n + 1}/${maxRetries})`);
+          await new Promise(resolve => setTimeout(resolve, waitTime));
+          continue;
+        }
+
+        throw error;
       }
-      throw error;
     }
   }
   throw lastError;
@@ -40,9 +101,9 @@ export async function analyzeFoodImage(base64Image, language = 'zh') {
     throw new Error("Missing Gemini API Key");
   }
 
-  return withRetry(async () => {
+  return withRetryAndFallback((modelName) => {
     const model = genAI.getGenerativeModel({ 
-      model: GOAL_PI_MODEL,
+      model: modelName,
       generationConfig: { temperature: 0 }
     });
 
@@ -59,7 +120,7 @@ export async function analyzeFoodImage(base64Image, language = 'zh') {
 }
 Only return the JSON object, no markdown, no explanation.`;
 
-    const result = await model.generateContent([
+    return model.generateContent([
       customPrompt,
       {
         inlineData: {
@@ -67,30 +128,30 @@ Only return the JSON object, no markdown, no explanation.`;
           mimeType: "image/jpeg",
         },
       },
-    ]);
-
-    const response = await result.response;
-    const text = response.text();
-    
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        return JSON.parse(jsonMatch[0]);
+    ]).then(async (result) => {
+      const response = await result.response;
+      const text = response.text();
+      
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        if (jsonMatch) {
+          return JSON.parse(jsonMatch[0]);
+        }
+        return JSON.parse(text);
+      } catch (e) {
+        console.error("Failed to parse Gemini response:", text);
+        throw new Error("無法解析 AI 回應，請再試一次。");
       }
-      return JSON.parse(text);
-    } catch (e) {
-      console.error("Failed to parse Gemini response:", text);
-      throw new Error("無法解析 AI 回應，請再試一次。");
-    }
+    });
   });
 }
 
 export async function suggestGoals(weight) {
   if (!API_KEY) throw new Error("Missing Gemini API Key");
 
-  return withRetry(async () => {
+  return withRetryAndFallback((modelName) => {
     const model = genAI.getGenerativeModel({ 
-      model: GOAL_PI_MODEL,
+      model: modelName,
       generationConfig: { temperature: 0 }
     });
     const prompt = `My current weight is ${weight} kg. Based on this, suggest a daily calorie goal (kcal), protein goal (g), and water intake goal (ml) for a healthy diet. 
@@ -100,21 +161,22 @@ export async function suggestGoals(weight) {
     - Water: approx weight * 35 (ml)
     Return strictly a JSON object: { "calories": number, "protein": number, "water": number }.`;
 
-    const result = await model.generateContent(prompt);
-    const response = await result.response;
-    const text = response.text();
+    return model.generateContent(prompt).then(async (result) => {
+      const response = await result.response;
+      const text = response.text();
 
-    try {
-      const jsonMatch = text.match(/\{[\s\S]*\}/);
-      return JSON.parse(jsonMatch ? jsonMatch[0] : text);
-    } catch (e) {
-      console.error("Failed to parse goals:", text);
-      return { 
-        calories: Math.round(weight * 30), 
-        protein: Math.round(weight * 1.5),
-        water: Math.round(weight * 35)
-      };
-    }
+      try {
+        const jsonMatch = text.match(/\{[\s\S]*\}/);
+        return JSON.parse(jsonMatch ? jsonMatch[0] : text);
+      } catch (e) {
+        console.error("Failed to parse goals:", text);
+        return { 
+          calories: Math.round(weight * 30), 
+          protein: Math.round(weight * 1.5),
+          water: Math.round(weight * 35)
+        };
+      }
+    });
   });
 }
 
@@ -125,10 +187,10 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
   if (!API_KEY) return getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language);
 
   try {
-    return await withRetry(async () => {
+    return await withRetryAndFallback((modelName) => {
       const model = genAI.getGenerativeModel({ 
-        model: GOAL_PI_MODEL,
-        generationConfig: { temperature: 0.8 } // A bit of creativity
+        model: modelName,
+        generationConfig: { temperature: 0.8 }
       });
       
       const calStatus = (calories / calorieGoal) * 100;
@@ -148,9 +210,10 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
       Mention specific metrics if they are particularly good or bad.
       Do not use more than 20 words.`;
 
-      const result = await model.generateContent(prompt);
-      const response = await result.response;
-      return response.text().trim().replace(/^"|"$/g, '');
+      return model.generateContent(prompt).then(async (result) => {
+        const response = await result.response;
+        return response.text().trim().replace(/^"|"$/g, '');
+      });
     });
   } catch (err) {
     console.error("Dynamic advice failed, falling back to local:", err);

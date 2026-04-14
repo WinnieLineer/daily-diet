@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2 } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import exifr from 'exifr';
@@ -145,7 +145,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
 };
 
 const FoodDetective = ({ onLogAdded }) => {
-  const [mode, setMode] = useState('ai'); // 'ai' or 'manual'
+  const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'favorites'
   const [loading, setLoading] = useState(false);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -155,6 +155,18 @@ const FoodDetective = ({ onLogAdded }) => {
   const [locationLoading, setLocationLoading] = useState(false);
   const [showDesktopCamera, setShowDesktopCamera] = useState(false);
   const pendingCoordsRef = useRef(null); // stores pre-fetched coords from camera open
+  const [favorites, setFavorites] = useState([]);
+  const [favToast, setFavToast] = useState(null);
+
+  // Load favorites when tab is shown
+  const loadFavorites = async () => {
+    const items = await db.favorites.toArray();
+    setFavorites(items);
+  };
+
+  useEffect(() => {
+    if (mode === 'favorites') loadFavorites();
+  }, [mode]);
 
   const getCurrentLocation = () => {
     // We will no longer use browser geolocation for manual/water
@@ -368,8 +380,9 @@ const FoodDetective = ({ onLogAdded }) => {
         </div>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0">
           {[
-            { id: 'ai',      label: t('ai_mode') },
-            { id: 'manual',  label: t('manual_mode') },
+            { id: 'ai',        label: t('ai_mode') },
+            { id: 'manual',    label: t('manual_mode') },
+            { id: 'favorites', label: t('favorites_mode') },
           ].map(tab => (
             <button
               key={tab.id}
@@ -583,6 +596,91 @@ const FoodDetective = ({ onLogAdded }) => {
           <NeoButton className="w-full mt-1" variant="black" disabled={!manualEntry.dish_name} onClick={saveLog}>
             <Check size={16} className="inline mr-1" /> {t('save_record')}
           </NeoButton>
+        </motion.div>
+      )}
+
+      {mode === 'favorites' && (
+        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 mt-2">
+          {/* Toast for quick add */}
+          <AnimatePresence>
+            {favToast && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                className="bg-black text-white text-xs font-black px-4 py-2 rounded-2xl text-center border-4 border-accent shadow-neo-sm"
+              >
+                {favToast}
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          {favorites.length > 0 ? (
+            favorites.map((fav) => (
+              <motion.div
+                key={fav.id}
+                layout
+                initial={{ opacity: 0, x: -10 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: 10 }}
+                className="flex items-center justify-between p-3 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors"
+              >
+                <div className="flex-1 min-w-0">
+                  <div className="font-black text-sm leading-tight truncate">{fav.dish_name}</div>
+                  <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold font-mono">
+                    {fav.calories > 0 && (
+                      <span className="text-black bg-accent px-1.5 py-0.5 rounded whitespace-nowrap">🔥{fav.calories}</span>
+                    )}
+                    {fav.protein > 0 && (
+                      <span className="text-white bg-black px-1.5 py-0.5 rounded whitespace-nowrap">🍖{fav.protein}g</span>
+                    )}
+                    {fav.water > 0 && (
+                      <span className="text-black border-2 border-black px-1.5 py-0.5 rounded whitespace-nowrap">🚰{fav.water}ml</span>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-1 shrink-0 ml-2">
+                  <button
+                    onClick={async () => {
+                      const now = new Date();
+                      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                      await db.dietLogs.add({
+                        dish_name: fav.dish_name,
+                        calories: fav.calories || 0,
+                        protein: fav.protein || 0,
+                        water: fav.water || 0,
+                        description: fav.description || '',
+                        date: localDate,
+                        timestamp: Date.now(),
+                        location: null
+                      });
+                      setFavToast(t('favorite_added_toast'));
+                      setTimeout(() => setFavToast(null), 1500);
+                      onLogAdded();
+                    }}
+                    className="bg-black text-white text-[10px] font-black px-3 py-1.5 rounded-xl border-2 border-black hover:bg-zinc-800 transition-all active:scale-95"
+                  >
+                    {t('quick_add')}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      await db.favorites.delete(fav.id);
+                      loadFavorites();
+                    }}
+                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                    title={t('remove_favorite')}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                </div>
+              </motion.div>
+            ))
+          ) : (
+            <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
+              <Star size={32} className="mx-auto mb-2 text-gray-300" />
+              <p className="text-gray-400 italic text-sm font-bold">{t('favorites_empty')}</p>
+            </div>
+          )}
         </motion.div>
       )}
     </NeoCard>
