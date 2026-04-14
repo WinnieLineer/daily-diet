@@ -26,11 +26,14 @@ function getUTC8DateString() {
 function getCurrentModel() {
   const today = getUTC8DateString();
   const savedDate = localStorage.getItem('ai_fallback_date');
-  if (savedDate === today) {
+  const savedModel = localStorage.getItem('ai_fallback_model');
+  // Only use fallback if date matches today AND the saved model matches current config
+  if (savedDate === today && savedModel === FALLBACK_MODEL) {
     return FALLBACK_MODEL;
   }
-  // New day or no fallback — use primary
+  // New day, model config changed, or no fallback — reset and use primary
   localStorage.removeItem('ai_fallback_date');
+  localStorage.removeItem('ai_fallback_model');
   return PRIMARY_MODEL;
 }
 
@@ -40,14 +43,15 @@ function getCurrentModel() {
 function switchToFallback() {
   const today = getUTC8DateString();
   localStorage.setItem('ai_fallback_date', today);
+  localStorage.setItem('ai_fallback_model', FALLBACK_MODEL);
   console.warn(`⚡ Switched to fallback model: ${FALLBACK_MODEL} until UTC-8 midnight`);
   return FALLBACK_MODEL;
 }
 
 /**
- * Retry helper with fallback on 429 (rate limit).
- * On 429, switches to gemma-4-31b-it for the rest of the day (UTC-8).
- * On 503, retries with exponential backoff.
+ * Retry helper with fallback on 429/503.
+ * On 429, immediately switches to fallback model for the rest of the day.
+ * On 503, retries with backoff, then falls back to the other model.
  * @param {Function} fnFactory - Takes a model name, returns a Promise
  * @param {number} maxRetries - Max retries for 503
  */
@@ -77,16 +81,22 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
             switchToFallback();
             break; // break inner retry loop → outer loop picks up fallback
           }
-          // Already on fallback and still 429 → give up
           console.error("❌ Fallback model also rate-limited.");
           throw error;
         }
 
         if (is503 && n < maxRetries) {
           const waitTime = Math.pow(2, n) * 1000;
-          console.warn(`Gemini overloaded (503). Retrying in ${waitTime}ms... (Attempt ${n + 1}/${maxRetries})`);
+          console.warn(`⏳ Model ${modelName} overloaded (503). Retrying in ${waitTime}ms... (${n + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
+        }
+
+        // 503 retries exhausted → also try fallback model
+        if (is503 && modelName !== FALLBACK_MODEL) {
+          console.warn(`🔄 Model ${modelName} still 503 after retries, switching to ${FALLBACK_MODEL}`);
+          switchToFallback();
+          break;
         }
 
         throw error;

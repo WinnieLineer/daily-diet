@@ -225,8 +225,12 @@ function App() {
               await registration.unregister();
             }
           }
+
+          // 3. Clear stale AI model fallback state
+          localStorage.removeItem('ai_fallback_date');
+          localStorage.removeItem('ai_fallback_model');
            
-          // 3. Final Hard Reload
+          // 4. Final Hard Reload
           window.location.reload(true);
         }
       } catch (err) {
