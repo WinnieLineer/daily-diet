@@ -223,7 +223,8 @@ Give me the 1-sentence comment now in ${langDisplay}.`;
         let text = response.text().trim()
           .replace(/^"|"$/g, '')
           .replace(/\n.*/s, '') // remove extra lines
-          .replace(/^(Role:.*?|Panda Coach:.*?|Coach:.*?)\s*/i, ''); // Strip leaked roles
+          .replace(/^(\*.*?\*|Role:.*?|Panda Coach:.*?|Coach:.*?|User's.*?:.*?)\s*/i, '') // Strip leaked roles and markdown thoughts
+          .replace(/^[-*]\s*/, ''); // Strip leading bullet points
           
         // Hard truncate: keep only the first sentence
         const sentenceEnd = text.search(/[。！？!?.]/)

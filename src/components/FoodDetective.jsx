@@ -169,12 +169,12 @@ const FoodDetective = ({ onLogAdded }) => {
   useEffect(() => {
     let interval;
     if (loading) {
-      setLoadTime(0);
+      setLoadTime(30);
       interval = setInterval(() => {
-        setLoadTime(prev => prev + 1);
+        setLoadTime(prev => (prev > 0 ? prev - 1 : 0));
       }, 1000);
     } else {
-      setLoadTime(0);
+      setLoadTime(30);
     }
     return () => clearInterval(interval);
   }, [loading]);

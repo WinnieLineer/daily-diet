@@ -1,4 +1,4 @@
 {
-  "version": "1.2.2",
-  "comment": "Refactor panda coach prompt, add AI loading timer"
+  "version": "1.2.3",
+  "comment": "Change timer to countdown, remove prefix noise from GPT output"
 }
