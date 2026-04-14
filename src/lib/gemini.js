@@ -5,7 +5,7 @@ const genAI = new GoogleGenerativeAI(API_KEY);
 
 // Primary model and fallback
 const PRIMARY_MODEL = "gemini-3.1-flash-lite-preview";
-const FALLBACK_MODEL = "gemma-3-1b-it";
+const FALLBACK_MODEL = "gemma-4-31b-it";
 
 /**
  * Get the current date string in UTC-8 / PST (Google API rate limit reset timezone)
@@ -46,7 +46,7 @@ function switchToFallback() {
 
 /**
  * Retry helper with fallback on 429 (rate limit).
- * On 429, switches to gemma-3-1b-it for the rest of the day (UTC-8).
+ * On 429, switches to gemma-4-31b-it for the rest of the day (UTC-8).
  * On 503, retries with exponential backoff.
  * @param {Function} fnFactory - Takes a model name, returns a Promise
  * @param {number} maxRetries - Max retries for 503
