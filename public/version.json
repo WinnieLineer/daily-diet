@@ -1,4 +1,4 @@
 {
-  "version": "1.2.4",
-  "comment": "Force Panda Coach to return strict JSON to eliminate conversational filler"
+  "version": "1.2.5",
+  "comment": "Added retry button for AI recognition, enhanced progress colors, and custom API key support for local domains."
 }

@@ -1,11 +1,28 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
+import { db } from "../db";
 
-const API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const genAI = new GoogleGenerativeAI(API_KEY);
-
-// Primary model and fallback
+// Fallback values
+const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 const PRIMARY_MODEL = "gemma-4-31b-it";
 const FALLBACK_MODEL = "gemini-3.1-flash-lite-preview";
+
+let genAIInstance = null;
+let currentKey = null;
+
+/**
+ * Get the Google AI instance with dynamic key loading.
+ */
+async function getGenAI() {
+  const userKeyEntry = await db.settings.get('user_api_key');
+  const apiKey = (userKeyEntry && userKeyEntry.value) || DEFAULT_API_KEY;
+
+  if (!genAIInstance || currentKey !== apiKey) {
+    if (!apiKey) throw new Error("Missing Gemini API Key. Please provide it in settings or environment.");
+    genAIInstance = new GoogleGenerativeAI(apiKey);
+    currentKey = apiKey;
+  }
+  return genAIInstance;
+}
 
 /**
  * Get the current date string in UTC-8 / PST (Google API rate limit reset timezone)
@@ -19,26 +36,21 @@ function getUTC8DateString() {
 }
 
 /**
- * Get the current model name.
- * If we previously fell back today (UTC-8), keep using fallback.
- * At midnight UTC-8, reset to primary.
+ * Get the current model name based on status.
  */
 function getCurrentModel() {
   const today = getUTC8DateString();
   const savedDate = localStorage.getItem('ai_fallback_date');
   const savedModel = localStorage.getItem('ai_fallback_model');
-  // Only use fallback if date matches today AND the saved model matches current config
+
   if (savedDate === today && savedModel === FALLBACK_MODEL) {
     return FALLBACK_MODEL;
   }
-  // New day, model config changed, or no fallback — reset and use primary
-  localStorage.removeItem('ai_fallback_date');
-  localStorage.removeItem('ai_fallback_model');
   return PRIMARY_MODEL;
 }
 
 /**
- * Switch to fallback model and remember for the rest of the day (UTC-8).
+ * Switch to fallback model for the rest of the day.
  */
 function switchToFallback() {
   const today = getUTC8DateString();
@@ -50,55 +62,39 @@ function switchToFallback() {
 
 /**
  * Retry helper with fallback on 429/503.
- * On 429, immediately switches to fallback model for the rest of the day.
- * On 503, retries with backoff, then falls back to the other model.
- * @param {Function} fnFactory - Takes a model name, returns a Promise
- * @param {number} maxRetries - Max retries for 503
  */
 async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   let lastError;
-
-  // Try up to 2 rounds: primary model, then fallback
   for (let round = 0; round < 2; round++) {
     const modelName = getCurrentModel();
-
     for (let n = 0; n <= maxRetries; n++) {
       try {
-        return await fnFactory(modelName);
+        const genAI = await getGenAI();
+        return await fnFactory(modelName, genAI);
       } catch (error) {
         lastError = error;
-        const is429 = error.message?.includes("429") ||
-                      error.message?.includes("Resource has been exhausted") ||
-                      error.message?.includes("Too Many Requests") ||
-                      error.message?.includes("RESOURCE_EXHAUSTED");
-        const is503 = error.message?.includes("503") ||
-                      error.message?.includes("Overloaded") ||
-                      error.message?.includes("Service Unavailable");
+        const errMsg = error.message || "";
+        const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
+        const is503 = errMsg.includes("503") || errMsg.includes("Overloaded") || errMsg.includes("Service Unavailable");
 
         if (is429) {
-          console.warn(`🚫 Model ${modelName} hit 429 rate limit.`);
           if (modelName !== FALLBACK_MODEL) {
             switchToFallback();
-            break; // break inner retry loop → outer loop picks up fallback
+            break; // Try fallback model in next round
           }
-          console.error("❌ Fallback model also rate-limited.");
           throw error;
         }
 
         if (is503 && n < maxRetries) {
           const waitTime = Math.pow(2, n) * 1000;
-          console.warn(`⏳ Model ${modelName} overloaded (503). Retrying in ${waitTime}ms... (${n + 1}/${maxRetries})`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
 
-        // 503 retries exhausted → also try fallback model
         if (is503 && modelName !== FALLBACK_MODEL) {
-          console.warn(`🔄 Model ${modelName} still 503 after retries, switching to ${FALLBACK_MODEL}`);
           switchToFallback();
           break;
         }
-
         throw error;
       }
     }
@@ -106,50 +102,57 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   throw lastError;
 }
 
-export async function analyzeFoodImage(base64Image, language = 'zh') {
-  if (!API_KEY) {
-    throw new Error("Missing Gemini API Key");
-  }
-
-  return withRetryAndFallback((modelName) => {
-    const model = genAI.getGenerativeModel({ 
+export async function analyzeFoodImage(base64Image, context = {}, language = 'zh') {
+  return withRetryAndFallback((modelName, genAI) => {
+    const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: { temperature: 0 }
     });
 
-    const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
-    const customPrompt = `Analyze this food image. Estimate calories and protein (g). Return strictly a JSON object in ${langDisplay} with exactly these fields:
-{
-  "dish_name": string,       // Food name
-  "calories": number,        // Estimated total calories (kcal)
-  "protein": number,         // Estimated total protein (g)
-  "water": number,           // Estimated water intake (ml)
-  "description": string,     // A short food description
-  "fun_fact": string,        // An interesting and useful food health/nutrition fact (serious, under 50 words)
-  "roast": string            // A humorous and slightly sarcastic remark, like a witty friend (funny, under 50 words)
-}
-Only return the JSON object, no markdown, no explanation.`;
+    const { calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [] } = context;
+    const now = new Date();
+    const currentHour = now.getHours();
+    const timeContext = currentHour < 5 ? 'Deep Night' : 
+                        currentHour < 10 ? 'Morning' : 
+                        currentHour < 14 ? 'Lunch Time' : 
+                        currentHour < 17 ? 'Afternoon' : 
+                        currentHour < 21 ? 'Dinner' : 'Night';
+    const foodStrip = foodLogs.map(l => l.dish_name).join(', ');
 
-    return model.generateContent([
-      customPrompt,
-      {
+    const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
+    const customPrompt = `STRICT: DIRECT JSON ONLY. NO PREAMBLE. NO THINKING.
+Output nutritional JSON for food in ${langDisplay}.
+
+Context: ${timeContext}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}, ${foodStrip}
+
+Schema: {dish_name, calories, protein, water, description, fun_fact, roast, panda_comment}`;
+
+    return model.generateContent({
+      contents: [{ role: "user", parts: [{ text: customPrompt }, {
         inlineData: {
           data: base64Image.split(',')[1],
           mimeType: "image/jpeg",
         },
-      },
-    ]).then(async (result) => {
+      }] }],
+      generationConfig: { 
+        temperature: 0,
+        maxOutputTokens: 500,
+        responseMimeType: "application/json" // 🚀 Force JSON engine (much faster)
+      }
+    }).then(async (result) => {
       const response = await result.response;
       const text = response.text();
-      
       try {
-        const jsonMatch = text.match(/\{[\s\S]*\}/);
-        if (jsonMatch) {
-          return JSON.parse(jsonMatch[0]);
+        // Robust parsing: Find the last JSON block in case of thoughts or markdown
+        const lastBrace = text.lastIndexOf('}');
+        const firstBrace = text.lastIndexOf('{', lastBrace);
+        if (lastBrace !== -1 && firstBrace !== -1) {
+          const jsonString = text.substring(firstBrace, lastBrace + 1);
+          return JSON.parse(jsonString);
         }
         return JSON.parse(text);
       } catch (e) {
-        console.error("Failed to parse Gemini response:", text);
+        console.error("Parse Error. Raw text:", text);
         throw new Error("無法解析 AI 回應，請再試一次。");
       }
     });
@@ -157,31 +160,23 @@ Only return the JSON object, no markdown, no explanation.`;
 }
 
 export async function suggestGoals(weight) {
-  if (!API_KEY) throw new Error("Missing Gemini API Key");
-
-  return withRetryAndFallback((modelName) => {
-    const model = genAI.getGenerativeModel({ 
+  return withRetryAndFallback((modelName, genAI) => {
+    const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: { temperature: 0 }
     });
     const prompt = `My current weight is ${weight} kg. Based on this, suggest a daily calorie goal (kcal), protein goal (g), and water intake goal (ml) for a healthy diet. 
-    Notes: 
-    - Calorie: approx weight * 30
-    - Protein: approx weight * 1.5
-    - Water: approx weight * 35 (ml)
     Return strictly a JSON object: { "calories": number, "protein": number, "water": number }.`;
 
     return model.generateContent(prompt).then(async (result) => {
       const response = await result.response;
       const text = response.text();
-
       try {
         const jsonMatch = text.match(/\{[\s\S]*\}/);
         return JSON.parse(jsonMatch ? jsonMatch[0] : text);
       } catch (e) {
-        console.error("Failed to parse goals:", text);
-        return { 
-          calories: Math.round(weight * 30), 
+        return {
+          calories: Math.round(weight * 30),
           protein: Math.round(weight * 1.5),
           water: Math.round(weight * 35)
         };
@@ -190,61 +185,52 @@ export async function suggestGoals(weight) {
   });
 }
 
-/**
- * Dynamic AI-powered Panda Advice
- */
-export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language = 'zh') {
-  if (!API_KEY) return getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language);
-
+export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], language = 'zh') {
   try {
-    return await withRetryAndFallback((modelName) => {
-      const model = genAI.getGenerativeModel({ 
-        model: modelName
-      });
-      
+    const now = new Date();
+    const currentHour = now.getHours();
+    const timeContext = currentHour < 5 ? 'Deep Night' : 
+                        currentHour < 10 ? 'Morning' : 
+                        currentHour < 14 ? 'Lunch Time' : 
+                        currentHour < 17 ? 'Afternoon' : 
+                        currentHour < 21 ? 'Dinner' : 'Night';
+
+    const foodStrip = foodLogs.map(l => l.dish_name).join(', ');
+
+    return await withRetryAndFallback((modelName, genAI) => {
+      const model = genAI.getGenerativeModel({ model: modelName });
       const calStatus = (calories / calorieGoal) * 100;
       const proStatus = (protein / proteinGoal) * 100;
       const watStatus = (water / waterGoal) * 100;
-      
       const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
       
-      const prompt = `Calories: ${calories}/${calorieGoal} (${calStatus.toFixed(0)}%)
-Protein: ${protein}/${proteinGoal} (${proStatus.toFixed(0)}%)
-Water: ${water}/${waterGoal} (${watStatus.toFixed(0)}%)
-
-You are a sarcastic Panda Coach. Comment on their worst metric.
-Output EXACTLY a JSON object with a single key "comment", containing ONE short sentence (max 15 words) in ${langDisplay}.`;
+      const prompt = `Persona: Sarcastic/caring fitness panda coach.
+Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml.
+History: ${foodStrip || 'None'}
+Task: One short witty sentence (max 20 words) analyzing the current status in ${langDisplay}.
+STRICT: DIRECT TEXT ONLY. NO JSON. NO MARKDOWN. NO PREAMBLE.`;
 
       return model.generateContent({
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        contents: [{ role: 'user', parts: [{ text: prompt }] }],
         generationConfig: { 
-          temperature: 0.8, 
-          maxOutputTokens: 60,
-          responseMimeType: "application/json"
+          temperature: 0.8,
+          maxOutputTokens: 100, 
         }
       }).then(async (result) => {
         const response = await result.response;
-        const text = response.text().trim();
+        // 🚀 Upgrade: Filter out 'thought' parts and join actual text parts
+        const parts = response.candidates[0].content.parts;
+        const actualText = parts
+          .filter(p => !p.thought)
+          .map(p => p.text)
+          .join('')
+          .trim();
         
-        let comment = "";
-        try {
-          const parsed = JSON.parse(text);
-          comment = parsed.comment || "吃飽飽才有力氣減肥啦！🐼";
-        } catch (e) {
-          console.error("Failed to parse Panda Advice JSON:", text);
-          comment = "吃飽飽才有力氣減肥啦！🐼";
-        }
-
-        // Hard truncate just in case
-        const maxLen = language === 'zh' ? 50 : 120;
-        if (comment.length > maxLen) {
-          comment = comment.slice(0, maxLen) + '…';
-        }
-        return comment;
+        // Final cleanup: remove potential AI artifacts or outer quotes
+        return actualText.split('\n').pop().replace(/^["'「]+|["'」]+$/g, '').trim();
       });
     });
   } catch (err) {
-    console.error("Dynamic advice failed, falling back to local:", err);
     return getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language);
   }
 }
@@ -252,7 +238,7 @@ Output EXACTLY a JSON object with a single key "comment", containing ONE short s
 function getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language = 'zh') {
   const calPercent = (calories / calorieGoal) * 100;
   const waterPercent = (water / waterGoal) * 100;
-  
+
   const advice = {
     zh: {
       low_water: "多喝點水啦！身體都枯竭了 💧",
@@ -260,7 +246,7 @@ function getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water,
       low_cal: "進度才一半，再吃一點點沒關係的！🐼",
       mid_cal: "接近目標了，你是最棒的！🐼",
       goal_reached: "完美達標！今天你就是飲食達人！🐼",
-      over_cal: "哎呀，今天吃得有點熱情喔！明天再努力調整吧！🐼"
+      over_cal: "哎呀，今天吃得有點熱情喔！🐼"
     },
     en: {
       low_water: "Drink more water! Your body is thirsty 💧",
@@ -268,10 +254,10 @@ function getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water,
       low_cal: "Halfway there, a little more won't hurt! 🐼",
       mid_cal: "Almost at the goal, you're doing great! 🐼",
       goal_reached: "Perfect! You're a diet expert today! 🐼",
-      over_cal: "Oops, a bit too enthusiastic today! Let's adjust tomorrow! 🐼"
+      over_cal: "Oops, a bit too enthusiastic today! 🐼"
     }
   }[language];
-  
+
   if (waterPercent < 40) return advice.low_water;
   if (calPercent === 0) return advice.zero_cal;
   if (calPercent < 50) return advice.low_cal;

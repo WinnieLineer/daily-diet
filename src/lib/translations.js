@@ -74,7 +74,12 @@ const translations = {
     already_in_favorites: "已在常用清單中",
     remove_favorite: "移除常用",
     quick_add: "快速新增",
-    favorite_added_toast: "✅ 已新增至今日紀錄",
+    favorite_added_toast: "已新增至今日紀錄",
+    retry_button: "重試",
+    ai_error: "AI 辨識失敗，請檢查網路或再試一次",
+    settings_api_key: "Gemini API 金鑰",
+    api_key_hint: "僅在本地端運行時可自定義",
+    ai_analyzing_status: "AI 辨識分析中...",
   },
   en: {
     app_title: "DAILY DIET",
@@ -151,7 +156,12 @@ const translations = {
     already_in_favorites: "Already in favorites",
     remove_favorite: "Remove",
     quick_add: "Quick Add",
-    favorite_added_toast: "✅ Added to today's log",
+    favorite_added_toast: "Added to today's log",
+    retry_button: "Retry",
+    ai_error: "AI recognition failed, please check your network or try again",
+    settings_api_key: "Gemini API Key",
+    api_key_hint: "Customizable only on local domain",
+    ai_analyzing_status: "AI Analyzing Status",
   }
 };
 

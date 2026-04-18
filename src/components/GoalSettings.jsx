@@ -12,6 +12,16 @@ const GoalSettings = ({ onGoalsUpdated }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [showTip, setShowTip] = useState(false);
   const [activeTab, setActiveTab] = useState('goals'); // 'goals', 'language', 'contact'
+  const [apiKey, setApiKey] = useState('');
+  
+  const isLocal = 
+    window.location.hostname === 'localhost' || 
+    window.location.hostname === '127.0.0.1' || 
+    window.location.hostname.startsWith('192.168.') || 
+    window.location.hostname.startsWith('10.') || 
+    window.location.hostname.endsWith('.local') ||
+    window.location.hostname === '0.0.0.0' ||
+    import.meta.env.DEV;
   
   // Contact form state
   const [contactForm, setContactForm] = useState({ subject: '', message: '' });
@@ -32,12 +42,19 @@ const GoalSettings = ({ onGoalsUpdated }) => {
         water: wat ? wat.value : 2500 
       });
     }
+
+    // Fetch API Key
+    const ak = await db.settings.get('user_api_key');
+    if (ak) setApiKey(ak.value);
   };
 
   const saveGoals = async () => {
     await db.settings.put({ key: 'calorie_goal', value: Number(goals.calories) });
     await db.settings.put({ key: 'protein_goal', value: Number(goals.protein) });
     await db.settings.put({ key: 'water_goal', value: Number(goals.water) });
+    if (isLocal) {
+      await db.settings.put({ key: 'user_api_key', value: apiKey });
+    }
     setIsOpen(false);
     onGoalsUpdated();
   };
@@ -226,6 +243,22 @@ const GoalSettings = ({ onGoalsUpdated }) => {
                         />
                       </div>
                     </div>
+
+                    {isLocal && (
+                      <div className="pt-4 border-t-2 border-black/5 mt-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest block mb-1.5 text-zinc-400">
+                          {t('settings_api_key')}
+                          <span className="ml-2 lowercase text-[8px] font-bold opacity-50">({t('api_key_hint')})</span>
+                        </label>
+                        <input 
+                          type="password"
+                          value={apiKey}
+                          onChange={(e) => setApiKey(e.target.value)}
+                          placeholder="AI API Key"
+                          className="w-full border-4 border-black p-3 rounded-2xl font-mono focus:outline-none focus:ring-4 ring-accent/20 transition-all font-bold text-xs"
+                        />
+                      </div>
+                    )}
 
                     <NeoButton 
                       variant="black" 

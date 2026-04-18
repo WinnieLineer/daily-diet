@@ -8,6 +8,7 @@ import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ANALYSIS_DURATION_SECONDS, IMAGE_MAX_DIMENSION, IMAGE_QUALITY } from '../lib/constants';
 
 const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
   const videoRef = useRef(null);
@@ -144,7 +145,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
   );
 };
 
-const FoodDetective = ({ onLogAdded }) => {
+export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef }) {
   const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'favorites'
   const [loading, setLoading] = useState(false);
   const [loadTime, setLoadTime] = useState(0);
@@ -158,6 +159,9 @@ const FoodDetective = ({ onLogAdded }) => {
   const pendingCoordsRef = useRef(null); // stores pre-fetched coords from camera open
   const [favorites, setFavorites] = useState([]);
   const [favToast, setFavToast] = useState(null);
+  const [aiError, setAiError] = useState(null);
+  const [nutritionFacts, setNutritionFacts] = useState([]);
+  const [currentFactIndex, setCurrentFactIndex] = useState(0);
 
   // Load favorites when tab is shown
   const loadFavorites = async () => {
@@ -165,19 +169,52 @@ const FoodDetective = ({ onLogAdded }) => {
     setFavorites(items);
   };
 
-  // Timer for loading state
+  // Cycle through nutrition facts during loading
   useEffect(() => {
     let interval;
     if (loading) {
-      setLoadTime(30);
+      // Fetch facts when loading starts (if not already fetched or to get latest)
+      const fetchFacts = async () => {
+        const lang = getLanguage();
+        let items = await db.nutritionFacts.where('lang').equals(lang).toArray();
+        
+        // Priority Logic: Show facts related to missing nutrients
+        const proteinShort = goals.protein - summary.protein;
+        const waterShort = goals.water - summary.water;
+        const isNight = new Date().getHours() >= 21;
+
+        items = items.sort((a, b) => {
+          const aText = a.fact.toLowerCase();
+          // If late at night, prioritize facts about digestion/metabolism
+          if (isNight && (aText.includes('消化') || aText.includes('代謝') || aText.includes('睡眠'))) return -1;
+          // If protein deficit is large, prioritize protein facts
+          if (proteinShort > 20 && (aText.includes('蛋') || aText.includes('肉') || aText.includes('肌肉'))) return -1;
+          // If water is low, prioritize hydration
+          if (waterShort > 800 && (aText.includes('水') || aText.includes('代謝'))) return -1;
+          return 0;
+        });
+
+        setNutritionFacts(items);
+      };
+      fetchFacts();
+
+      setLoadTime(ANALYSIS_DURATION_SECONDS);
       interval = setInterval(() => {
-        setLoadTime(prev => (prev > 0 ? prev - 1 : 0));
-      }, 1000);
+        setLoadTime(prev => {
+          const next = prev > 0 ? prev - 1 : 0;
+          // Every 5 seconds, change the fact
+          if (next % 5 === 0) {
+            setCurrentFactIndex(curr => (nutritionFacts.length > 0 ? (curr + 1) % nutritionFacts.length : 0));
+          }
+          return next;
+        });
+      }, 1000); // Tick every 1 second
     } else {
-      setLoadTime(30);
+      setLoadTime(ANALYSIS_DURATION_SECONDS);
+      setCurrentFactIndex(0);
     }
     return () => clearInterval(interval);
-  }, [loading]);
+  }, [loading, nutritionFacts.length]);
 
   useEffect(() => {
     if (mode === 'favorites') loadFavorites();
@@ -198,8 +235,18 @@ const FoodDetective = ({ onLogAdded }) => {
         }
       });
       const data = await response.json();
-      const name = data.address.suburb || data.address.town || data.address.city || data.address.road || t('unknown');
-      return name;
+      const addr = data.address;
+      const city = addr.city || addr.state || '';
+      const suburb = addr.suburb || addr.town || addr.district || '';
+      const road = addr.road || addr.pedestrian || '';
+      let houseNumber = addr.house_number || '';
+      
+      if (houseNumber && !houseNumber.includes('號')) {
+        houseNumber += '號';
+      }
+      
+      // Return a structured string that we can parse if needed
+      return `${city}${suburb} ${road}${houseNumber}`.trim();
     } catch (err) {
       console.error("Geocoding error:", err);
       return t('unknown');
@@ -219,6 +266,69 @@ const FoodDetective = ({ onLogAdded }) => {
       console.error("Geolocation error:", err);
       setLocationLoading(false);
     }, { timeout: 10000 });
+  };
+
+  const compressImage = (base64) => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        const MAX_WIDTH = IMAGE_MAX_DIMENSION;
+        const MAX_HEIGHT = IMAGE_MAX_DIMENSION;
+        let width = img.width;
+        let height = img.height;
+        if (width > height) {
+          if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+        } else {
+          if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+        }
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
+      };
+      img.src = base64;
+    });
+  };
+
+  const handleAnalysis = async (base64, location) => {
+    setLoading(true);
+    setResult(null);
+    setAiError(null);
+    setLoadTime(ANALYSIS_DURATION_SECONDS);
+
+    try {
+      const compressedBase64 = await compressImage(base64);
+      const dailyContext = {
+        calories: summary.calories,
+        calorieGoal: goals.calories,
+        protein: summary.protein,
+        proteinGoal: goals.protein,
+        water: summary.water,
+        waterGoal: goals.water,
+        foodLogs: recentLogs
+      };
+
+      const data = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
+      
+      if (data && data.dish_name) {
+        setResult({ ...data, location });
+        
+        // 🚀 Set the lock immediately!
+        if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
+        
+        if (data.panda_comment && setAdvice) setAdvice(data.panda_comment);
+        if (data.fun_fact) {
+          const exists = await db.nutritionFacts.where('fact').equals(data.fun_fact).count();
+          if (exists === 0) await db.nutritionFacts.add({ fact: data.fun_fact, lang: getLanguage() });
+        }
+      }
+    } catch (err) {
+      setAiError(err.message || t('ai_error'));
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleImageUpload = async (e) => {
@@ -256,19 +366,8 @@ const FoodDetective = ({ onLogAdded }) => {
 
     const reader = new FileReader();
     reader.onloadend = async () => {
-      const base64 = reader.result;
-      setPreview(base64);
-      setLoading(true);
-      setResult(null);
-
-      try {
-        const data = await analyzeFoodImage(base64, getLanguage());
-        setResult({ ...data, location: finalLocation });
-      } catch (err) {
-        alert(err.message);
-      } finally {
-        setLoading(false);
-      }
+      setPreview(reader.result);
+      await handleAnalysis(reader.result, finalLocation);
     };
     reader.readAsDataURL(file);
   };
@@ -276,47 +375,24 @@ const FoodDetective = ({ onLogAdded }) => {
   const handleCameraCapture = async (base64) => {
     setShowDesktopCamera(false);
     setPreview(base64);
-    setLoading(true);
-    setResult(null);
-
-    // Use pre-fetched coords from camera open; fall back to fresh fetch if needed
+    
     let autoLocation = null;
     try {
       const coords = pendingCoordsRef.current;
       if (coords) {
         autoLocation = await reverseGeocode(coords.latitude, coords.longitude);
       } else if (navigator.geolocation) {
-        const checkPermission = async () => {
-          try {
-            const p = await navigator.permissions.query({ name: 'geolocation' });
-            return p.state === 'granted';
-          } catch (e) {
-            return false;
-          }
-        };
-        const hasPerm = await checkPermission() || localStorage.getItem('location_granted') === 'true';
-        
-        if (hasPerm) {
-          autoLocation = await new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-              localStorage.setItem('location_granted', 'true');
-              const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-              resolve(loc);
-            }, () => resolve(null), { timeout: 5000, maximumAge: 30000 });
-          });
-        }
+        autoLocation = await new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(async (pos) => {
+            const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+            resolve(loc);
+          }, () => resolve(null), { timeout: 5000 });
+        });
       }
-    } catch (err) { console.warn("Auto-location check failed:", err); }
+    } catch (err) { console.warn("Location error:", err); }
     finally { pendingCoordsRef.current = null; }
 
-    try {
-      const data = await analyzeFoodImage(base64, getLanguage());
-      setResult({ ...data, location: autoLocation });
-    } catch (err) {
-      alert(err.message);
-    } finally {
-      setLoading(false);
-    }
+    await handleAnalysis(base64, autoLocation);
   };
 
   const saveLog = async () => {
@@ -348,7 +424,7 @@ const FoodDetective = ({ onLogAdded }) => {
     setPreview(null);
     setResult(null);
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
-    onLogAdded();
+    onLogAdded(mode === 'ai');
     setLoading(false);
   };
 
@@ -356,7 +432,7 @@ const FoodDetective = ({ onLogAdded }) => {
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2 mb-2">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-xl font-black italic">📝 {t('food_detective')}</h2>
+          <h2 className="text-xl font-black italic"></h2>
           <button 
             onClick={async () => {
               const now = new Date();
@@ -479,12 +555,81 @@ const FoodDetective = ({ onLogAdded }) => {
           <div className="min-h-[200px] max-h-[500px] border-4 border-black rounded-3xl overflow-hidden relative bg-zinc-100 flex items-center justify-center">
             <img src={preview} alt="Preview" className="max-w-full max-h-[500px] object-contain" />
             {loading && (
-              <div className="absolute inset-0 bg-black/60 flex flex-col items-center justify-center backdrop-blur-md">
-                <Loader2 className="animate-spin text-accent mb-3" size={48} />
-                <span className="text-white font-bold animate-pulse text-sm">{t('ai_calculating')}</span>
-                <span className="text-white/70 font-mono text-xs mt-2 bg-black/50 px-2 py-1 rounded-lg border border-white/10">
-                  {loadTime}s
-                </span>
+              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4 z-50">
+                <div className="flex flex-col items-center w-full max-w-[280px] space-y-3">
+                  {/* Status Badge */}
+                  <div className="bg-accent/20 text-accent px-3 py-1 rounded-full border border-accent/40 inline-flex items-center gap-2 shadow-[0_0_10px_rgba(255,183,0,0.1)]">
+                    <Loader2 className="animate-spin text-accent" size={14} />
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('ai_analyzing_status')}</span>
+                  </div>
+                  
+                  {/* Fact Box */}
+                  <AnimatePresence mode="wait">
+                    {nutritionFacts.length > 0 && (
+                      <motion.div
+                        key={currentFactIndex}
+                        initial={{ opacity: 0, scale: 0.98 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        exit={{ opacity: 0, scale: 0.98 }}
+                        className="text-center bg-white/5 p-4 rounded-3xl border border-white/10 w-full"
+                      >
+                        <span className="text-accent/60 font-black uppercase tracking-[0.2em] text-[8px] block border-b border-accent/20 pb-1 mb-2">
+                          {t('food_fact')}
+                        </span>
+                        <p className="text-white font-bold italic text-xs leading-relaxed">
+                          "{nutritionFacts[currentFactIndex]?.fact}"
+                        </p>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
+                  
+                  {/* Progress Indicator */}
+                  <div className="flex flex-col items-center w-full gap-1.5 pt-1">
+                    <div className="h-1 w-24 bg-white/10 rounded-full overflow-hidden">
+                      <motion.div 
+                        className="h-full bg-accent"
+                        initial={{ width: "0%" }}
+                        animate={{ width: "100%" }}
+                        transition={{ duration: ANALYSIS_DURATION_SECONDS, ease: "linear" }}
+                      />
+                    </div>
+                    <span className="text-accent font-mono text-[10px] font-black tracking-tighter">
+                      {loadTime} SEC REMAINING
+                    </span>
+                  </div>
+                </div>
+              </div>
+            )}
+            {!loading && aiError && (
+              <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center backdrop-blur-md p-6 text-center">
+                <AlertCircle className="text-rose-500 mb-3" size={48} />
+                <span className="text-white font-bold text-sm mb-4">{aiError}</span>
+                <div className="flex gap-2">
+                  <button 
+                    onClick={() => { setPreview(null); setAiError(null); }}
+                    className="bg-white/10 text-white px-4 py-2 rounded-xl border-2 border-white/20 font-bold text-xs"
+                  >
+                    {t('cancel')}
+                  </button>
+                  <button 
+                    onClick={() => {
+                      if (preview) {
+                        setLoading(true);
+                        setAiError(null);
+                        analyzeFoodImage(preview, getLanguage())
+                          .then(data => {
+                            setResult(data);
+                            setAiError(null);
+                          })
+                          .catch(err => setAiError(err.message))
+                          .finally(() => setLoading(false));
+                      }
+                    }}
+                    className="bg-accent text-black px-6 py-2 rounded-xl border-4 border-black font-black text-xs shadow-neo-sm active:scale-95"
+                  >
+                    <RefreshCw size={14} className="inline mr-1" /> {t('retry_button') || '重試'}
+                  </button>
+                </div>
               </div>
             )}
           </div>
@@ -627,8 +772,11 @@ const FoodDetective = ({ onLogAdded }) => {
                 initial={{ opacity: 0, y: -10, scale: 0.95 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
                 exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                className="bg-black text-white text-xs font-black px-4 py-2 rounded-2xl text-center border-4 border-accent shadow-neo-sm"
+                className="bg-white text-black text-xs font-black px-4 py-2 rounded-2xl border-4 border-black shadow-neo-sm flex items-center gap-2 justify-center"
               >
+                <div className="bg-emerald-500 p-0.5 rounded-full border border-black">
+                  <Check size={10} strokeWidth={4} className="text-white" />
+                </div>
                 {favToast}
               </motion.div>
             )}
@@ -706,4 +854,4 @@ const FoodDetective = ({ onLogAdded }) => {
   );
 };
 
-export default FoodDetective;
+// Removed redundant export default

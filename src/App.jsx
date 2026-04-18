@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import PandaCoachCard from './components/PandaCoachCard';
 import Dashboard from './components/Dashboard';
 import FoodDetective from './components/FoodDetective';
@@ -123,7 +123,19 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             {log.location && (
               <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[120px] bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
                 <MapPin size={10} />
-                {log.location}
+                {(() => {
+                  // Try to extract suburb (like "新莊區") from full address
+                  // Simple logic: catch 3nd/4th to 6th characters or part before space
+                  const full = log.location;
+                  const parts = full.split(' ');
+                  const citySub = parts[0]; // "新北市新莊區"
+                  
+                  // Common pattern: City(3 chars) + Suburb
+                  if (citySub.length > 3) {
+                    return citySub.substring(3);
+                  }
+                  return citySub;
+                })()}
               </span>
             )}
           </div>
@@ -230,8 +242,8 @@ function App() {
           localStorage.removeItem('ai_fallback_date');
           localStorage.removeItem('ai_fallback_model');
            
-          // 4. Final Hard Reload
-          window.location.reload(true);
+          // 4. Final Hard Reload (forcing a fresh hit to the server by appending version)
+          window.location.href = window.location.origin + window.location.pathname + '?v=' + remoteVersion;
         }
       } catch (err) {
         console.error("Version check failed:", err);
@@ -275,7 +287,12 @@ function App() {
   const [editingId, setEditingId] = useState(null);
   const [editValues, setEditValues] = useState({ dish_name: '', calories: '', protein: '', water: '' });
 
-  const refreshData = async () => {
+  const adviceUpdateLockRef = useRef(false);
+
+  const refreshData = async (skipAdvice = false) => {
+    // If we have a lock or explicitly asked to skip, don't fetch advice
+    const shouldSkipAdvice = skipAdvice || adviceUpdateLockRef.current;
+    
     const today = getLocalDateString();
     const dailySummary = await getDailySummary(today);
     setSummary(dailySummary);
@@ -301,7 +318,8 @@ function App() {
       .sortBy('timestamp');
     
     // Categorize logs
-    setRecentLogs(allLogs.filter(log => log.date === today));
+    const todayLogs = allLogs.filter(log => log.date === today);
+    setRecentLogs(todayLogs);
     
     // Find last location
     const lastWithLocation = allLogs.find(log => log.location);
@@ -324,19 +342,37 @@ function App() {
     const sortedGroups = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
     setHistoryGroups(sortedGroups);
 
-    const currentAdvice = await getPandaAdvice(
-      dailySummary.calories, 
-      currentGoals.calories, 
-      dailySummary.protein, 
-      currentGoals.protein,
-      dailySummary.water,
-      currentGoals.water,
-      getLanguage()
-    );
-    setAdvice(currentAdvice);
+    // 🚀 Background Analysis: Non-blocking advice update
+    if (!shouldSkipAdvice) {
+      console.log("Triggering background Panda analysis...");
+      // We don't 'await' this so the UI refreshes immediately
+      getPandaAdvice(
+        dailySummary.calories, 
+        currentGoals.calories, 
+        dailySummary.protein, 
+        currentGoals.protein,
+        dailySummary.water,
+        currentGoals.water,
+        todayLogs, 
+        getLanguage()
+      ).then(currentAdvice => {
+        if (currentAdvice) setAdvice(currentAdvice);
+      }).catch(err => console.error("Background advice error:", err));
+    } else {
+      console.log("Using existing merged advice (skipping background fetch)");
+      adviceUpdateLockRef.current = false;
+    }
   };
 
   useEffect(() => {
+    const initFacts = async () => {
+      const count = await db.nutritionFacts.count();
+      if (count === 0) {
+        const { initialNutritionFacts } = await import('./lib/nutritionData');
+        await db.nutritionFacts.bulkAdd(initialNutritionFacts);
+      }
+    };
+    initFacts();
     refreshData();
   }, []);
 
@@ -405,14 +441,17 @@ function App() {
       {/* Toast notification */}
       <AnimatePresence>
         {toast && (
-          <motion.div
-            initial={{ opacity: 0, y: -30, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: -20, scale: 0.9 }}
-            className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-black text-white px-5 py-2.5 rounded-2xl font-black text-sm shadow-neo border-4 border-accent"
-          >
-            {toast}
-          </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: -30, scale: 0.9 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -20, scale: 0.9 }}
+              className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-white text-black px-4 py-2.5 rounded-2xl font-black text-sm shadow-neo border-4 border-black flex items-center gap-2 min-w-[200px] justify-center"
+            >
+              <div className="bg-emerald-500 p-1 rounded-full border-2 border-black">
+                <Check size={14} strokeWidth={4} className="text-white" />
+              </div>
+              {toast}
+            </motion.div>
         )}
       </AnimatePresence>
       <header className="flex justify-between items-center py-4">
@@ -423,7 +462,7 @@ function App() {
               {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
             </div>
             {lastLocation && (
-              <div className="text-[8px] sm:text-[9px] text-gray-400 italic truncate max-w-[120px]">
+              <div className="text-[8px] sm:text-[9px] text-gray-400 italic truncate max-w-[200px]">
                 📍 {lastLocation}
               </div>
             )}
@@ -446,7 +485,14 @@ function App() {
 
       <Dashboard summary={summary} goals={goals} />
 
-      <FoodDetective onLogAdded={refreshData} />
+      <FoodDetective 
+        onLogAdded={refreshData} 
+        summary={summary}
+        goals={goals}
+        recentLogs={recentLogs}
+        setAdvice={setAdvice}
+        adviceUpdateLockRef={adviceUpdateLockRef}
+      />
 
       {/* Today's Logs */}
       <NeoCard className="bg-white">
@@ -537,10 +583,23 @@ function App() {
                 <div className="space-y-4 pt-4">
                   {historyGroups.map((group) => {
                     const isExpanded = !!expandedGroups[group.date];
-                    const calorieAchievement = Math.min((group.totalCalories / goals.calories) * 100, 100);
-                    const proteinAchievement = Math.min((group.totalProtein / goals.protein) * 100, 100);
-                    const isCalorieReached = group.totalCalories >= goals.calories;
-                    const isProteinReached = group.totalProtein >= goals.protein;
+                    const caloriePercent = Math.round((group.totalCalories / goals.calories) * 100);
+                    const proteinPercent = Math.round((group.totalProtein / goals.protein) * 100);
+                    const waterPercent   = Math.round(((group.totalWater || 0) / goals.water) * 100);
+
+                    const getCalColor = (p) => {
+                      if (p > 110) return 'bg-rose-500';
+                      if (p >= 100) return 'bg-emerald-500';
+                      return 'bg-accent';
+                    };
+                    const getProColor = (p) => {
+                      if (p >= 100) return 'bg-emerald-500';
+                      return 'bg-black';
+                    };
+                    const getWatColor = (p) => {
+                      if (p >= 100) return 'bg-emerald-500';
+                      return 'bg-[#3b82f6]';
+                    };
 
                     return (
                       <div key={group.date} className="border-b-2 border-gray-100 pb-3 last:border-0">
@@ -553,20 +612,26 @@ function App() {
                             <div className="flex flex-col gap-1 translate-y-0.5">
                               {/* Metrics Row */}
                               <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[9px] font-black italic uppercase tracking-wider text-gray-400">
-                                <span className="whitespace-nowrap">🔥 {group.totalCalories}/{goals.calories}</span>
-                                <span className="whitespace-nowrap">🍖 {group.totalProtein}/{goals.protein}</span>
-                                <span className="whitespace-nowrap">🚰 {group.totalWater || 0}/{goals.water}</span>
+                                <span className={caloriePercent > 110 ? 'text-rose-500' : caloriePercent >= 100 ? 'text-emerald-600' : ''}>
+                                  🔥 {group.totalCalories}/{goals.calories} ({caloriePercent}%)
+                                </span>
+                                <span className={proteinPercent >= 100 ? 'text-emerald-600' : ''}>
+                                  🍖 {group.totalProtein}/{goals.protein} ({proteinPercent}%)
+                                </span>
+                                <span className={waterPercent >= 100 ? 'text-emerald-600' : ''}>
+                                  🚰 {group.totalWater || 0}/{goals.water} ({waterPercent}%)
+                                </span>
                               </div>
                               {/* Progress Bars */}
                               <div className="flex gap-1.5 w-full max-w-[180px] mt-2">
-                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
-                                  <div className={`h-full transition-all ${isCalorieReached ? 'bg-accent' : 'bg-black/20'}`} style={{ width: `${calorieAchievement}%` }} />
+                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden border border-black/5">
+                                  <div className={`h-full transition-all ${getCalColor(caloriePercent)}`} style={{ width: `${Math.min(caloriePercent, 100)}%` }} />
                                 </div>
                                 <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
-                                  <div className={`h-full transition-all ${isProteinReached ? 'bg-black' : 'bg-black/20'}`} style={{ width: `${proteinAchievement}%` }} />
+                                  <div className={`h-full transition-all ${getProColor(proteinPercent)}`} style={{ width: `${Math.min(proteinPercent, 100)}%` }} />
                                 </div>
                                 <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
-                                  <div className={`h-full transition-all ${group.totalWater >= goals.water ? 'bg-[#3b82f6]' : 'bg-black/20'}`} style={{ width: `${Math.min(((group.totalWater || 0) / goals.water) * 100, 100)}%` }} />
+                                  <div className={`h-full transition-all ${getWatColor(waterPercent)}`} style={{ width: `${Math.min(waterPercent, 100)}%` }} />
                                 </div>
                               </div>
                             </div>
