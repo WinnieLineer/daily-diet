@@ -146,13 +146,13 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
 
         <div className="flex items-center gap-x-1.5 text-[10px] font-bold font-mono shrink-0">
            {log.calories > 0 && (
-             <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">{log.calories}</span>
+             <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
            )}
            {log.protein > 0 && (
-             <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">{log.protein}</span>
+             <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}</span>
            )}
            {log.water > 0 && (
-             <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">{log.water}</span>
+             <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🚰{log.water}</span>
            )}
         </div>
       </div>
