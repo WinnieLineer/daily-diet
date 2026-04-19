@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 
+
 const GoalSettings = ({ onGoalsUpdated }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
   const [loading, setLoading] = useState(false);
@@ -78,7 +79,7 @@ const GoalSettings = ({ onGoalsUpdated }) => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
-          subject: `[Daily-Diet] ${contactForm.subject}`,
+          subject: `[Daily-Diet v${APP_VERSION}] ${contactForm.subject}`,
           message: contactForm.message,
           from_name: 'Daily Diet App User',
         })
@@ -371,13 +372,6 @@ const GoalSettings = ({ onGoalsUpdated }) => {
                     </button>
                   </div>
                 )}
-                
-                {/* Version Tag */}
-                <div className="pt-2 text-center">
-                  <span className="text-[9px] font-black italic text-zinc-300 uppercase tracking-[0.2em]">
-                    DailyDiet v{APP_VERSION}
-                  </span>
-                </div>
               </div>
             </NeoCard>
           </motion.div>
