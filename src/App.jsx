@@ -73,23 +73,22 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
           />
         </div>
       </div>
-        </div>
 
-        <div className="flex gap-2 pt-1">
-          <button 
-            onClick={cancelEditing}
-            className="flex-1 bg-white border-4 border-black font-black py-2 rounded-xl hover:bg-gray-100 flex items-center justify-center gap-1"
-          >
-            <X size={16} /> {t('cancel')}
-          </button>
-          <button 
-            onClick={() => saveEdit(log.id)}
-            className="flex-1 bg-black text-white border-4 border-black font-black py-2 rounded-xl hover:bg-black/90 flex items-center justify-center gap-1"
-          >
-            <Check size={16} /> {t('save')}
-          </button>
-        </div>
-      </motion.div>
+      <div className="flex gap-2 pt-1">
+        <button 
+          onClick={cancelEditing}
+          className="flex-1 bg-white border-4 border-black font-black py-2 rounded-xl hover:bg-gray-100 flex items-center justify-center gap-1"
+        >
+          <X size={16} /> {t('cancel')}
+        </button>
+        <button 
+          onClick={() => saveEdit(log.id)}
+          className="flex-1 bg-black text-white border-4 border-black font-black py-2 rounded-xl hover:bg-black/90 flex items-center justify-center gap-1"
+        >
+          <Check size={16} /> {t('save')}
+        </button>
+      </div>
+    </motion.div>
     );
   }
 
@@ -697,8 +696,9 @@ function App() {
 
 
       <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
-        <div className="bg-black/95 backdrop-blur-md border-4 border-black text-white p-4 rounded-3xl shadow-neo flex justify-center items-center">
-          <p className="text-[10px] font-bold text-accent tracking-widest uppercase">© 2026 DailyDiet - 飲控萬歲 🐼</p>
+        <div className="bg-black/95 backdrop-blur-md border-4 border-black text-white p-4 rounded-3xl shadow-neo flex flex-col items-center gap-1">
+          <p className="text-[10px] font-bold text-accent tracking-widest uppercase truncate max-w-full italic">© 2026 DailyDiet - 飲控萬歲 🐼</p>
+          <p className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] -mt-0.5 opacity-80">v{APP_VERSION}</p>
         </div>
       </footer>
     </div>

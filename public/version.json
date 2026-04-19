@@ -1,4 +1,3 @@
 {
-  "version": "1.2.5",
-  "comment": "Added retry button for AI recognition, enhanced progress colors, and custom API key support for local domains."
+  "version": "1.2.0"
 }
