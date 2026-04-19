@@ -1,3 +1,3 @@
-export const ANALYSIS_DURATION_SECONDS = 15;
-export const IMAGE_MAX_DIMENSION = 512; // Ultra-speed mode
-export const IMAGE_QUALITY = 0.5;       // Barebones quality
+export const ANALYSIS_DURATION_SECONDS = 30; // 🕒 Back to 30s for stability
+export const IMAGE_MAX_DIMENSION = 1024;    // 📸 Back to 1024px to read labels clearly
+export const IMAGE_QUALITY = 0.8;           // 💎 Higher quality
