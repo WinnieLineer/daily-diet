@@ -466,7 +466,9 @@ function App() {
         )}
       </AnimatePresence>
       <header className="flex justify-between items-center py-4">
-        <div /> {/* Removed title for desktop as well for a cleaner look */}
+        <div className="hidden md:flex items-center">
+          <h1 className="text-xl sm:text-2xl font-black italic tracking-tighter shrink-0">{t('app_title')}</h1>
+        </div>
         <div className="flex gap-2">
           <div className="bg-white border-4 border-black px-3 py-1.5 rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center">
             <div className="text-[11px] sm:text-xs">
