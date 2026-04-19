@@ -73,16 +73,8 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
           />
         </div>
       </div>
+        </div>
 
-      {/* Footer Version */}
-      <footer className="pt-8 pb-12 text-center">
-        <span className="text-[10px] font-black italic text-zinc-300 uppercase tracking-widest">
-          Daily Diet v{APP_VERSION}
-        </span>
-      </footer>
-    </div>
-  );
-};
         <div className="flex gap-2 pt-1">
           <button 
             onClick={cancelEditing}
