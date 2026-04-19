@@ -50,7 +50,7 @@ const ProgressRing = ({ value, max, label, defaultColor = "bg-accent" }) => {
       </div>
       <span className="mt-2 font-black text-[10px] sm:text-xs uppercase tracking-tight text-gray-500">{label}</span>
       <span className="text-[9px] sm:text-[10px] opacity-40 font-mono font-bold mt-0.5">
-        {value}{label.includes('🔥') ? 'kcal' : label.includes('🍖') ? 'g' : 'ml'}/{max}
+        {value}/{max}{label.includes('🔥') ? 'kcal' : label.includes('🍖') ? 'g' : 'ml'}
       </span>
     </div>
   );
