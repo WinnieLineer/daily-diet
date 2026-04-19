@@ -5,6 +5,7 @@ import { db } from '../db';
 import { Settings, Sparkles, X, Info, Globe, Mail, Target, Check } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
+import { APP_VERSION } from '../lib/constants';
 
 const GoalSettings = ({ onGoalsUpdated }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
@@ -370,6 +371,13 @@ const GoalSettings = ({ onGoalsUpdated }) => {
                     </button>
                   </div>
                 )}
+                
+                {/* Version Tag */}
+                <div className="pt-2 text-center">
+                  <span className="text-[9px] font-black italic text-zinc-300 uppercase tracking-[0.2em]">
+                    DailyDiet v{APP_VERSION}
+                  </span>
+                </div>
               </div>
             </NeoCard>
           </motion.div>
