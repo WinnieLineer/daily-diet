@@ -47,6 +47,12 @@ const Onboarding = ({ onComplete }) => {
     }
   };
 
+  const prev = () => {
+    if (currentSlide > 0) {
+      setCurrentSlide(currentSlide - 1);
+    }
+  };
+
   const skip = () => onComplete();
 
   return (
@@ -54,7 +60,7 @@ const Onboarding = ({ onComplete }) => {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 overflow-hidden"
+      className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 overflow-hidden touch-none"
     >
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-5">
@@ -66,11 +72,23 @@ const Onboarding = ({ onComplete }) => {
         <AnimatePresence mode="wait">
           <motion.div
             key={currentSlide}
+            drag="x"
+            dragConstraints={{ left: 0, right: 0 }}
+            dragElastic={0.2}
+            onDragEnd={(e, { offset, velocity }) => {
+              const swipe = offset.x;
+              const swipeThreshold = 50;
+              if (swipe < -swipeThreshold) {
+                next();
+              } else if (swipe > swipeThreshold) {
+                prev();
+              }
+            }}
             initial={{ x: 100, opacity: 0 }}
             animate={{ x: 0, opacity: 1 }}
             exit={{ x: -100, opacity: 0 }}
-            transition={{ type: 'spring', damping: 20, stiffness: 100 }}
-            className="flex-1 flex flex-col items-center justify-center text-center space-y-8"
+            transition={{ type: 'spring', damping: 25, stiffness: 120 }}
+            className="flex-1 flex flex-col items-center justify-center text-center space-y-8 cursor-grab active:cursor-grabbing"
           >
             {/* Visual Part */}
             <motion.div 
