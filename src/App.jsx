@@ -695,9 +695,11 @@ function App() {
 
 
       <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
-        <div className="bg-black/95 backdrop-blur-md border-4 border-black text-white p-4 rounded-3xl shadow-neo flex flex-col items-center gap-1">
-          <p className="text-[10px] font-bold text-accent tracking-widest uppercase truncate max-w-full italic">© 2026 DailyDiet - 飲控萬歲 🐼</p>
-          <p className="text-[8px] font-black text-zinc-500 uppercase tracking-[0.2em] -mt-0.5 opacity-80">v{APP_VERSION}</p>
+        <div className="bg-black/95 backdrop-blur-md border-4 border-black text-white p-3.5 rounded-3xl shadow-neo flex justify-center items-center">
+          <p className="text-[10px] font-bold tracking-widest uppercase italic whitespace-nowrap">
+            <span className="text-accent">© 2026 DailyDiet - 飲控萬歲 🐼</span>
+            <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
+          </p>
         </div>
       </footer>
     </div>
