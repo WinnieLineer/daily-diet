@@ -124,9 +124,9 @@ export async function analyzeFoodImage(base64Image, context = {}, language = 'zh
 Priority: Read packaging text, labels, or menu signs for accuracy.
 If NO FOOD is detected: Still return a JSON object with dish_name: "No food detected", 0 for all numbers, and a sarcastic roast about missing food.
 
-Output nutritional JSON in ${langDisplay}.
+CRITICAL: You MUST output all text fields (dish_name, description, fun_fact, roast, panda_comment) in ${langDisplay}. Do not mix languages.
 
-Context: ${timeContext}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}, ${foodStrip}
+Context: ${timeContext}, Cal}:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}, ${foodStrip}
 
 Schema: {dish_name, calories, protein, water, description, fun_fact, roast, panda_comment}`;
 
@@ -156,7 +156,8 @@ Schema: {dish_name, calories, protein, water, description, fun_fact, roast, pand
         return JSON.parse(text);
       } catch (e) {
         console.error("Parse Error. Raw text:", text);
-        throw new Error("無法解析 AI 回應，請再試一次。");
+        const errMap = { zh: "無法解析 AI 回應，請再試一次。", en: "Failed to parse AI response. Please try again." };
+        throw new Error(errMap[language] || errMap.en);
       }
     });
   });
@@ -210,8 +211,8 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
       const prompt = `Persona: Sarcastic/caring fitness panda coach.
 Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml.
 History: ${foodStrip || 'None'}
-Task: One short witty sentence (max 20 words) analyzing the current status in ${langDisplay}.
-STRICT: DIRECT TEXT ONLY. NO JSON. NO MARKDOWN. NO PREAMBLE.`;
+Task: One short witty sentence (max 20 words) analyzing the current status.
+STRICT: Output the sentence in ${langDisplay}. NO JSON. NO MARKDOWN. NO PREAMBLE.`;
 
       return model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],

@@ -228,9 +228,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const reverseGeocode = async (lat, lon) => {
     setLocationLoading(true);
     try {
+      const lang = getLanguage();
+      const acceptLang = lang === 'zh' ? 'zh-TW,zh;q=0.9' : 'en-US,en;q=0.9';
       const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
         headers: {
-          'Accept-Language': 'zh-TW,zh;q=0.9',
+          'Accept-Language': acceptLang,
           'User-Agent': 'DailyDietApp/1.0'
         }
       });
@@ -616,7 +618,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       if (preview) {
                         setLoading(true);
                         setAiError(null);
-                        analyzeFoodImage(preview, getLanguage())
+                        analyzeFoodImage(preview, {}, getLanguage())
                           .then(data => {
                             setResult(data);
                             setAiError(null);

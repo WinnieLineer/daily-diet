@@ -475,7 +475,7 @@ function App() {
               {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
             </div>
             {lastLocation && (
-              <div className="text-[7px] sm:text-[9px] text-gray-400 italic truncate max-w-[80px] sm:max-w-[200px]">
+              <div className="text-[7px] sm:text-[9px] text-gray-400 italic">
                 📍 {lastLocation}
               </div>
             )}
