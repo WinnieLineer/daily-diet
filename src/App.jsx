@@ -694,9 +694,9 @@ function App() {
       )}
 
 
-      <footer className="fixed bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
-        <div className="bg-black/95 backdrop-blur-md border-4 border-black text-white p-3.5 rounded-3xl shadow-neo flex justify-center items-center">
-          <p className="text-[10px] font-bold tracking-widest uppercase italic whitespace-nowrap">
+      <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
+        <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center">
+          <p className="text-[8px] sm:text-[10px] font-bold tracking-widest uppercase italic whitespace-nowrap">
             <span className="text-accent">© 2026 DailyDiet - 飲控萬歲 🐼</span>
             <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
           </p>
