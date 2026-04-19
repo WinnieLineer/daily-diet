@@ -122,6 +122,8 @@ export async function analyzeFoodImage(base64Image, context = {}, language = 'zh
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
     const customPrompt = `STRICT: DIRECT JSON ONLY. NO PREAMBLE. 
 Priority: Read packaging text, labels, or menu signs for accuracy.
+If NO FOOD is detected: Still return a JSON object with dish_name: "No food detected", 0 for all numbers, and a sarcastic roast about missing food.
+
 Output nutritional JSON in ${langDisplay}.
 
 Context: ${timeContext}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}, ${foodStrip}

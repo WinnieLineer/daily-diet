@@ -8,7 +8,7 @@ import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 
 
-const GoalSettings = ({ onGoalsUpdated }) => {
+const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -261,6 +261,18 @@ const GoalSettings = ({ onGoalsUpdated }) => {
                         />
                       </div>
                     )}
+
+                    <NeoButton 
+                      variant="white" 
+                      className="w-full h-12 text-sm mt-4 border-dashed border-zinc-300 flex items-center justify-center gap-2 not-italic"
+                      onClick={() => {
+                        setIsOpen(false);
+                        onWatchTutorial();
+                      }}
+                    >
+                      <Sparkles size={16} />
+                      <span>重新觀看功能介紹</span>
+                    </NeoButton>
 
                     <NeoButton 
                       variant="black" 

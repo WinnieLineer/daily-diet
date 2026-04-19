@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import FoodDetective from './components/FoodDetective';
 import WeightTracker from './components/WeightTracker';
 import GoalSettings from './components/GoalSettings';
+import Onboarding from './components/Onboarding';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
@@ -197,11 +198,16 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-const APP_VERSION = versionData.version;
 
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
+  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_seen'));
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
+
+  const handleOnboardingComplete = () => {
+    localStorage.setItem('onboarding_seen', 'true');
+    setShowOnboarding(false);
+  };
   
   // Force reload on version change to clear cache
   useEffect(() => {
@@ -439,6 +445,9 @@ function App() {
 
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
+      <AnimatePresence>
+        {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
+      </AnimatePresence>
       {/* Toast notification */}
       <AnimatePresence>
         {toast && (
@@ -480,7 +489,10 @@ function App() {
             >
               <Share2 size={18} />
             </NeoButton>
-            <GoalSettings onGoalsUpdated={refreshData} />
+            <GoalSettings 
+              onGoalsUpdated={refreshData} 
+              onWatchTutorial={() => setShowOnboarding(true)}
+            />
           </div>
         </div>
       </header>
