@@ -466,16 +466,16 @@ function App() {
         )}
       </AnimatePresence>
       <header className="flex justify-between items-center py-4">
-        <div className="hidden md:flex items-center">
-          <h1 className="text-xl sm:text-2xl font-black italic tracking-tighter shrink-0">{t('app_title')}</h1>
+        <div className="flex items-center">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-black italic tracking-tighter shrink-0 leading-none">{t('app_title')}</h1>
         </div>
         <div className="flex gap-2">
-          <div className="bg-white border-4 border-black px-3 py-1.5 rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center">
-            <div className="text-[11px] sm:text-xs">
+          <div className="bg-white border-[3px] sm:border-4 border-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center">
+            <div className="text-[10px] sm:text-xs">
               {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
             </div>
             {lastLocation && (
-              <div className="text-[8px] sm:text-[9px] text-gray-400 italic truncate max-w-[200px]">
+              <div className="text-[7px] sm:text-[9px] text-gray-400 italic truncate max-w-[80px] sm:max-w-[200px]">
                 📍 {lastLocation}
               </div>
             )}
