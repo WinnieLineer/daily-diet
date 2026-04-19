@@ -146,13 +146,13 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
 
         <div className="flex items-center gap-x-1.5 text-[10px] font-bold font-mono shrink-0">
            {log.calories > 0 && (
-             <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
+             <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">{log.calories}</span>
            )}
            {log.protein > 0 && (
-             <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}g</span>
+             <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">{log.protein}</span>
            )}
            {log.water > 0 && (
-             <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🚰{log.water}ml</span>
+             <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">{log.water}</span>
            )}
         </div>
       </div>
@@ -340,9 +340,9 @@ function App() {
         acc[date] = { date, logs: [], totalCalories: 0, totalProtein: 0, totalWater: 0 };
       }
       acc[date].logs.push(log);
-      acc[date].totalCalories += log.calories || 0;
-      acc[date].totalProtein += log.protein || 0;
-      acc[date].totalWater += log.water || 0;
+      acc[date].totalCalories += Number(log.calories) || 0;
+      acc[date].totalProtein += Number(log.protein) || 0;
+      acc[date].totalWater += Number(log.water) || 0;
       return acc;
     }, {});
 

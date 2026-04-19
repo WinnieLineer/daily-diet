@@ -449,7 +449,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
               if (lastWaterLog) {
                 await db.dietLogs.update(lastWaterLog.id, {
-                  water: (lastWaterLog.water || 0) + 250,
+                  water: (Number(lastWaterLog.water) || 0) + 250,
                   timestamp: timestamp // Update timestamp to keep it "recent"
                 });
               } else {

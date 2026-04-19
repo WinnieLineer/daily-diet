@@ -19,9 +19,9 @@ db.version(6).stores({
 export async function getDailySummary(date) {
   const logs = await db.dietLogs.where('date').equals(date).toArray();
   return logs.reduce((acc, log) => {
-    acc.calories += log.calories || 0;
-    acc.protein += log.protein || 0;
-    acc.water += log.water || 0;
+    acc.calories += Number(log.calories) || 0;
+    acc.protein += Number(log.protein) || 0;
+    acc.water += Number(log.water) || 0;
     return acc;
   }, { calories: 0, protein: 0, water: 0 });
 }
