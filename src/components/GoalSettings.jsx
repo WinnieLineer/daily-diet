@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Info, Globe, Mail, Target, Check } from 'lucide-react';
+import { Settings, Sparkles, X, Info, Globe, Mail, Target, Check, Database, Download, Upload } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
@@ -139,6 +139,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
                     {activeTab === 'goals' && t('settings_goals')}
                     {activeTab === 'language' && t('settings_language')}
                     {activeTab === 'contact' && t('settings_contact')}
+                    {activeTab === 'data' && t('settings_data')}
                   </h3>
                 </div>
                 <button onClick={() => setIsOpen(false)} className="bg-white border-2 border-black p-1 rounded-xl hover:bg-zinc-100 transition-colors">
@@ -151,6 +152,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
                 {[
                   { id: 'goals', icon: Target },
                   { id: 'language', icon: Globe },
+                  { id: 'data', icon: Database },
                   { id: 'contact', icon: Mail }
                 ].map(tab => (
                   <button
@@ -193,18 +195,18 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
                             <div className="space-y-2">
                               <div className="p-2 bg-white/60 rounded-lg">
                                 <p className="text-zinc-500 text-[9px] uppercase mb-0.5">{t('guide_tdee')}</p>
-                                <p className="leading-normal">Formula: Weight(kg) × 25 ~ 30 kcal</p>
+                                <p className="leading-normal">{t('formula_tdee')}</p>
                               </div>
 
                               <div className="p-2 bg-white/60 rounded-lg">
                                 <p className="text-zinc-500 text-[9px] uppercase mb-0.5">{t('guide_protein')}</p>
-                                <p className="leading-normal">Base: Weight(kg) × 1.2 g</p>
-                                <p className="leading-normal">Muscle: Weight(kg) × 1.6~2.2 g</p>
+                                <p className="leading-normal">{t('formula_protein_base')}</p>
+                                <p className="leading-normal">{t('formula_protein_muscle')}</p>
                               </div>
 
                               <div className="p-2 bg-white/60 rounded-lg">
                                 <p className="text-zinc-500 text-[9px] uppercase mb-0.5">{t('guide_water')}</p>
-                                <p className="leading-normal">Formula: Weight(kg) × 30~40 ml</p>
+                                <p className="leading-normal">{t('formula_water')}</p>
                               </div>
                             </div>
 
@@ -271,7 +273,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
                       }}
                     >
                       <Sparkles size={16} />
-                      <span>重新觀看功能介紹</span>
+                      <span>{t('watch_tutorial')}</span>
                     </NeoButton>
 
                     <NeoButton 
@@ -382,6 +384,107 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
                         </>
                       )}
                     </button>
+                  </div>
+                )}
+                {activeTab === 'data' && (
+                  <div className="space-y-4">
+                    <div className="bg-zinc-50 p-4 rounded-2xl border-2 border-dashed border-zinc-200">
+                      <p className="text-sm font-bold text-zinc-600 italic leading-relaxed">
+                        🐼 {t('export_hint')}
+                      </p>
+                    </div>
+
+                    <div className="space-y-3">
+                      <button 
+                        onClick={async () => {
+                          try {
+                            const dietLogs = await db.dietLogs.toArray();
+                            const weightLogs = await db.weightLogs.toArray();
+                            const settings = await db.settings.toArray();
+                            const favorites = await db.favorites.toArray();
+                            const facts = await db.nutritionFacts.toArray();
+                            
+                            const data = {
+                              version: 2,
+                              exportedAt: new Date().toISOString(),
+                              dietLogs,
+                              weightLogs,
+                              settings,
+                              favorites,
+                              nutritionFacts: facts
+                            };
+
+                            const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const link = document.createElement('a');
+                            link.href = url;
+                            link.download = `dailydiet_backup_${new Date().toISOString().split('T')[0]}.json`;
+                            link.click();
+                            URL.revokeObjectURL(url);
+                          } catch (err) {
+                            alert(t('data_error'));
+                          }
+                        }}
+                        className="w-full bg-white border-4 border-black py-4 rounded-2xl font-black italic tracking-tight shadow-neo-sm hover:bg-zinc-50 active:scale-95 transition-all flex items-center justify-center gap-2 text-black"
+                      >
+                        <Download size={18} />
+                        {t('export_data')}
+                      </button>
+
+                      <div className="relative">
+                        <input 
+                          type="file" 
+                          accept=".json"
+                          className="hidden" 
+                          id="import-file"
+                          onChange={async (e) => {
+                            const file = e.target.files[0];
+                            if (!file) return;
+
+                            if (!confirm(t('import_warning'))) return;
+
+                            const reader = new FileReader();
+                            reader.onload = async (event) => {
+                              try {
+                                const data = JSON.parse(event.target.result);
+                                
+                                // Basic validation
+                                if (!data.dietLogs || !data.settings) throw new Error("Invalid format");
+
+                                // Import
+                                await db.transaction('rw', db.dietLogs, db.weightLogs, db.settings, db.favorites, db.nutritionFacts, async () => {
+                                  await db.dietLogs.clear();
+                                  await db.weightLogs.clear();
+                                  await db.settings.clear();
+                                  await db.favorites.clear();
+                                  await db.nutritionFacts.clear();
+
+                                  if (data.dietLogs.length) await db.dietLogs.bulkAdd(data.dietLogs.map(({id, ...rest}) => rest));
+                                  if (data.weightLogs.length) await db.weightLogs.bulkAdd(data.weightLogs.map(({id, ...rest}) => rest));
+                                  if (data.settings.length) await db.settings.bulkAdd(data.settings);
+                                  if (data.favorites.length) await db.favorites.bulkAdd(data.favorites.map(({id, ...rest}) => rest));
+                                  if (data.nutritionFacts?.length) await db.nutritionFacts.bulkAdd(data.nutritionFacts.map(({id, ...rest}) => rest));
+                                });
+
+                                alert(t('data_success'));
+                                window.location.reload(); // Refresh to ensure all states are reset
+                              } catch (err) {
+                                console.error(err);
+                                alert(t('data_error'));
+                              }
+                            };
+                            reader.readAsText(file);
+                          }}
+                        />
+                        <label 
+                          htmlFor="import-file"
+                          className="w-full bg-rose-500 text-white border-4 border-black py-4 rounded-2xl font-black italic tracking-tight shadow-neo-sm hover:bg-rose-600 active:scale-95 transition-all flex items-center justify-center gap-2 cursor-pointer"
+                        >
+                          <Upload size={18} />
+                          {t('import_data')}
+                        </label>
+                      </div>
+                    </div>
                   </div>
                 )}
               </div>

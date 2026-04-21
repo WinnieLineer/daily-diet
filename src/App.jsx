@@ -379,7 +379,10 @@ function App() {
           getLanguage()
         ).then(currentAdvice => {
           if (currentAdvice) setAdvice(currentAdvice);
-        }).catch(err => console.error("Background advice error:", err));
+        }).catch(err => {
+          console.error("Background advice error:", err);
+          setAdvice("ERROR_RETRY");
+        });
       }, 5000);
     } else if (shouldSkipAdvice) {
       console.log("Using existing merged advice (skipping background fetch)");
@@ -511,7 +514,11 @@ function App() {
         </div>
       </header>
 
-      <PandaCoachCard advice={advice} streak={streak} />
+      <PandaCoachCard 
+        advice={advice} 
+        streak={streak} 
+        onRetryAdvice={() => refreshData('fetch')}
+      />
 
       <Dashboard summary={summary} goals={goals} />
 

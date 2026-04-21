@@ -217,7 +217,7 @@ const SpeechBubble = ({ text, visible }) => (
         initial={{ opacity: 0, scale: 0.85, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.85 }}
-        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center pointer-events-none w-[200px] sm:w-[280px]"
+        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center pointer-events-auto w-[240px] sm:w-[320px]"
       >
         <div className="bg-black text-white border-4 border-black rounded-2xl px-5 py-3 text-sm font-black shadow-neo-sm text-center leading-relaxed tracking-tight italic">
           {text}
@@ -255,7 +255,7 @@ const FloatingEmoji = ({ emoji, id, onDone }) => {
 // ──────────────────────────────────────────────
 // Main Component
 // ──────────────────────────────────────────────
-const PandaCoachCard = ({ advice, streak = 0 }) => {
+const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
   const constraintsRef = useRef(null);
   const [expression, setExpression]     = useState('normal');
   const [bubble, setBubble]             = useState('');
@@ -399,11 +399,27 @@ const PandaCoachCard = ({ advice, streak = 0 }) => {
         }
       }
     }, 8000);
+
     return () => {
       clearInterval(interval);
       document.removeEventListener('click', handleGlobalClick);
     };
   }, [bubbleVisible, isDragging, advice, showBubble]);
+
+  const currentAdvice = advice === 'ERROR_RETRY' ? (
+    <div className="flex flex-col items-center gap-1">
+      <span>{t('ai_error') || "連線中斷了..."}</span>
+      <button 
+        onClick={(e) => {
+          e.stopPropagation();
+          if (onRetryAdvice) onRetryAdvice();
+        }}
+        className="text-accent underline font-black flex items-center gap-1 hover:text-white transition-colors"
+      >
+        <Flame size={12} fill="currentColor" /> {t('retry_button') || "點我重試"}
+      </button>
+    </div>
+  ) : advice;
 
   return (
     <motion.div 
@@ -416,7 +432,7 @@ const PandaCoachCard = ({ advice, streak = 0 }) => {
         <div className="flex items-center gap-4 sm:gap-6 relative z-10 selection:bg-transparent rounded-[2rem]" style={{ WebkitTapHighlightColor: 'transparent' }}>
           {/* Interactive Panda */}
           <div className="relative flex-shrink-0 z-50 group/panda w-16 h-16 sm:w-20 sm:h-20">
-            <SpeechBubble text={bubble} visible={bubbleVisible} />
+            <SpeechBubble text={bubble || currentAdvice} visible={bubbleVisible || advice === 'ERROR_RETRY'} />
 
             {/* Particles */}
             {particles.map(({ id, emoji }) => (
@@ -461,7 +477,7 @@ const PandaCoachCard = ({ advice, streak = 0 }) => {
               )}
             </div>
             <p className="text-base sm:text-lg font-bold text-black leading-snug italic">
-              {advice || '每一刻的節制，都是對生活的極致追求。'}
+              {advice === 'ERROR_RETRY' ? (t('ai_error') || '連線出錯了') : (advice || '每一刻的節制，都是對生活的極致追求。')}
             </p>
           </div>
         </div>

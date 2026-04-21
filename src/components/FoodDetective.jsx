@@ -162,6 +162,29 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [aiError, setAiError] = useState(null);
   const [nutritionFacts, setNutritionFacts] = useState([]);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
+  const [isResuming, setIsResuming] = useState(false);
+
+  // Recovery Logic
+  useEffect(() => {
+    const checkPending = async () => {
+      try {
+        const pending = await db.pendingAnalysis.get('current');
+        if (pending && (Date.now() - pending.timestamp < 5 * 60 * 1000)) {
+          setIsResuming(true);
+          setPreview(pending.base64);
+          await performAnalysis(pending.base64, pending.location);
+          setIsResuming(false);
+          // Auto-cleanup on success handled in performAnalysis finally
+        } else if (pending) {
+          // Stale data cleanup
+          await db.pendingAnalysis.delete('current');
+        }
+      } catch (err) {
+        console.warn("Recovery failed:", err);
+      }
+    };
+    checkPending();
+  }, []);
 
   // Load favorites when tab is shown
   const loadFavorites = async () => {
@@ -294,14 +317,17 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     });
   };
 
-  const handleAnalysis = async (base64, location) => {
+  const analysisIdRef = useRef(0);
+
+  const performAnalysis = async (base64, location) => {
+    // Increment analysis ID to invalidate previous requests
+    const currentAnalysisId = ++analysisIdRef.current;
+    
     setLoading(true);
-    setResult(null);
     setAiError(null);
     setLoadTime(ANALYSIS_DURATION_SECONDS);
 
     try {
-      const compressedBase64 = await compressImage(base64);
       const dailyContext = {
         calories: summary.calories,
         calorieGoal: goals.calories,
@@ -312,10 +338,16 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         foodLogs: recentLogs
       };
 
-      const data = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
+      const data = await analyzeFoodImage(base64, dailyContext, getLanguage());
       
+      // 🚀 Check if this request is still valid (not cancelled)
+      if (currentAnalysisId !== analysisIdRef.current) return;
+
       if (data && data.dish_name) {
         setResult({ ...data, location });
+        
+        // Clear pending on success
+        await db.pendingAnalysis.delete('current');
         
         // 🚀 Set the lock immediately!
         if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
@@ -327,9 +359,33 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         }
       }
     } catch (err) {
-      setAiError(err.message || t('ai_error'));
+      if (currentAnalysisId !== analysisIdRef.current) return;
+      console.error("AI Analysis Error:", err);
+      setAiError(err.message || t('ai_error') || "AI 辨識發生錯誤，請稍後再試。");
     } finally {
-      setLoading(false);
+      if (currentAnalysisId === analysisIdRef.current) {
+        setLoading(false);
+        setIsResuming(false);
+      }
+    }
+  };
+
+  const handleAnalysis = async (base64, location) => {
+    try {
+      const compressedBase64 = await compressImage(base64);
+      
+      // Save for recovery
+      await db.pendingAnalysis.put({
+        key: 'current',
+        base64: compressedBase64,
+        location,
+        timestamp: Date.now()
+      });
+
+      await performAnalysis(compressedBase64, location);
+    } catch (err) {
+      console.error("Preparation Error:", err);
+      setAiError("圖片處理失敗");
     }
   };
 
@@ -337,39 +393,44 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const file = e.target.files[0];
     if (!file) return;
 
-    // Try to extract GPS from EXIF
-    let exifLocation = null;
-    try {
-      const gps = await exifr.gps(file);
-      if (gps && gps.latitude && gps.longitude) {
-        exifLocation = await reverseGeocode(gps.latitude, gps.longitude);
-      }
-    } catch (err) {
-      console.warn("EXIF extraction failed:", err);
-    }
-
-    // Auto-location fallback if no EXIF data but permission already granted
-    let autoLocation = null;
-    if (!exifLocation && navigator.geolocation) {
-      try {
-        const permission = await navigator.permissions.query({ name: 'geolocation' });
-        if (permission.state === 'granted') {
-          autoLocation = await new Promise((resolve) => {
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-              const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-              resolve(loc);
-            }, () => resolve(null), { timeout: 5000 });
-          });
-        }
-      } catch (err) { console.warn("Auto-location check failed:", err); }
-    }
-
-    const finalLocation = exifLocation || autoLocation;
+    // 🚀 Trigger loading and preview IMMEDIATELY to avoid 1s lag
+    setLoading(true);
+    setAiError(null);
+    setResult(null);
 
     const reader = new FileReader();
-    reader.onloadend = async () => {
-      setPreview(reader.result);
-      await handleAnalysis(reader.result, finalLocation);
+    reader.onload = async () => {
+      const base64 = reader.result;
+      setPreview(base64);
+
+      // Perform heavy tasks (EXIF, Geocoding) in background
+      let exifLocation = null;
+      try {
+        const gps = await exifr.gps(file);
+        if (gps && gps.latitude && gps.longitude) {
+          exifLocation = await reverseGeocode(gps.latitude, gps.longitude);
+        }
+      } catch (err) {
+        console.warn("EXIF extraction failed:", err);
+      }
+
+      let autoLocation = null;
+      if (!exifLocation && navigator.geolocation) {
+        try {
+          const permission = await navigator.permissions.query({ name: 'geolocation' });
+          if (permission.state === 'granted') {
+            autoLocation = await new Promise((resolve) => {
+              navigator.geolocation.getCurrentPosition(async (pos) => {
+                const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
+                resolve(loc);
+              }, () => resolve(null), { timeout: 5000 });
+            });
+          }
+        } catch (err) { console.warn("Auto-location check failed:", err); }
+      }
+
+      const finalLocation = exifLocation || autoLocation;
+      await handleAnalysis(base64, finalLocation);
     };
     reader.readAsDataURL(file);
   };
@@ -377,6 +438,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const handleCameraCapture = async (base64) => {
     setShowDesktopCamera(false);
     setPreview(base64);
+    setLoading(true);
+    setAiError(null);
+    setResult(null);
     
     let autoLocation = null;
     try {
@@ -554,15 +618,18 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
       {mode === 'ai' && preview && (
         <div className="w-full space-y-4">
-          <div className="min-h-[200px] max-h-[500px] border-4 border-black rounded-3xl overflow-hidden relative bg-zinc-100 flex items-center justify-center">
-            <img src={preview} alt="Preview" className="max-w-full max-h-[500px] object-contain" />
+          <div className="aspect-[4/3] border-4 border-black rounded-[2.5rem] overflow-hidden relative bg-zinc-900 flex items-center justify-center shadow-neo">
+            <img src={preview} alt="Preview" className="w-full h-full object-cover opacity-40 blur-sm absolute inset-0" />
+            <img src={preview} alt="Preview" className="relative z-10 max-w-full max-h-full object-contain" />
             {loading && (
               <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4 z-50">
                 <div className="flex flex-col items-center w-full max-w-[280px] space-y-3">
                   {/* Status Badge */}
                   <div className="bg-accent/20 text-accent px-3 py-1 rounded-full border border-accent/40 inline-flex items-center gap-2 shadow-[0_0_10px_rgba(255,183,0,0.1)]">
                     <Loader2 className="animate-spin text-accent" size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">{t('ai_analyzing_status')}</span>
+                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">
+                      {isResuming ? t('resuming_analysis') : t('ai_analyzing_status')}
+                    </span>
                   </div>
                   
                   {/* Fact Box */}
@@ -599,45 +666,19 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       {loadTime} SEC REMAINING
                     </span>
                   </div>
-                </div>
-              </div>
-            )}
-            {!loading && aiError && (
-              <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center backdrop-blur-md p-6 text-center">
-                <AlertCircle className="text-rose-500 mb-3" size={48} />
-                <span className="text-white font-bold text-sm mb-4">{aiError}</span>
-                <div className="flex gap-2">
+
                   <button 
-                    onClick={() => { setPreview(null); setAiError(null); }}
-                    className="bg-white/10 text-white px-4 py-2 rounded-xl border-2 border-white/20 font-bold text-xs"
-                  >
-                    {t('cancel')}
-                  </button>
-                  <button 
-                    onClick={() => {
-                      if (preview) {
-                        setLoading(true);
-                        setAiError(null);
-                        analyzeFoodImage(preview, {
-                          calories: summary.calories,
-                          calorieGoal: goals.calories,
-                          protein: summary.protein,
-                          proteinGoal: goals.protein,
-                          water: summary.water,
-                          waterGoal: goals.water,
-                          foodLogs: recentLogs
-                        }, getLanguage())
-                          .then(data => {
-                            setResult(data);
-                            setAiError(null);
-                          })
-                          .catch(err => setAiError(err.message))
-                          .finally(() => setLoading(false));
-                      }
+                    onClick={async () => {
+                      analysisIdRef.current++; // 🚀 Invalidate pending request immediately
+                      await db.pendingAnalysis.delete('current'); // Clear persistence
+                      setLoading(false);
+                      setIsResuming(false);
+                      setPreview(null);
+                      setAiError(null);
                     }}
-                    className="bg-accent text-black px-6 py-2 rounded-xl border-4 border-black font-black text-xs shadow-neo-sm active:scale-95"
+                    className="mt-8 text-[11px] font-black uppercase tracking-[0.15em] text-zinc-100 hover:text-white transition-all bg-white/15 px-6 py-2.5 rounded-full border-2 border-white/20 hover:border-white/40 hover:bg-white/20 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.05)]"
                   >
-                    <RefreshCw size={14} className="inline mr-1" /> {t('retry_button') || '重試'}
+                    {t('cancel_analysis')}
                   </button>
                 </div>
               </div>
@@ -860,6 +901,53 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           )}
         </motion.div>
       )}
+
+      {/* AI Error Overlay - Moved to root level to avoid clipping */}
+      <AnimatePresence>
+        {!loading && aiError && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md rounded-[2.5rem]"
+          >
+            <motion.div 
+              initial={{ scale: 0.9, y: 20 }}
+              animate={{ scale: 1, y: 0 }}
+              className="bg-white border-4 border-black rounded-[2.5rem] p-8 shadow-neo w-full max-w-xs flex flex-col items-center text-center space-y-6"
+            >
+              <div className="bg-rose-100 p-4 rounded-full border-4 border-black shadow-neo-sm">
+                <AlertCircle className="text-rose-500" size={32} />
+              </div>
+              
+              <div className="space-y-2 w-full overflow-hidden">
+                <h3 className="text-xl font-black italic uppercase tracking-tighter">{t('ai_error_title')}</h3>
+                <div className="bg-rose-50/50 p-4 rounded-2xl border-2 border-dashed border-rose-200">
+                  <p className="text-[10px] font-mono font-bold text-rose-700/80 leading-relaxed break-all line-clamp-6 overflow-y-auto">
+                    {aiError}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex flex-col w-full gap-3">
+                <button 
+                  onClick={() => performAnalysis(preview, result?.location)}
+                  className="w-full bg-accent text-black py-4 rounded-2xl border-4 border-black font-black text-sm shadow-neo active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2"
+                >
+                  <RefreshCw size={18} /> {t('retry_button') || "重試一次"}
+                </button>
+                
+                <button 
+                  onClick={() => { setPreview(null); setAiError(null); }}
+                  className="w-full bg-white text-gray-400 py-3 rounded-2xl font-black text-xs hover:text-black transition-colors"
+                >
+                  {t('cancel') || "取消"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </NeoCard>
   );
 };

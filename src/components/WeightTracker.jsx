@@ -3,12 +3,14 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2, ChevronDown, ChevronUp, History } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../lib/translations';
 
 const WeightTracker = () => {
   const [weight, setWeight] = useState('');
   const [history, setHistory] = useState([]);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     fetchHistory();
@@ -33,6 +35,12 @@ const WeightTracker = () => {
     });
 
     setWeight('');
+    fetchHistory();
+  };
+
+  const deleteWeight = async (id) => {
+    if (!confirm(t('confirm_delete') || 'Delete this record?')) return;
+    await db.weightLogs.delete(id);
     fetchHistory();
   };
 
@@ -99,6 +107,55 @@ const WeightTracker = () => {
           </div>
         )}
       </div>
+
+      {history.length > 0 && (
+        <div className="pt-4 border-t-2 border-dashed border-gray-100 flex flex-col gap-2">
+          <button 
+            onClick={() => setIsExpanded(!isExpanded)}
+            className="flex items-center justify-between w-full px-1 group"
+          >
+            <div className="flex items-center gap-2">
+              <History size={14} className="text-gray-400" />
+              <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors">
+                Recent History
+              </h3>
+            </div>
+            {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
+          </button>
+          
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div 
+                initial={{ height: 0, opacity: 0 }}
+                animate={{ height: 'auto', opacity: 1 }}
+                exit={{ height: 0, opacity: 0 }}
+                className="overflow-hidden"
+              >
+                <div className="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto pr-1 pt-2">
+                  {history.slice().sort((a, b) => b.timestamp - a.timestamp).map(log => (
+                    <div key={log.id} className="flex justify-between items-center p-3 bg-zinc-50 rounded-2xl border-2 border-transparent hover:border-black transition-all">
+                      <div className="flex items-center gap-3">
+                        <div className="bg-black text-white px-2 py-1 rounded-lg text-[10px] font-black italic">
+                          {log.date}
+                        </div>
+                        <div className="font-black text-sm italic">
+                          {log.weight} <span className="text-[10px] uppercase text-gray-400">kg</span>
+                        </div>
+                      </div>
+                      <button 
+                        onClick={() => deleteWeight(log.id)}
+                        className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      )}
     </NeoCard>
   );
 };
