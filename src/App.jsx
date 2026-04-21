@@ -597,16 +597,18 @@ function App() {
 
       {/* History Logs */}
       {historyGroups.length > 0 && (
-        <NeoCard className="bg-gray-50/50 border-gray-300">
+        <NeoCard className="bg-white">
           <button 
             onClick={() => setShowHistory(!showHistory)}
-            className="w-full flex items-center justify-between text-gray-500 hover:text-black transition-colors"
+            className="w-full flex items-center justify-between group"
           >
             <div className="flex items-center gap-2">
-              <History size={18} />
-              <h2 className="text-lg font-black italic">📚 {t('history_record')}</h2>
+              <History size={16} className="text-gray-400" />
+              <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors">
+                {t('history_record')}
+              </h2>
             </div>
-            {showHistory ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+            {showHistory ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
           </button>
           
           <AnimatePresence>
@@ -639,42 +641,46 @@ function App() {
                     };
 
                     return (
-                      <div key={group.date} className="border-b-2 border-gray-100 pb-3 last:border-0">
+                      <div key={group.date} className="flex flex-col gap-2 p-3 bg-zinc-50 rounded-2xl border-2 border-transparent hover:border-black transition-all">
                         <button 
                           onClick={() => toggleGroup(group.date)}
-                          className="w-full flex items-center justify-between group/header mb-2"
+                          className="w-full flex items-center justify-between group/header"
                         >
-                          <div className="flex items-center gap-3">
-                            <span className="text-xs font-black bg-gray-100 px-2 py-0.5 rounded-lg border-2 border-black/5">{group.date}</span>
-                            <div className="flex flex-col gap-1 translate-y-0.5">
-                              {/* Metrics Row */}
-                              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-1 text-[9px] font-black italic uppercase tracking-wider text-gray-400">
+                          <div className="flex flex-col items-start gap-2 w-full">
+                            <div className="flex items-center gap-3 w-full">
+                              <span className="bg-black text-white px-2 py-1 rounded-lg text-[10px] font-black italic shrink-0">
+                                {group.date}
+                              </span>
+                              
+                              <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-black italic uppercase tracking-wider text-gray-400 flex-1">
                                 <span className={caloriePercent > 110 ? 'text-rose-500' : caloriePercent >= 100 ? 'text-emerald-600' : ''}>
-                                  🔥 {group.totalCalories}/{goals.calories} ({caloriePercent}%)
+                                  🔥 {caloriePercent}%
                                 </span>
                                 <span className={proteinPercent >= 100 ? 'text-emerald-600' : ''}>
-                                  🍖 {group.totalProtein}/{goals.protein} ({proteinPercent}%)
+                                  🍖 {proteinPercent}%
                                 </span>
                                 <span className={waterPercent >= 100 ? 'text-emerald-600' : ''}>
-                                  🚰 {group.totalWater || 0}/{goals.water} ({waterPercent}%)
+                                  🚰 {waterPercent}%
                                 </span>
                               </div>
-                              {/* Progress Bars */}
-                              <div className="flex gap-1.5 w-full max-w-[180px] mt-2">
-                                <div className="flex-1 h-2 bg-gray-100 rounded-full overflow-hidden border border-black/5">
-                                  <div className={`h-full transition-all ${getCalColor(caloriePercent)}`} style={{ width: `${Math.min(caloriePercent, 100)}%` }} />
-                                </div>
-                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
-                                  <div className={`h-full transition-all ${getProColor(proteinPercent)}`} style={{ width: `${Math.min(proteinPercent, 100)}%` }} />
-                                </div>
-                                <div className="flex-1 h-2 bg-gray-200 rounded-full overflow-hidden border border-black/5">
-                                  <div className={`h-full transition-all ${getWatColor(waterPercent)}`} style={{ width: `${Math.min(waterPercent, 100)}%` }} />
-                                </div>
+
+                              <div className={`p-1 rounded-lg transition-colors ${isExpanded ? 'bg-black text-white' : 'bg-gray-100 text-gray-400 group-hover/header:bg-gray-200'}`}>
+                                {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
                               </div>
                             </div>
-                          </div>
-                          <div className={`p-1.5 rounded-lg transition-colors ${isExpanded ? 'bg-black text-white' : 'bg-gray-100 text-gray-400 group-hover/header:bg-gray-200'}`}>
-                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+
+                            {/* Progress Bars - Standardized & Clean */}
+                            <div className="flex gap-1 w-full mt-0.5 pr-8">
+                              <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
+                                <div className={`h-full transition-all duration-700 ${getCalColor(caloriePercent)}`} style={{ width: `${Math.min(caloriePercent, 100)}%` }} />
+                              </div>
+                              <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
+                                <div className={`h-full transition-all duration-700 ${getProColor(proteinPercent)}`} style={{ width: `${Math.min(proteinPercent, 100)}%` }} />
+                              </div>
+                              <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
+                                <div className={`h-full transition-all duration-700 ${getWatColor(waterPercent)}`} style={{ width: `${Math.min(waterPercent, 100)}%` }} />
+                              </div>
+                            </div>
                           </div>
                         </button>
 

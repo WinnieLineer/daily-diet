@@ -618,7 +618,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
       {mode === 'ai' && preview && (
         <div className="w-full space-y-4">
-          <div className="aspect-[4/3] border-4 border-black rounded-[2.5rem] overflow-hidden relative bg-zinc-900 flex items-center justify-center shadow-neo">
+          <div className="aspect-[3/4] border-4 border-black rounded-[2.5rem] overflow-hidden relative bg-zinc-900 flex items-center justify-center shadow-neo">
             <img src={preview} alt="Preview" className="w-full h-full object-cover opacity-40 blur-sm absolute inset-0" />
             <img src={preview} alt="Preview" className="relative z-10 max-w-full max-h-full object-contain" />
             {loading && (
