@@ -296,10 +296,17 @@ function App() {
   const [editValues, setEditValues] = useState({ dish_name: '', calories: '', protein: '', water: '' });
 
   const adviceUpdateLockRef = useRef(false);
+  const adviceTimerRef = useRef(null);
 
-  const refreshData = async (skipAdvice = false) => {
-    // If we have a lock or explicitly asked to skip, don't fetch advice
-    const shouldSkipAdvice = skipAdvice || adviceUpdateLockRef.current;
+  const refreshData = async (adviceMode = 'none') => {
+    // adviceMode: 'none' (just refresh data), 'fetch' (call AI), 'skip' (already have fresh AI advice)
+    const shouldFetchAdvice = adviceMode === 'fetch';
+    const shouldSkipAdvice = adviceMode === 'skip';
+    
+    // Reset lock if we are skipping (already handled) or explicitly performing a manual fetch/refresh
+    if (shouldSkipAdvice || !adviceUpdateLockRef.current) {
+      adviceUpdateLockRef.current = false;
+    }
     
     const today = getLocalDateString();
     const dailySummary = await getDailySummary(today);
@@ -350,25 +357,32 @@ function App() {
     const sortedGroups = Object.values(groups).sort((a, b) => b.date.localeCompare(a.date));
     setHistoryGroups(sortedGroups);
 
-    // 🚀 Background Analysis: Non-blocking advice update
-    if (!shouldSkipAdvice) {
-      console.log("Triggering background Panda analysis...");
-      // We don't 'await' this so the UI refreshes immediately
-      getPandaAdvice(
-        dailySummary.calories, 
-        currentGoals.calories, 
-        dailySummary.protein, 
-        currentGoals.protein,
-        dailySummary.water,
-        currentGoals.water,
-        todayLogs, 
-        getLanguage()
-      ).then(currentAdvice => {
-        if (currentAdvice) setAdvice(currentAdvice);
-      }).catch(err => console.error("Background advice error:", err));
-    } else {
+    // 🚀 Background Analysis: Trigger only when specifically requested ('fetch')
+    if (shouldFetchAdvice) {
+      console.log("Scheduling debounced Panda analysis (5s)...");
+      clearTimeout(adviceTimerRef.current);
+      
+      adviceTimerRef.current = setTimeout(async () => {
+        console.log("Executing debounced Panda analysis...");
+        // Re-fetch the absolute latest data from DB right before calling the API
+        const latestSummary = await getDailySummary(today);
+        const latestLogs = await db.dietLogs.where('date').equals(today).toArray();
+        
+        getPandaAdvice(
+          latestSummary.calories, 
+          currentGoals.calories, 
+          latestSummary.protein, 
+          currentGoals.protein,
+          latestSummary.water,
+          currentGoals.water,
+          latestLogs, 
+          getLanguage()
+        ).then(currentAdvice => {
+          if (currentAdvice) setAdvice(currentAdvice);
+        }).catch(err => console.error("Background advice error:", err));
+      }, 5000);
+    } else if (shouldSkipAdvice) {
       console.log("Using existing merged advice (skipping background fetch)");
-      adviceUpdateLockRef.current = false;
     }
   };
 
@@ -456,7 +470,7 @@ function App() {
               initial={{ opacity: 0, y: -30, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
-              className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-white text-black px-4 py-2.5 rounded-2xl font-black text-sm shadow-neo border-4 border-black flex items-center gap-2 min-w-[200px] justify-center"
+              className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-white text-black px-5 py-3 rounded-2xl font-black text-sm shadow-neo border-4 border-black flex items-center gap-3 w-max max-w-[90vw] justify-center whitespace-nowrap"
             >
               <div className="bg-emerald-500 p-1 rounded-full border-2 border-black">
                 <Check size={14} strokeWidth={4} className="text-white" />

@@ -426,7 +426,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setPreview(null);
     setResult(null);
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
-    onLogAdded(mode === 'ai');
+    onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
     setLoading(false);
   };
 
@@ -465,7 +465,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   location: null
                 });
               }
-              onLogAdded();
+              onLogAdded('fetch');
             }}
             className="text-[10px] font-black bg-white text-black px-2 py-1 rounded-xl border-2 border-black active:scale-95 transition-all whitespace-nowrap shadow-neo-sm hover:bg-zinc-50"
           >
@@ -618,7 +618,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       if (preview) {
                         setLoading(true);
                         setAiError(null);
-                        analyzeFoodImage(preview, {}, getLanguage())
+                        analyzeFoodImage(preview, {
+                          calories: summary.calories,
+                          calorieGoal: goals.calories,
+                          protein: summary.protein,
+                          proteinGoal: goals.protein,
+                          water: summary.water,
+                          waterGoal: goals.water,
+                          foodLogs: recentLogs
+                        }, getLanguage())
                           .then(data => {
                             setResult(data);
                             setAiError(null);
@@ -825,7 +833,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       });
                       setFavToast(t('favorite_added_toast'));
                       setTimeout(() => setFavToast(null), 1500);
-                      onLogAdded();
+                      onLogAdded('fetch');
                     }}
                     className="bg-black text-white text-[10px] font-black px-3 py-1.5 rounded-xl border-2 border-black hover:bg-zinc-800 transition-all active:scale-95"
                   >

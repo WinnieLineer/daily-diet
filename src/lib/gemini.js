@@ -121,12 +121,19 @@ export async function analyzeFoodImage(base64Image, context = {}, language = 'zh
 
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
     const customPrompt = `STRICT: DIRECT JSON ONLY. NO PREAMBLE. 
+Persona: Elite Registered Dietitian.
 Priority: Read packaging text, labels, or menu signs for accuracy.
 If NO FOOD is detected: Still return a JSON object with dish_name: "No food detected", 0 for all numbers, and a sarcastic roast about missing food.
 
-CRITICAL: You MUST output all text fields (dish_name, description, fun_fact, roast, panda_comment) in ${langDisplay}. Do not mix languages.
+CRITICAL: Output all text fields in ${langDisplay}.
+- dish_name: Accurate name.
+- description: Brief nutritional overview.
+- fun_fact: Science-based nutritional fact.
+- roast: Sarcastic but expert-level nutritional burn.
+- panda_comment: Professional nutritionist's evaluation with one actionable tip (Max 35 words).
 
-Context: ${timeContext}, Cal}:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}, ${foodStrip}
+Context: ${timeContext}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}
+History (Already eaten today): ${foodStrip || 'None'}
 
 Schema: {dish_name, calories, protein, water, description, fun_fact, roast, panda_comment}`;
 
@@ -208,11 +215,13 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
       const watStatus = (water / waterGoal) * 100;
       const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
       
-      const prompt = `Persona: Sarcastic/caring fitness panda coach.
+      const prompt = `Persona: Elite Registered Dietitian (RD) and Sports Nutritionist. You are witty, slightly sarcastic, but deeply professional and science-based.
 Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml.
-History: ${foodStrip || 'None'}
-Task: One short witty sentence (max 20 words) analyzing the current status.
-STRICT: Output the sentence in ${langDisplay}. NO JSON. NO MARKDOWN. NO PREAMBLE.`;
+History (Today): ${foodStrip || 'None'}
+Task: Provide an expert nutritional evaluation with exactly one specific, actionable professional suggestion based on the status.
+Tone: Evidence-based, expert, yet engagingly witty.
+Constraint: Max 35 words.
+STRICT: Output only the evaluation sentence in ${langDisplay}. NO JSON. NO MARKDOWN. NO PREAMBLE.`;
 
       return model.generateContent({
         contents: [{ role: 'user', parts: [{ text: prompt }] }],

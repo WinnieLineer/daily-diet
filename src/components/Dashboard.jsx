@@ -27,18 +27,15 @@ const ProgressRing = ({ value, max, label, defaultColor = "bg-accent" }) => {
     <div className="flex flex-col items-center">
       <div className="w-20 h-20 sm:w-24 sm:h-24 relative flex items-center justify-center">
         <div className="absolute inset-0 rounded-full border-4 sm:border-8 border-gray-100"></div>
-        <svg className="w-full h-full -rotate-90">
+        <svg className="w-full h-full -rotate-90" viewBox="0 0 100 100">
           <circle 
-            cx="50%" cy="50%" r="35%"
+            cx="50" cy="50" r="40"
             fill="none" 
             stroke={ringColor} 
             strokeWidth="8" 
-            strokeDasharray="251.2"
+            strokeDasharray="251.33"
             style={{ 
-              strokeDasharray: '251.2',
-              strokeDashoffset: 251.2 - (251.2 * displayPercentage) / 100,
-              strokeWidth: '8px',
-              r: '40%'
+              strokeDashoffset: 251.33 - (251.33 * displayPercentage) / 100,
             }}
             strokeLinecap="round"
             className="transition-all duration-1000 ease-out"
