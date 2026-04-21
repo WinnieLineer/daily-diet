@@ -622,8 +622,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             <img src={preview} alt="Preview" className="w-full h-full object-cover opacity-40 blur-sm absolute inset-0" />
             <img src={preview} alt="Preview" className="relative z-10 max-w-full max-h-full object-contain" />
             {loading && (
-              <div className="absolute inset-0 bg-black/90 flex flex-col items-center justify-center backdrop-blur-md p-4 z-50">
-                <div className="flex flex-col items-center w-full max-w-[280px] space-y-3">
+              <div className="absolute inset-0 bg-black/90 flex flex-col items-center backdrop-blur-md z-50 overflow-y-auto custom-scrollbar">
+                <div className="flex flex-col items-center w-full max-w-[280px] space-y-3 py-6 px-4 m-auto">
                   {/* Status Badge */}
                   <div className="bg-accent/20 text-accent px-3 py-1 rounded-full border border-accent/40 inline-flex items-center gap-2 shadow-[0_0_10px_rgba(255,183,0,0.1)]">
                     <Loader2 className="animate-spin text-accent" size={14} />
@@ -676,7 +676,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       setPreview(null);
                       setAiError(null);
                     }}
-                    className="mt-8 text-[11px] font-black uppercase tracking-[0.15em] text-zinc-100 hover:text-white transition-all bg-white/15 px-6 py-2.5 rounded-full border-2 border-white/20 hover:border-white/40 hover:bg-white/20 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.05)]"
+                    className="mt-4 text-[11px] font-black uppercase tracking-[0.15em] text-zinc-100 hover:text-white transition-all bg-white/15 px-6 py-2.5 rounded-full border-2 border-white/20 hover:border-white/40 hover:bg-white/20 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.05)] shrink-0"
                   >
                     {t('cancel_analysis')}
                   </button>
