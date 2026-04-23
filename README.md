@@ -65,7 +65,7 @@ Visit the app directly on your phone or computer:
 | Styling | [Tailwind CSS](https://tailwindcss.com/) |
 | Animations | [Framer Motion](https://www.framer.com/motion/) |
 | Database | [Dexie.js](https://dexie.org/) (IndexedDB) |
-| AI Engine | [Google Gemini](https://deepmind.google/technologies/gemini/) (Vision + Text) |
+| AI Engine | [Google Gemini](https://deepmind.google/technologies/gemini/) |
 | Image Export | [html2canvas](https://html2canvas.hertzen.com/) |
 | Deployment | GitHub Pages (via GitHub Actions) |
 
