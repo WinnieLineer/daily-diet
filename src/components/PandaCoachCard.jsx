@@ -534,7 +534,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
               {streak > 0 && (
                 <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200 shadow-sm">
                   <Flame size={10} className="fill-orange-500" />
-                  <span className="text-[10px] font-black italic">{streak}{getLanguage() === 'zh' ? '' : ' '}{t('streak_text')}</span>
+                  <span className="text-[10px] font-black italic">{streak} {t('streak_text')}</span>
                 </div>
               )}
             </div>
