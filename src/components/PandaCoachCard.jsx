@@ -148,26 +148,124 @@ function getRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// High-quality Panda mascot from favicon
+// High-quality Panda mascot designed with dynamic SVG to match the favicon's style without the background and with full expressiveness
 const PandaFace = ({ expression = 'normal', isSquished = false }) => {
   const scaleY = isSquished ? 0.92 : 1;
-  const filter = expression === 'dizzy' ? 'blur(1.5px)' : expression === 'sad' ? 'saturate(0.5)' : 'none';
+  const isHappy = expression === 'happy';
+  const isSad = expression === 'sad';
+  const isScared = expression === 'scared';
+  const isDizzy = expression === 'dizzy';
+  const isNormal = expression === 'normal';
 
   return (
     <div
-      className="w-full h-full drop-shadow-md"
+      className="w-full h-full drop-shadow-md pb-1"
       style={{ 
         transform: `scaleY(${scaleY})`, 
-        transition: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
-        filter 
+        transition: 'transform 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
       }}
     >
-      <img
-        src={`${import.meta.env.BASE_URL}favicon.png`}
-        alt="Panda Coach"
-        className="w-full h-full object-contain pointer-events-none select-none"
-        style={{ WebkitUserDrag: 'none' }}
-      />
+      <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
+        <defs>
+          {/* Gradients for premium texture */}
+          <radialGradient id="patchGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="0%" stopColor="#3f3f46" />
+            <stop offset="100%" stopColor="#09090b" />
+          </radialGradient>
+          <radialGradient id="faceGrad" cx="50%" cy="50%" r="50%">
+            <stop offset="60%" stopColor="#ffffff" />
+            <stop offset="100%" stopColor="#f4f4f5" />
+          </radialGradient>
+          <filter id="blush">
+            <feGaussianBlur stdDeviation="2" />
+          </filter>
+        </defs>
+
+        {/* Ears */}
+        <circle cx="20" cy="28" r="14" fill="url(#patchGrad)" />
+        <circle cx="80" cy="28" r="14" fill="url(#patchGrad)" />
+
+        {/* Face */}
+        <ellipse cx="50" cy="56" rx="44" ry="40" fill="url(#faceGrad)" stroke="#e4e4e7" strokeWidth="1" />
+        
+        {/* Blush - only when happy or normal */}
+        {(isHappy || isNormal) && (
+          <g filter="url(#blush)" opacity="0.6">
+            <ellipse cx="25" cy="62" rx="7" ry="3.5" fill="#fca5a5" />
+            <ellipse cx="75" cy="62" rx="7" ry="3.5" fill="#fca5a5" />
+          </g>
+        )}
+
+        {/* Eye Patches - angled depending on expression */}
+        <g fill="url(#patchGrad)">
+          {isSad ? (
+            <>
+              <ellipse cx="32" cy="46" rx="14" ry="16" transform="rotate(20 32 46)" />
+              <ellipse cx="68" cy="46" rx="14" ry="16" transform="rotate(-20 68 46)" />
+            </>
+          ) : (
+            <>
+              <ellipse cx="32" cy="46" rx="14" ry="18" transform="rotate(-15 32 46)" />
+              <ellipse cx="68" cy="46" rx="14" ry="18" transform="rotate(15 68 46)" />
+            </>
+          )}
+        </g>
+
+        {/* Eyes / Pupils */}
+        {isHappy && (
+          <g fill="none" stroke="#fff" strokeWidth="3" strokeLinecap="round">
+            <path d="M 26 46 Q 32 40 38 46" />
+            <path d="M 62 46 Q 68 40 74 46" />
+          </g>
+        )}
+        {isNormal && (
+          <g>
+            <circle cx="34" cy="45" r="5" fill="#fff" />
+            <circle cx="36" cy="43" r="1.5" fill="#fff" />
+            <circle cx="66" cy="45" r="5" fill="#fff" />
+            <circle cx="64" cy="43" r="1.5" fill="#fff" />
+          </g>
+        )}
+        {isScared && (
+          <g>
+            <circle cx="32" cy="46" r="2.5" fill="#fff" />
+            <circle cx="68" cy="46" r="2.5" fill="#fff" />
+          </g>
+        )}
+        {isDizzy && (
+          <g fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M 28 42 L 36 50 M 36 42 L 28 50" />
+            <path d="M 64 42 L 72 50 M 72 42 L 64 50" />
+          </g>
+        )}
+        {isSad && (
+          <g fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round">
+            <path d="M 28 48 Q 32 42 36 48" />
+            <path d="M 64 48 Q 68 42 72 48" />
+          </g>
+        )}
+
+        {/* Nose */}
+        <ellipse cx="50" cy="62" rx="4" ry="3" fill="#18181b" />
+        <circle cx="51" cy="61" r="1" fill="#fff" opacity="0.6" />
+
+        {/* Mouth */}
+        {isHappy && (
+          <path d="M 42 68 Q 50 78 58 68" fill="none" stroke="#18181b" strokeWidth="3" strokeLinecap="round" />
+        )}
+        {isNormal && (
+          <path d="M 44 68 Q 47 71 50 68 Q 53 71 56 68" fill="none" stroke="#18181b" strokeWidth="2.5" strokeLinecap="round" />
+        )}
+        {isSad && (
+          <path d="M 46 72 Q 50 68 54 72" fill="none" stroke="#18181b" strokeWidth="2" strokeLinecap="round" />
+        )}
+        {isScared && (
+          <ellipse cx="50" cy="72" rx="4" ry="5" fill="#18181b" />
+        )}
+        {isDizzy && (
+          <path d="M 44 68 Q 47 64 50 68 T 56 68" fill="none" stroke="#18181b" strokeWidth="2" strokeLinecap="round" />
+        )}
+      </svg>
     </div>
   );
 };

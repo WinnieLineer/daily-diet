@@ -786,9 +786,9 @@ function App() {
 
       <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50 pointer-events-none">
         <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center pointer-events-auto">
-          <p className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase italic whitespace-nowrap flex items-center gap-1.5">
-            <span className="text-accent flex items-center gap-1">© 2026 DailyDiet - {t('settings_copyright')} <img src={`${import.meta.env.BASE_URL}favicon.png`} alt="Panda" className="w-3 sm:w-4 aspect-square object-contain inline-block" /></span>
-            <span className="text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
+          <p className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase italic whitespace-nowrap">
+            <span className="text-accent">© 2026 DailyDiet - {t('settings_copyright')} 🐼</span>
+            <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
           </p>
         </div>
       </footer>
