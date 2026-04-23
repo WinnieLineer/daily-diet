@@ -176,6 +176,10 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
             <stop offset="60%" stopColor="#ffffff" />
             <stop offset="100%" stopColor="#f4f4f5" />
           </radialGradient>
+          <linearGradient id="leafGrad" x1="0%" y1="100%" x2="100%" y2="0%">
+            <stop offset="0%" stopColor="#22c55e" />
+            <stop offset="100%" stopColor="#86efac" />
+          </linearGradient>
           <filter id="blush">
             <feGaussianBlur stdDeviation="2" />
           </filter>
@@ -184,6 +188,22 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
         {/* Ears */}
         <circle cx="20" cy="28" r="14" fill="url(#patchGrad)" />
         <circle cx="80" cy="28" r="14" fill="url(#patchGrad)" />
+
+        {/* Leaf on head */}
+        <g transform="translate(48, 17)">
+          {/* Stem */}
+          <path d="M 0 0 L -1 3" stroke="#166534" strokeWidth="1.5" strokeLinecap="round" />
+          {/* Leaf Body */}
+          <path 
+            d="M 0 0 Q -8 -10, 8 -16 Q 14 -4, 0 0 Z" 
+            fill="url(#leafGrad)" 
+            stroke="#166534" 
+            strokeWidth="1.2" 
+            strokeLinejoin="round" 
+          />
+          {/* Leaf Vein */}
+          <path d="M 0 0 Q 2 -8, 6 -13" stroke="#166534" strokeWidth="1" strokeLinecap="round" opacity="0.5"/>
+        </g>
 
         {/* Face */}
         <ellipse cx="50" cy="56" rx="44" ry="40" fill="url(#faceGrad)" stroke="#e4e4e7" strokeWidth="1" />
