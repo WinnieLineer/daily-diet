@@ -124,6 +124,7 @@ const translations = {
     panda_says: "PANDA SAYS",
     keep_tracking: "繼續記錄吧，人類！ 🐼",
     share_not_supported: "您的瀏覽器不支援原生分享，請改用儲存圖片。",
+    last_30_days: "最近 30 天",
   },
   en: {
     app_title: "DAILY DIET",
@@ -250,6 +251,7 @@ const translations = {
     panda_says: "Panda Coach Says:",
     keep_tracking: "Keep tracking, human! 🐼",
     share_not_supported: "Native sharing not supported. Please save as image.",
+    last_30_days: "LAST 30 DAYS",
   }
 };
 

@@ -4,6 +4,7 @@ import Dashboard from './components/Dashboard';
 import FoodDetective from './components/FoodDetective';
 import WeightTracker from './components/WeightTracker';
 import GoalSettings from './components/GoalSettings';
+import WhatsNew from './components/WhatsNew';
 import Onboarding from './components/Onboarding';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
@@ -203,6 +204,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_seen'));
+  const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
 
   const handleOnboardingComplete = () => {
@@ -252,6 +254,13 @@ function App() {
            
           // 4. Final Hard Reload (forcing a fresh hit to the server by appending version)
           window.location.href = window.location.origin + window.location.pathname + '?v=' + remoteVersion;
+        } else {
+          // If version matches, check if we should show the "What's New" intro
+          const lastSeenVersion = localStorage.getItem('last_seen_version');
+          if (lastSeenVersion !== APP_VERSION) {
+            setShowWhatsNew(true);
+            localStorage.setItem('last_seen_version', APP_VERSION);
+          }
         }
       } catch (err) {
         console.error("Version check failed:", err);
@@ -484,6 +493,7 @@ function App() {
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
       <AnimatePresence>
         {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
+        {showWhatsNew && <WhatsNew version={APP_VERSION} onClose={() => setShowWhatsNew(false)} />}
       </AnimatePresence>
       {/* Toast notification */}
       <AnimatePresence>
@@ -635,9 +645,6 @@ function App() {
                 >
                   <div className="flex items-center gap-2">
                     <h2 className="text-xl font-black italic tracking-tighter">📚 {t('history_record')}</h2>
-                    <span className="bg-white border-2 border-black text-black px-2 py-0.5 rounded-xl text-[10px] font-bold">
-                      {t('last_30_days')}
-                    </span>
                   </div>
                   <div className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-black text-white' : 'bg-gray-200 text-gray-500'}`}>
                     {showHistory ? <ChevronUp size={18} /> : <ChevronDown size={18} />}

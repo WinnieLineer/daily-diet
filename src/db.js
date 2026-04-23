@@ -19,12 +19,18 @@ db.version(7).stores({
 
 export async function getDailySummary(date) {
   const logs = await db.dietLogs.where('date').equals(date).toArray();
-  return logs.reduce((acc, log) => {
+  const summary = logs.reduce((acc, log) => {
     acc.calories += Number(log.calories) || 0;
     acc.protein += Number(log.protein) || 0;
     acc.water += Number(log.water) || 0;
     return acc;
   }, { calories: 0, protein: 0, water: 0 });
+
+  return {
+    calories: Math.round(summary.calories),
+    protein: Math.round(summary.protein * 10) / 10,
+    water: Math.round(summary.water)
+  };
 }
 
 export async function calculateStreak() {
