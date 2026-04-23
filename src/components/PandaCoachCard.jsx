@@ -2,7 +2,7 @@ import React, { useState, useRef, useCallback, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { Flame } from 'lucide-react';
-import { getLanguage } from '../lib/translations';
+import { t, getLanguage } from '../lib/translations';
 
 // ──────────────────────────────────────────────
 // Dialogue banks per interaction type
@@ -467,17 +467,17 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
           <div className="flex-1 min-w-0 space-y-1 relative z-10">
             <div className="flex items-center justify-between gap-2 mb-1">
               <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
-                Panda Coach
+                {t('panda_coach_name')}
               </span>
               {streak > 0 && (
                 <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200 shadow-sm">
                   <Flame size={10} className="fill-orange-500" />
-                  <span className="text-[10px] font-black italic">{streak} DAY STREAK</span>
+                  <span className="text-[10px] font-black italic">{streak}{getLanguage() === 'zh' ? '' : ' '}{t('streak_text')}</span>
                 </div>
               )}
             </div>
             <p className="text-base sm:text-lg font-bold text-black leading-snug italic">
-              {advice === 'ERROR_RETRY' ? (t('ai_error') || '連線出錯了') : (advice || '每一刻的節制，都是對生活的極致追求。')}
+              {advice === 'ERROR_RETRY' ? (t('ai_error') || '連線出錯了') : (advice || t('default_panda_advice'))}
             </p>
           </div>
         </div>

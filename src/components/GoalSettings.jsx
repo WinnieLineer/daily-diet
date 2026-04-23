@@ -8,7 +8,7 @@ import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 
 
-const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
+const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
@@ -63,6 +63,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
 
   const handleLanguageChange = (lang) => {
     setLanguage(lang);
+    if (onLanguageChanged) onLanguageChanged();
     onGoalsUpdated();
     // Force refresh might be needed for some components
   };
@@ -178,8 +179,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial }) => {
                         onClick={() => setShowTip(!showTip)} 
                         className={`transition-all p-1.5 rounded-lg flex items-center gap-1.5 text-[10px] font-black uppercase ${showTip ? 'bg-amber-100 text-amber-500' : 'bg-zinc-100 text-zinc-500'}`}
                       >
-                        <Sparkles size={14} fill={showTip ? "currentColor" : "none"} />
-                        {showTip ? 'HIDE' : 'SHOW'}
+                        {showTip ? t('settings_hide') : t('settings_show')}
                       </button>
                     </div>
 

@@ -49,11 +49,11 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: t('app_title') || 'Daily Diet',
-          text: 'My Daily Diet 🐼'
+          title: t('app_title'),
+          text: t('keep_tracking')
         });
       } else {
-        alert(t('share_not_supported') || 'Native sharing is not supported on your browser. Please save as image instead.');
+        alert(t('share_not_supported'));
       }
     } catch (err) {
       if (err.name !== 'AbortError') console.error("Share error:", err);
@@ -104,17 +104,17 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
               </div>
               <div className="bg-black text-white px-3 py-1.5 rounded-xl border-2 border-black flex items-center gap-1.5 shadow-neo-sm">
                 <Flame size={14} className="text-orange-400 fill-orange-400" />
-                <span className="font-black italic text-sm">{streak} DAY STREAK</span>
+                <span className="font-black italic text-sm">{streak} {t('streak_text')}</span>
               </div>
             </div>
 
             {/* Panda Advice Section */}
             <div className="bg-white border-4 border-black p-4 rounded-2xl mb-6 shadow-neo-sm relative">
               <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg">
-                <span className="text-[8px] font-black uppercase tracking-wider">Panda Coach Says:</span>
+                <span className="text-[8px] font-black uppercase tracking-wider">{t('panda_says')}</span>
               </div>
               <p className="text-lg font-black italic leading-tight text-black pt-1">
-                "{advice || 'Keep tracking, human! 🐼'}"
+                "{advice || t('keep_tracking')}"
               </p>
             </div>
 
@@ -122,7 +122,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
             <div className="space-y-4 mb-6">
               <div className="space-y-1.5">
                 <div className="flex justify-between items-end px-1">
-                  <span className="text-xs font-black uppercase tracking-widest text-zinc-400">Calories</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-zinc-400">{t('calories')}</span>
                   <span className="text-lg font-black italic">{summary.calories} <span className="text-[10px] opacity-40">/ {goals.calories}</span></span>
                 </div>
                 <div className="h-6 bg-zinc-100 border-2 border-black rounded-full overflow-hidden p-0.5">
@@ -136,7 +136,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
 
               <div className="space-y-1.5">
                 <div className="flex justify-between items-end px-1">
-                  <span className="text-xs font-black uppercase tracking-widest text-zinc-400">Protein</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-zinc-400">{t('protein')}</span>
                   <span className="text-lg font-black italic">{summary.protein}g <span className="text-[10px] opacity-40">/ {goals.protein}g</span></span>
                 </div>
                 <div className="h-6 bg-zinc-100 border-2 border-black rounded-full overflow-hidden p-0.5">
@@ -150,7 +150,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
 
               <div className="space-y-1.5">
                 <div className="flex justify-between items-end px-1">
-                  <span className="text-xs font-black uppercase tracking-widest text-zinc-400">Water</span>
+                  <span className="text-xs font-black uppercase tracking-widest text-zinc-400">{t('water')}</span>
                   <span className="text-lg font-black italic">{summary.water}ml <span className="text-[10px] opacity-40">/ {goals.water}ml</span></span>
                 </div>
                 <div className="h-6 bg-zinc-100 border-2 border-black rounded-full overflow-hidden p-0.5">
@@ -189,7 +189,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
               {exportState === 'download' ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
-                <><Download size={18} /> SAVE</>
+                <><Download size={18} /> {t('save_image')}</>
               )}
             </button>
             <button 
@@ -200,7 +200,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
               {exportState === 'share' ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
-                <><Share2 size={18} /> SHARE</>
+                <><Share2 size={18} /> {t('share_image')}</>
               )}
             </button>
           </div>

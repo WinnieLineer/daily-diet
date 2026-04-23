@@ -319,7 +319,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
   const analysisIdRef = useRef(0);
 
-  const performAnalysis = async (base64, location) => {
+  const performAnalysis = async (compressedBase64, locationPromise) => {
     // Increment analysis ID to invalidate previous requests
     const currentAnalysisId = ++analysisIdRef.current;
     
@@ -328,6 +328,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setLoadTime(ANALYSIS_DURATION_SECONDS);
 
     try {
+      // Resolve location in background, could take seconds
+      const location = await (locationPromise instanceof Promise ? locationPromise : Promise.resolve(locationPromise ?? null));
+
+      // Update pending analysis with location if it was found
+      if (location) {
+        await db.pendingAnalysis.update('current', { location });
+      }
+
       const dailyContext = {
         calories: summary.calories,
         calorieGoal: goals.calories,
@@ -338,7 +346,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         foodLogs: recentLogs
       };
 
-      const data = await analyzeFoodImage(base64, dailyContext, getLanguage());
+      const data = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
       
       // 🚀 Check if this request is still valid (not cancelled)
       if (currentAnalysisId !== analysisIdRef.current) return;
@@ -370,22 +378,24 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     }
   };
 
-  const handleAnalysis = async (base64, location) => {
+  // locationPromise: optional Promise<string|null> for background location resolution
+  const handleAnalysis = async (base64, locationPromise = null) => {
     try {
+      // Immediately start compression
       const compressedBase64 = await compressImage(base64);
       
-      // Save for recovery
+      // Save for recovery (without location initially, location will update when ready)
       await db.pendingAnalysis.put({
         key: 'current',
         base64: compressedBase64,
-        location,
+        location: null,
         timestamp: Date.now()
       });
 
-      await performAnalysis(compressedBase64, location);
+      await performAnalysis(compressedBase64, locationPromise);
     } catch (err) {
       console.error("Preparation Error:", err);
-      setAiError("圖片處理失敗");
+      setAiError(t('ai_error') || "圖片處理失敗");
     }
   };
 
@@ -393,72 +403,75 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const file = e.target.files[0];
     if (!file) return;
 
-    // 🚀 Trigger loading and preview IMMEDIATELY to avoid 1s lag
-    setLoading(true);
-    setAiError(null);
-    setResult(null);
+    // Read the file immediately so we can show preview + loading ASAP
+    const base64 = await new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onloadend = () => resolve(reader.result);
+      reader.readAsDataURL(file);
+    });
 
-    const reader = new FileReader();
-    reader.onload = async () => {
-      const base64 = reader.result;
-      setPreview(base64);
+    // Show preview & start loading right away — no waiting for location
+    setPreview(base64);
 
-      // Perform heavy tasks (EXIF, Geocoding) in background
-      let exifLocation = null;
+    // Build a background location promise that runs in parallel with AI analysis
+    const locationPromise = (async () => {
+      // 1. Try EXIF GPS (fast, local)
       try {
         const gps = await exifr.gps(file);
-        if (gps && gps.latitude && gps.longitude) {
-          exifLocation = await reverseGeocode(gps.latitude, gps.longitude);
+        if (gps?.latitude && gps?.longitude) {
+          return await reverseGeocode(gps.latitude, gps.longitude);
         }
       } catch (err) {
         console.warn("EXIF extraction failed:", err);
       }
 
-      let autoLocation = null;
-      if (!exifLocation && navigator.geolocation) {
+      // 2. Fallback: use geolocation if permission already granted
+      if (navigator.geolocation) {
         try {
           const permission = await navigator.permissions.query({ name: 'geolocation' });
           if (permission.state === 'granted') {
-            autoLocation = await new Promise((resolve) => {
-              navigator.geolocation.getCurrentPosition(async (pos) => {
-                const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-                resolve(loc);
-              }, () => resolve(null), { timeout: 5000 });
+            return await new Promise((resolve) => {
+              navigator.geolocation.getCurrentPosition(
+                async (pos) => resolve(await reverseGeocode(pos.coords.latitude, pos.coords.longitude)),
+                () => resolve(null),
+                { timeout: 5000 }
+              );
             });
           }
         } catch (err) { console.warn("Auto-location check failed:", err); }
       }
+      return null;
+    })();
 
-      const finalLocation = exifLocation || autoLocation;
-      await handleAnalysis(base64, finalLocation);
-    };
-    reader.readAsDataURL(file);
+    await handleAnalysis(base64, locationPromise);
   };
 
   const handleCameraCapture = async (base64) => {
     setShowDesktopCamera(false);
+    // Show preview & loading immediately, resolve location in background
     setPreview(base64);
-    setLoading(true);
-    setAiError(null);
-    setResult(null);
-    
-    let autoLocation = null;
-    try {
-      const coords = pendingCoordsRef.current;
-      if (coords) {
-        autoLocation = await reverseGeocode(coords.latitude, coords.longitude);
-      } else if (navigator.geolocation) {
-        autoLocation = await new Promise((resolve) => {
-          navigator.geolocation.getCurrentPosition(async (pos) => {
-            const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-            resolve(loc);
-          }, () => resolve(null), { timeout: 5000 });
-        });
-      }
-    } catch (err) { console.warn("Location error:", err); }
-    finally { pendingCoordsRef.current = null; }
 
-    await handleAnalysis(base64, autoLocation);
+
+    const locationPromise = (async () => {
+      try {
+        const coords = pendingCoordsRef.current;
+        if (coords) {
+          return await reverseGeocode(coords.latitude, coords.longitude);
+        } else if (navigator.geolocation) {
+          return await new Promise((resolve) => {
+            navigator.geolocation.getCurrentPosition(
+              async (pos) => resolve(await reverseGeocode(pos.coords.latitude, pos.coords.longitude)),
+              () => resolve(null),
+              { timeout: 5000 }
+            );
+          });
+        }
+      } catch (err) { console.warn("Location error:", err); }
+      finally { pendingCoordsRef.current = null; }
+      return null;
+    })();
+
+    await handleAnalysis(base64, locationPromise);
   };
 
   const saveLog = async () => {
@@ -663,7 +676,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       />
                     </div>
                     <span className="text-accent font-mono text-[10px] font-black tracking-tighter">
-                      {loadTime} SEC REMAINING
+                      {loadTime} {t('sec_remaining')}
                     </span>
                   </div>
 

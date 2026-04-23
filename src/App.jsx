@@ -168,21 +168,21 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             <button 
               onClick={(e) => { e.stopPropagation(); startEditing(log); }}
               className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
-              title="編輯"
+              title={t('edit')}
             >
               <Pencil size={18} />
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }}
               className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
-              title="刪除"
+              title={t('delete')}
             >
               <Trash2 size={18} />
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); if (onAddToFavorite) onAddToFavorite(log); setShowActions(false); }}
               className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
-              title="加入常用"
+              title={t('added_to_favorites')}
             >
               <Star size={18} />
             </button>
@@ -509,6 +509,7 @@ function App() {
             <GoalSettings 
               onGoalsUpdated={refreshData} 
               onWatchTutorial={() => setShowOnboarding(true)}
+              onLanguageChanged={() => setAdvice('')}
             />
           </div>
         </div>
@@ -723,8 +724,8 @@ function App() {
 
       <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
         <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center">
-          <p className="text-[8px] sm:text-[10px] font-bold tracking-widest uppercase italic whitespace-nowrap">
-            <span className="text-accent">© 2026 DailyDiet - 飲控萬歲 🐼</span>
+          <p className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase italic whitespace-nowrap">
+            <span className="text-accent">© 2026 DailyDiet - {t('settings_copyright')} 🐼</span>
             <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
           </p>
         </div>
