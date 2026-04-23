@@ -148,63 +148,27 @@ function getRandom(arr) {
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
-// SVG Panda face – scalable, cute, pure SVG so we can animate it
+// High-quality Panda mascot from favicon
 const PandaFace = ({ expression = 'normal', isSquished = false }) => {
   const scaleY = isSquished ? 0.92 : 1;
+  const filter = expression === 'dizzy' ? 'blur(1.5px)' : expression === 'sad' ? 'saturate(0.5)' : 'none';
 
   return (
-    <svg
-      viewBox="0 0 100 100"
-      className="w-full h-full"
-      style={{ transform: `scaleY(${scaleY})`, transition: 'transform 0.4s cubic-bezier(0.23, 1, 0.32, 1)' }}
+    <div
+      className="w-full h-full drop-shadow-md"
+      style={{ 
+        transform: `scaleY(${scaleY})`, 
+        transition: 'all 0.4s cubic-bezier(0.23, 1, 0.32, 1)',
+        filter 
+      }}
     >
-      <defs>
-        <linearGradient id="earGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-          <stop offset="0%" stopColor="#27272a" />
-          <stop offset="100%" stopColor="#09090b" />
-        </linearGradient>
-      </defs>
-
-      {/* Ears */}
-      <circle cx="22" cy="25" r="14" fill="url(#earGrad)" stroke="black" strokeWidth="2" />
-      <circle cx="78" cy="25" r="14" fill="url(#earGrad)" stroke="black" strokeWidth="2" />
-
-      {/* Face Body */}
-      <ellipse cx="50" cy="55" rx="42" ry="40" fill="white" stroke="black" strokeWidth="3" />
-
-      {/* Eyes & Patches */}
-      <g>
-        <ellipse cx="65" cy="48" rx="14" ry="12" fill="#09090b" stroke="black" strokeWidth="1" />
-        <ellipse cx="35" cy="48" rx="14" ry="12" fill="#09090b" stroke="black" strokeWidth="1" />
-        
-        <g fill="white">
-          {expression === 'happy' ? (
-            <>
-              <path d="M 28 48 Q 35 40 42 48" fill="none" stroke="#FDE047" strokeWidth="3" strokeLinecap="round" />
-              <path d="M 58 48 Q 65 40 72 48" fill="none" stroke="#FDE047" strokeWidth="3" strokeLinecap="round" />
-            </>
-          ) : expression === 'dizzy' ? (
-            <>
-              <path d="M 32 45 L 38 51 M 38 45 L 32 51" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-              <path d="M 62 45 L 68 51 M 68 45 L 62 51" fill="none" stroke="#fff" strokeWidth="2.5" strokeLinecap="round" />
-            </>
-          ) : (
-            <>
-              <circle cx="35" cy="48" r="4" fill="#000" />
-              <circle cx="65" cy="48" r="4" fill="#000" />
-              <circle cx="33" cy="46" r="1.5" fill="white" />
-              <circle cx="63" cy="46" r="1.5" fill="white" />
-            </>
-          )}
-        </g>
-      </g>
-
-      {/* Nose */}
-      <path d="M 47 62 Q 50 65 53 62" fill="none" stroke="black" strokeWidth="3" strokeLinecap="round" />
-
-      {/* Mouth */}
-      <path d="M 42 70 Q 50 74 58 70" fill="none" stroke="black" strokeWidth="2" strokeLinecap="round" />
-    </svg>
+      <img
+        src="/favicon.png"
+        alt="Panda Coach"
+        className="w-full h-full object-contain pointer-events-none select-none"
+        style={{ WebkitUserDrag: 'none' }}
+      />
+    </div>
   );
 };
 

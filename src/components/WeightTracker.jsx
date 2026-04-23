@@ -7,7 +7,7 @@ import { Plus, Trash2, ChevronDown, ChevronUp, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../lib/translations';
 
-const WeightTracker = () => {
+const WeightTracker = ({ pointerEventsNone }) => {
   const [weight, setWeight] = useState('');
   const [history, setHistory] = useState([]);
   const [isExpanded, setIsExpanded] = useState(false);

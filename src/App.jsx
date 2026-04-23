@@ -10,8 +10,8 @@ import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
 import SharingCard from './components/SharingCard';
 import { getPandaAdvice } from './lib/gemini';
-import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal } from 'lucide-react';
+import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION } from './lib/constants';
 import versionData from '../public/version.json';
@@ -281,7 +281,26 @@ function App() {
   const [now, setNow] = useState(new Date());
   const [lastLocation, setLastLocation] = useState(null);
   const [streak, setStreak] = useState(0);
+  const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  
+  const DEFAULT_LAYOUT = ['panda', 'dashboard', 'detective', 'today', 'weight', 'history'];
+  const [layout, setLayout] = useState(() => {
+    const saved = localStorage.getItem('app_layout');
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        const combined = Array.from(new Set([...parsed, ...DEFAULT_LAYOUT]));
+        return combined.filter(item => DEFAULT_LAYOUT.includes(item));
+      } catch(e) {}
+    }
+    return DEFAULT_LAYOUT;
+  });
+  const [isEditingLayout, setIsEditingLayout] = useState(false);
+
+  useEffect(() => {
+    localStorage.setItem('app_layout', JSON.stringify(layout));
+  }, [layout]);
   const [toast, setToast] = useState(null);
 
   useEffect(() => {
@@ -499,6 +518,14 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <NeoButton 
+              variant={isEditingLayout ? "black" : "white"}
+              className="w-10 h-10 p-0 flex items-center justify-center"
+              onClick={() => setIsEditingLayout(!isEditingLayout)}
+              title={t('edit_layout') || "Edit Layout"}
+            >
+              <LayoutGrid size={18} className={isEditingLayout ? "text-white" : "text-black"} />
+            </NeoButton>
+            <NeoButton 
               variant="black" 
               className="w-10 h-10 p-0 flex items-center justify-center"
               onClick={() => setShowShare(true)}
@@ -515,78 +542,239 @@ function App() {
         </div>
       </header>
 
-      <PandaCoachCard 
-        advice={advice} 
-        streak={streak} 
-        onRetryAdvice={() => refreshData('fetch')}
-      />
-
-      <Dashboard summary={summary} goals={goals} />
-
-      <FoodDetective 
-        onLogAdded={refreshData} 
-        summary={summary}
-        goals={goals}
-        recentLogs={recentLogs}
-        setAdvice={setAdvice}
-        adviceUpdateLockRef={adviceUpdateLockRef}
-      />
-
-      {/* Today's Logs */}
-      <NeoCard className="bg-white">
-        <button 
-          onClick={() => setShowToday(!showToday)}
-          className="w-full flex items-center justify-between mb-0"
-        >
-          <div className="flex items-center gap-2">
-            <h2 className="text-xl font-black italic">📝 {t('today_record')}</h2>
-            <span className="bg-black text-white px-2 py-0.5 rounded-xl text-[10px] font-bold">
-              {recentLogs.length} {t('items')}
-            </span>
-          </div>
-          <div className={`p-1.5 rounded-lg transition-colors ${showToday ? 'bg-black text-white' : 'bg-gray-100 text-gray-400'}`}>
-            {showToday ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
-          </div>
-        </button>
-
-        <AnimatePresence>
-          {showToday && (
-            <motion.div
-              initial={{ height: 0, opacity: 0 }}
-              animate={{ height: "auto", opacity: 1 }}
-              exit={{ height: 0, opacity: 0 }}
-              className="overflow-hidden"
-            >
-              <div className="space-y-3 pt-4">
-                {recentLogs.length > 0 ? (
-                  recentLogs.map((log) => (
-                    <LogItem 
-                      key={log.id} 
-                      log={log} 
-                      isRecent={true}
-                      editingId={editingId}
-                      editValues={editValues}
-                      setEditValues={setEditValues}
-                      cancelEditing={cancelEditing}
-                      saveEdit={saveEdit}
-                      startEditing={startEditing}
-                      deleteLog={deleteLog}
-                      onAddToFavorite={addToFavorite}
-                    />
-                  ))
-                ) : (
-                  <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
-                    <p className="text-gray-400 italic text-sm font-bold">{t('no_logs_today')}</p>
+      <Reorder.Group axis="y" values={layout} onReorder={setLayout} className="space-y-6">
+        {layout.map(item => {
+          let blockContent = null;
+          if (item === 'panda') {
+            blockContent = (
+              <PandaCoachCard 
+                advice={advice} 
+                streak={streak} 
+                onRetryAdvice={() => refreshData('fetch')}
+              />
+            );
+          } else if (item === 'dashboard') {
+            blockContent = <Dashboard summary={summary} goals={goals} />;
+          } else if (item === 'detective') {
+            blockContent = (
+              <FoodDetective 
+                onLogAdded={refreshData} 
+                summary={summary}
+                goals={goals}
+                recentLogs={recentLogs}
+                setAdvice={setAdvice}
+                adviceUpdateLockRef={adviceUpdateLockRef}
+              />
+            );
+          } else if (item === 'today') {
+            blockContent = (
+              <NeoCard className="bg-white">
+                <button 
+                  onClick={() => {
+                    if (!isEditingLayout) setShowToday(!showToday);
+                  }}
+                  className={`w-full flex items-center justify-between mb-0 ${isEditingLayout ? 'pointer-events-none' : ''}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-black italic">📝 {t('today_record')}</h2>
+                    <span className="bg-black text-white px-2 py-0.5 rounded-xl text-[10px] font-bold">
+                      {recentLogs.length} {t('items')}
+                    </span>
                   </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </NeoCard>
+                  <div className={`p-1.5 rounded-lg transition-colors ${showToday ? 'bg-black text-white' : 'bg-gray-100 text-gray-400'}`}>
+                    {showToday ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </div>
+                </button>
 
-      <WeightTracker />
-      
+                <AnimatePresence>
+                  {showToday && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className={`space-y-3 pt-4 ${isEditingLayout ? 'pointer-events-none' : ''}`}>
+                        {recentLogs.length > 0 ? (
+                          recentLogs.map((log) => (
+                            <LogItem 
+                              key={log.id} 
+                              log={log} 
+                              isRecent={true}
+                              editingId={editingId}
+                              editValues={editValues}
+                              setEditValues={setEditValues}
+                              cancelEditing={cancelEditing}
+                              saveEdit={saveEdit}
+                              startEditing={startEditing}
+                              deleteLog={deleteLog}
+                              onAddToFavorite={addToFavorite}
+                            />
+                          ))
+                        ) : (
+                          <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
+                            <p className="text-gray-400 italic text-sm font-bold">{t('no_logs_today')}</p>
+                          </div>
+                        )}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </NeoCard>
+            );
+          } else if (item === 'weight') {
+            blockContent = <WeightTracker pointerEventsNone={isEditingLayout} />;
+          } else if (item === 'history' && historyGroups.length > 0) {
+            blockContent = (
+              <NeoCard className="bg-zinc-100">
+                <button 
+                  onClick={() => {
+                    if (!isEditingLayout) setShowHistory(!showHistory);
+                  }}
+                  className={`w-full flex items-center justify-between mb-0 ${isEditingLayout ? 'pointer-events-none' : ''}`}
+                >
+                  <div className="flex items-center gap-2">
+                    <h2 className="text-xl font-black italic tracking-tighter">📚 {t('history_record')}</h2>
+                    <span className="bg-white border-2 border-black text-black px-2 py-0.5 rounded-xl text-[10px] font-bold">
+                      {t('last_30_days')}
+                    </span>
+                  </div>
+                  <div className={`p-1.5 rounded-lg transition-colors ${showHistory ? 'bg-black text-white' : 'bg-gray-200 text-gray-500'}`}>
+                    {showHistory ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+                  </div>
+                </button>
+
+                <AnimatePresence>
+                  {showHistory && (
+                    <motion.div
+                      initial={{ height: 0, opacity: 0 }}
+                      animate={{ height: "auto", opacity: 1 }}
+                      exit={{ height: 0, opacity: 0 }}
+                      className="overflow-hidden"
+                    >
+                      <div className={`space-y-4 pt-4 ${isEditingLayout ? 'pointer-events-none' : ''}`}>
+                        {historyGroups.map((group) => {
+                          const isExpanded = !!expandedGroups[group.date];
+                          const caloriePercent = Math.round((group.totalCalories / goals.calories) * 100);
+                          const proteinPercent = Math.round((group.totalProtein / goals.protein) * 100);
+                          const waterPercent   = Math.round(((group.totalWater || 0) / goals.water) * 100);
+
+                          const getCalColor = (p) => {
+                            if (p > 110) return 'bg-rose-500';
+                            if (p >= 100) return 'bg-emerald-500';
+                            return 'bg-accent';
+                          };
+                          const getProColor = (p) => {
+                            if (p >= 100) return 'bg-emerald-500';
+                            return 'bg-black';
+                          };
+                          const getWatColor = (p) => {
+                            if (p >= 100) return 'bg-emerald-500';
+                            return 'bg-[#3b82f6]';
+                          };
+
+                          return (
+                            <div key={group.date} className="flex flex-col gap-2 p-3 bg-zinc-50 rounded-2xl border-2 border-transparent hover:border-black transition-all">
+                              <button 
+                                onClick={() => toggleGroup(group.date)}
+                                className="w-full flex items-center justify-between group/header"
+                              >
+                                <div className="flex flex-col items-start gap-2 w-full">
+                                  <div className="flex items-center gap-3 w-full">
+                                    <span className="bg-black text-white px-2 py-1 rounded-lg text-[10px] font-black italic shrink-0">
+                                      {group.date}
+                                    </span>
+                                    
+                                    <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-black italic uppercase tracking-wider text-gray-400 flex-1">
+                                      <span className={caloriePercent > 110 ? 'text-rose-500' : caloriePercent >= 100 ? 'text-emerald-600' : ''}>
+                                        🔥 {caloriePercent}%
+                                      </span>
+                                      <span className={proteinPercent >= 100 ? 'text-emerald-600' : ''}>
+                                        🍖 {proteinPercent}%
+                                      </span>
+                                      <span className={waterPercent >= 100 ? 'text-emerald-600' : ''}>
+                                        🚰 {waterPercent}%
+                                      </span>
+                                    </div>
+
+                                    <div className={`p-1 rounded-lg transition-colors ${isExpanded ? 'bg-black text-white' : 'bg-gray-100 text-gray-400 group-hover/header:bg-gray-200'}`}>
+                                      {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
+                                    </div>
+                                  </div>
+
+                                  <div className="flex gap-1 w-full mt-0.5 pr-8">
+                                    <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
+                                      <div className={`h-full transition-all duration-700 ${getCalColor(caloriePercent)}`} style={{ width: `${Math.min(caloriePercent, 100)}%` }} />
+                                    </div>
+                                    <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
+                                      <div className={`h-full transition-all duration-700 ${getProColor(proteinPercent)}`} style={{ width: `${Math.min(proteinPercent, 100)}%` }} />
+                                    </div>
+                                    <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
+                                      <div className={`h-full transition-all duration-700 ${getWatColor(waterPercent)}`} style={{ width: `${Math.min(waterPercent, 100)}%` }} />
+                                    </div>
+                                  </div>
+                                </div>
+                              </button>
+
+                              <AnimatePresence>
+                                {isExpanded && (
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: "auto", opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    className="overflow-hidden space-y-2 px-1 pb-2"
+                                  >
+                                    {group.logs.map((log) => (
+                                      <LogItem 
+                                        key={log.id} 
+                                        log={log} 
+                                        isRecent={false}
+                                        editingId={editingId}
+                                        editValues={editValues}
+                                        setEditValues={setEditValues}
+                                        cancelEditing={cancelEditing}
+                                        saveEdit={saveEdit}
+                                        startEditing={startEditing}
+                                        deleteLog={deleteLog}
+                                        onAddToFavorite={addToFavorite}
+                                      />
+                                    ))}
+                                  </motion.div>
+                                )}
+                              </AnimatePresence>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </NeoCard>
+            );
+          }
+
+          if (!blockContent) return null;
+
+          return (
+            <Reorder.Item 
+              key={item} 
+              value={item} 
+              dragListener={isEditingLayout}
+              className={`relative ${isEditingLayout ? 'rounded-[2rem] border-4 border-dashed border-[#ffb700] p-1 pb-6 mb-4 cursor-grab active:cursor-grabbing bg-[#ffb700]/5 transition-colors' : 'mb-6'}`}
+            >
+              {isEditingLayout && (
+                <div className="absolute -top-3 -right-2 z-50 bg-[#ffb700] text-black border-4 border-black p-2 rounded-2xl shadow-neo-sm transform rotate-3 flex items-center justify-center">
+                  <GripHorizontal size={24} className="animate-pulse" />
+                </div>
+              )}
+              <div className={isEditingLayout ? 'pointer-events-none opacity-80' : ''}>
+                {blockContent}
+              </div>
+            </Reorder.Item>
+          );
+        })}
+      </Reorder.Group>
+
       <SharingCard 
         isOpen={showShare}
         onClose={() => setShowShare(false)}
@@ -596,137 +784,11 @@ function App() {
         advice={advice}
       />
 
-      {/* History Logs */}
-      {historyGroups.length > 0 && (
-        <NeoCard className="bg-white">
-          <button 
-            onClick={() => setShowHistory(!showHistory)}
-            className="w-full flex items-center justify-between group"
-          >
-            <div className="flex items-center gap-2">
-              <History size={16} className="text-gray-400" />
-              <h2 className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors">
-                {t('history_record')}
-              </h2>
-            </div>
-            {showHistory ? <ChevronUp size={16} className="text-gray-400" /> : <ChevronDown size={16} className="text-gray-400" />}
-          </button>
-          
-          <AnimatePresence>
-            {showHistory && (
-              <motion.div 
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: "auto", opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                className="overflow-hidden"
-              >
-                <div className="space-y-4 pt-4">
-                  {historyGroups.map((group) => {
-                    const isExpanded = !!expandedGroups[group.date];
-                    const caloriePercent = Math.round((group.totalCalories / goals.calories) * 100);
-                    const proteinPercent = Math.round((group.totalProtein / goals.protein) * 100);
-                    const waterPercent   = Math.round(((group.totalWater || 0) / goals.water) * 100);
-
-                    const getCalColor = (p) => {
-                      if (p > 110) return 'bg-rose-500';
-                      if (p >= 100) return 'bg-emerald-500';
-                      return 'bg-accent';
-                    };
-                    const getProColor = (p) => {
-                      if (p >= 100) return 'bg-emerald-500';
-                      return 'bg-black';
-                    };
-                    const getWatColor = (p) => {
-                      if (p >= 100) return 'bg-emerald-500';
-                      return 'bg-[#3b82f6]';
-                    };
-
-                    return (
-                      <div key={group.date} className="flex flex-col gap-2 p-3 bg-zinc-50 rounded-2xl border-2 border-transparent hover:border-black transition-all">
-                        <button 
-                          onClick={() => toggleGroup(group.date)}
-                          className="w-full flex items-center justify-between group/header"
-                        >
-                          <div className="flex flex-col items-start gap-2 w-full">
-                            <div className="flex items-center gap-3 w-full">
-                              <span className="bg-black text-white px-2 py-1 rounded-lg text-[10px] font-black italic shrink-0">
-                                {group.date}
-                              </span>
-                              
-                              <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-black italic uppercase tracking-wider text-gray-400 flex-1">
-                                <span className={caloriePercent > 110 ? 'text-rose-500' : caloriePercent >= 100 ? 'text-emerald-600' : ''}>
-                                  🔥 {caloriePercent}%
-                                </span>
-                                <span className={proteinPercent >= 100 ? 'text-emerald-600' : ''}>
-                                  🍖 {proteinPercent}%
-                                </span>
-                                <span className={waterPercent >= 100 ? 'text-emerald-600' : ''}>
-                                  🚰 {waterPercent}%
-                                </span>
-                              </div>
-
-                              <div className={`p-1 rounded-lg transition-colors ${isExpanded ? 'bg-black text-white' : 'bg-gray-100 text-gray-400 group-hover/header:bg-gray-200'}`}>
-                                {isExpanded ? <ChevronUp size={12} /> : <ChevronDown size={12} />}
-                              </div>
-                            </div>
-
-                            {/* Progress Bars - Standardized & Clean */}
-                            <div className="flex gap-1 w-full mt-0.5 pr-8">
-                              <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
-                                <div className={`h-full transition-all duration-700 ${getCalColor(caloriePercent)}`} style={{ width: `${Math.min(caloriePercent, 100)}%` }} />
-                              </div>
-                              <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
-                                <div className={`h-full transition-all duration-700 ${getProColor(proteinPercent)}`} style={{ width: `${Math.min(proteinPercent, 100)}%` }} />
-                              </div>
-                              <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
-                                <div className={`h-full transition-all duration-700 ${getWatColor(waterPercent)}`} style={{ width: `${Math.min(waterPercent, 100)}%` }} />
-                              </div>
-                            </div>
-                          </div>
-                        </button>
-
-                        <AnimatePresence>
-                          {isExpanded && (
-                            <motion.div
-                              initial={{ height: 0, opacity: 0 }}
-                              animate={{ height: "auto", opacity: 1 }}
-                              exit={{ height: 0, opacity: 0 }}
-                              className="overflow-hidden space-y-2 px-1 pb-2"
-                            >
-                              {group.logs.map((log) => (
-                                <LogItem 
-                                  key={log.id} 
-                                  log={log} 
-                                  isRecent={false}
-                                  editingId={editingId}
-                                  editValues={editValues}
-                                  setEditValues={setEditValues}
-                                  cancelEditing={cancelEditing}
-                                  saveEdit={saveEdit}
-                                  startEditing={startEditing}
-                                  deleteLog={deleteLog}
-                                  onAddToFavorite={addToFavorite}
-                                />
-                              ))}
-                            </motion.div>
-                          )}
-                        </AnimatePresence>
-                      </div>
-                    );
-                  })}
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </NeoCard>
-      )}
-
-
-      <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
-        <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center">
-          <p className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase italic whitespace-nowrap">
-            <span className="text-accent">© 2026 DailyDiet - {t('settings_copyright')} 🐼</span>
-            <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
+      <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50 pointer-events-none">
+        <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center pointer-events-auto">
+          <p className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase italic whitespace-nowrap flex items-center gap-1.5">
+            <span className="text-accent flex items-center gap-1">© 2026 DailyDiet - {t('settings_copyright')} <img src="/favicon.png" alt="Panda" className="w-3 sm:w-4 aspect-square object-contain inline-block" /></span>
+            <span className="text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
           </p>
         </div>
       </footer>

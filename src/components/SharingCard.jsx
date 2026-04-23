@@ -110,7 +110,8 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
 
             {/* Panda Advice Section */}
             <div className="bg-white border-4 border-black p-4 rounded-2xl mb-6 shadow-neo-sm relative">
-              <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg">
+              <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                <img src="/favicon.png" alt="Panda" className="w-3 h-3 object-contain" />
                 <span className="text-[8px] font-black uppercase tracking-wider">{t('panda_says')}</span>
               </div>
               <p className="text-lg font-black italic leading-tight text-black pt-1">
