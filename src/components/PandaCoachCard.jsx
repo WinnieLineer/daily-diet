@@ -163,7 +163,7 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
       }}
     >
       <img
-        src="/favicon.png"
+        src={`${import.meta.env.BASE_URL}favicon.png`}
         alt="Panda Coach"
         className="w-full h-full object-contain pointer-events-none select-none"
         style={{ WebkitUserDrag: 'none' }}
