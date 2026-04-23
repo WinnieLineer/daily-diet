@@ -501,8 +501,8 @@ function App() {
             </motion.div>
         )}
       </AnimatePresence>
-      <header className="flex justify-between items-start sm:items-center py-4 gap-2 flex-wrap">
-        <div className="flex items-center">
+      <header className="flex justify-between items-center py-4 gap-2">
+        <div className="flex items-center shrink min-w-[60px]">
           <h1 className="text-xs sm:text-base md:text-xl font-black italic tracking-tight leading-tight whitespace-normal break-words">{t('app_title')}</h1>
         </div>
         <div className="flex gap-2">
