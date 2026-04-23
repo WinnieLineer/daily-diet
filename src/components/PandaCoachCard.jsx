@@ -196,17 +196,17 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
           </g>
         )}
 
-        {/* Eye Patches - angled depending on expression */}
+        {/* Eye Patches - angled outwards ( / \ ) for a cute, innocent panda look */}
         <g fill="url(#patchGrad)">
           {isSad ? (
             <>
-              <ellipse cx="32" cy="46" rx="14" ry="16" transform="rotate(20 32 46)" />
-              <ellipse cx="68" cy="46" rx="14" ry="16" transform="rotate(-20 68 46)" />
+              <ellipse cx="32" cy="46" rx="14" ry="16" transform="rotate(25 32 46)" />
+              <ellipse cx="68" cy="46" rx="14" ry="16" transform="rotate(-25 68 46)" />
             </>
           ) : (
             <>
-              <ellipse cx="32" cy="46" rx="14" ry="18" transform="rotate(-15 32 46)" />
-              <ellipse cx="68" cy="46" rx="14" ry="18" transform="rotate(15 68 46)" />
+              <ellipse cx="32" cy="46" rx="14" ry="18" transform="rotate(15 32 46)" />
+              <ellipse cx="68" cy="46" rx="14" ry="18" transform="rotate(-15 68 46)" />
             </>
           )}
         </g>
