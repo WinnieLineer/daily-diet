@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import PandaCoachCard from './components/PandaCoachCard';
 import Dashboard from './components/Dashboard';
+import HistoryTrends from './components/HistoryTrends';
 import FoodDetective from './components/FoodDetective';
 import WeightTracker from './components/WeightTracker';
 import GoalSettings from './components/GoalSettings';
@@ -660,6 +661,8 @@ function App() {
                       className="overflow-hidden"
                     >
                       <div className={`space-y-4 pt-4 ${isEditingLayout ? 'pointer-events-none' : ''}`}>
+                        <HistoryTrends goals={goals} summary={summary} />
+                        
                         {historyGroups.map((group) => {
                           const isExpanded = !!expandedGroups[group.date];
                           const caloriePercent = Math.round((group.totalCalories / goals.calories) * 100);

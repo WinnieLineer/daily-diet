@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, RefreshCcw, Sparkles, X, CheckCircle2, Move, Calculator, LineChart as ChartIcon, Tag, MapPin } from 'lucide-react';
+import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin } from 'lucide-react';
 import NeoButton from './NeoButton';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
@@ -29,7 +29,6 @@ const WhatsNew = ({ version, onClose }) => {
         exit={{ scale: 0.9, opacity: 0 }}
         className="bg-accent border-4 border-black w-full max-w-md rounded-[2.5rem] shadow-neo relative flex flex-col max-h-[90vh] overflow-hidden"
       >
-        {/* Background Decorative Elements */}
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
         
         <button 

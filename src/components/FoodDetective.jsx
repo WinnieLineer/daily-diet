@@ -157,6 +157,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [locationLoading, setLocationLoading] = useState(false);
   const [showDesktopCamera, setShowDesktopCamera] = useState(false);
   const pendingCoordsRef = useRef(null); // stores pre-fetched coords from camera open
+  const analysisIdRef = useRef(0);
   const [favorites, setFavorites] = useState([]);
   const [favToast, setFavToast] = useState(null);
   const [aiError, setAiError] = useState(null);
@@ -348,7 +349,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     });
   };
 
-  const analysisIdRef = useRef(0);
+  // Helper for image hashing to ensure consistent results
+  const hashImage = async (base64) => {
+    const msgUint8 = new TextEncoder().encode(base64);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', msgUint8);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  };
 
   const performAnalysis = async (compressedBase64, locationPromise) => {
     // Increment analysis ID to invalidate previous requests
@@ -359,13 +366,47 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setLoadTime(ANALYSIS_DURATION_SECONDS);
 
     try {
-      // 1. Try Cache First
-      let location = getCachedLocation();
+      // 🚀 1. Check Image Cache First for consistency
+      const imgHash = await hashImage(compressedBase64);
+      const cached = await db.analysisCache.get(imgHash);
       
-      // 2. If no cache, resolve location in background
-      if (!location) {
-        location = await (locationPromise instanceof Promise ? locationPromise : Promise.resolve(locationPromise ?? null));
-        if (location) saveLocationToCache(location);
+      let data;
+      let location = getCachedLocation();
+
+      if (cached) {
+        console.log("🚀 Using cached result for consistency");
+        data = cached.result;
+        setLoadTime(1); // Fast track loading UI
+      } else {
+        // 🚀 2. Resolve location if no cache
+        if (!location) {
+          location = await (locationPromise instanceof Promise ? locationPromise : Promise.resolve(locationPromise ?? null));
+          if (location) saveLocationToCache(location);
+        }
+
+        const dailyContext = {
+          calories: summary.calories,
+          calorieGoal: goals.calories,
+          protein: summary.protein,
+          proteinGoal: goals.protein,
+          water: summary.water,
+          waterGoal: goals.water,
+          foodLogs: recentLogs
+        };
+
+        const res = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
+        if (currentAnalysisId !== analysisIdRef.current) return;
+        
+        data = res;
+        
+        // 🚀 3. Save to cache
+        if (data && data.dish_name) {
+          await db.analysisCache.put({
+            hash: imgHash,
+            result: data,
+            timestamp: Date.now()
+          });
+        }
       }
 
       // Update pending analysis with location if it was found
@@ -373,22 +414,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         await db.pendingAnalysis.update('current', { location });
       }
 
-      const dailyContext = {
-        calories: summary.calories,
-        calorieGoal: goals.calories,
-        protein: summary.protein,
-        proteinGoal: goals.protein,
-        water: summary.water,
-        waterGoal: goals.water,
-        foodLogs: recentLogs
-      };
-
-      const data = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
-      
-      // 🚀 Check if this request is still valid (not cancelled)
-      if (currentAnalysisId !== analysisIdRef.current) return;
-
-      if (data && data.dish_name) {
+      if (currentAnalysisId === analysisIdRef.current && data && data.dish_name) {
         const finalResult = { ...data, location };
         setResult(finalResult);
         setOriginalResult(finalResult);
@@ -700,7 +726,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             <img src={preview} alt="Preview" className="relative z-10 max-w-full max-h-full object-contain" />
             {loading && (
               <div className="absolute inset-0 bg-black/90 flex flex-col items-center backdrop-blur-md z-50 overflow-y-auto custom-scrollbar">
-                <div className="flex flex-col items-center w-full max-w-[280px] space-y-3 py-6 px-4 m-auto">
+                <div className="flex flex-col items-center w-full max-w-[280px] space-y-3 py-6 px-4 m-auto relative">
                   {/* Status Badge */}
                   <div className="bg-accent/20 text-accent px-3 py-1 rounded-full border border-accent/40 inline-flex items-center gap-2 shadow-[0_0_10px_rgba(255,183,0,0.1)]">
                     <Loader2 className="animate-spin text-accent" size={14} />

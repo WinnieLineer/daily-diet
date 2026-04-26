@@ -8,13 +8,14 @@ db.version(4).stores({
   settings: 'key' // key-value store for goals
 });
 
-db.version(7).stores({
+db.version(8).stores({
   dietLogs: '++id, date, dish_name, calories, protein, water, timestamp, location',
   weightLogs: '++id, date, weight, timestamp',
   settings: 'key',
   favorites: '++id, dish_name',
   nutritionFacts: '++id, fact, lang',
-  pendingAnalysis: 'key'
+  pendingAnalysis: 'key',
+  analysisCache: 'hash'
 });
 
 export async function getDailySummary(date) {
