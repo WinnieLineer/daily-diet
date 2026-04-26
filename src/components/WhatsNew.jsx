@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, RefreshCcw, Sparkles, X, CheckCircle2 } from 'lucide-react';
+import { Download, RefreshCcw, Sparkles, X, CheckCircle2, Move, Calculator, LineChart as ChartIcon, Tag, MapPin } from 'lucide-react';
 import NeoButton from './NeoButton';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
@@ -52,22 +52,34 @@ const WhatsNew = ({ version, onClose }) => {
 
             <div className="space-y-4">
               <FeatureItem 
-                icon={RefreshCcw}
-                color="bg-emerald-400"
-                title="數據自由，無縫遷移"
-                description="支援 JSON 格式導出與導入。您的飲食紀錄不再受限於瀏覽器，隨時備份，跨裝置接續旅程。"
+                icon={Calculator}
+                color="bg-purple-400"
+                title="智能目標計算機"
+                description="不再憑感覺！輸入身高、體重與活動量，自動為您計算科學化的熱量與蛋白質建議目標。"
               />
               <FeatureItem 
-                icon={Sparkles}
-                color="bg-blue-400"
-                title="全新面貌，極致辨識"
-                description="品牌識別 Favicon 全面升級。讓專屬 Panda 教練在您的分頁標籤中展現獨特個性。"
-              />
-              <FeatureItem 
-                icon={CheckCircle2}
+                icon={ChartIcon}
                 color="bg-rose-400"
-                title="智慧教練，即時點評"
-                description="導入 AI 核心，Panda 教練現在能根據您當日的熱量與營養攝取，提供幽默且精準的飲食建議。"
+                title="數據趨勢 UX 優化"
+                description="圖表標籤加上背景底色，辨識更清晰。並修正了圖例顏色與實際圖表的一致性。"
+              />
+              <FeatureItem 
+                icon={Move}
+                color="bg-emerald-400"
+                title="布局持久化"
+                description="現在 Panda 教練的位置會被永久記憶！無論如何重整頁面，他都會待在您安排的最佳角落。"
+              />
+              <FeatureItem 
+                icon={MapPin}
+                color="bg-blue-400"
+                title="位置快取與優化"
+                description="大幅減少權限詢問頻率！自動記住您的常用地點，讓記錄過程更加流暢。"
+              />
+              <FeatureItem 
+                icon={Tag}
+                color="bg-orange-400"
+                title="飲食分類標籤"
+                description="新增早午晚餐與點心分類。AI 會根據時間自動推薦類別，讓飲食日誌條理分明。"
               />
             </div>
 

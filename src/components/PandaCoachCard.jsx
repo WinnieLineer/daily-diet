@@ -26,6 +26,7 @@ const DIALOGUES = {
       '辛苦了，吃這麼「養生」……欸等等，那是炸雞嗎？ 🍗',
       '記錄飲食的第一步是：承認你剛才吃了那個 🙄',
       '你以為不記錄熱量就不存在？ 哈，天真！',
+      '你今天是不是還沒喝水？快去！ 🚰',
     ],
     click: [
       '你按我幹嘛啦！ 😤',
@@ -145,6 +146,7 @@ const DIALOGUES = {
 };
 
 function getRandom(arr) {
+  if (!arr || arr.length === 0) return '';
   return arr[Math.floor(Math.random() * arr.length)];
 }
 
@@ -308,7 +310,6 @@ const SpeechBubble = ({ text, visible }) => (
           className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-black"
         />
       </motion.div>
-
     )}
   </AnimatePresence>
 );
@@ -316,8 +317,8 @@ const SpeechBubble = ({ text, visible }) => (
 // Floating effect particle
 const FloatingEmoji = ({ emoji, id, onDone }) => {
   useEffect(() => {
-    const t = setTimeout(onDone, 800);
-    return () => clearTimeout(t);
+    const timer = setTimeout(onDone, 800);
+    return () => clearTimeout(timer);
   }, [onDone]);
 
   return (
@@ -338,13 +339,16 @@ const FloatingEmoji = ({ emoji, id, onDone }) => {
 // Main Component
 // ──────────────────────────────────────────────
 const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
-  const constraintsRef = useRef(null);
   const [expression, setExpression]     = useState('normal');
   const [bubble, setBubble]             = useState('');
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [isSquished, setIsSquished]     = useState(false);
   const [particles, setParticles]       = useState([]);
-  const [isDragging, setIsDragging]     = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [initialPos, setInitialPos] = useState(() => {
+    const saved = localStorage.getItem('panda_position');
+    return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+  });
 
   const controls   = useAnimation();
   const pokeCount  = useRef(0);
@@ -397,7 +401,6 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
     if (isDragging) return;
     setExpression('happy');
     showBubble(getRandom(DIALOGUES[getLanguage()].tickle), 3500);
-    // Use yellow/gold themed particles
     addParticle('✨'); 
     controls.start({
       rotate: [-5, 5, -5, 5, 0],
@@ -455,17 +458,19 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
     addParticle('💫');
   }, [showBubble, addParticle]);
 
-  const handleDragEnd = useCallback(async () => {
+  const handleDragEnd = useCallback((e, info) => {
+    const finalX = info.offset.x + initialPos.x;
+    const finalY = info.offset.y + initialPos.y;
+    
+    setInitialPos({ x: finalX, y: finalY });
+    localStorage.setItem('panda_position', JSON.stringify({ x: finalX, y: finalY }));
+
     setExpression('sad');
     showBubble(getRandom(DIALOGUES[getLanguage()].release), 2500);
     addParticle('🌀');
-    await controls.start({
-      x: 0, y: 0,
-      transition: { type: 'spring', stiffness: 300, damping: 20 },
-    });
     setIsDragging(false);
     resetExpression(2000);
-  }, [controls, showBubble, addParticle, resetExpression]);
+  }, [initialPos, showBubble, addParticle, resetExpression]);
 
   // ── IDLE chatter & Click-away ──────────────────
   useEffect(() => {
@@ -488,7 +493,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
     };
   }, [bubbleVisible, isDragging, advice, showBubble]);
 
-  const currentAdvice = advice === 'ERROR_RETRY' ? (
+  const currentAdviceText = advice === 'ERROR_RETRY' ? (
     <div className="flex flex-col items-center gap-1">
       <span>{t('ai_error') || "連線中斷了..."}</span>
       <button 
@@ -505,7 +510,6 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
 
   return (
     <motion.div 
-      ref={constraintsRef}
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="relative z-10 overflow-visible"
@@ -514,7 +518,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
         <div className="flex items-center gap-4 sm:gap-6 relative z-10 selection:bg-transparent rounded-[2rem] overflow-visible" style={{ WebkitTapHighlightColor: 'transparent' }}>
           {/* Interactive Panda */}
           <div className="relative flex-shrink-0 z-50 group/panda w-16 h-16 sm:w-20 sm:h-20">
-            <SpeechBubble text={bubble || currentAdvice} visible={bubbleVisible || advice === 'ERROR_RETRY'} />
+            <SpeechBubble text={bubble || currentAdviceText} visible={bubbleVisible || advice === 'ERROR_RETRY'} />
 
             {/* Particles */}
             {particles.map(({ id, emoji }) => (
@@ -530,6 +534,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
               drag
               dragMomentum={false}
               dragElastic={0.3}
+              initial={initialPos}
               onDragStart={handleDragStart}
               onDragEnd={handleDragEnd}
               animate={controls}

@@ -129,17 +129,17 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
                 <MapPin size={10} />
                 {(() => {
                   // Try to extract suburb (like "新莊區") from full address
-                  // Simple logic: catch 3nd/4th to 6th characters or part before space
                   const full = log.location;
                   const parts = full.split(' ');
-                  const citySub = parts[0]; // "新北市新莊區"
-                  
-                  // Common pattern: City(3 chars) + Suburb
-                  if (citySub.length > 3) {
-                    return citySub.substring(3);
-                  }
+                  const citySub = parts[0]; 
+                  if (citySub.length > 3) return citySub.substring(3);
                   return citySub;
                 })()}
+              </span>
+            )}
+            {log.category && (
+              <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg bg-black text-white italic border border-black">
+                {t(log.category)}
               </span>
             )}
           </div>

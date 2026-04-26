@@ -163,6 +163,16 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [nutritionFacts, setNutritionFacts] = useState([]);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [isResuming, setIsResuming] = useState(false);
+  const [multiplier, setMultiplier] = useState(1);
+  const [originalResult, setOriginalResult] = useState(null);
+  const [showCustomMultiplier, setShowCustomMultiplier] = useState(false);
+  const [selectedCategory, setSelectedCategory] = useState(() => {
+    const hour = new Date().getHours();
+    if (hour < 11) return 'breakfast';
+    if (hour < 15) return 'lunch';
+    if (hour < 19) return 'dinner';
+    return 'snack';
+  });
 
   // Recovery Logic
   useEffect(() => {
@@ -280,6 +290,27 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     }
   };
 
+  const getCachedLocation = () => {
+    const cached = localStorage.getItem('last_known_location');
+    if (!cached) return null;
+    try {
+      const data = JSON.parse(cached);
+      // Valid for 15 minutes
+      if (Date.now() - data.timestamp < 15 * 60 * 1000) {
+        return data.location;
+      }
+    } catch (e) {}
+    return null;
+  };
+
+  const saveLocationToCache = (location) => {
+    if (!location) return;
+    localStorage.setItem('last_known_location', JSON.stringify({
+      location,
+      timestamp: Date.now()
+    }));
+  };
+
   const fetchCurrentLocation = () => {
     if (!navigator.geolocation) return;
     setLocationLoading(true);
@@ -328,8 +359,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setLoadTime(ANALYSIS_DURATION_SECONDS);
 
     try {
-      // Resolve location in background, could take seconds
-      const location = await (locationPromise instanceof Promise ? locationPromise : Promise.resolve(locationPromise ?? null));
+      // 1. Try Cache First
+      let location = getCachedLocation();
+      
+      // 2. If no cache, resolve location in background
+      if (!location) {
+        location = await (locationPromise instanceof Promise ? locationPromise : Promise.resolve(locationPromise ?? null));
+        if (location) saveLocationToCache(location);
+      }
 
       // Update pending analysis with location if it was found
       if (location) {
@@ -352,7 +389,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       if (currentAnalysisId !== analysisIdRef.current) return;
 
       if (data && data.dish_name) {
-        setResult({ ...data, location });
+        const finalResult = { ...data, location };
+        setResult(finalResult);
+        setOriginalResult(finalResult);
+        setMultiplier(1);
+        setShowCustomMultiplier(false);
         
         // Clear pending on success
         await db.pendingAnalysis.delete('current');
@@ -474,6 +515,25 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     await handleAnalysis(base64, locationPromise);
   };
 
+  const handleMultiplierChange = (m) => {
+    const val = parseFloat(m);
+    if (isNaN(val) || val <= 0) return;
+    
+    setMultiplier(val);
+    if (!originalResult) return;
+    
+    const updatedResult = {
+      ...originalResult,
+      calories: Math.round(originalResult.calories * val),
+      protein: Number((originalResult.protein * val).toFixed(1)),
+      water: Math.round(originalResult.water * val),
+      dish_name: val === 1 
+        ? originalResult.dish_name 
+        : t('multiplier_format').replace('{n}', val).replace('{name}', originalResult.dish_name)
+    };
+    setResult(updatedResult);
+  };
+
   const saveLog = async () => {
     let dataToSave = null;
     if (mode === 'ai' && result) {
@@ -497,11 +557,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       ...dataToSave,
       date: localDate,
       timestamp: Date.now(),
-      location: dataToSave.location || null
+      location: dataToSave.location || null,
+      category: selectedCategory
     });
     
     setPreview(null);
     setResult(null);
+    setOriginalResult(null);
+    setMultiplier(1);
+    setShowCustomMultiplier(false);
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
     onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
     setLoading(false);
@@ -711,6 +775,65 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           >
             <div className="p-4 bg-black text-white rounded-3xl border-4 border-black shadow-neo-sm">
               <h3 className="font-black text-lg leading-tight mb-3">{result.dish_name}</h3>
+              
+              {/* Portion Multiplier Selector */}
+              <div className="flex flex-wrap items-center gap-2 mb-4 bg-white/5 p-2 rounded-2xl border border-white/10">
+                <div className="flex items-center gap-1.5 mr-1">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{t('portion')}</span>
+                </div>
+                <div className="flex gap-1">
+                  {[0.5, 1, 2].map(val => (
+                    <button 
+                      key={val}
+                      onClick={() => {
+                        setShowCustomMultiplier(false);
+                        handleMultiplierChange(val);
+                      }}
+                      className={twMerge(
+                        "px-3 py-1 rounded-xl text-[10px] font-black transition-all border-2",
+                        multiplier === val && !showCustomMultiplier
+                          ? "bg-accent text-black border-accent" 
+                          : "bg-white/5 text-white/60 border-transparent hover:bg-white/10"
+                      )}
+                    >
+                      {val === 0.5 ? '1/2' : val + 'x'}
+                    </button>
+                  ))}
+                  <button 
+                    onClick={() => setShowCustomMultiplier(!showCustomMultiplier)}
+                    className={twMerge(
+                      "px-3 py-1 rounded-xl text-[10px] font-black transition-all border-2",
+                      showCustomMultiplier 
+                        ? "bg-accent text-black border-accent" 
+                        : "bg-white/5 text-white/60 border-transparent hover:bg-white/10"
+                    )}
+                  >
+                    {t('custom')}
+                  </button>
+                </div>
+                
+                <AnimatePresence>
+                  {showCustomMultiplier && (
+                    <motion.div 
+                      initial={{ opacity: 0, width: 0 }}
+                      animate={{ opacity: 1, width: 'auto' }}
+                      exit={{ opacity: 0, width: 0 }}
+                      className="overflow-hidden flex items-center gap-2 ml-auto"
+                    >
+                      <input 
+                        type="number"
+                        step="0.1"
+                        min="0.1"
+                        value={multiplier}
+                        onChange={(e) => handleMultiplierChange(e.target.value)}
+                        className="w-16 bg-white/10 border-2 border-white/20 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none focus:border-accent transition-colors"
+                      />
+                      <span className="text-xs font-bold text-white/40">x</span>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+
               <div className="grid grid-cols-3 gap-2 font-mono text-[10px] sm:text-xs mb-4">
                 <div className="flex flex-col items-center justify-center bg-accent text-black p-2 rounded-2xl font-bold border-2 border-black/10">
                   <Flame size={14} className="mb-0.5" />
@@ -788,7 +911,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             <div className="flex gap-2 pt-2">
               <NeoButton 
                 className="flex-1" 
-                onClick={() => { setPreview(null); setResult(null); }}
+                onClick={() => { 
+                  setPreview(null); 
+                  setResult(null); 
+                  setOriginalResult(null); 
+                  setMultiplier(1);
+                  setShowCustomMultiplier(false);
+                }}
                 disabled={loading}
               >
                 {t('cancel')}
@@ -821,6 +950,22 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               <input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({...manualEntry, water: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
             </div>
           </div>
+          
+          <div className="flex flex-wrap gap-2">
+            {['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (
+              <button
+                key={cat}
+                onClick={() => setSelectedCategory(cat)}
+                className={twMerge(
+                  "px-3 py-1.5 rounded-xl text-xs font-black border-2 transition-all",
+                  selectedCategory === cat ? "bg-black text-white border-black" : "bg-gray-50 text-gray-400 border-transparent hover:bg-gray-100"
+                )}
+              >
+                {t(cat)}
+              </button>
+            ))}
+          </div>
+
           <NeoButton className="w-full mt-1" variant="black" disabled={!manualEntry.dish_name} onClick={saveLog}>
             <Check size={16} className="inline mr-1" /> {t('save_record')}
           </NeoButton>
