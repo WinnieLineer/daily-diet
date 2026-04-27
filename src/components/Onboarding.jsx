@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../lib/translations';
 import NeoButton from './NeoButton';
-import { Sparkles, Camera, BarChart3, ChevronRight, X } from 'lucide-react';
+import { Sparkles, Camera, BarChart3, ChevronRight, X, Bell } from 'lucide-react';
 
 const slides = [
   {
@@ -18,6 +18,13 @@ const slides = [
     desc: 'onboarding_ai_desc',
     icon: <Camera size={48} />,
     color: 'bg-white'
+  },
+  {
+    key: 'notifications',
+    title: 'onboarding_notif_title',
+    desc: 'onboarding_notif_desc',
+    icon: <Bell size={48} />,
+    color: 'bg-emerald-400'
   },
   {
     key: 'panda',
