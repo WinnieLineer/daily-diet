@@ -51,34 +51,28 @@ const WhatsNew = ({ version, onClose }) => {
 
             <div className="space-y-4">
               <FeatureItem 
-                icon={Calculator}
-                color="bg-purple-400"
-                title="智能目標計算機"
-                description="不再憑感覺！輸入身高、體重與活動量，自動為您計算科學化的熱量與蛋白質建議目標。"
+                icon={Sparkles}
+                color="bg-yellow-400"
+                title="AI 辨識通知系統"
+                description="現在 AI 辨識完成後會自動發送通知、播放提示音並閃爍標題。即使離開頁面，也能第一時間收到結果！"
               />
               <FeatureItem 
                 icon={ChartIcon}
                 color="bg-rose-400"
-                title="數據趨勢 UX 優化"
-                description="圖表標籤加上背景底色，辨識更清晰。並修正了圖例顏色與實際圖表的一致性。"
+                title="趨勢範圍切換 (7/14/30D)"
+                description="歷史數據趨勢現在支援切換查看 7 天、14 天或 30 天，讓您更清楚掌握長期的攝取變化。"
               />
               <FeatureItem 
                 icon={Move}
                 color="bg-emerald-400"
-                title="布局持久化"
-                description="現在 Panda 教練的位置會被永久記憶！無論如何重整頁面，他都會待在您安排的最佳角落。"
+                title="手機版佈局優化"
+                description="重新設計了紀錄列表的顯示方式，解決了熱量資訊與時間標籤重疊的問題，閱讀更輕鬆。"
               />
               <FeatureItem 
-                icon={MapPin}
-                color="bg-blue-400"
-                title="位置快取與優化"
-                description="大幅減少權限詢問頻率！自動記住您的常用地點，讓記錄過程更加流暢。"
-              />
-              <FeatureItem 
-                icon={Tag}
-                color="bg-orange-400"
-                title="飲食分類標籤"
-                description="新增早午晚餐與點心分類。AI 會根據時間自動推薦類別，讓飲食日誌條理分明。"
+                icon={Calculator}
+                color="bg-purple-400"
+                title="系統效能與穩定性"
+                description="優化了 Service Worker 的註冊流程與通知權限處理，並加入了多重備援機制確保提醒不遺漏。"
               />
             </div>
 

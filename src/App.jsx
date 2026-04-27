@@ -260,7 +260,14 @@ function App() {
           // If version matches, check if we should show the "What's New" intro
           const lastSeenVersion = localStorage.getItem('last_seen_version');
           if (lastSeenVersion !== APP_VERSION) {
-            setShowWhatsNew(true);
+            // 🚀 Skip "What's New" for users coming from 1.6.x as requested
+            // Also skip for brand new users (they will see Onboarding)
+            const isFrom16 = lastSeenVersion?.startsWith('1.6');
+            const isNewUser = !lastSeenVersion;
+
+            if (!isFrom16 && !isNewUser) {
+              setShowWhatsNew(true);
+            }
             localStorage.setItem('last_seen_version', APP_VERSION);
           }
         }
