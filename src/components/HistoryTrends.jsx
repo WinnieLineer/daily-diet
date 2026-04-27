@@ -4,9 +4,11 @@ import { t } from '../lib/translations';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
 import { getDailySummary } from '../db';
 import { Activity } from 'lucide-react';
+import { twMerge } from 'tailwind-merge';
 
 const HistoryTrends = ({ goals, summary }) => {
   const [trendData, setTrendData] = useState([]);
+  const [range, setRange] = useState(7);
   const CALORIE_GOAL = goals.calories || 2000;
   const PROTEIN_GOAL = goals.protein || 100;
 
@@ -14,7 +16,7 @@ const HistoryTrends = ({ goals, summary }) => {
     let isMounted = true;
     const fetchTrendData = async () => {
       const dates = [];
-      for (let i = 6; i >= 0; i--) {
+      for (let i = range - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
         dates.push(d.toISOString().split('T')[0]);
@@ -37,22 +39,40 @@ const HistoryTrends = ({ goals, summary }) => {
     
     fetchTrendData();
     return () => { isMounted = false; };
-  }, [summary, goals]);
+  }, [summary, goals, range]);
 
   if (trendData.length === 0) return null;
 
   return (
     <div className="mb-6 bg-white border-4 border-black rounded-[2rem] p-4 shadow-neo-sm overflow-hidden">
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
-          <div className="bg-black text-white p-1.5 rounded-lg">
-            <Activity size={14} />
+      <div className="flex flex-col gap-3 mb-4">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <div className="bg-black text-white p-1.5 rounded-lg">
+              <Activity size={14} />
+            </div>
+            <span className="text-xs font-black uppercase tracking-widest text-black italic">
+              {t('calorie_trend')} & {t('dashboard_protein')}
+            </span>
           </div>
-          <span className="text-xs font-black uppercase tracking-widest text-black italic">
-            {t('calorie_trend')} & {t('dashboard_protein')}
-          </span>
+          
+          <div className="flex gap-1 bg-gray-100 p-0.5 rounded-xl border-2 border-black/5 shadow-inner">
+            {[7, 14, 30].map(r => (
+              <button
+                key={r}
+                onClick={() => setRange(r)}
+                className={twMerge(
+                  "px-2 py-0.5 text-[9px] font-black rounded-lg transition-all",
+                  range === r ? "bg-black text-white shadow-neo-sm" : "text-gray-400 hover:text-black"
+                )}
+              >
+                {r}D
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-3">
+
+        <div className="flex items-center justify-end gap-3">
           <div className="flex items-center gap-1">
             <div className="w-2 h-2 bg-[#FDE047] rounded-full border border-black" />
             <span className="text-[9px] font-bold">KCAL</span>
@@ -67,7 +87,13 @@ const HistoryTrends = ({ goals, summary }) => {
       <div className="h-[180px] w-full">
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={trendData} margin={{ top: 25, right: 5, left: -20, bottom: 0 }}>
-            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
+            <XAxis 
+              dataKey="name" 
+              axisLine={false} 
+              tickLine={false} 
+              tick={{ fontSize: 10, fontWeight: 'bold' }}
+              interval={range > 7 ? (range > 14 ? 4 : 1) : 0}
+            />
             <YAxis hide domain={[0, (dataMax) => Math.max(CALORIE_GOAL * 1.2, PROTEIN_GOAL * 11, dataMax * 1.1)]} />
             <Tooltip 
               cursor={{ fill: 'rgba(0,0,0,0.05)' }}
@@ -117,12 +143,12 @@ const HistoryTrends = ({ goals, summary }) => {
               )} 
             />
             
-            <Bar dataKey="calories" radius={[4, 4, 0, 0]} barSize={16}>
+            <Bar dataKey="calories" radius={[4, 4, 0, 0]} barSize={range > 14 ? 8 : (range > 7 ? 12 : 16)}>
               {trendData.map((entry, index) => (
                 <Cell key={`cell-c-${index}`} fill="#FDE047" />
               ))}
             </Bar>
-            <Bar dataKey="protein" radius={[4, 4, 0, 0]} barSize={6}>
+            <Bar dataKey="protein" radius={[4, 4, 0, 0]} barSize={range > 14 ? 3 : (range > 7 ? 4 : 6)}>
               {trendData.map((entry, index) => (
                 <Cell key={`cell-p-${index}`} fill="#94a3b8" />
               ))}

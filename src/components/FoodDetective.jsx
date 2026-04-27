@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2 } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, Bell } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import exifr from 'exifr';
@@ -174,6 +174,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     if (hour < 19) return 'dinner';
     return 'snack';
   });
+  const [wantsNotification, setWantsNotification] = useState(false);
+  const wantsNotificationRef = useRef(false);
+
+  // Sync ref with state
+  useEffect(() => {
+    wantsNotificationRef.current = wantsNotification;
+  }, [wantsNotification]);
 
   // Recovery Logic
   useEffect(() => {
@@ -432,16 +439,84 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           const exists = await db.nutritionFacts.where('fact').equals(data.fun_fact).count();
           if (exists === 0) await db.nutritionFacts.add({ fact: data.fun_fact, lang: getLanguage() });
         }
+
+        // 🚀 Notification Logic (Success)
+        (async () => {
+          const title = t('notification_title');
+          const body = t('notification_body').replace('{name}', data.dish_name);
+          await notifyUser(title, body);
+        })();
       }
     } catch (err) {
       if (currentAnalysisId !== analysisIdRef.current) return;
       console.error("AI Analysis Error:", err);
-      setAiError(err.message || t('ai_error') || "AI 辨識發生錯誤，請稍後再試。");
+      const errorMsg = err.message || t('ai_error') || "AI 辨識發生錯誤，請稍後再試。";
+      setAiError(errorMsg);
+
+      // 🚀 Notification Logic (Error)
+      (async () => {
+        const title = t('ai_error_title');
+        const body = errorMsg;
+        await notifyUser(title, body);
+      })();
     } finally {
       if (currentAnalysisId === analysisIdRef.current) {
         setLoading(false);
         setIsResuming(false);
       }
+    }
+  };
+
+  // Generic Notification Helper
+  const notifyUser = async (title, body) => {
+    const currentWantsNotification = wantsNotificationRef.current;
+    if (currentWantsNotification && document.visibilityState === 'hidden') {
+      const baseUrl = import.meta.env.BASE_URL || '/';
+      const icon = `${baseUrl}pwa-192x192.png`.replace(/\/+/g, '/');
+      const badge = `${baseUrl}favicon.png`.replace(/\/+/g, '/');
+      
+      // 🔊 Fallback 1: Audio Feedback
+      try {
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        const oscillator = audioContext.createOscillator();
+        const gainNode = audioContext.createGain();
+        oscillator.connect(gainNode);
+        gainNode.connect(audioContext.destination);
+        oscillator.type = 'sine';
+        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+        oscillator.start();
+        oscillator.stop(audioContext.currentTime + 0.5);
+      } catch (e) {}
+
+      // 🏷️ Fallback 2: Title Flashing
+      const originalTitle = document.title;
+      let isFlashing = true;
+      const interval = setInterval(() => {
+        document.title = isFlashing ? `⚠️ ${title}` : originalTitle;
+        isFlashing = !isFlashing;
+      }, 1000);
+      const stopFlashing = () => {
+        clearInterval(interval);
+        document.title = originalTitle;
+        window.removeEventListener('focus', stopFlashing);
+      };
+      window.addEventListener('focus', stopFlashing);
+
+      // 📲 System Notification
+      try {
+        if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+          const reg = await navigator.serviceWorker.getRegistration();
+          if (reg) {
+            await reg.showNotification(title, { body, icon, badge, tag: 'analysis-status', renotify: true });
+          } else {
+            new Notification(title, { body, icon });
+          }
+        } else if (Notification.permission === 'granted') {
+          new Notification(title, { body, icon });
+        }
+      } catch (err) {}
     }
   };
 
@@ -595,6 +670,24 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
     onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
     setLoading(false);
+  };
+
+  const handleNotificationToggle = async () => {
+    if (!("Notification" in window)) return;
+
+    if (Notification.permission === "granted") {
+      const nextState = !wantsNotification;
+      setWantsNotification(nextState);
+      if (nextState) {
+        new Notification(t('notification_granted'));
+      }
+    } else if (Notification.permission !== "denied") {
+      const permission = await Notification.requestPermission();
+      if (permission === "granted") {
+        setWantsNotification(true);
+        new Notification(t('notification_granted'));
+      }
+    }
   };
 
   return (
@@ -755,6 +848,27 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     )}
                   </AnimatePresence>
                   
+                  {/* Notification Toggle */}
+                  <button 
+                    onClick={handleNotificationToggle}
+                    className={twMerge(
+                      "flex items-center gap-2 px-4 py-2 rounded-2xl border-2 transition-all active:scale-95 w-full",
+                      wantsNotification 
+                        ? "bg-accent border-black text-black shadow-neo-sm" 
+                        : "bg-white/10 border-white/20 text-white/60 hover:border-white/40"
+                    )}
+                  >
+                    <Bell size={14} className={wantsNotification ? "fill-black" : ""} />
+                    <div className="text-left">
+                      <div className="text-[10px] font-black uppercase tracking-wider leading-none mb-0.5">
+                        {t('notification_ask')}
+                      </div>
+                      <div className="text-[8px] opacity-60 font-bold leading-none">
+                        {t('notification_ask_sub')}
+                      </div>
+                    </div>
+                  </button>
+
                   {/* Progress Indicator */}
                   <div className="flex flex-col items-center w-full gap-1.5 pt-1">
                     <div className="h-1 w-24 bg-white/10 rounded-full overflow-hidden">

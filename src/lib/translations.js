@@ -125,6 +125,8 @@ const translations = {
     keep_tracking: "繼續記錄吧，人類！ 🐼",
     share_not_supported: "您的瀏覽器不支援原生分享，請改用儲存圖片。",
     last_30_days: "最近 30 天",
+    last_14_days: "最近 14 天",
+    last_7_days: "最近 7 天",
     portion: "份量",
     custom: "客製",
     multiplier_format: "{n}倍的{name}",
@@ -155,6 +157,12 @@ const translations = {
     goal_maintain: "維持體重",
     goal_gain: "增肌/增重 (增加 300 kcal)",
     apply_suggestion: "套用建議數值",
+    notification_ask: "辨識完成後通知我？",
+    notification_ask_sub: "即使離開頁面，完成後也會收到通知 🐼",
+    notification_granted: "好的！辨識完成會通知你。",
+    notification_denied: "請允許通知權限以接收通知。",
+    notification_title: "AI 辨識完成！",
+    notification_body: "「{name}」已分析完畢，快回來記錄吧 🐼",
   },
   en: {
     app_title: "DAILY DIET",
@@ -282,6 +290,8 @@ const translations = {
     keep_tracking: "Keep tracking, human! 🐼",
     share_not_supported: "Native sharing not supported. Please save as image.",
     last_30_days: "LAST 30 DAYS",
+    last_14_days: "LAST 14 DAYS",
+    last_7_days: "LAST 7 DAYS",
     portion: "Portion",
     custom: "Custom",
     multiplier_format: "{n}x {name}",
@@ -312,6 +322,12 @@ const translations = {
     goal_maintain: "Maintain Weight",
     goal_gain: "Gain Weight (+300 kcal)",
     apply_suggestion: "Apply Suggestions",
+    notification_ask: "Notify me when done?",
+    notification_ask_sub: "Get a notification even if you leave the page 🐼",
+    notification_granted: "Got it! I'll notify you when finished.",
+    notification_denied: "Please enable notification permissions to receive updates.",
+    notification_title: "AI Analysis Complete!",
+    notification_body: "\"{name}\" is ready. Come back and log it! 🐼",
   }
 };
 
