@@ -117,45 +117,46 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       onContextMenu={(e) => { e.preventDefault(); }}
       className={`relative overflow-hidden flex flex-col p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className="flex flex-wrap items-center justify-between gap-y-2 gap-x-4 w-full">
-        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 flex-1 min-w-0">
-          <div className="font-black text-sm leading-tight break-words min-w-fit">{log.dish_name}</div>
-          <div className="flex items-center gap-2 shrink-0">
-            <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5 bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
-              <Clock size={10} />
-              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-            </span>
-            {log.location && (
-              <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[120px] bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
-                <MapPin size={10} />
-                {(() => {
-                  // Try to extract suburb (like "新莊區") from full address
-                  const full = log.location;
-                  const parts = full.split(' ');
-                  const citySub = parts[0]; 
-                  if (citySub.length > 3) return citySub.substring(3);
-                  return citySub;
-                })()}
-              </span>
-            )}
-            {log.category && (
-              <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg bg-black text-white italic border border-black">
-                {t(log.category)}
-              </span>
-            )}
+      <div className="flex flex-col gap-1.5 w-full">
+        {/* Top Row: Dish Name and Nutrition Info */}
+        <div className="flex items-start justify-between gap-3">
+          <div className="font-black text-sm leading-tight break-words flex-1 min-w-0 pt-0.5">{log.dish_name}</div>
+          <div className="flex items-center gap-x-1.5 text-[10px] font-bold font-mono shrink-0">
+             {log.calories > 0 && (
+               <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
+             )}
+             {log.protein > 0 && (
+               <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}</span>
+             )}
+             {log.water > 0 && (
+               <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🚰{log.water}</span>
+             )}
           </div>
         </div>
 
-        <div className="flex items-center gap-x-1.5 text-[10px] font-bold font-mono shrink-0">
-           {log.calories > 0 && (
-             <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
-           )}
-           {log.protein > 0 && (
-             <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}</span>
-           )}
-           {log.water > 0 && (
-             <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🚰{log.water}</span>
-           )}
+        {/* Bottom Row: Metadata (Time, Location, Category) */}
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5 bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5 shrink-0">
+            <Clock size={10} />
+            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+          </span>
+          {log.location && (
+            <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[120px] bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
+              <MapPin size={10} />
+              {(() => {
+                const full = log.location;
+                const parts = full.split(' ');
+                const citySub = parts[0]; 
+                if (citySub.length > 3) return citySub.substring(3);
+                return citySub;
+              })()}
+            </span>
+          )}
+          {log.category && (
+            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg bg-black text-white italic border border-black shrink-0">
+              {t(log.category)}
+            </span>
+          )}
         </div>
       </div>
 
