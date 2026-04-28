@@ -149,6 +149,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'favorites'
   const [aiLoading, setAiLoading] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
+  const [successToast, setSuccessToast] = useState(null);
   const [loadTime, setLoadTime] = useState(0);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -449,11 +450,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           if (exists === 0) await db.nutritionFacts.add({ fact: data.fun_fact, lang: getLanguage() });
         }
 
-        // 🚀 Notify user if they are in the background
-        if (document.visibilityState === 'hidden') {
-          const title = t('ai_complete_title');
-          const body = `${t('ai_complete_body')}\n${data.dish_name}: ${data.calories}kcal`;
-          await notifyUser(title, body);
+        // 🚀 Notify user
+        const title = t('ai_complete_title');
+        const body = `${t('ai_complete_body')}\n${data.dish_name}: ${data.calories}kcal`;
+        await notifyUser(title, body);
+
+        if (document.visibilityState === 'visible' && mode !== 'ai') {
+          setSuccessToast(data.dish_name);
+          setTimeout(() => setSuccessToast(null), 5000);
         }
       }
     } catch (err) {
@@ -463,11 +467,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       setAiError(errorMsg);
 
       // 🚀 Notify user of failure
-      if (document.visibilityState === 'hidden') {
-        const title = t('ai_fail_title');
-        const body = t('ai_fail_body');
-        await notifyUser(title, body);
-      }
+      const title = t('ai_fail_title');
+      const body = t('ai_fail_body');
+      await notifyUser(title, body);
     } finally {
       if (currentAnalysisId === analysisIdRef.current) {
         setAiLoading(false);
@@ -495,6 +497,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const icon = `${baseUrl}pwa-192x192.png`.replace(/\/+/g, '/');
     const badge = `${baseUrl}favicon.png`.replace(/\/+/g, '/');
     
+    if (!wantsNotificationRef.current) return;
+
     // 🔊 Fallback 1: Audio Feedback
     try {
       const audioContext = new (window.AudioContext || window.webkitAudioContext)();
@@ -524,7 +528,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     };
     window.addEventListener('focus', stopFlashing);
 
-    // 📲 System Notification
+    // 📲 System Notification (only if hidden)
+    if (document.visibilityState !== 'hidden') return;
     try {
       if (Notification.permission === 'granted' && wantsNotificationRef.current) {
         if ('serviceWorker' in navigator) {
@@ -699,6 +704,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     if (Notification.permission === "granted") {
       const nextState = !wantsNotification;
       setWantsNotification(nextState);
+      localStorage.setItem('diet_notify_preference', nextState);
       if (nextState) {
         new Notification(t('notification_granted'));
       }
@@ -706,6 +712,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       const permission = await Notification.requestPermission();
       if (permission === "granted") {
         setWantsNotification(true);
+        localStorage.setItem('diet_notify_preference', 'true');
         new Notification(t('notification_granted'));
       }
     }
@@ -714,6 +721,20 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   return (
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm">
       <div className="flex items-center justify-between gap-2 mb-2">
+        <AnimatePresence>
+          {successToast && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-0 left-0 right-0 z-50 flex justify-center"
+            >
+              <div className="bg-emerald-500 text-white px-4 py-2 rounded-2xl shadow-neo-sm font-black italic text-xs flex items-center gap-2">
+                <Check size={14} /> {successToast} {t('ai_complete_title')}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
         <div className="flex items-center gap-2 min-w-0">
           <h2 className="text-xl font-black italic"></h2>
           <button 
