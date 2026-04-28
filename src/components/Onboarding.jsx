@@ -54,7 +54,29 @@ const slides = [
 const Onboarding = ({ onComplete }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
 
-  const next = () => {
+  const next = async () => {
+    // 🚀 Handle Permissions Slide
+    if (slides[currentSlide].isPermission) {
+      // 1. Request Notification Permission
+      if ("Notification" in window && Notification.permission !== "granted") {
+        await Notification.requestPermission();
+      }
+
+      // 2. Request Location Permission
+      if (navigator.geolocation) {
+        await new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            () => {
+              localStorage.setItem('location_granted', 'true');
+              resolve();
+            },
+            () => resolve(),
+            { timeout: 5000 }
+          );
+        });
+      }
+    }
+
     if (currentSlide < slides.length - 1) {
       setCurrentSlide(currentSlide + 1);
     } else {
