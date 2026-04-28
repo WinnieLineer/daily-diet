@@ -40,6 +40,14 @@ const slides = [
     desc: 'onboarding_goal_desc',
     icon: <BarChart3 size={48} />,
     color: 'bg-accent'
+  },
+  {
+    key: 'permissions',
+    title: 'notification_title',
+    desc: 'notification_desc',
+    icon: '🔔',
+    color: 'bg-white',
+    isPermission: true
   }
 ];
 

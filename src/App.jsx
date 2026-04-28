@@ -117,37 +117,56 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       onContextMenu={(e) => { e.preventDefault(); }}
       className={`relative overflow-hidden flex flex-col p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className="flex flex-col gap-1.5 w-full">
-        {/* Top Row: Dish Name and Nutrition Info */}
+      <div className={`flex flex-col gap-2.5 w-full transition-all duration-300 ${showActions ? 'pr-[145px] opacity-40 blur-[1px]' : ''}`}>
         <div className="flex items-start justify-between gap-3">
-          <div className="font-black text-sm leading-tight break-words flex-1 min-w-0 pt-0.5">{log.dish_name}</div>
-          <div className="flex items-center gap-x-1.5 text-[10px] font-bold font-mono shrink-0">
-             {log.calories > 0 && (
-               <span className="text-black bg-accent px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🔥{log.calories}</span>
-             )}
-             {log.protein > 0 && (
-               <span className="text-white bg-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🍖{log.protein}</span>
-             )}
-             {log.water > 0 && (
-               <span className="text-black border-2 border-black px-1.5 py-0.5 rounded flex items-center gap-0.5 whitespace-nowrap">🚰{log.water}</span>
-             )}
+          <div className="font-black text-sm leading-tight break-words flex-1 min-w-0">{log.dish_name}</div>
+          <div className="flex flex-col items-end gap-1 shrink-0">
+            {log.calories > 0 && (
+              <span className="text-[10px] font-black bg-accent px-1.5 py-0.5 rounded border border-black/10 shadow-neo-sm whitespace-nowrap">🔥{log.calories}</span>
+            )}
+            <div className="flex items-center gap-1">
+              {log.protein > 0 && (
+                <span className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍖{log.protein}</span>
+              )}
+              {log.water > 0 && (
+                <span className="text-[10px] font-black text-black border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}</span>
+              )}
+            </div>
           </div>
         </div>
 
-        {/* Bottom Row: Metadata (Time, Location, Category) */}
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5 bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5 shrink-0">
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+          {/* Meal Tag */}
+          {(() => {
+            const hour = new Date(log.timestamp).getHours();
+            let meal = { label: '宵夜', color: 'bg-zinc-100 text-zinc-500' };
+            if (hour >= 5 && hour < 11) meal = { label: '早餐', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
+            else if (hour >= 11 && hour < 14) meal = { label: '午餐', color: 'bg-amber-50 text-amber-600 border-amber-100' };
+            else if (hour >= 14 && hour < 17) meal = { label: '下午茶', color: 'bg-rose-50 text-rose-600 border-rose-100' };
+            else if (hour >= 17 && hour < 21) meal = { label: '晚餐', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
+            
+            return (
+              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${meal.color} uppercase tracking-tight`}>
+                {meal.label}
+              </span>
+            );
+          })()}
+
+          <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5 bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
             <Clock size={10} />
             {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
           </span>
+
           {log.location && (
-            <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[120px] bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
+            <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[140px] bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
               <MapPin size={10} />
               {(() => {
                 const full = log.location;
                 const parts = full.split(' ');
                 const citySub = parts[0]; 
-                if (citySub.length > 3) return citySub.substring(3);
+                if (citySub.length > 3) {
+                  return citySub.substring(3);
+                }
                 return citySub;
               })()}
             </span>
@@ -217,6 +236,13 @@ function App() {
   // Force reload on version change to clear cache
   useEffect(() => {
     const checkVersion = async () => {
+      // 🚀 CRITICAL: Do not reload if we are in the middle of AI analysis
+      const isAnalyzing = document.body.classList.contains('ai-analyzing');
+      if (isAnalyzing) {
+        console.log("AI Analysis in progress, delaying version check reload.");
+        return;
+      }
+
       try {
         // Fetch version.json with a unique timestamp to bypass all caches
         const response = await fetch(`/daily-diet/version.json?t=${Date.now()}`, {
@@ -290,6 +316,7 @@ function App() {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
   }, []);
+
   const [recentLogs, setRecentLogs] = useState([]);
   const [historyGroups, setHistoryGroups] = useState([]); // Array of { date, logs, totalCalories, totalProtein }
   const [expandedGroups, setExpandedGroups] = useState({}); // Record of date -> boolean
@@ -692,7 +719,7 @@ function App() {
                           };
 
                           return (
-                            <div key={group.date} className="flex flex-col gap-2 p-3 bg-zinc-50 rounded-2xl border-2 border-transparent hover:border-black transition-all">
+                            <div key={group.date} className="flex flex-col gap-2 p-3 bg-white rounded-2xl border-2 border-transparent hover:border-black transition-all">
                               <button 
                                 onClick={() => toggleGroup(group.date)}
                                 className="w-full flex items-center justify-between group/header"
@@ -720,6 +747,7 @@ function App() {
                                     </div>
                                   </div>
 
+                                  {/* Progress Bars - Standardized & Clean */}
                                   <div className="flex gap-1 w-full mt-0.5 pr-8">
                                     <div className="flex-1 h-1.5 bg-gray-200/50 rounded-full overflow-hidden">
                                       <div className={`h-full transition-all duration-700 ${getCalColor(caloriePercent)}`} style={{ width: `${Math.min(caloriePercent, 100)}%` }} />
@@ -776,22 +804,35 @@ function App() {
           return (
             <Reorder.Item 
               key={item} 
-              value={item} 
+              value={item}
               dragListener={isEditingLayout}
-              className={`relative ${isEditingLayout ? 'rounded-[2rem] border-4 border-dashed border-[#ffb700] p-1 pb-6 mb-4 cursor-grab active:cursor-grabbing bg-[#ffb700]/5 transition-colors' : 'mb-6'}`}
+              className="relative group"
             >
               {isEditingLayout && (
-                <div className="absolute -top-3 -right-2 z-50 bg-[#ffb700] text-black border-4 border-black p-2 rounded-2xl shadow-neo-sm transform rotate-3 flex items-center justify-center">
-                  <GripHorizontal size={24} className="animate-pulse" />
-                </div>
+                <div className="absolute -top-3 -left-3 -right-3 -bottom-3 border-4 border-dashed border-black/20 rounded-[2.5rem] pointer-events-none z-0" />
               )}
-              <div className={isEditingLayout ? 'pointer-events-none opacity-80' : ''}>
+              <div className="relative z-10">
                 {blockContent}
               </div>
+              {isEditingLayout && (
+                <div className="absolute top-4 right-4 z-50 bg-black text-white p-2 rounded-xl shadow-neo-sm cursor-grab active:cursor-grabbing">
+                  <GripHorizontal size={20} />
+                </div>
+              )}
             </Reorder.Item>
           );
         })}
       </Reorder.Group>
+
+
+      <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
+        <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center">
+          <p className="text-[8px] sm:text-[10px] font-bold tracking-widest uppercase italic whitespace-nowrap">
+            <span className="text-accent">© 2026 DailyDiet - 飲控萬歲 🐼</span>
+            <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
+          </p>
+        </div>
+      </footer>
 
       <SharingCard 
         isOpen={showShare}
@@ -801,15 +842,6 @@ function App() {
         streak={streak}
         advice={advice}
       />
-
-      <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50 pointer-events-none">
-        <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center pointer-events-auto">
-          <p className="text-[8px] sm:text-[10px] font-black tracking-widest uppercase italic whitespace-nowrap">
-            <span className="text-accent">© 2026 DailyDiet - {t('settings_copyright')} 🐼</span>
-            <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
-          </p>
-        </div>
-      </footer>
     </div>
   );
 }

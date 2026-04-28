@@ -372,6 +372,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setAiError(null);
     setLoadTime(ANALYSIS_DURATION_SECONDS);
 
+    // 🚀 Signal to App that we are busy (prevents auto-reload on visibility change)
+    document.body.classList.add('ai-analyzing');
+
     try {
       // 🚀 1. Check Image Cache First for consistency
       const imgHash = await hashImage(compressedBase64);
@@ -440,12 +443,12 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           if (exists === 0) await db.nutritionFacts.add({ fact: data.fun_fact, lang: getLanguage() });
         }
 
-        // 🚀 Notification Logic (Success)
-        (async () => {
-          const title = t('notification_title');
-          const body = t('notification_body').replace('{name}', data.dish_name);
+        // 🚀 Notify user if they are in the background
+        if (document.visibilityState === 'hidden') {
+          const title = t('ai_complete_title');
+          const body = `${t('ai_complete_body')}\n${data.dish_name}: ${data.calories}kcal`;
           await notifyUser(title, body);
-        })();
+        }
       }
     } catch (err) {
       if (currentAnalysisId !== analysisIdRef.current) return;
@@ -453,71 +456,72 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       const errorMsg = err.message || t('ai_error') || "AI 辨識發生錯誤，請稍後再試。";
       setAiError(errorMsg);
 
-      // 🚀 Notification Logic (Error)
-      (async () => {
-        const title = t('ai_error_title');
-        const body = errorMsg;
+      // 🚀 Notify user of failure
+      if (document.visibilityState === 'hidden') {
+        const title = t('ai_fail_title');
+        const body = t('ai_fail_body');
         await notifyUser(title, body);
-      })();
+      }
     } finally {
       if (currentAnalysisId === analysisIdRef.current) {
         setLoading(false);
         setIsResuming(false);
+        document.body.classList.remove('ai-analyzing');
       }
     }
   };
 
   // Generic Notification Helper
   const notifyUser = async (title, body) => {
-    const currentWantsNotification = wantsNotificationRef.current;
-    if (currentWantsNotification && document.visibilityState === 'hidden') {
-      const baseUrl = import.meta.env.BASE_URL || '/';
-      const icon = `${baseUrl}pwa-192x192.png`.replace(/\/+/g, '/');
-      const badge = `${baseUrl}favicon.png`.replace(/\/+/g, '/');
-      
-      // 🔊 Fallback 1: Audio Feedback
-      try {
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-        gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-        oscillator.start();
-        oscillator.stop(audioContext.currentTime + 0.5);
-      } catch (e) {}
+    // If permission not granted, we can't do system notification but we can still flash title/sound
+    const baseUrl = import.meta.env.BASE_URL || '/';
+    const icon = `${baseUrl}pwa-192x192.png`.replace(/\/+/g, '/');
+    const badge = `${baseUrl}favicon.png`.replace(/\/+/g, '/');
+    
+    // 🔊 Fallback 1: Audio Feedback
+    try {
+      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {}
 
-      // 🏷️ Fallback 2: Title Flashing
-      const originalTitle = document.title;
-      let isFlashing = true;
-      const interval = setInterval(() => {
-        document.title = isFlashing ? `⚠️ ${title}` : originalTitle;
-        isFlashing = !isFlashing;
-      }, 1000);
-      const stopFlashing = () => {
-        clearInterval(interval);
-        document.title = originalTitle;
-        window.removeEventListener('focus', stopFlashing);
-      };
-      window.addEventListener('focus', stopFlashing);
+    // 🏷️ Fallback 2: Title Flashing
+    const originalTitle = document.title;
+    let isFlashing = true;
+    const interval = setInterval(() => {
+      document.title = isFlashing ? `⚠️ ${title}` : originalTitle;
+      isFlashing = !isFlashing;
+    }, 1000);
+    const stopFlashing = () => {
+      clearInterval(interval);
+      document.title = originalTitle;
+      window.removeEventListener('focus', stopFlashing);
+    };
+    window.addEventListener('focus', stopFlashing);
 
-      // 📲 System Notification
-      try {
-        if ('serviceWorker' in navigator && Notification.permission === 'granted') {
+    // 📲 System Notification
+    try {
+      if (Notification.permission === 'granted') {
+        if ('serviceWorker' in navigator) {
           const reg = await navigator.serviceWorker.getRegistration();
           if (reg) {
             await reg.showNotification(title, { body, icon, badge, tag: 'analysis-status', renotify: true });
           } else {
             new Notification(title, { body, icon });
           }
-        } else if (Notification.permission === 'granted') {
+        } else {
           new Notification(title, { body, icon });
         }
-      } catch (err) {}
-    }
+      }
+    } catch (err) {}
   };
 
   // locationPromise: optional Promise<string|null> for background location resolution
@@ -770,484 +774,465 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 cameraInputRef.current?.click();
               } else {
                 setShowDesktopCamera(true);
+                // Pre-fetch location while camera is opening
+                navigator.geolocation.getCurrentPosition(
+                  pos => { pendingCoordsRef.current = pos.coords; },
+                  () => {},
+                  { timeout: 5000 }
+                );
               }
             }}
-            className="group flex flex-col items-center justify-center p-6 bg-black text-white rounded-[2.5rem] border-4 border-black hover:bg-zinc-800 transition-all active:scale-95 shadow-neo-sm"
+            className="group flex flex-col items-center justify-center gap-3 p-6 bg-accent border-4 border-black rounded-3xl shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
-            <div className="bg-accent text-black p-4 rounded-2xl mb-3 group-hover:scale-110 transition-transform">
-              <Camera size={28} />
+            <div className="bg-white p-3 rounded-2xl border-4 border-black group-hover:rotate-6 transition-transform">
+              <Camera size={32} />
             </div>
-            <div className="text-center">
-              <div className="font-black text-lg italic">{t('camera')}</div>
-              <div className="text-[10px] uppercase tracking-widest text-white/40 font-bold">{t('camera_sub')}</div>
-            </div>
+            <span className="font-black italic text-lg">{t('camera')}</span>
           </button>
-
+          
           <button 
             onClick={() => galleryInputRef.current?.click()}
-            className="group flex flex-col items-center justify-center p-6 bg-white text-black rounded-[2.5rem] border-4 border-black hover:bg-gray-50 transition-all active:scale-95 shadow-neo-sm"
+            className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-4 border-black rounded-3xl shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
-            <div className="bg-gray-100 text-black p-4 rounded-2xl mb-3 group-hover:scale-110 transition-transform border-2 border-black/5">
-              <ImageIcon size={28} />
+            <div className="bg-zinc-100 p-3 rounded-2xl border-4 border-black group-hover:-rotate-6 transition-transform">
+              <ImageIcon size={32} />
             </div>
-            <div className="text-center">
-              <div className="font-black text-lg italic">{t('gallery')}</div>
-              <div className="text-[10px] uppercase tracking-widest text-black/40 font-bold">{t('gallery_sub')}</div>
-            </div>
+            <span className="font-black italic text-lg">{t('gallery')}</span>
           </button>
 
-          {/* Hidden inputs */}
-          <input type="file" ref={cameraInputRef} onChange={handleImageUpload} accept="image/*" capture="environment" className="hidden" />
-          <input type="file" ref={galleryInputRef} onChange={handleImageUpload} accept="image/*" className="hidden" />
+          <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
+          <input type="file" accept="image/*" className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
         </motion.div>
       )}
 
       {showDesktopCamera && (
         <DesktopCamera 
-          onCapture={handleCameraCapture} 
           onClose={() => setShowDesktopCamera(false)} 
+          onCapture={handleCameraCapture}
           onLocationReady={(coords) => { pendingCoordsRef.current = coords; }}
         />
       )}
 
-
-
       {mode === 'ai' && preview && (
-        <div className="w-full space-y-4">
-          <div className="aspect-[3/4] border-4 border-black rounded-[2.5rem] overflow-hidden relative bg-zinc-900 flex items-center justify-center shadow-neo">
-            <img src={preview} alt="Preview" className="w-full h-full object-cover opacity-40 blur-sm absolute inset-0" />
-            <img src={preview} alt="Preview" className="relative z-10 max-w-full max-h-full object-contain" />
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <div className="relative aspect-square sm:aspect-video rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo group">
+            <img src={preview} className="w-full h-full object-cover" alt="Preview" />
             {loading && (
-              <div className="absolute inset-0 bg-black/90 flex flex-col items-center backdrop-blur-md z-50 overflow-y-auto custom-scrollbar">
-                <div className="flex flex-col items-center w-full max-w-[280px] space-y-3 py-6 px-4 m-auto relative">
-                  {/* Status Badge */}
-                  <div className="bg-accent/20 text-accent px-3 py-1 rounded-full border border-accent/40 inline-flex items-center gap-2 shadow-[0_0_10px_rgba(255,183,0,0.1)]">
-                    <Loader2 className="animate-spin text-accent" size={14} />
-                    <span className="text-[10px] font-black uppercase tracking-[0.2em]">
-                      {isResuming ? t('resuming_analysis') : t('ai_analyzing_status')}
-                    </span>
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center">
+                <div className="relative mb-6">
+                  <Loader2 size={64} className="text-accent animate-spin" strokeWidth={3} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-white font-black font-mono text-sm">{loadTime}s</span>
                   </div>
-                  
-                  {/* Fact Box */}
-                  <AnimatePresence mode="wait">
-                    {nutritionFacts.length > 0 && (
-                      <motion.div
-                        key={currentFactIndex}
-                        initial={{ opacity: 0, scale: 0.98 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.98 }}
-                        className="text-center bg-white/5 p-4 rounded-3xl border border-white/10 w-full"
-                      >
-                        <span className="text-accent/60 font-black uppercase tracking-[0.2em] text-[8px] block border-b border-accent/20 pb-1 mb-2">
-                          {t('food_fact')}
-                        </span>
-                        <p className="text-white font-bold italic text-xs leading-relaxed">
-                          "{nutritionFacts[currentFactIndex]?.fact}"
-                        </p>
-                      </motion.div>
-                    )}
-                  </AnimatePresence>
-                  
-                  {/* Notification Toggle */}
-                  <button 
-                    onClick={handleNotificationToggle}
-                    className={twMerge(
-                      "flex items-center gap-2 px-4 py-2 rounded-2xl border-2 transition-all active:scale-95 w-full",
-                      wantsNotification 
-                        ? "bg-accent border-black text-black shadow-neo-sm" 
-                        : "bg-white/10 border-white/20 text-white/60 hover:border-white/40"
-                    )}
-                  >
-                    <Bell size={14} className={wantsNotification ? "fill-black" : ""} />
-                    <div className="text-left">
-                      <div className="text-[10px] font-black uppercase tracking-wider leading-none mb-0.5">
-                        {t('notification_ask')}
-                      </div>
-                      <div className="text-[8px] opacity-60 font-bold leading-none">
-                        {t('notification_ask_sub')}
-                      </div>
-                    </div>
-                  </button>
-
-                  {/* Progress Indicator */}
-                  <div className="flex flex-col items-center w-full gap-1.5 pt-1">
-                    <div className="h-1 w-24 bg-white/10 rounded-full overflow-hidden">
-                      <motion.div 
-                        className="h-full bg-accent"
-                        initial={{ width: "0%" }}
-                        animate={{ width: "100%" }}
-                        transition={{ duration: ANALYSIS_DURATION_SECONDS, ease: "linear" }}
-                      />
-                    </div>
-                    <span className="text-accent font-mono text-[10px] font-black tracking-tighter">
-                      {loadTime} {t('sec_remaining')}
-                    </span>
-                  </div>
-
-                  <button 
-                    onClick={async () => {
-                      analysisIdRef.current++; // 🚀 Invalidate pending request immediately
-                      await db.pendingAnalysis.delete('current'); // Clear persistence
-                      setLoading(false);
-                      setIsResuming(false);
-                      setPreview(null);
-                      setAiError(null);
-                    }}
-                    className="mt-4 text-[11px] font-black uppercase tracking-[0.15em] text-zinc-100 hover:text-white transition-all bg-white/15 px-6 py-2.5 rounded-full border-2 border-white/20 hover:border-white/40 hover:bg-white/20 active:scale-95 shadow-[0_0_20px_rgba(255,255,255,0.05)] shrink-0"
-                  >
-                    {t('cancel_analysis')}
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
-
-      <AnimatePresence>
-        {(mode === 'ai' && result) && (
-          <motion.div
-            key="result"
-            initial={{ opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="w-full space-y-4 mt-2"
-          >
-            <div className="p-4 bg-black text-white rounded-3xl border-4 border-black shadow-neo-sm">
-              <h3 className="font-black text-lg leading-tight mb-3">{result.dish_name}</h3>
-              
-              {/* Portion Multiplier Selector */}
-              <div className="flex flex-wrap items-center gap-2 mb-4 bg-white/5 p-2 rounded-2xl border border-white/10">
-                <div className="flex items-center gap-1.5 mr-1">
-                  <span className="text-[10px] font-black uppercase tracking-widest text-white/40">{t('portion')}</span>
-                </div>
-                <div className="flex gap-1">
-                  {[0.5, 1, 2].map(val => (
-                    <button 
-                      key={val}
-                      onClick={() => {
-                        setShowCustomMultiplier(false);
-                        handleMultiplierChange(val);
-                      }}
-                      className={twMerge(
-                        "px-3 py-1 rounded-xl text-[10px] font-black transition-all border-2",
-                        multiplier === val && !showCustomMultiplier
-                          ? "bg-accent text-black border-accent" 
-                          : "bg-white/5 text-white/60 border-transparent hover:bg-white/10"
-                      )}
-                    >
-                      {val === 0.5 ? '1/2' : val + 'x'}
-                    </button>
-                  ))}
-                  <button 
-                    onClick={() => setShowCustomMultiplier(!showCustomMultiplier)}
-                    className={twMerge(
-                      "px-3 py-1 rounded-xl text-[10px] font-black transition-all border-2",
-                      showCustomMultiplier 
-                        ? "bg-accent text-black border-accent" 
-                        : "bg-white/5 text-white/60 border-transparent hover:bg-white/10"
-                    )}
-                  >
-                    {t('custom')}
-                  </button>
                 </div>
                 
-                <AnimatePresence>
-                  {showCustomMultiplier && (
-                    <motion.div 
-                      initial={{ opacity: 0, width: 0 }}
-                      animate={{ opacity: 1, width: 'auto' }}
-                      exit={{ opacity: 0, width: 0 }}
-                      className="overflow-hidden flex items-center gap-2 ml-auto"
-                    >
-                      <input 
-                        type="number"
-                        step="0.1"
-                        min="0.1"
-                        value={multiplier}
-                        onChange={(e) => handleMultiplierChange(e.target.value)}
-                        className="w-16 bg-white/10 border-2 border-white/20 rounded-lg px-2 py-1 text-xs font-bold text-white focus:outline-none focus:border-accent transition-colors"
-                      />
-                      <span className="text-xs font-bold text-white/40">x</span>
-                    </motion.div>
-                  )}
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentFactIndex}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -10 }}
+                    className="space-y-3"
+                  >
+                    <div className="bg-accent text-black px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest inline-block border-2 border-black">
+                      Did you know?
+                    </div>
+                    <p className="text-white font-black italic text-base leading-tight">
+                      {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
+                    </p>
+                  </motion.div>
                 </AnimatePresence>
+
+                <div className="mt-8 flex gap-2">
+                  {[...Array(3)].map((_, i) => (
+                    <motion.div
+                      key={i}
+                      animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+                      transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
+                      className="w-2 h-2 bg-accent rounded-full"
+                    />
+                  ))}
+                </div>
+                
+                {isResuming && (
+                  <p className="mt-4 text-accent text-xs font-black italic animate-pulse">
+                    {t('resuming_analysis')}
+                  </p>
+                )}
+              </div>
+            )}
+            {!loading && (
+              <button 
+                onClick={() => { setPreview(null); setResult(null); setAiError(null); }}
+                className="absolute top-4 right-4 bg-black/50 hover:bg-black text-white p-2 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-95"
+              >
+                <X size={20} />
+              </button>
+            )}
+          </div>
+
+          {aiError && (
+            <NeoCard className="bg-rose-50 border-rose-500 text-rose-600 p-4">
+              <div className="flex items-start gap-3">
+                <AlertCircle className="shrink-0 mt-0.5" />
+                <div className="space-y-2">
+                  <p className="font-black italic">{aiError}</p>
+                  <NeoButton 
+                    variant="black" 
+                    className="h-10 text-xs flex items-center justify-center gap-2"
+                    onClick={() => performAnalysis(preview, null)}
+                  >
+                    <RefreshCw size={14} /> {t('retry')}
+                  </NeoButton>
+                </div>
+              </div>
+            </NeoCard>
+          )}
+
+          {result && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="space-y-4"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-accent border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
+                  <div className="flex items-center gap-2 mb-1 opacity-60">
+                    <Flame size={14} className="font-black" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t('calories')}</span>
+                  </div>
+                  <div className="text-2xl font-black italic">{result.calories} <span className="text-xs">kcal</span></div>
+                </div>
+                <div className="bg-white border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
+                  <div className="flex items-center gap-2 mb-1 opacity-60">
+                    <Star size={14} className="font-black" />
+                    <span className="text-[10px] font-black uppercase tracking-widest">{t('protein')}</span>
+                  </div>
+                  <div className="text-2xl font-black italic">{result.protein} <span className="text-xs">g</span></div>
+                </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-2 font-mono text-[10px] sm:text-xs mb-4">
-                <div className="flex flex-col items-center justify-center bg-accent text-black p-2 rounded-2xl font-bold border-2 border-black/10">
-                  <Flame size={14} className="mb-0.5" />
-                  <span>{result.calories} kcal</span>
-                </div>
-                <div className="flex flex-col items-center justify-center bg-white text-black p-2 rounded-2xl font-bold border-2 border-black/10">
-                  <span className="mb-0.5 text-base">🍖</span>
-                  <span>{result.protein}g {t('protein')}</span>
-                </div>
-                <div className="flex flex-col items-center justify-center bg-black text-white p-2 rounded-2xl font-bold border-2 border-black/10">
-                  <span className="mb-0.5 text-base">🚰</span>
-                  <span>{result.water}ml {t('water_unit')}</span>
-                </div>
-              </div>
-              
-              <div className="border-t-2 border-white/20 pt-3 flex gap-2">
-                <span className="text-accent flex-shrink-0 mt-0.5">📝</span>
-                <p className="text-sm opacity-90 italic">"{result.description}"</p>
-              </div>
+              <NeoCard className="bg-white border-4 border-black">
+                <div className="flex justify-between items-start gap-4 mb-4">
+                  <div className="flex-1">
+                    <h3 className="text-2xl font-black italic leading-tight mb-2">
+                      {result.dish_name}
+                    </h3>
+                    
+                    {/* Portion Control Multiplier */}
+                    <div className="flex flex-wrap items-center gap-2 mb-4">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 w-full mb-1">{t('portion_size')}</span>
+                      {[0.5, 1, 1.5, 2].map(m => (
+                        <button
+                          key={m}
+                          onClick={() => {
+                            handleMultiplierChange(m);
+                            setShowCustomMultiplier(false);
+                          }}
+                          className={twMerge(
+                            "px-3 py-1.5 rounded-xl font-black text-xs border-2 transition-all active:scale-95",
+                            multiplier === m && !showCustomMultiplier
+                              ? "bg-black text-white border-black"
+                              : "bg-white text-black border-black/10 hover:border-black"
+                          )}
+                        >
+                          x{m}
+                        </button>
+                      ))}
+                      <button
+                        onClick={() => setShowCustomMultiplier(true)}
+                        className={twMerge(
+                          "px-3 py-1.5 rounded-xl font-black text-xs border-2 transition-all active:scale-95",
+                          showCustomMultiplier
+                            ? "bg-black text-white border-black"
+                            : "bg-white text-black border-black/10 hover:border-black"
+                        )}
+                      >
+                        {t('custom')}...
+                      </button>
+                    </div>
 
-              {/* Location Feedback */}
-              <div className="mt-4 pt-3 border-t-2 border-white/10">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2 min-w-0">
-                    <MapPin size={14} className={locationLoading ? "animate-bounce text-accent" : "text-gray-400"} />
-                    <div className="flex flex-col">
-                      <span className="text-[9px] font-black uppercase tracking-widest text-white/50">{t('location')}</span>
-                      <span className="text-xs font-bold truncate">
-                        {locationLoading ? t('geocoding') : (result.location || t('no_location_found'))}
-                      </span>
+                    {showCustomMultiplier && (
+                      <motion.div 
+                        initial={{ opacity: 0, x: -10 }}
+                        animate={{ opacity: 1, x: 0 }}
+                        className="flex items-center gap-2 mb-4"
+                      >
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0.1"
+                          value={multiplier}
+                          onChange={(e) => handleMultiplierChange(e.target.value)}
+                          className="w-20 border-2 border-black p-1.5 rounded-xl font-black text-center"
+                          autoFocus
+                        />
+                        <span className="font-black text-xs">{t('times_portion')}</span>
+                      </motion.div>
+                    )}
+
+                    <div className="flex flex-wrap items-center gap-2">
+                      <div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5">
+                        <MapPin size={14} className="text-zinc-400" />
+                        <span className="text-[10px] font-bold text-zinc-500">
+                          {locationLoading ? t('locating') : (result.location || t('unknown_location'))}
+                        </span>
+                        {!locationLoading && !result.location && (
+                          <button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1">
+                            <RefreshCw size={12} className="animate-pulse" />
+                          </button>
+                        )}
+                      </div>
+                      
+                      {/* Meal Category Selector */}
+                      <div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">
+                        {['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (
+                          <button
+                            key={cat}
+                            onClick={() => setSelectedCategory(cat)}
+                            className={twMerge(
+                              "px-2 py-1 text-[9px] font-black uppercase tracking-tighter rounded-lg transition-all",
+                              selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600"
+                            )}
+                          >
+                            {t(cat)}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
                   
-                  {!result.location && !locationLoading && (
-                    <button 
-                      onClick={fetchCurrentLocation}
-                      className="bg-white/10 hover:bg-white/20 text-[10px] font-black px-2 py-1 rounded-lg transition-colors border border-white/20 flex items-center gap-1"
-                    >
-                      <RefreshCw size={10} /> {t('get_current_location')}
-                    </button>
+                  {result.water > 0 && (
+                    <div className="bg-sky-50 border-2 border-sky-200 p-2 rounded-2xl flex flex-col items-center gap-1 shrink-0">
+                      <div className="text-sky-500 font-black text-xs">🚰</div>
+                      <div className="text-[10px] font-black text-sky-600">+{result.water}ml</div>
+                    </div>
                   )}
                 </div>
-                {!result.location && !locationLoading && (
-                  <p className="text-[9px] text-white/30 italic mt-1">{t('location_hint')}</p>
+
+                {result.description && (
+                  <div className="bg-zinc-50 border-l-4 border-black p-3 mb-6 rounded-r-xl">
+                    <div className="flex gap-2 items-start opacity-40 mb-1">
+                      <Lightbulb size={12} />
+                      <span className="text-[9px] font-black uppercase tracking-widest">{t('composition')}</span>
+                    </div>
+                    <p className="text-xs font-bold text-zinc-600 leading-relaxed italic">
+                      {result.description}
+                    </p>
+                  </div>
                 )}
+
+                {result.panda_comment && (
+                  <div className="bg-accent/10 border-4 border-black p-4 rounded-[2rem] mb-6 relative shadow-neo-sm">
+                    <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                      <MessageSquareQuote size={10} className="fill-black" />
+                      <span className="text-[8px] font-black uppercase tracking-wider">{t('panda_coach')}</span>
+                    </div>
+                    <p className="text-sm font-black italic leading-snug">
+                      "{result.panda_comment}"
+                    </p>
+                  </div>
+                )}
+
+                <div className="flex gap-2">
+                  <NeoButton 
+                    variant="black" 
+                    className="flex-1 h-16 text-lg flex items-center justify-center gap-2 group"
+                    onClick={saveLog}
+                  >
+                    <Check size={24} className="group-hover:scale-110 transition-transform" />
+                    {t('log_meal')}
+                  </NeoButton>
+                  <button 
+                    onClick={() => { setPreview(null); setResult(null); }}
+                    className="w-16 h-16 bg-white border-4 border-black rounded-[1.5rem] flex items-center justify-center hover:bg-zinc-50 active:scale-95 transition-all shadow-neo-sm"
+                  >
+                    <Trash2 size={24} />
+                  </button>
+                </div>
+              </NeoCard>
+            </motion.div>
+          )}
+        </motion.div>
+      )}
+
+      {mode === 'manual' && (
+        <motion.div 
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="space-y-4"
+        >
+          <div className="space-y-3">
+            <div>
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1 ml-1">{t('food_name')}</label>
+              <input 
+                type="text" 
+                placeholder={t('manual_placeholder')}
+                value={manualEntry.dish_name}
+                onChange={(e) => setManualEntry({ ...manualEntry, dish_name: e.target.value })}
+                className="w-full border-4 border-black p-4 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none"
+              />
+            </div>
+            
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1 ml-1">{t('calories')}</label>
+                <input 
+                  type="number" 
+                  placeholder="0"
+                  value={manualEntry.calories}
+                  onChange={(e) => setManualEntry({ ...manualEntry, calories: e.target.value })}
+                  className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1 ml-1">{t('protein')}</label>
+                <input 
+                  type="number" 
+                  placeholder="0"
+                  value={manualEntry.protein}
+                  onChange={(e) => setManualEntry({ ...manualEntry, protein: e.target.value })}
+                  className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1 ml-1">{t('water_unit')}</label>
+                <input 
+                  type="number" 
+                  placeholder="0"
+                  value={manualEntry.water}
+                  onChange={(e) => setManualEntry({ ...manualEntry, water: e.target.value })}
+                  className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none"
+                />
               </div>
             </div>
 
-            <div className="space-y-3">
-              {result.fun_fact && (
-                <div className="p-4 bg-white border-4 border-black rounded-3xl shadow-neo-sm flex gap-3">
-                  <div className="bg-accent rounded-xl p-2 flex-shrink-0 border-2 border-black h-fit">
-                    <Lightbulb size={18} className="text-black" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('food_fact')}</span>
-                    <p className="text-sm font-bold leading-relaxed">{result.fun_fact}</p>
-                  </div>
+            <div className="flex gap-2">
+              <div className="flex-1">
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1 ml-1">{t('category')}</label>
+                <div className="flex bg-white border-4 border-black p-1 rounded-2xl">
+                  {['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (
+                    <button
+                      key={cat}
+                      onClick={() => setSelectedCategory(cat)}
+                      className={twMerge(
+                        "flex-1 py-2 text-[10px] font-black uppercase tracking-tighter rounded-xl transition-all",
+                        selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600"
+                      )}
+                    >
+                      {t(cat)}
+                    </button>
+                  ))}
                 </div>
-              )}
-              
-              {result.roast && (
-                <div className="p-4 bg-accent border-4 border-black rounded-3xl shadow-neo-sm flex gap-3">
-                  <div className="bg-black rounded-xl p-2 flex-shrink-0 border-2 border-black h-fit">
-                    <MessageSquareQuote size={18} className="text-white" />
-                  </div>
-                  <div>
-                    <span className="text-[10px] font-black uppercase tracking-widest text-black/40 block mb-1">{t('panda_roast')}</span>
-                    <p className="text-sm font-bold leading-relaxed italic">"{result.roast}"</p>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <div className="flex gap-2 pt-2">
-              <NeoButton 
-                className="flex-1" 
-                onClick={() => { 
-                  setPreview(null); 
-                  setResult(null); 
-                  setOriginalResult(null); 
-                  setMultiplier(1);
-                  setShowCustomMultiplier(false);
-                }}
-                disabled={loading}
-              >
-                {t('cancel')}
-              </NeoButton>
-              <NeoButton className="flex-1" variant="black" disabled={loading || !result} onClick={saveLog}>
-                <Check size={16} className="inline mr-1" /> {t('save_record')}
-              </NeoButton>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {mode === 'manual' && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-4 bg-white border-4 border-black p-4 rounded-3xl mt-2">
-          <div>
-            <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('food_name')}</label>
-            <input type="text" placeholder={t('food_placeholder')} value={manualEntry.dish_name} onChange={(e) => setManualEntry({...manualEntry, dish_name: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-medium" />
-          </div>
-          <div className="flex gap-3">
-            <div className="flex-1">
-              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('calories')} (kcal)</label>
-              <input type="number" placeholder="0" value={manualEntry.calories} onChange={(e) => setManualEntry({...manualEntry, calories: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('protein')} (g)</label>
-              <input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({...manualEntry, protein: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
-            </div>
-            <div className="flex-1">
-              <label className="text-xs font-black uppercase tracking-wider block mb-1.5 text-gray-500">{t('water_unit')} (ml)</label>
-              <input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({...manualEntry, water: e.target.value})} className="w-full border-4 border-black p-2.5 rounded-2xl focus:outline-none focus:ring-4 ring-accent/30 transition-all font-mono" />
+              </div>
             </div>
           </div>
           
-          <div className="flex flex-wrap gap-2">
-            {['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (
-              <button
-                key={cat}
-                onClick={() => setSelectedCategory(cat)}
-                className={twMerge(
-                  "px-3 py-1.5 rounded-xl text-xs font-black border-2 transition-all",
-                  selectedCategory === cat ? "bg-black text-white border-black" : "bg-gray-50 text-gray-400 border-transparent hover:bg-gray-100"
-                )}
-              >
-                {t(cat)}
-              </button>
-            ))}
-          </div>
-
-          <NeoButton className="w-full mt-1" variant="black" disabled={!manualEntry.dish_name} onClick={saveLog}>
-            <Check size={16} className="inline mr-1" /> {t('save_record')}
+          <NeoButton 
+            variant="black" 
+            className="w-full h-16 text-lg flex items-center justify-center gap-2 group disabled:opacity-50"
+            onClick={saveLog}
+            disabled={!manualEntry.dish_name || loading}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : <><Check size={24} /> {t('log_meal')}</>}
           </NeoButton>
         </motion.div>
       )}
 
       {mode === 'favorites' && (
-        <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="space-y-3 mt-2">
-          {/* Toast for quick add */}
-          <AnimatePresence>
-            {favToast && (
-              <motion.div
-                initial={{ opacity: 0, y: -10, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -10, scale: 0.95 }}
-                className="bg-white text-black text-xs font-black px-4 py-2 rounded-2xl border-4 border-black shadow-neo-sm flex items-center gap-2 justify-center"
-              >
-                <div className="bg-emerald-500 p-0.5 rounded-full border border-black">
-                  <Check size={10} strokeWidth={4} className="text-white" />
-                </div>
-                {favToast}
-              </motion.div>
-            )}
-          </AnimatePresence>
-
+        <motion.div 
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          className="space-y-4"
+        >
+          {favToast && (
+             <div className="bg-black text-white text-[10px] font-black px-3 py-2 rounded-xl text-center animate-bounce">
+               {favToast}
+             </div>
+          )}
+          
           {favorites.length > 0 ? (
-            favorites.map((fav) => (
-              <motion.div
-                key={fav.id}
-                layout
-                initial={{ opacity: 0, x: -10 }}
-                animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: 10 }}
-                className="flex items-center justify-between p-3 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors"
-              >
-                <div className="flex-1 min-w-0">
-                  <div className="font-black text-sm leading-tight truncate">{fav.dish_name}</div>
-                  <div className="flex items-center gap-1.5 mt-1 text-[10px] font-bold font-mono">
-                    {fav.calories > 0 && (
-                      <span className="text-black bg-accent px-1.5 py-0.5 rounded whitespace-nowrap">🔥{fav.calories}</span>
-                    )}
-                    {fav.protein > 0 && (
-                      <span className="text-white bg-black px-1.5 py-0.5 rounded whitespace-nowrap">🍖{fav.protein}g</span>
-                    )}
-                    {fav.water > 0 && (
-                      <span className="text-black border-2 border-black px-1.5 py-0.5 rounded whitespace-nowrap">🚰{fav.water}ml</span>
-                    )}
+            <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+              {favorites.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={async () => {
+                    setLoading(true);
+                    const now = new Date();
+                    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    await db.dietLogs.add({
+                      dish_name: item.dish_name,
+                      calories: item.calories,
+                      protein: item.protein,
+                      water: item.water || 0,
+                      description: item.description,
+                      date: localDate,
+                      timestamp: Date.now(),
+                      category: selectedCategory
+                    });
+                    setFavToast(t('added_to_today'));
+                    setTimeout(() => setFavToast(null), 1500);
+                    onLogAdded('fetch');
+                    setLoading(false);
+                  }}
+                  className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-sm truncate">{item.dish_name}</div>
+                    <div className="flex gap-2 text-[10px] font-bold font-mono text-zinc-400">
+                      <span>🔥 {item.calories}</span>
+                      <span>🍖 {item.protein}</span>
+                      {item.water > 0 && <span>🚰 {item.water}</span>}
+                    </div>
                   </div>
-                </div>
-                <div className="flex items-center gap-1 shrink-0 ml-2">
-                  <button
-                    onClick={async () => {
-                      const now = new Date();
-                      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-                      await db.dietLogs.add({
-                        dish_name: fav.dish_name,
-                        calories: fav.calories || 0,
-                        protein: fav.protein || 0,
-                        water: fav.water || 0,
-                        description: fav.description || '',
-                        date: localDate,
-                        timestamp: Date.now(),
-                        location: null
-                      });
-                      setFavToast(t('favorite_added_toast'));
-                      setTimeout(() => setFavToast(null), 1500);
-                      onLogAdded('fetch');
-                    }}
-                    className="bg-black text-white text-[10px] font-black px-3 py-1.5 rounded-xl border-2 border-black hover:bg-zinc-800 transition-all active:scale-95"
-                  >
-                    {t('quick_add')}
-                  </button>
-                  <button
-                    onClick={async () => {
-                      await db.favorites.delete(fav.id);
-                      loadFavorites();
-                    }}
-                    className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all"
-                    title={t('remove_favorite')}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                </div>
-              </motion.div>
-            ))
+                  <div className="flex items-center gap-2">
+                    <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
+                    <button 
+                      onClick={async (e) => {
+                        e.stopPropagation();
+                        await db.favorites.delete(item.id);
+                        loadFavorites();
+                      }}
+                      className="p-1 hover:text-rose-500"
+                    >
+                      <Trash2 size={14} />
+                    </button>
+                  </div>
+                </button>
+              ))}
+            </div>
           ) : (
-            <div className="text-center py-10 border-4 border-dashed border-gray-200 rounded-2xl">
-              <Star size={32} className="mx-auto mb-2 text-gray-300" />
-              <p className="text-gray-400 italic text-sm font-bold">{t('favorites_empty')}</p>
+            <div className="text-center py-10 border-4 border-dashed border-zinc-200 rounded-3xl">
+              <Star size={32} className="mx-auto text-zinc-200 mb-2" />
+              <p className="text-zinc-400 font-bold italic text-sm">{t('no_favorites')}</p>
             </div>
           )}
         </motion.div>
       )}
 
-      {/* AI Error Overlay - Moved to root level to avoid clipping */}
-      <AnimatePresence>
-        {!loading && aiError && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="absolute inset-0 z-[100] flex items-center justify-center p-6 bg-black/40 backdrop-blur-md rounded-[2.5rem]"
-          >
-            <motion.div 
-              initial={{ scale: 0.9, y: 20 }}
-              animate={{ scale: 1, y: 0 }}
-              className="bg-white border-4 border-black rounded-[2.5rem] p-8 shadow-neo w-full max-w-xs flex flex-col items-center text-center space-y-6"
-            >
-              <div className="bg-rose-100 p-4 rounded-full border-4 border-black shadow-neo-sm">
-                <AlertCircle className="text-rose-500" size={32} />
-              </div>
-              
-              <div className="space-y-2 w-full overflow-hidden">
-                <h3 className="text-xl font-black italic uppercase tracking-tighter">{t('ai_error_title')}</h3>
-                <div className="bg-rose-50/50 p-4 rounded-2xl border-2 border-dashed border-rose-200">
-                  <p className="text-[10px] font-mono font-bold text-rose-700/80 leading-relaxed break-all line-clamp-6 overflow-y-auto">
-                    {aiError}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-col w-full gap-3">
-                <button 
-                  onClick={() => performAnalysis(preview, result?.location)}
-                  className="w-full bg-accent text-black py-4 rounded-2xl border-4 border-black font-black text-sm shadow-neo active:translate-x-1 active:translate-y-1 active:shadow-none transition-all flex items-center justify-center gap-2"
-                >
-                  <RefreshCw size={18} /> {t('retry_button') || "重試一次"}
-                </button>
-                
-                <button 
-                  onClick={() => { setPreview(null); setAiError(null); }}
-                  className="w-full bg-white text-gray-400 py-3 rounded-2xl font-black text-xs hover:text-black transition-colors"
-                >
-                  {t('cancel') || "取消"}
-                </button>
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* Experimental Features Toggle (Admin/Pro) */}
+      <div className="flex justify-between items-center pt-2 px-2 border-t-2 border-black/5 opacity-40 hover:opacity-100 transition-opacity">
+        <div className="flex items-center gap-2">
+           <Bell size={12} className={Notification.permission === 'granted' ? 'text-emerald-500' : 'text-gray-400'} />
+           <span className="text-[8px] font-black uppercase tracking-widest">{t('notifications')}</span>
+        </div>
+        <button 
+          onClick={handleNotificationToggle}
+          className={twMerge(
+            "w-8 h-4 rounded-full border-2 border-black relative transition-colors",
+            Notification.permission === 'granted' ? "bg-accent" : "bg-gray-200"
+          )}
+        >
+          <div className={twMerge(
+            "absolute top-0.5 w-2 h-2 bg-black rounded-full transition-all",
+            Notification.permission === 'granted' ? "left-[18px]" : "left-0.5"
+          )} />
+        </button>
+      </div>
     </NeoCard>
   );
-};
-
-// Removed redundant export default
+}

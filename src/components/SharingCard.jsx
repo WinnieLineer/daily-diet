@@ -97,23 +97,23 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
             <div className="flex justify-between items-start mb-8">
               <div>
                 <h1 className="text-3xl font-black italic tracking-tighter leading-[0.85] mb-3">DAILY<br/>DIET</h1>
-                <div className="flex items-center gap-1.5 text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-0.5">
-                  <Calendar size={10} />
-                  {new Date().toLocaleDateString()}
+                <div className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-0.5">
+                  <span className="inline-flex items-center mt-[-1px]"><Calendar size={11} strokeWidth={2.5} /></span>
+                  <span className="ml-1">{new Date().toLocaleDateString()}</span>
                 </div>
               </div>
-              <div className="bg-black text-white px-3 py-1.5 rounded-xl border-2 border-black flex items-center gap-1.5 shadow-neo-sm">
-                <Flame size={14} className="text-orange-400 fill-orange-400" />
-                <span className="font-black italic text-sm">{streak} {t('streak_text')}</span>
+              <div className="bg-black text-white px-3 py-1.5 rounded-xl border-2 border-black flex items-center gap-1.5 shadow-neo-sm whitespace-nowrap shrink-0">
+                <Flame size={14} className="text-orange-400 fill-orange-400 shrink-0" />
+                <span className="font-black italic text-sm uppercase">{streak} {t('streak_text')}</span>
               </div>
             </div>
 
             {/* Panda Advice Section */}
             <div className="bg-white border-4 border-black p-4 rounded-2xl mb-6 shadow-neo-sm relative">
-              <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg">
+              <div className="absolute top-[-10px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg z-10">
                 <span className="text-[8px] font-black uppercase tracking-wider">{t('panda_says')}</span>
               </div>
-              <p className="text-lg font-black italic leading-tight text-black pt-1">
+              <p className="text-lg font-black italic leading-snug text-black pt-1 break-words">
                 "{advice || t('keep_tracking')}"
               </p>
             </div>
