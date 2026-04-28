@@ -26,11 +26,19 @@ const getLocalDateString = () => {
 const LogDetailModal = ({ log, onClose }) => {
   if (!log) return null;
   return (
-    <div className="fixed inset-0 w-screen h-screen z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto">
+    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+        onClick={onClose} 
+      />
       <motion.div 
         initial={{ opacity: 0, scale: 0.9, y: 20 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        className="bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh]"
+        exit={{ opacity: 0, scale: 0.9, y: 20 }}
+        className="relative bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh]"
       >
         {/* Header */}
         <div className="p-4 border-b-4 border-black flex items-center justify-between bg-accent/10">
@@ -78,7 +86,7 @@ const LogDetailModal = ({ log, onClose }) => {
                  <div className="bg-black text-white p-1 rounded-lg">
                    <Zap size={14} />
                  </div>
-                 <span className="text-xs font-black uppercase tracking-widest">{t('ai_mode')} {t('advice')}</span>
+                 <span className="text-xs font-black uppercase tracking-widest">{t('panda_coach')} {t('advice')}</span>
                </div>
                <p className="font-black italic text-sm leading-relaxed text-black/80">
                  {log.advice || log.description || t('no_advice')}
@@ -285,7 +293,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             >
               <Trash2 size={18} />
             </button>
-            {log.image ? (
+            {log.image && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onShowDetail(log); setShowActions(false); }}
                 className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
@@ -293,20 +301,13 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
               >
                 <Info size={18} />
               </button>
-            ) : (
-              <button 
-                onClick={(e) => { e.stopPropagation(); if (onAddToFavorite) onAddToFavorite(log); setShowActions(false); }}
-                className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
-                title={t('added_to_favorites')}
-              >
-                <Star size={18} />
-              </button>
             )}
             <button 
-              onClick={(e) => { e.stopPropagation(); setShowActions(false); }}
-              className="p-2 hover:bg-black/10 transition-all rounded-xl border-2 border-transparent"
+              onClick={(e) => { e.stopPropagation(); if (onAddToFavorite) onAddToFavorite(log); setShowActions(false); }}
+              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+              title={t('added_to_favorites')}
             >
-              <X size={18} />
+              <Star size={18} />
             </button>
           </motion.div>
         )}

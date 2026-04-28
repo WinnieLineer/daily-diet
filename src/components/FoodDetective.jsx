@@ -170,6 +170,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [multiplier, setMultiplier] = useState(1);
   const [originalResult, setOriginalResult] = useState(null);
   const [showCustomMultiplier, setShowCustomMultiplier] = useState(false);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(() => {
     const hour = new Date().getHours();
     if (hour >= 5 && hour < 11) return 'breakfast';
@@ -265,6 +267,35 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     }
     return () => clearInterval(interval);
   }, [aiLoading, nutritionFacts.length]);
+
+  // Search logic
+  useEffect(() => {
+    if (mode === 'search') {
+      const doSearch = async () => {
+        if (!searchQuery.trim()) {
+          setSearchResults([]);
+          return;
+        }
+        const matches = await db.dietLogs
+          .filter(log => log.dish_name.toLowerCase().includes(searchQuery.toLowerCase()))
+          .reverse()
+          .sortBy('timestamp');
+          
+        // Deduplicate and limit
+        const uniqueMatches = [];
+        const seen = new Set();
+        for (const m of matches) {
+          if (!seen.has(m.dish_name)) {
+            uniqueMatches.push(m);
+            seen.add(m.dish_name);
+          }
+          if (uniqueMatches.length >= 30) break;
+        }
+        setSearchResults(uniqueMatches);
+      };
+      doSearch();
+    }
+  }, [searchQuery, mode]);
 
   useEffect(() => {
     if (mode === 'favorites') loadFavorites();
@@ -742,82 +773,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
   return (
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm relative overflow-hidden">
-      {aiLoading && mode === 'ai' && (
-        <div className="absolute inset-0 z-[60] bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center">
-          <div className="relative mb-6">
-            <Loader2 size={64} className="text-accent animate-spin" strokeWidth={3} />
-            <div className="absolute inset-0 flex items-center justify-center">
-              <span className="text-white font-black font-mono text-xs">{loadTime}s</span>
-            </div>
-          </div>
-          
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentFactIndex}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -10 }}
-              className="space-y-2 px-4"
-            >
-              <div className="bg-accent text-black px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block border border-black mb-1">
-                Fact
-              </div>
-              <p className="text-white font-black italic text-lg leading-tight max-w-[280px]">
-                {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
-              </p>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="mt-6 flex gap-2">
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 1, 0.3] }}
-                transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-                className="w-2 h-2 bg-accent rounded-full"
-              />
-            ))}
-          </div>
-          
-          {isResuming && (
-            <p className="mt-4 text-accent text-xs font-black italic animate-pulse">
-              {t('resuming_analysis')}
-            </p>
-          )}
-
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 0.5 }}
-            className="mt-8 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-3 rounded-[2rem] flex items-center justify-between gap-4 max-w-[280px] w-full"
-          >
-            <div className="text-left">
-              <p className="text-white text-[10px] font-black uppercase tracking-tight leading-none mb-1">{t('notification_ask')}</p>
-              <p className="text-white/60 text-[8px] font-bold leading-none">{t('notification_ask_sub')}</p>
-            </div>
-            <button 
-              onClick={handleNotificationToggle}
-              className={twMerge(
-                "w-10 h-5 rounded-full border border-white relative transition-all duration-300 shrink-0",
-                wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
-              )}
-            >
-              <motion.div 
-                animate={{ x: wantsNotification ? 20 : 2 }}
-                transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-lg" 
-              />
-            </button>
-          </motion.div>
-
-          <button 
-            onClick={cancelAnalysis}
-            className="mt-8 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
-          >
-            <X size={14} /> {t('cancel')}
-          </button>
-        </div>
-      )}
       <div className="flex items-center justify-between gap-2 mb-2">
         <AnimatePresence>
           {successToast && (
@@ -884,11 +839,12 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             {t('add_water')}
           </button>
         </div>
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0">
+        <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0 overflow-x-auto no-scrollbar">
           {[
             { id: 'ai',        label: t('ai_mode') },
             { id: 'manual',    label: t('manual_mode') },
             { id: 'favorites', label: t('favorites_mode') },
+            { id: 'search',    label: t('search_mode') },
           ].map(tab => (
             <button
               key={tab.id}
@@ -1323,6 +1279,155 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             </div>
           )}
         </motion.div>
+      )}
+
+      {mode === 'search' && (
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="space-y-4"
+        >
+          <div className="relative">
+            <input 
+              type="text" 
+              placeholder={t('search_placeholder')}
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full border-4 border-black p-4 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none"
+              autoFocus
+            />
+          </div>
+
+          <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+            {searchResults.length > 0 ? (
+              searchResults.map((item) => (
+                <button
+                  key={item.id}
+                  onClick={async () => {
+                    setManualSaving(true);
+                    const now = new Date();
+                    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                    await db.dietLogs.add({
+                      dish_name: item.dish_name,
+                      calories: item.calories,
+                      protein: item.protein,
+                      water: item.water || 0,
+                      description: item.description,
+                      date: localDate,
+                      timestamp: Date.now(),
+                      category: selectedCategory
+                    });
+                    setFavToast(t('added_to_today'));
+                    setTimeout(() => setFavToast(null), 1500);
+                    onLogAdded('fetch');
+                    setManualSaving(false);
+                    setMode('ai'); 
+                    setSearchQuery('');
+                  }}
+                  className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group"
+                >
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-sm truncate">{item.dish_name}</div>
+                    <div className="flex gap-2 text-[10px] font-bold font-mono text-zinc-400">
+                      <span>🔥 {item.calories}</span>
+                      <span>🍖 {item.protein}</span>
+                    </div>
+                  </div>
+                  <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
+                </button>
+              ))
+            ) : searchQuery.trim() !== '' ? (
+              <div className="text-center py-10 border-4 border-dashed border-zinc-200 rounded-3xl">
+                 <p className="text-zinc-400 font-bold italic text-sm">{t('no_search_results')}</p>
+              </div>
+            ) : null}
+          </div>
+        </motion.div>
+      )}
+
+      {aiLoading && (
+        <div className="absolute -inset-6 z-[60] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center rounded-[2rem] overflow-hidden">
+          <div className="flex flex-col items-center gap-2 mb-4">
+            <div className="relative">
+              <Loader2 size={52} className="text-accent animate-spin" strokeWidth={4} />
+              <div className="absolute inset-0 flex items-center justify-center">
+                <span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm">
+              <span className="text-sm">🐼</span>
+              <span className="text-white text-[9px] font-black tracking-tight uppercase">{t('ai_calculating')}</span>
+            </div>
+          </div>
+          
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentFactIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="space-y-1.5 px-2 mb-4"
+            >
+              <div className="bg-accent text-black px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest inline-block border border-black mb-1">
+                {t('food_fact')}
+              </div>
+              <p className="text-white font-black italic text-sm sm:text-base leading-tight max-w-[240px] mx-auto text-balance">
+                {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="flex gap-1.5 mb-6">
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 1, 0.3] }}
+                transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
+                className="w-1.5 h-1.5 bg-accent rounded-full"
+              />
+            ))}
+          </div>
+          
+          <div className="w-full max-w-[240px] space-y-3">
+            {isResuming && (
+              <p className="text-accent text-[9px] font-black italic animate-pulse">
+                {t('resuming_analysis')}
+              </p>
+            )}
+
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.5 }}
+              className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-2 rounded-2xl flex items-center justify-between gap-3"
+            >
+              <div className="text-left min-w-0">
+                <p className="text-white text-[8px] font-black uppercase tracking-tight leading-none mb-1 truncate">{t('notification_ask')}</p>
+                <p className="text-white/60 text-[7px] font-bold leading-none truncate">{t('notification_ask_sub')}</p>
+              </div>
+              <button 
+                onClick={handleNotificationToggle}
+                className={twMerge(
+                  "w-8 h-4 rounded-full border border-white relative transition-all duration-300 shrink-0",
+                  wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
+                )}
+              >
+                <motion.div 
+                  animate={{ x: wantsNotification ? 16 : 2 }}
+                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                  className="absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow-lg" 
+                />
+              </button>
+            </motion.div>
+
+            <button 
+              onClick={cancelAnalysis}
+              className="mx-auto text-white/30 hover:text-white text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
+            >
+              <X size={10} /> {t('cancel')}
+            </button>
+          </div>
+        </div>
       )}
 
     </NeoCard>
