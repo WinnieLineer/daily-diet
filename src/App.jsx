@@ -12,7 +12,7 @@ import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
 import SharingCard from './components/SharingCard';
 import { getPandaAdvice } from './lib/gemini';
-import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal, Info, Zap } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION } from './lib/constants';
@@ -23,7 +23,89 @@ const getLocalDateString = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
-const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite }) => {
+const LogDetailModal = ({ log, onClose }) => {
+  if (!log) return null;
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+      <motion.div 
+        initial={{ opacity: 0, scale: 0.9, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        className="bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh]"
+      >
+        {/* Header */}
+        <div className="p-4 border-b-4 border-black flex items-center justify-between bg-accent/10">
+          <div className="flex items-center gap-3">
+            <div className="bg-black text-white p-2 rounded-xl">
+              <Zap size={20} />
+            </div>
+            <div>
+              <h3 className="font-black italic text-lg leading-none">{log.dish_name}</h3>
+              <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                {new Date(log.timestamp).toLocaleString()}
+              </p>
+            </div>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+            <X size={24} />
+          </button>
+        </div>
+
+        {/* Content */}
+        <div className="overflow-y-auto p-4 space-y-6 flex-1 custom-scrollbar">
+          {/* Image */}
+          {log.image && (
+            <div className="relative aspect-video rounded-3xl overflow-hidden border-4 border-black shadow-neo-sm">
+              <img src={log.image} className="w-full h-full object-cover" alt={log.dish_name} />
+            </div>
+          )}
+
+          {/* Stats Grid */}
+          <div className="grid grid-cols-2 gap-3">
+            <div className="bg-zinc-50 border-4 border-black p-4 rounded-3xl shadow-neo-sm">
+              <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('calories')}</div>
+              <div className="text-2xl font-black italic">{log.calories} <span className="text-xs">kcal</span></div>
+            </div>
+            <div className="bg-zinc-50 border-4 border-black p-4 rounded-3xl shadow-neo-sm">
+              <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('protein')}</div>
+              <div className="text-2xl font-black italic">{log.protein} <span className="text-xs">g</span></div>
+            </div>
+          </div>
+
+          {/* Advice Section */}
+          <div className="bg-accent border-4 border-black p-5 rounded-[2.5rem] shadow-neo-sm relative overflow-hidden">
+            <div className="relative z-10">
+               <div className="flex items-center gap-2 mb-3">
+                 <div className="bg-black text-white p-1 rounded-lg">
+                   <Zap size={14} />
+                 </div>
+                 <span className="text-xs font-black uppercase tracking-widest">{t('ai_mode')} {t('advice')}</span>
+               </div>
+               <p className="font-black italic text-sm leading-relaxed text-black/80">
+                 {log.advice || log.description || t('no_advice')}
+               </p>
+            </div>
+            <div className="absolute -bottom-4 -right-4 opacity-10 pointer-events-none">
+              <Zap size={120} className="text-black" />
+            </div>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t-4 border-black flex gap-3">
+          <NeoButton 
+            variant="black" 
+            className="w-full h-14 text-lg font-black italic"
+            onClick={onClose}
+          >
+            {t('close')}
+          </NeoButton>
+        </div>
+      </motion.div>
+    </div>
+  );
+};
+
+const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite, onShowDetail }) => {
   const isEditing = editingId === log.id;
   const [showActions, setShowActions] = React.useState(false);
   const longPressTimer = React.useRef(null);
@@ -219,13 +301,23 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             >
               <Trash2 size={18} />
             </button>
-            <button 
-              onClick={(e) => { e.stopPropagation(); if (onAddToFavorite) onAddToFavorite(log); setShowActions(false); }}
-              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
-              title={t('added_to_favorites')}
-            >
-              <Star size={18} />
-            </button>
+            {log.image ? (
+              <button 
+                onClick={(e) => { e.stopPropagation(); onShowDetail(log); setShowActions(false); }}
+                className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+                title={t('details')}
+              >
+                <LayoutGrid size={18} />
+              </button>
+            ) : (
+              <button 
+                onClick={(e) => { e.stopPropagation(); if (onAddToFavorite) onAddToFavorite(log); setShowActions(false); }}
+                className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+                title={t('added_to_favorites')}
+              >
+                <Star size={18} />
+              </button>
+            )}
             <button 
               onClick={(e) => { e.stopPropagation(); setShowActions(false); }}
               className="p-2 hover:bg-black/10 transition-all rounded-xl border-2 border-transparent"
@@ -348,6 +440,7 @@ function App() {
   const [streak, setStreak] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
   
   const DEFAULT_LAYOUT = ['panda', 'dashboard', 'detective', 'today', 'weight', 'history'];
   const [layout, setLayout] = useState(() => {
@@ -679,6 +772,7 @@ function App() {
                               startEditing={startEditing}
                               deleteLog={deleteLog}
                               onAddToFavorite={addToFavorite}
+                              onShowDetail={setSelectedLogForDetail}
                             />
                           ))
                         ) : (
@@ -807,6 +901,7 @@ function App() {
                                         startEditing={startEditing}
                                         deleteLog={deleteLog}
                                         onAddToFavorite={addToFavorite}
+                                        onShowDetail={setSelectedLogForDetail}
                                       />
                                     ))}
                                   </motion.div>
@@ -866,6 +961,16 @@ function App() {
         streak={streak}
         advice={advice}
       />
+
+      {/* Detail Modal */}
+      <AnimatePresence>
+        {selectedLogForDetail && (
+          <LogDetailModal 
+            log={selectedLogForDetail} 
+            onClose={() => setSelectedLogForDetail(null)} 
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

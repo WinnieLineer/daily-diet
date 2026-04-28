@@ -679,7 +679,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const saveLog = async () => {
     let dataToSave = null;
     if (mode === 'ai' && result) {
-      dataToSave = result;
+      dataToSave = {
+        ...result,
+        image: preview,
+        advice: result.panda_comment || null
+      };
     } else if (mode === 'manual' && manualEntry.dish_name) {
       dataToSave = {
         dish_name: manualEntry.dish_name,
