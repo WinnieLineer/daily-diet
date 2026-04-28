@@ -307,7 +307,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
                 className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
                 title={t('details')}
               >
-                <LayoutGrid size={18} />
+                <Info size={18} />
               </button>
             ) : (
               <button 

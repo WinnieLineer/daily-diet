@@ -839,6 +839,84 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         </div>
       </div>
 
+      {aiLoading && mode === 'ai' && (
+        <div className="absolute inset-0 z-[60] bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-6 text-center rounded-[2.5rem]">
+          <div className="relative mb-6">
+            <Loader2 size={64} className="text-accent animate-spin" strokeWidth={3} />
+            <div className="absolute inset-0 flex items-center justify-center">
+              <span className="text-white font-black font-mono text-xs">{loadTime}s</span>
+            </div>
+          </div>
+          
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={currentFactIndex}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="space-y-2 px-4"
+            >
+              <div className="bg-accent text-black px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest inline-block border border-black mb-1">
+                Fact
+              </div>
+              <p className="text-white font-black italic text-lg leading-tight max-w-[280px]">
+                {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
+              </p>
+            </motion.div>
+          </AnimatePresence>
+
+          <div className="mt-6 flex gap-2">
+            {[...Array(3)].map((_, i) => (
+              <motion.div
+                key={i}
+                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 1, 0.3] }}
+                transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
+                className="w-2 h-2 bg-accent rounded-full"
+              />
+            ))}
+          </div>
+          
+          {isResuming && (
+            <p className="mt-4 text-accent text-xs font-black italic animate-pulse">
+              {t('resuming_analysis')}
+            </p>
+          )}
+
+          {/* 🔔 Compact Notification Opt-in */}
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5 }}
+            className="mt-8 bg-white/10 backdrop-blur-md border border-white/20 px-4 py-3 rounded-[2rem] flex items-center justify-between gap-4 max-w-[280px] w-full"
+          >
+            <div className="text-left">
+              <p className="text-white text-[10px] font-black uppercase tracking-tight leading-none mb-1">{t('notification_ask')}</p>
+              <p className="text-white/60 text-[8px] font-bold leading-none">{t('notification_ask_sub')}</p>
+            </div>
+            <button 
+              onClick={handleNotificationToggle}
+              className={twMerge(
+                "w-10 h-5 rounded-full border border-white relative transition-all duration-300 shrink-0",
+                wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
+              )}
+            >
+              <motion.div 
+                animate={{ x: wantsNotification ? 20 : 2 }}
+                transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-lg" 
+              />
+            </button>
+          </motion.div>
+
+          <button 
+            onClick={cancelAnalysis}
+            className="mt-8 text-white/40 hover:text-white text-[10px] font-black uppercase tracking-widest flex items-center gap-2 transition-all"
+          >
+            <X size={14} /> {t('cancel')}
+          </button>
+        </div>
+      )}
+
       {mode === 'ai' && !preview && (
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
