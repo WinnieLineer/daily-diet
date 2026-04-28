@@ -703,11 +703,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       category: selectedCategory
     });
     
-    setPreview(null);
-    setResult(null);
-    setOriginalResult(null);
-    setMultiplier(1);
-    setShowCustomMultiplier(false);
+    if (mode === 'ai') {
+      setPreview(null);
+      setResult(null);
+      setOriginalResult(null);
+      setMultiplier(1);
+      setShowCustomMultiplier(false);
+    }
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
     onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
     setManualSaving(false);
@@ -817,7 +819,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               )}
               onClick={() => {
                 setMode(tab.id);
-                if (tab.id !== mode) setResult(null);
               }}
             >
               <span className="relative">
@@ -1039,7 +1040,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                               setShowCustomMultiplier(false);
                             }}
                             className={twMerge(
-                              "px-3 py-2 rounded-xl font-black text-xs border-2 transition-all active:scale-95 shrink-0 min-w-[50px]",
+                              "px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all active:scale-95 shrink-0 min-w-[42px]",
                               multiplier === m && !showCustomMultiplier
                                 ? "bg-black text-white border-black"
                                 : "bg-white text-black border-black/10 hover:border-black"
@@ -1051,7 +1052,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         <button
                           onClick={() => setShowCustomMultiplier(true)}
                           className={twMerge(
-                            "px-4 py-2 rounded-xl font-black text-xs border-2 transition-all active:scale-95 shrink-0 whitespace-nowrap",
+                            "px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all active:scale-95 shrink-0 whitespace-nowrap",
                             showCustomMultiplier
                               ? "bg-black text-white border-black"
                               : "bg-white text-black border-black/10 hover:border-black"
