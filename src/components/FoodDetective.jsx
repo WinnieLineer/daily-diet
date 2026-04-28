@@ -1411,30 +1411,32 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               </p>
             )}
 
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.5 }}
-              className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-2 rounded-2xl flex items-center justify-between gap-3"
-            >
-              <div className="text-left min-w-0">
-                <p className="text-white text-[8px] font-black uppercase tracking-tight leading-none mb-1 truncate">{t('notification_ask')}</p>
-                <p className="text-white/60 text-[7px] font-bold leading-none truncate">{t('notification_ask_sub')}</p>
-              </div>
-              <button 
-                onClick={handleNotificationToggle}
-                className={twMerge(
-                  "w-8 h-4 rounded-full border border-white relative transition-all duration-300 shrink-0",
-                  wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
-                )}
+            {typeof window !== 'undefined' && window.Notification && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.5 }}
+                className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-2 rounded-2xl flex items-center justify-between gap-3"
               >
-                <motion.div 
-                  animate={{ x: wantsNotification ? 16 : 2 }}
-                  transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                  className="absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow-lg" 
-                />
-              </button>
-            </motion.div>
+                <div className="text-left min-w-0">
+                  <p className="text-white text-[8px] font-black uppercase tracking-tight leading-none mb-1 truncate">{t('notification_ask')}</p>
+                  <p className="text-white/60 text-[7px] font-bold leading-none truncate">{t('notification_ask_sub')}</p>
+                </div>
+                <button 
+                  onClick={handleNotificationToggle}
+                  className={twMerge(
+                    "w-8 h-4 rounded-full border border-white relative transition-all duration-300 shrink-0",
+                    wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
+                  )}
+                >
+                  <motion.div 
+                    animate={{ x: wantsNotification ? 16 : 2 }}
+                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                    className="absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow-lg" 
+                  />
+                </button>
+              </motion.div>
+            )}
 
             <button 
               onClick={cancelAnalysis}
