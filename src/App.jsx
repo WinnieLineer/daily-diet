@@ -254,17 +254,18 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             </span>
           )}
 
-          {log.location && (
+          {log.location && typeof log.location === 'string' && (
             <span className="text-[9px] font-bold text-zinc-400 flex items-center gap-0.5 truncate bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
               <MapPin size={8} />
               {(() => {
-                const full = log.location;
-                const parts = full.split(' ');
-                const citySub = parts[0]; 
-                if (citySub.length > 3) {
-                  return citySub.substring(3);
+                try {
+                  const parts = log.location.split(' ');
+                  if (!parts || parts.length === 0) return log.location;
+                  const citySub = parts[0]; 
+                  return citySub && citySub.length > 3 ? citySub.substring(3) : (citySub || '');
+                } catch (e) {
+                  return '';
                 }
-                return citySub;
               })()}
             </span>
           )}
