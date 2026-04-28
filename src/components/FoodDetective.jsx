@@ -150,6 +150,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [aiLoading, setAiLoading] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
   const [successToast, setSuccessToast] = useState(null);
+  const [errorToast, setErrorToast] = useState(null);
   const [loadTime, setLoadTime] = useState(0);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -375,7 +376,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     // Increment analysis ID to invalidate previous requests
     const currentAnalysisId = ++analysisIdRef.current;
     
-    setLoading(true);
+    setAiLoading(true);
     setAiError(null);
     setLoadTime(ANALYSIS_DURATION_SECONDS);
 
@@ -470,6 +471,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       const title = t('ai_fail_title');
       const body = t('ai_fail_body');
       await notifyUser(title, body);
+
+      if (document.visibilityState === 'visible' && mode !== 'ai') {
+        setErrorToast(errorMsg);
+        setTimeout(() => setErrorToast(null), 5000);
+      }
     } finally {
       if (currentAnalysisId === analysisIdRef.current) {
         setAiLoading(false);
@@ -731,6 +737,18 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             >
               <div className="bg-emerald-500 text-white px-4 py-2 rounded-2xl shadow-neo-sm font-black italic text-xs flex items-center gap-2">
                 <Check size={14} /> {successToast} {t('ai_complete_title')}
+              </div>
+            </motion.div>
+          )}
+          {errorToast && (
+            <motion.div 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              className="absolute top-0 left-0 right-0 z-50 flex justify-center"
+            >
+              <div className="bg-rose-500 text-white px-4 py-2 rounded-2xl shadow-neo-sm font-black italic text-xs flex items-center gap-2">
+                <AlertCircle size={14} /> {t('ai_fail_title')}
               </div>
             </motion.div>
           )}
@@ -1241,7 +1259,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 <button
                   key={item.id}
                   onClick={async () => {
-                    setLoading(true);
+                    setManualSaving(true);
                     const now = new Date();
                     const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                     await db.dietLogs.add({
@@ -1257,7 +1275,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     setFavToast(t('added_to_today'));
                     setTimeout(() => setFavToast(null), 1500);
                     onLogAdded('fetch');
-                    setLoading(false);
+                    setManualSaving(false);
                   }}
                   className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group"
                 >
