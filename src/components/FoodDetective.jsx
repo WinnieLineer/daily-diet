@@ -973,23 +973,21 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             )}
           </div>
 
-          {aiError && (
-            <NeoCard className="bg-rose-50 border-rose-500 text-rose-600 p-4">
-              <div className="flex items-start gap-3">
-                <AlertCircle className="shrink-0 mt-0.5" />
-                <div className="space-y-2">
-                  <p className="font-black italic">{aiError}</p>
-                  <NeoButton 
-                    variant="black" 
-                    className="h-10 text-xs flex items-center justify-center gap-2"
-                    onClick={() => performAnalysis(preview, null)}
-                  >
-                    <RefreshCw size={14} /> {t('retry')}
-                  </NeoButton>
-                </div>
+            {aiError && (
+              <div className="absolute inset-0 bg-rose-500/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white">
+                <AlertCircle size={48} className="mb-4 animate-bounce" />
+                <p className="font-black italic text-sm mb-6 break-words max-w-full">
+                  {aiError}
+                </p>
+                <NeoButton 
+                  variant="white" 
+                  className="h-12 px-8 text-xs flex items-center justify-center gap-2 shadow-lg"
+                  onClick={() => performAnalysis(preview, null)}
+                >
+                  <RefreshCw size={16} /> {t('retry')}
+                </NeoButton>
               </div>
-            </NeoCard>
-          )}
+            )}
 
           {result && (
             <motion.div
