@@ -346,8 +346,13 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
   const [particles, setParticles]       = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [initialPos, setInitialPos] = useState(() => {
-    const saved = localStorage.getItem('panda_position');
-    return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+    try {
+      const saved = localStorage.getItem('panda_position');
+      return saved ? JSON.parse(saved) : { x: 0, y: 0 };
+    } catch (e) {
+      console.error("Error loading panda position:", e);
+      return { x: 0, y: 0 };
+    }
   });
 
   const controls   = useAnimation();

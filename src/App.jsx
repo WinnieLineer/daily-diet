@@ -554,14 +554,22 @@ function App() {
 
   useEffect(() => {
     const initFacts = async () => {
-      const count = await db.nutritionFacts.count();
-      if (count === 0) {
-        const { initialNutritionFacts } = await import('./lib/nutritionData');
-        await db.nutritionFacts.bulkAdd(initialNutritionFacts);
+      try {
+        const count = await db.nutritionFacts.count();
+        if (count === 0) {
+          const { initialNutritionFacts } = await import('./lib/nutritionData');
+          await db.nutritionFacts.bulkAdd(initialNutritionFacts);
+        }
+      } catch (err) {
+        console.warn("DB init facts error (likely storage restricted):", err);
       }
     };
+    
     initFacts();
-    refreshData();
+    
+    refreshData().catch(err => {
+      console.error("Initial refreshData error:", err);
+    });
   }, []);
 
   const deleteLog = async (id) => {
