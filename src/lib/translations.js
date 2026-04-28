@@ -163,7 +163,7 @@ const translations = {
     breakfast: "早餐",
     lunch: "午餐",
     dinner: "晚餐",
-    snack: "點心",
+    snack: "點心/下午茶",
     composition: "成分分析",
     added_to_today: "已新增至今日紀錄！",
     trends: "數據趨勢",

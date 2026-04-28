@@ -240,22 +240,6 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
 
         {/* Bottom Row: Metadata (Tags + Location) */}
         <div className="flex items-center gap-2 overflow-hidden">
-          {/* Meal Tag */}
-          {(() => {
-            const hour = new Date(log.timestamp).getHours();
-            let meal = { label: '宵夜', color: 'bg-zinc-100 text-zinc-500' };
-            if (hour >= 5 && hour < 11) meal = { label: '早餐', color: 'bg-emerald-50 text-emerald-600 border-emerald-100' };
-            else if (hour >= 11 && hour < 14) meal = { label: '午餐', color: 'bg-amber-50 text-amber-600 border-amber-100' };
-            else if (hour >= 14 && hour < 17) meal = { label: '下午茶', color: 'bg-rose-50 text-rose-600 border-rose-100' };
-            else if (hour >= 17 && hour < 21) meal = { label: '晚餐', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
-            
-            return (
-              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border ${meal.color} uppercase tracking-tighter shrink-0`}>
-                {meal.label}
-              </span>
-            );
-          })()}
-
           {log.category && (
             <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-black text-white italic border border-black shrink-0">
               {t(log.category)}
