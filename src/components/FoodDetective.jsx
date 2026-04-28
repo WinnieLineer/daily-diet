@@ -181,16 +181,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     return 'snack'; // Night snack
   });
   const [wantsNotification, setWantsNotification] = useState(() => {
-    const saved = localStorage.getItem('wants_notification');
-    if (saved !== null) return saved === 'true';
-    return Notification.permission === 'granted';
+    if (typeof window === 'undefined' || !window.Notification) return false;
+    return localStorage.getItem('diet_notifications_enabled') === 'true' && Notification.permission === 'granted';
   });
   const wantsNotificationRef = useRef(wantsNotification);
 
   // Sync ref with state and persist preference
   useEffect(() => {
     wantsNotificationRef.current = wantsNotification;
-    localStorage.setItem('wants_notification', wantsNotification.toString());
+    localStorage.setItem('diet_notifications_enabled', wantsNotification.toString());
   }, [wantsNotification]);
 
   // Recovery Logic
@@ -578,7 +577,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     // 📲 System Notification (only if hidden)
     if (document.visibilityState !== 'hidden') return;
     try {
-      if (Notification.permission === 'granted' && wantsNotificationRef.current) {
+      if (typeof window !== 'undefined' && window.Notification && wantsNotificationRef.current && Notification.permission === 'granted') {
         if ('serviceWorker' in navigator) {
           const reg = await navigator.serviceWorker.getRegistration();
           if (reg) {
@@ -752,22 +751,25 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   };
 
   const handleNotificationToggle = async () => {
-    if (!("Notification" in window)) return;
-
-    if (Notification.permission === "granted") {
-      const nextState = !wantsNotification;
-      setWantsNotification(nextState);
-      localStorage.setItem('diet_notify_preference', nextState);
-      if (nextState) {
-        new Notification(t('notification_granted'));
-      }
-    } else if (Notification.permission !== "denied") {
+    if (typeof window === 'undefined' || !window.Notification) return;
+    
+    if (Notification.permission === 'default') {
       const permission = await Notification.requestPermission();
-      if (permission === "granted") {
+      if (permission === 'granted') {
         setWantsNotification(true);
-        localStorage.setItem('diet_notify_preference', 'true');
-        new Notification(t('notification_granted'));
+        localStorage.setItem('diet_notifications_enabled', 'true');
+        setFavToast(t('notification_granted'));
+      } else {
+        setWantsNotification(false);
+        localStorage.setItem('diet_notifications_enabled', 'false');
+        setFavToast(t('notification_denied'));
       }
+    } else if (Notification.permission === 'granted') {
+      const newState = !wantsNotification;
+      setWantsNotification(newState);
+      localStorage.setItem('diet_notifications_enabled', String(newState));
+    } else {
+      setFavToast(t('notification_denied'));
     }
   };
 
