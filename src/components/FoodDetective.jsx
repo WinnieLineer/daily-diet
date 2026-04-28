@@ -800,15 +800,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             </motion.div>
           )}
         </AnimatePresence>
-        <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-xl font-black italic"></h2>
+        <div className="flex items-center gap-1.5 shrink-0">
           <button 
             onClick={async () => {
               const now = new Date();
               const timestamp = now.getTime();
               const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
               
-              // Find if there's a water log within the last 2 minutes
               const twoMinutesAgo = timestamp - (2 * 60 * 1000);
               const lastWaterLog = await db.dietLogs
                 .where('timestamp')
@@ -819,7 +817,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               if (lastWaterLog) {
                 await db.dietLogs.update(lastWaterLog.id, {
                   water: (Number(lastWaterLog.water) || 0) + 250,
-                  timestamp: timestamp // Update timestamp to keep it "recent"
+                  timestamp: timestamp
                 });
               } else {
                 await db.dietLogs.add({ 
@@ -834,9 +832,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               }
               onLogAdded('fetch');
             }}
-            className="text-[10px] font-black bg-white text-black px-2 py-1 rounded-xl border-2 border-black active:scale-95 transition-all whitespace-nowrap shadow-neo-sm hover:bg-zinc-50"
+            className="w-10 h-10 flex flex-col items-center justify-center bg-white text-black rounded-full border-4 border-black active:scale-90 transition-all shadow-neo-sm hover:bg-sky-50 shrink-0"
+            title={t('add_water')}
           >
-            {t('add_water')}
+            <span className="text-sm leading-none">🚰</span>
+            <span className="text-[7px] font-black leading-none mt-0.5">+250ml</span>
           </button>
         </div>
         <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0 overflow-x-auto no-scrollbar">
