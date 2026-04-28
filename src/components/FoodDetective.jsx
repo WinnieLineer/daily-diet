@@ -469,7 +469,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
       // 🚀 Notify user of failure
       const title = t('ai_fail_title');
-      const body = t('ai_fail_body');
+      const body = `${t('ai_fail_body')}\n${errorMsg}`;
+      
+      // Always call notifyUser for sensory feedback (sound/title)
       await notifyUser(title, body);
 
       if (document.visibilityState === 'visible' && mode !== 'ai') {
