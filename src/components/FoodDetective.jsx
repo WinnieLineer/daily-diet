@@ -1044,7 +1044,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       </motion.div>
                     )}
 
-                    <div className="flex flex-wrap items-center gap-2">
+                    <div className="flex items-center gap-1.5 overflow-hidden">
+                      {result.category && !result.dish_name.toLowerCase().includes(t(result.category).toLowerCase()) && (
+                        <span className="text-[7px] font-black uppercase tracking-tighter px-1 py-0.5 rounded bg-zinc-100 text-zinc-400 border border-zinc-200 shrink-0">
+                          {t(result.category)}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2 mt-2">
                       <div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5">
                         <MapPin size={14} className="text-zinc-400" />
                         <span className="text-[10px] font-bold text-zinc-500">
@@ -1330,7 +1337,12 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 >
                   <div className="flex-1 min-w-0">
                     <div className="font-black text-sm truncate">{item.dish_name}</div>
-                    <div className="flex gap-2 text-[10px] font-bold font-mono text-zinc-400">
+                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold font-mono text-zinc-400 mt-1">
+                      {item.category && !item.dish_name.startsWith(t(item.category)) && (
+                        <span className="text-[7px] font-black uppercase tracking-tighter px-1 py-0.5 rounded bg-zinc-100 text-zinc-400 border border-zinc-200 shrink-0">
+                          {t(item.category)}
+                        </span>
+                      )}
                       <span>🔥 {item.calories}</span>
                       <span>🍖 {item.protein}</span>
                     </div>

@@ -248,7 +248,7 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
 
         {/* Bottom Row: Metadata (Tags + Location) */}
         <div className="flex items-center gap-2 overflow-hidden">
-          {log.category && (
+          {log.category && !log.dish_name.startsWith(t(log.category)) && (
             <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-black text-white italic border border-black shrink-0">
               {t(log.category)}
             </span>
