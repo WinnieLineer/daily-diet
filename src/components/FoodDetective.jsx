@@ -868,6 +868,32 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     {t('resuming_analysis')}
                   </p>
                 )}
+
+                {/* 🔔 Notification Opt-in inside Loading Area */}
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 1 }}
+                  className="mt-12 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-3xl flex items-center justify-between gap-4 max-w-[280px] w-full"
+                >
+                  <div className="text-left">
+                    <p className="text-white text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('notification_ask')}</p>
+                    <p className="text-white/60 text-[8px] font-bold leading-tight">{t('notification_ask_sub')}</p>
+                  </div>
+                  <button 
+                    onClick={handleNotificationToggle}
+                    className={twMerge(
+                      "w-10 h-5 rounded-full border-2 border-white relative transition-all duration-300 shrink-0",
+                      wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
+                    )}
+                  >
+                    <motion.div 
+                      animate={{ x: wantsNotification ? 20 : 2 }}
+                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-lg" 
+                    />
+                  </button>
+                </motion.div>
               </div>
             )}
             {!loading && (
@@ -930,7 +956,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     
                     {/* Portion Control Multiplier */}
                     <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 w-full mb-1">{t('portion_size')}</span>
+                      <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 w-full mb-1">{t('portion_size')}</div>
                       {[0.5, 1, 1.5, 2].map(m => (
                         <button
                           key={m}
