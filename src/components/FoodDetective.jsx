@@ -147,7 +147,8 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
 
 export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef, favoriteUpdateTrigger }) {
   const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'favorites'
-  const [loading, setLoading] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [manualSaving, setManualSaving] = useState(false);
   const [loadTime, setLoadTime] = useState(0);
   const [preview, setPreview] = useState(null);
   const [result, setResult] = useState(null);
@@ -218,7 +219,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   // Cycle through nutrition facts during loading
   useEffect(() => {
     let interval;
-    if (loading) {
+    if (aiLoading) {
       // Fetch facts when loading starts (if not already fetched or to get latest)
       const fetchFacts = async () => {
         const lang = getLanguage();
@@ -260,7 +261,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       setCurrentFactIndex(0);
     }
     return () => clearInterval(interval);
-  }, [loading, nutritionFacts.length]);
+  }, [aiLoading, nutritionFacts.length]);
 
   useEffect(() => {
     if (mode === 'favorites') loadFavorites();
@@ -469,11 +470,22 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       }
     } finally {
       if (currentAnalysisId === analysisIdRef.current) {
-        setLoading(false);
+        setAiLoading(false);
         setIsResuming(false);
         document.body.classList.remove('ai-analyzing');
       }
     }
+  };
+
+  const cancelAnalysis = () => {
+    analysisIdRef.current++; // Invalidate current analysis
+    setAiLoading(false);
+    setIsResuming(false);
+    setPreview(null);
+    setResult(null);
+    setAiError(null);
+    document.body.classList.remove('ai-analyzing');
+    db.pendingAnalysis.delete('current');
   };
 
   // Generic Notification Helper
@@ -659,7 +671,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     }
     if (!dataToSave) return;
     
-    setLoading(true);
+    setManualSaving(true);
     const now = new Date();
     const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
     
@@ -678,7 +690,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setShowCustomMultiplier(false);
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
     onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
-    setLoading(false);
+    setManualSaving(false);
   };
 
   const handleNotificationToggle = async () => {
@@ -760,7 +772,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 if (tab.id !== mode) setResult(null);
               }}
             >
-              {tab.label}
+              <span className="relative">
+                {tab.label}
+                {tab.id === 'ai' && aiLoading && mode !== 'ai' && (
+                  <motion.div 
+                    layoutId="ai-bg-status"
+                    className="absolute -top-1.5 -right-1.5 w-2 h-2 bg-accent rounded-full border border-white animate-pulse"
+                  />
+                )}
+              </span>
             </button>
           ))}
         </div>
@@ -826,7 +846,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         >
           <div className="relative aspect-square sm:aspect-video rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo group">
             <img src={preview} className="w-full h-full object-cover" alt="Preview" />
-            {loading && (
+            {aiLoading && (
               <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
                 <div className="relative mb-3">
                   <Loader2 size={48} className="text-accent animate-spin" strokeWidth={3} />
@@ -896,10 +916,18 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 </motion.div>
               </div>
             )}
-            {!loading && (
+            {!aiLoading && (
               <button 
-                onClick={() => { setPreview(null); setResult(null); setAiError(null); }}
+                onClick={cancelAnalysis}
                 className="absolute top-4 right-4 bg-black/50 hover:bg-black text-white p-2 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-95"
+              >
+                <X size={20} />
+              </button>
+            )}
+            {aiLoading && (
+               <button 
+                onClick={cancelAnalysis}
+                className="absolute top-4 right-4 bg-white/10 hover:bg-white/20 text-white p-2 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-95 z-[60]"
               >
                 <X size={20} />
               </button>
@@ -1167,9 +1195,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             variant="black" 
             className="w-full h-16 text-lg flex items-center justify-center gap-2 group disabled:opacity-50"
             onClick={saveLog}
-            disabled={!manualEntry.dish_name || loading}
+            disabled={!manualEntry.dish_name || manualSaving}
           >
-            {loading ? <Loader2 className="animate-spin" /> : <><Check size={24} /> {t('log_meal')}</>}
+            {manualSaving ? <Loader2 className="animate-spin" /> : <><Check size={24} /> {t('log_meal')}</>}
           </NeoButton>
         </motion.div>
       )}
