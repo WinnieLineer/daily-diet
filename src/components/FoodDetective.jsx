@@ -514,7 +514,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
     // 📲 System Notification
     try {
-      if (Notification.permission === 'granted') {
+      if (Notification.permission === 'granted' && wantsNotificationRef.current) {
         if ('serviceWorker' in navigator) {
           const reg = await navigator.serviceWorker.getRegistration();
           if (reg) {
@@ -1222,7 +1222,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       {/* Experimental Features Toggle (Admin/Pro) */}
       <div className="flex justify-between items-center pt-2 px-2 border-t-2 border-black/5 opacity-40 hover:opacity-100 transition-opacity">
         <div className="flex items-center gap-2">
-           <Bell size={12} className={Notification.permission === 'granted' ? 'text-emerald-500' : 'text-gray-400'} />
+           <Bell size={12} className={wantsNotification ? 'text-emerald-500' : 'text-gray-400'} />
            <span className="text-[8px] font-black uppercase tracking-widest">{t('notifications')}</span>
         </div>
         <button 
