@@ -832,13 +832,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               }
               onLogAdded('fetch');
             }}
-            className="w-11 h-11 flex items-center justify-center bg-white rounded-full border-4 border-black active:scale-90 transition-all shadow-neo-sm hover:bg-sky-50 shrink-0 overflow-hidden"
+            className="w-12 h-12 flex items-center justify-center bg-white rounded-full border-4 border-black active:scale-90 transition-all shadow-neo-sm hover:bg-sky-50 shrink-0 overflow-hidden"
             title={t('add_water')}
           >
             <img 
               src={`${import.meta.env.BASE_URL}water.png`} 
               alt="250ml" 
-              className="w-full h-full object-cover p-1"
+              className="w-full h-full object-contain"
             />
           </button>
         </div>
