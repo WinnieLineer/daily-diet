@@ -174,15 +174,17 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     if (hour < 19) return 'dinner';
     return 'snack';
   });
-  const [wantsNotification, setWantsNotification] = useState(false);
-  const wantsNotificationRef = useRef(false);
+  const [wantsNotification, setWantsNotification] = useState(() => {
+    const saved = localStorage.getItem('wants_notification');
+    if (saved !== null) return saved === 'true';
+    return Notification.permission === 'granted';
+  });
+  const wantsNotificationRef = useRef(wantsNotification);
 
-  // Sync ref with state and initialize from permission
+  // Sync ref with state and persist preference
   useEffect(() => {
-    if (Notification.permission === 'granted') {
-      setWantsNotification(true);
-    }
     wantsNotificationRef.current = wantsNotification;
+    localStorage.setItem('wants_notification', wantsNotification.toString());
   }, [wantsNotification]);
 
   // Recovery Logic
@@ -803,8 +805,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             <span className="font-black italic text-lg">{t('gallery')}</span>
           </button>
 
-          <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
-          <input type="file" accept="image/*" multiple className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
+          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
+          <input type="file" accept="image/jpeg,image/png,image/webp" multiple="multiple" className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
         </motion.div>
       )}
 
@@ -1226,14 +1228,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         <button 
           onClick={handleNotificationToggle}
           className={twMerge(
-            "w-8 h-4 rounded-full border-2 border-black relative transition-colors",
-            wantsNotification ? "bg-accent" : "bg-gray-200"
+            "w-12 h-6 rounded-full border-2 border-black relative transition-all duration-300 shadow-neo-sm",
+            wantsNotification ? "bg-emerald-400" : "bg-gray-200"
           )}
         >
-          <div className={twMerge(
-            "absolute top-0.5 w-2 h-2 bg-black rounded-full transition-all",
-            wantsNotification ? "left-[18px]" : "left-0.5"
-          )} />
+          <motion.div 
+            animate={{ x: wantsNotification ? 24 : 2 }}
+            transition={{ type: "spring", stiffness: 500, damping: 30 }}
+            className="absolute top-1 w-3 h-3 bg-black rounded-full" 
+          />
         </button>
       </div>
     </NeoCard>
