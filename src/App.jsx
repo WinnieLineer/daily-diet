@@ -75,6 +75,23 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
           />
         </div>
       </div>
+      
+      <div>
+        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('category')}</label>
+        <div className="flex bg-white border-4 border-black p-1 rounded-xl">
+          {['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (
+            <button
+              key={cat}
+              onClick={() => setEditValues({ ...editValues, category: cat })}
+              className={`flex-1 py-1 text-[10px] font-black uppercase tracking-tighter rounded-lg transition-all ${
+                editValues.category === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600"
+              }`}
+            >
+              {t(cat)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       <div className="flex gap-2 pt-1">
         <button 
@@ -115,27 +132,32 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
       onTouchEnd={() => { clearTimeout(longPressTimer.current); }}
       onTouchMove={() => { clearTimeout(longPressTimer.current); }}
       onContextMenu={(e) => { e.preventDefault(); }}
-      className={`relative overflow-hidden flex flex-col p-3.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
+      className={`relative overflow-hidden flex flex-col p-2.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className={`flex flex-col gap-2.5 w-full transition-all duration-300 ${showActions ? 'pr-[145px] opacity-40 blur-[1px]' : ''}`}>
-        <div className="flex items-start justify-between gap-3">
-          <div className="font-black text-sm leading-tight break-words flex-1 min-w-0">{log.dish_name}</div>
-          <div className="flex flex-col items-end gap-1 shrink-0">
+      <div className={`flex flex-col gap-1.5 w-full transition-all duration-300 ${showActions ? 'pr-[145px] opacity-40 blur-[1px]' : ''}`}>
+        {/* Top Row: Time + Dish Name + Calories */}
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2 min-w-0">
+            <span className="text-[10px] font-black font-mono text-zinc-400 shrink-0">
+              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+            </span>
+            <div className="font-black text-sm leading-tight truncate">{log.dish_name}</div>
+          </div>
+          <div className="flex items-center gap-1 shrink-0">
             {log.calories > 0 && (
               <span className="text-[10px] font-black bg-accent px-1.5 py-0.5 rounded border border-black/10 shadow-neo-sm whitespace-nowrap">🔥{log.calories}</span>
             )}
-            <div className="flex items-center gap-1">
-              {log.protein > 0 && (
-                <span className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍖{log.protein}</span>
-              )}
-              {log.water > 0 && (
-                <span className="text-[10px] font-black text-black border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}</span>
-              )}
-            </div>
+            {log.protein > 0 && (
+              <span className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍖{log.protein}</span>
+            )}
+            {log.water > 0 && (
+              <span className="text-[10px] font-black text-black border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}</span>
+            )}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1.5">
+        {/* Bottom Row: Metadata (Tags + Location) */}
+        <div className="flex items-center gap-2 overflow-hidden">
           {/* Meal Tag */}
           {(() => {
             const hour = new Date(log.timestamp).getHours();
@@ -146,20 +168,21 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             else if (hour >= 17 && hour < 21) meal = { label: '晚餐', color: 'bg-indigo-50 text-indigo-600 border-indigo-100' };
             
             return (
-              <span className={`text-[9px] font-black px-1.5 py-0.5 rounded-md border ${meal.color} uppercase tracking-tight`}>
+              <span className={`text-[8px] font-black px-1.5 py-0.5 rounded-md border ${meal.color} uppercase tracking-tighter shrink-0`}>
                 {meal.label}
               </span>
             );
           })()}
 
-          <span className="text-[10px] font-bold font-mono text-zinc-400 flex items-center gap-0.5 bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
-            <Clock size={10} />
-            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-          </span>
+          {log.category && (
+            <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-black text-white italic border border-black shrink-0">
+              {t(log.category)}
+            </span>
+          )}
 
           {log.location && (
-            <span className="text-[10px] font-bold text-zinc-400 flex items-center gap-0.5 truncate max-w-[140px] bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
-              <MapPin size={10} />
+            <span className="text-[9px] font-bold text-zinc-400 flex items-center gap-0.5 truncate bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
+              <MapPin size={8} />
               {(() => {
                 const full = log.location;
                 const parts = full.split(' ');
@@ -169,11 +192,6 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
                 }
                 return citySub;
               })()}
-            </span>
-          )}
-          {log.category && (
-            <span className="text-[9px] font-black uppercase tracking-widest px-1.5 py-0.5 rounded-lg bg-black text-white italic border border-black shrink-0">
-              {t(log.category)}
             </span>
           )}
         </div>
@@ -228,6 +246,8 @@ function App() {
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
 
+  const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);
+  
   const handleOnboardingComplete = () => {
     localStorage.setItem('onboarding_seen', 'true');
     setShowOnboarding(false);
@@ -476,7 +496,8 @@ function App() {
       dish_name: log.dish_name,
       calories: log.calories,
       protein: log.protein,
-      water: log.water || 0
+      water: log.water || 0,
+      category: log.category || 'snack'
     });
   };
 
@@ -489,7 +510,8 @@ function App() {
       dish_name: editValues.dish_name,
       calories: Number(editValues.calories) || 0,
       protein: Number(editValues.protein) || 0,
-      water: Number(editValues.water) || 0
+      water: Number(editValues.water) || 0,
+      category: editValues.category
     });
     setEditingId(null);
     refreshData();
@@ -521,6 +543,7 @@ function App() {
       water: log.water || 0,
       description: log.description || ''
     });
+    setFavoriteUpdateTrigger(prev => prev + 1);
     showToast(t('added_to_favorites'));
   };
 
@@ -604,12 +627,13 @@ function App() {
           } else if (item === 'detective') {
             blockContent = (
               <FoodDetective 
-                onLogAdded={refreshData} 
+                onLogAdded={(type) => refreshData(type)} 
+                recentLogs={recentLogs}
                 summary={summary}
                 goals={goals}
-                recentLogs={recentLogs}
                 setAdvice={setAdvice}
                 adviceUpdateLockRef={adviceUpdateLockRef}
+                favoriteUpdateTrigger={favoriteUpdateTrigger}
               />
             );
           } else if (item === 'today') {

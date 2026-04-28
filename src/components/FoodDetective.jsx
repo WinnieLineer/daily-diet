@@ -145,7 +145,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
   );
 };
 
-export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef }) {
+export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef, favoriteUpdateTrigger }) {
   const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'favorites'
   const [loading, setLoading] = useState(false);
   const [loadTime, setLoadTime] = useState(0);
@@ -177,8 +177,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [wantsNotification, setWantsNotification] = useState(false);
   const wantsNotificationRef = useRef(false);
 
-  // Sync ref with state
+  // Sync ref with state and initialize from permission
   useEffect(() => {
+    if (Notification.permission === 'granted') {
+      setWantsNotification(true);
+    }
     wantsNotificationRef.current = wantsNotification;
   }, [wantsNotification]);
 
@@ -259,7 +262,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
   useEffect(() => {
     if (mode === 'favorites') loadFavorites();
-  }, [mode]);
+  }, [mode, favoriteUpdateTrigger]);
 
   const getCurrentLocation = () => {
     // We will no longer use browser geolocation for manual/water
@@ -801,7 +804,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           </button>
 
           <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
-          <input type="file" accept="image/*" className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
+          <input type="file" accept="image/*" multiple className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
         </motion.div>
       )}
 
@@ -1224,12 +1227,12 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           onClick={handleNotificationToggle}
           className={twMerge(
             "w-8 h-4 rounded-full border-2 border-black relative transition-colors",
-            Notification.permission === 'granted' ? "bg-accent" : "bg-gray-200"
+            wantsNotification ? "bg-accent" : "bg-gray-200"
           )}
         >
           <div className={twMerge(
             "absolute top-0.5 w-2 h-2 bg-black rounded-full transition-all",
-            Notification.permission === 'granted' ? "left-[18px]" : "left-0.5"
+            wantsNotification ? "left-[18px]" : "left-0.5"
           )} />
         </button>
       </div>
