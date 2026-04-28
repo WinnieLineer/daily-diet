@@ -889,7 +889,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 cameraInputRef.current?.click();
               } else {
                 setShowDesktopCamera(true);
-                // Pre-fetch location while camera is opening
                 navigator.geolocation.getCurrentPosition(
                   pos => { pendingCoordsRef.current = pos.coords; },
                   () => {},
@@ -899,7 +898,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             }}
             className="group flex flex-col items-center justify-center gap-3 p-6 bg-accent border-4 border-black rounded-3xl shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
-            <div className="bg-white p-3 rounded-2xl border-4 border-black transition-transform">
+            <div className="w-16 h-16 flex items-center justify-center bg-white rounded-2xl border-4 border-black shadow-neo-sm">
               <Camera size={32} />
             </div>
             <span className="font-black italic text-lg">{t('camera')}</span>
@@ -909,7 +908,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             onClick={() => galleryInputRef.current?.click()}
             className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-4 border-black rounded-3xl shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
           >
-            <div className="bg-zinc-100 p-3 rounded-2xl border-4 border-black transition-transform">
+            <div className="w-16 h-16 flex items-center justify-center bg-zinc-100 rounded-2xl border-4 border-black shadow-neo-sm">
               <ImageIcon size={32} />
             </div>
             <span className="font-black italic text-lg">{t('gallery')}</span>
