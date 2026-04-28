@@ -428,8 +428,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       }
 
       // Update pending analysis with location if it was found
-      if (location) {
-        await db.pendingAnalysis.update('current', { location });
+      if (currentAnalysisId === analysisIdRef.current && location) {
+        try {
+          await db.pendingAnalysis.update('current', { location });
+        } catch (err) {
+          // Ignore abort errors if we just deleted it
+          if (err.name !== 'AbortError' && err.name !== 'NotFoundError') throw err;
+        }
       }
 
       if (currentAnalysisId === analysisIdRef.current && data && data.dish_name) {
@@ -463,6 +468,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       }
     } catch (err) {
       if (currentAnalysisId !== analysisIdRef.current) return;
+      if (err.name === 'AbortError') return; // Silent ignore on manual cancel
+
       console.error("AI Analysis Error:", err);
       const errorMsg = err.message || t('ai_error') || "AI 辨識發生錯誤，請稍後再試。";
       setAiError(errorMsg);
@@ -980,7 +987,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   {aiError}
                 </p>
                 <NeoButton 
-                  variant="white" 
+                  variant="black" 
                   className="h-12 px-8 text-xs flex items-center justify-center gap-2 shadow-lg"
                   onClick={() => performAnalysis(preview, null)}
                 >
