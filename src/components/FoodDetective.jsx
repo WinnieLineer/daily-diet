@@ -971,10 +971,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 <X size={20} />
               </button>
             )}
-          </div>
-
             {aiError && (
-              <div className="absolute inset-0 bg-rose-500/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white">
+              <div className="absolute inset-0 bg-rose-500/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white z-[70]">
                 <AlertCircle size={48} className="mb-4 animate-bounce" />
                 <p className="font-black italic text-sm mb-6 break-words max-w-full">
                   {aiError}
@@ -988,6 +986,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 </NeoButton>
               </div>
             )}
+          </div>
 
           {result && (
             <motion.div
@@ -1020,36 +1019,38 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     </h3>
                     
                     {/* Portion Control Multiplier */}
-                    <div className="flex flex-wrap items-center gap-2 mb-4">
-                      <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 w-full mb-1">{t('portion_size')}</div>
-                      {[0.5, 1, 1.5, 2].map(m => (
+                    <div className="mb-4">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div>
+                      <div className="flex overflow-x-auto no-scrollbar items-center gap-2 -mx-1 px-1 py-0.5">
+                        {[0.5, 1, 1.5, 2].map(m => (
+                          <button
+                            key={m}
+                            onClick={() => {
+                              handleMultiplierChange(m);
+                              setShowCustomMultiplier(false);
+                            }}
+                            className={twMerge(
+                              "px-3 py-2 rounded-xl font-black text-xs border-2 transition-all active:scale-95 shrink-0 min-w-[50px]",
+                              multiplier === m && !showCustomMultiplier
+                                ? "bg-black text-white border-black"
+                                : "bg-white text-black border-black/10 hover:border-black"
+                            )}
+                          >
+                            x{m}
+                          </button>
+                        ))}
                         <button
-                          key={m}
-                          onClick={() => {
-                            handleMultiplierChange(m);
-                            setShowCustomMultiplier(false);
-                          }}
+                          onClick={() => setShowCustomMultiplier(true)}
                           className={twMerge(
-                            "px-3 py-1.5 rounded-xl font-black text-xs border-2 transition-all active:scale-95",
-                            multiplier === m && !showCustomMultiplier
+                            "px-4 py-2 rounded-xl font-black text-xs border-2 transition-all active:scale-95 shrink-0 whitespace-nowrap",
+                            showCustomMultiplier
                               ? "bg-black text-white border-black"
                               : "bg-white text-black border-black/10 hover:border-black"
                           )}
                         >
-                          x{m}
+                          {t('custom')}...
                         </button>
-                      ))}
-                      <button
-                        onClick={() => setShowCustomMultiplier(true)}
-                        className={twMerge(
-                          "px-3 py-1.5 rounded-xl font-black text-xs border-2 transition-all active:scale-95",
-                          showCustomMultiplier
-                            ? "bg-black text-white border-black"
-                            : "bg-white text-black border-black/10 hover:border-black"
-                        )}
-                      >
-                        {t('custom')}...
-                      </button>
+                      </div>
                     </div>
 
                     {showCustomMultiplier && (
