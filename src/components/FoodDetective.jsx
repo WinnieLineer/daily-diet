@@ -827,70 +827,70 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           <div className="relative aspect-square sm:aspect-video rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo group">
             <img src={preview} className="w-full h-full object-cover" alt="Preview" />
             {loading && (
-              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-8 text-center">
-                <div className="relative mb-6">
-                  <Loader2 size={64} className="text-accent animate-spin" strokeWidth={3} />
+              <div className="absolute inset-0 bg-black/60 backdrop-blur-sm flex flex-col items-center justify-center p-4 text-center">
+                <div className="relative mb-3">
+                  <Loader2 size={48} className="text-accent animate-spin" strokeWidth={3} />
                   <div className="absolute inset-0 flex items-center justify-center">
-                    <span className="text-white font-black font-mono text-sm">{loadTime}s</span>
+                    <span className="text-white font-black font-mono text-[10px]">{loadTime}s</span>
                   </div>
                 </div>
                 
                 <AnimatePresence mode="wait">
                   <motion.div
                     key={currentFactIndex}
-                    initial={{ opacity: 0, y: 10 }}
+                    initial={{ opacity: 0, y: 5 }}
                     animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: -10 }}
-                    className="space-y-3"
+                    exit={{ opacity: 0, y: -5 }}
+                    className="space-y-1 px-2"
                   >
-                    <div className="bg-accent text-black px-3 py-1 rounded-xl text-[10px] font-black uppercase tracking-widest inline-block border-2 border-black">
-                      Did you know?
+                    <div className="bg-accent text-black px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-widest inline-block border border-black mb-1">
+                      Fact
                     </div>
-                    <p className="text-white font-black italic text-base leading-tight">
+                    <p className="text-white font-black italic text-sm leading-tight max-w-[240px]">
                       {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
                     </p>
                   </motion.div>
                 </AnimatePresence>
 
-                <div className="mt-8 flex gap-2">
+                <div className="mt-4 flex gap-1.5">
                   {[...Array(3)].map((_, i) => (
                     <motion.div
                       key={i}
-                      animate={{ scale: [1, 1.5, 1], opacity: [0.3, 1, 0.3] }}
+                      animate={{ scale: [1, 1.2, 1], opacity: [0.3, 1, 0.3] }}
                       transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-                      className="w-2 h-2 bg-accent rounded-full"
+                      className="w-1.5 h-1.5 bg-accent rounded-full"
                     />
                   ))}
                 </div>
                 
                 {isResuming && (
-                  <p className="mt-4 text-accent text-xs font-black italic animate-pulse">
+                  <p className="mt-2 text-accent text-[10px] font-black italic animate-pulse">
                     {t('resuming_analysis')}
                   </p>
                 )}
 
-                {/* 🔔 Notification Opt-in inside Loading Area */}
+                {/* 🔔 Compact Notification Opt-in */}
                 <motion.div 
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 1 }}
-                  className="mt-12 bg-white/10 backdrop-blur-md border border-white/20 p-4 rounded-3xl flex items-center justify-between gap-4 max-w-[280px] w-full"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="mt-6 bg-white/10 backdrop-blur-md border border-white/20 px-3 py-2 rounded-2xl flex items-center justify-between gap-3 max-w-[240px] w-full"
                 >
                   <div className="text-left">
-                    <p className="text-white text-[10px] font-black uppercase tracking-widest leading-none mb-1">{t('notification_ask')}</p>
-                    <p className="text-white/60 text-[8px] font-bold leading-tight">{t('notification_ask_sub')}</p>
+                    <p className="text-white text-[9px] font-black uppercase tracking-tight leading-none mb-0.5">{t('notification_ask')}</p>
+                    <p className="text-white/60 text-[7px] font-bold leading-none">{t('notification_ask_sub')}</p>
                   </div>
                   <button 
                     onClick={handleNotificationToggle}
                     className={twMerge(
-                      "w-10 h-5 rounded-full border-2 border-white relative transition-all duration-300 shrink-0",
+                      "w-8 h-4 rounded-full border border-white relative transition-all duration-300 shrink-0",
                       wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
                     )}
                   >
                     <motion.div 
-                      animate={{ x: wantsNotification ? 20 : 2 }}
+                      animate={{ x: wantsNotification ? 16 : 2 }}
                       transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                      className="absolute top-0.5 w-3 h-3 bg-white rounded-full shadow-lg" 
+                      className="absolute top-0.5 w-2 h-2 bg-white rounded-full shadow-lg" 
                     />
                   </button>
                 </motion.div>
@@ -1245,26 +1245,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         </motion.div>
       )}
 
-      {/* Experimental Features Toggle (Admin/Pro) */}
-      <div className="flex justify-between items-center pt-2 px-2 border-t-2 border-black/5 opacity-40 hover:opacity-100 transition-opacity">
-        <div className="flex items-center gap-2">
-           <Bell size={12} className={wantsNotification ? 'text-emerald-500' : 'text-gray-400'} />
-           <span className="text-[8px] font-black uppercase tracking-widest">{t('notifications')}</span>
-        </div>
-        <button 
-          onClick={handleNotificationToggle}
-          className={twMerge(
-            "w-12 h-6 rounded-full border-2 border-black relative transition-all duration-300 shadow-neo-sm",
-            wantsNotification ? "bg-emerald-400" : "bg-gray-200"
-          )}
-        >
-          <motion.div 
-            animate={{ x: wantsNotification ? 24 : 2 }}
-            transition={{ type: "spring", stiffness: 500, damping: 30 }}
-            className="absolute top-1 w-3 h-3 bg-black rounded-full" 
-          />
-        </button>
-      </div>
     </NeoCard>
   );
 }
