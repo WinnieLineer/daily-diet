@@ -224,6 +224,11 @@ const translations = {
     panda_roast_expand: "展開查看",
     panda_roast_collapse: "收起",
     // v1.8.0 — Header
+    // v1.8.1 — PWA Install
+    pwa_install_title: "安裝 DAILY DIET",
+    pwa_install_desc: "將 App 加入主螢幕，享受全螢幕體驗與更快速的存取！",
+    pwa_install_btn: "立即安裝",
+    pwa_ios_hint: "請點擊瀏覽器下方的分享按鈕 {icon}，然後選擇「加入主螢幕」即可完成安裝 🐼",
     title_possessive: "的",
     finish_edit: "完成編輯",
   },
@@ -452,6 +457,11 @@ const translations = {
     panda_roast_expand: "Tap to expand",
     panda_roast_collapse: "Collapse",
     // v1.8.0 — Header
+    // v1.8.1 — PWA Install
+    pwa_install_title: "Install DAILY DIET",
+    pwa_install_desc: "Add to home screen for a full-screen experience and faster access!",
+    pwa_install_btn: "Install Now",
+    pwa_ios_hint: "Tap the share button {icon} below and select 'Add to Home Screen' to install 🐼",
     title_possessive: "'s",
     finish_edit: "Finish Editing",
   }

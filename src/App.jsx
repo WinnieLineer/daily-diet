@@ -8,6 +8,7 @@ import WeightTracker from './components/WeightTracker';
 import GoalSettings from './components/GoalSettings';
 import WhatsNew from './components/WhatsNew';
 import Onboarding from './components/Onboarding';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
@@ -705,6 +706,7 @@ function App() {
         {showWhatsNew && <WhatsNew key="whats-new" version={APP_VERSION} onClose={() => setShowWhatsNew(false)} />}
         {showNamePrompt && <NamePromptModal key="name-prompt" onSave={handleNameSave} isUpdate={true} />}
       </AnimatePresence>
+      <PWAInstallPrompt />
       {/* Toast notification */}
       <AnimatePresence>
         {toast && (
