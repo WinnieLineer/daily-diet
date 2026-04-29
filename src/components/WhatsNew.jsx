@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap, Database } from 'lucide-react';
+import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap, Database, Download } from 'lucide-react';
 import NeoButton from './NeoButton';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
@@ -51,9 +51,15 @@ const WhatsNew = ({ version, onClose }) => {
 
             <div className="space-y-4">
               <FeatureItem 
+                icon={Download}
+                color="bg-purple-400"
+                title="PWA 安裝引導系統 📱"
+                description="現在支援將 App 加入主螢幕！提供 iOS 與 Android 專屬安裝教學，享受全螢幕順暢體驗。"
+              />
+              <FeatureItem 
                 icon={Database}
                 color="bg-rose-400"
-                title="資料安全大升級 ⚠️"
+                title="資料管理大升級 ⚠️"
                 description="新增本地儲存警示，提醒你資料存在地端瀏覽器，請記得定期導出備份防遺失。"
               />
               <FeatureItem 
@@ -67,12 +73,6 @@ const WhatsNew = ({ version, onClose }) => {
                 color="bg-yellow-400"
                 title="UI 配色細節優化"
                 description="全站視覺色彩優化，對比度更高且更符合品牌感，給你最純粹的黑金風格。"
-              />
-              <FeatureItem 
-                icon={Move}
-                color="bg-purple-400"
-                title="份量輸入體驗改進"
-                description="客製份量時輸入框會自動清空，讓你輸入更順手，不再需要手動刪除預設數字。"
               />
             </div>
 

@@ -231,6 +231,8 @@ const translations = {
     pwa_ios_hint: "請點擊瀏覽器工具列中的「分享」按鈕 {icon}，然後選擇「加入主螢幕」即可完成安裝 🐼",
     pwa_dismiss_later: "稍後再說",
     pwa_dismiss_never: "不再顯示",
+    pwa_settings_tab: "安裝 App",
+    pwa_already_installed: "已安裝為獨立 App 🐼",
     title_possessive: "的",
     finish_edit: "完成編輯",
   },
@@ -466,6 +468,8 @@ const translations = {
     pwa_ios_hint: "Tap the Share button {icon} in your browser toolbar and select 'Add to Home Screen' 🐼",
     pwa_dismiss_later: "Maybe Later",
     pwa_dismiss_never: "Don't Show Again",
+    pwa_settings_tab: "Install App",
+    pwa_already_installed: "Already installed as an App 🐼",
     title_possessive: "'s",
     finish_edit: "Finish Editing",
   }
