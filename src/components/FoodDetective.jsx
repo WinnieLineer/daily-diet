@@ -539,31 +539,29 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       </div>
 
       {mode === 'ai' && !preview && (
-        <div className="relative w-full aspect-[2.5/1] rounded-[2rem] overflow-hidden border-4 border-black shadow-neo mt-2 bg-zinc-50 flex flex-col items-center justify-center p-4">
-          <div className="grid grid-cols-2 gap-3 w-full h-full">
-            <button 
-              onClick={() => {
-                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                if (isMobile) cameraInputRef.current?.click();
-                else {
-                  setShowDesktopCamera(true);
-                  navigator.geolocation.getCurrentPosition(pos => { pendingCoordsRef.current = pos.coords; }, () => {}, { timeout: 5000 });
-                }
-              }}
-              className="group flex flex-col items-center justify-center gap-1.5 p-2 bg-accent border-4 border-black rounded-[2rem] shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all active:translate-x-0 active:translate-y-0"
-            >
-              <div className="w-10 h-10 flex items-center justify-center bg-white rounded-xl border-2 border-black shadow-neo-xs"><Camera size={20} /></div>
-              <span className="font-black italic text-xs uppercase tracking-tighter">{t('camera')}</span>
-            </button>
-            
-            <button 
-              onClick={() => galleryInputRef.current?.click()}
-              className="group flex flex-col items-center justify-center gap-1.5 p-2 bg-white border-4 border-black rounded-[2rem] shadow-neo-sm hover:translate-x-[-1px] hover:translate-y-[-1px] transition-all active:translate-x-0 active:translate-y-0"
-            >
-              <div className="w-10 h-10 flex items-center justify-center bg-zinc-100 rounded-xl border-2 border-black shadow-neo-xs"><ImageIcon size={20} /></div>
-              <span className="font-black italic text-xs uppercase tracking-tighter">{t('gallery')}</span>
-            </button>
-          </div>
+        <div className="grid grid-cols-2 gap-4 w-full mt-2">
+          <button 
+            onClick={() => {
+              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+              if (isMobile) cameraInputRef.current?.click();
+              else {
+                setShowDesktopCamera(true);
+                navigator.geolocation.getCurrentPosition(pos => { pendingCoordsRef.current = pos.coords; }, () => {}, { timeout: 5000 });
+              }
+            }}
+            className="group flex flex-col items-center justify-center gap-3 p-6 bg-accent border-4 border-black rounded-[2.5rem] shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0"
+          >
+            <div className="w-14 h-14 flex items-center justify-center bg-white rounded-2xl border-4 border-black shadow-neo-sm"><Camera size={28} /></div>
+            <span className="font-black italic text-lg uppercase tracking-tighter">{t('camera')}</span>
+          </button>
+          
+          <button 
+            onClick={() => galleryInputRef.current?.click()}
+            className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-4 border-black rounded-[2.5rem] shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0"
+          >
+            <div className="w-14 h-14 flex items-center justify-center bg-zinc-100 rounded-2xl border-4 border-black shadow-neo-sm"><ImageIcon size={28} /></div>
+            <span className="font-black italic text-lg uppercase tracking-tighter">{t('gallery')}</span>
+          </button>
 
           <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
           <input type="file" accept="image/*" multiple className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
@@ -611,7 +609,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       )}
 
       {aiLoading && (
-        <div className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center rounded-[2rem] overflow-hidden">
+        <div className="absolute -inset-1 z-[60] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center rounded-[2rem] overflow-hidden">
           <div className="flex flex-col items-center gap-2 mb-3">
             <div className="relative">
               <Loader2 size={40} className="text-accent animate-spin" strokeWidth={4} />
