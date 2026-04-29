@@ -2,17 +2,27 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 
-const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged }) => {
+const VERSION_HISTORY = [
+  { version: '1.8.0', date: '2026-04-29', features: ['個人化名稱系統 🐼', '設定區全面進化', 'AI 嘴砲區塊', '移除通知優化效能', '全新水杯圖示'] },
+  { version: '1.7.19', date: '2026-04-20', features: ['AI 辨識穩定性優化', '歷史趨勢圖表改進', '多語系支援優化'] },
+  { version: '1.7.0', date: '2026-04-10', features: ['常用紀錄功能', '自動地點標記', '智慧建議計算機'] },
+  { version: '1.6.5', date: '2026-03-25', features: ['體重追蹤系統', '飲食分析日誌', '深色模式優化'] },
+  { version: '1.5.0', date: '2026-03-10', features: ['全新 Neo-brutalism UI', '熊貓營養師登場'] }
+];
+
+const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
   const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [showTip, setShowTip] = useState(false);
-  const [activeTab, setActiveTab] = useState('goals'); // 'goals', 'language', 'contact', 'data'
+  const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'goals', 'language', 'appinfo', 'data', 'contact'
+  const [newName, setNewName] = useState(userName || '');
+  const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
   const [showCalculator, setShowCalculator] = useState(false);
 
@@ -37,7 +47,33 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged }) =>
 
   useEffect(() => {
     fetchGoals();
+    checkLocationPermission();
   }, []);
+
+  const checkLocationPermission = () => {
+    if ("geolocation" in navigator) {
+      if (localStorage.getItem('location_granted') === 'true') {
+        setLocationStatus('granted');
+      } else {
+        setLocationStatus('denied');
+      }
+    }
+  };
+
+  const requestLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        () => {
+          localStorage.setItem('location_granted', 'true');
+          setLocationStatus('granted');
+        },
+        () => {
+          localStorage.setItem('location_granted', 'false');
+          setLocationStatus('denied');
+        }
+      );
+    }
+  };
 
   const fetchGoals = async () => {
     const cal = await db.settings.get('calorie_goal');
@@ -146,8 +182,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged }) =>
             >
               <div className="flex items-center justify-between p-4 bg-zinc-50 border-b-2 border-black">
                 <h3 className="font-black text-lg italic tracking-tight uppercase">
+                  {activeTab === 'profile' && t('settings_profile')}
                   {activeTab === 'goals' && t('settings_goals')}
                   {activeTab === 'language' && t('settings_language')}
+                  {activeTab === 'appinfo' && t('settings_app_info')}
                   {activeTab === 'contact' && t('settings_contact')}
                   {activeTab === 'data' && t('settings_data')}
                 </h3>
@@ -158,7 +196,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged }) =>
 
               <div className="flex p-2 gap-1 bg-white border-b-2 border-zinc-100">
                 {[
+                  { id: 'profile', icon: User },
                   { id: 'goals', icon: Target },
+                  { id: 'appinfo', icon: Info },
                   { id: 'language', icon: Globe },
                   { id: 'data', icon: Database },
                   { id: 'contact', icon: Mail }
@@ -178,6 +218,49 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged }) =>
               </div>
 
               <div className="p-4 space-y-4 overflow-y-auto flex-1 custom-scrollbar">
+                {activeTab === 'profile' && (
+                  <div className="space-y-6 pt-2">
+                    <div className="flex flex-col items-center gap-4">
+                      <div className="w-24 h-24 bg-accent border-4 border-black rounded-[2rem] shadow-neo-sm flex items-center justify-center text-4xl">🐼</div>
+                      <div className="text-center">
+                        <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('your_name')}</div>
+                        <div className="text-2xl font-black italic">{userName || 'Guest'}</div>
+                      </div>
+                    </div>
+                    
+                    <div className="space-y-2">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">{t('change_name')}</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={newName} 
+                          onChange={e => setNewName(e.target.value)}
+                          placeholder={t('name_placeholder')}
+                          className="flex-1 border-4 border-black p-3 rounded-2xl font-bold outline-none focus:bg-zinc-50 transition-all"
+                        />
+                        <NeoButton 
+                          variant="black" 
+                          className="px-4"
+                          onClick={() => {
+                            if (newName.trim()) {
+                              onSetUserName(newName.trim());
+                              setIsOpen(false);
+                            }
+                          }}
+                        >
+                          <Check size={20} />
+                        </NeoButton>
+                      </div>
+                    </div>
+
+                    <div className="bg-zinc-50 border-4 border-black p-4 rounded-3xl shadow-neo-sm">
+                      <p className="text-[10px] font-bold text-zinc-500 leading-relaxed italic">
+                        🐼 「名字不只是個代號，它讓我可以更精準地嘴砲（劃掉）建議你。改個帥一點的名字吧！」
+                      </p>
+                    </div>
+                  </div>
+                )}
+
                 {activeTab === 'goals' && (
                   <>
                     <div className="flex items-center justify-between mb-2">
@@ -300,6 +383,82 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged }) =>
                       </NeoButton>
                     </div>
                   </>
+                )}
+
+                {activeTab === 'appinfo' && (
+                  <div className="space-y-6 py-2">
+                    {/* App Actions */}
+                    <div className="grid grid-cols-1 gap-3">
+                      <button 
+                        onClick={() => { onWatchTutorial(); setIsOpen(false); }}
+                        className="flex items-center gap-4 p-4 bg-white border-4 border-black rounded-2xl shadow-neo-sm hover:translate-x-1 hover:-translate-y-1 transition-all active:translate-x-0 active:translate-y-0"
+                      >
+                        <div className="bg-accent p-2 rounded-xl border-2 border-black">
+                          <RotateCcw size={20} />
+                        </div>
+                        <span className="font-black italic text-sm">{t('watch_tutorial')}</span>
+                      </button>
+
+                      <button 
+                        onClick={() => { onToggleLayoutEdit(); setIsOpen(false); }}
+                        className={`flex items-center gap-4 p-4 border-4 border-black rounded-2xl shadow-neo-sm transition-all ${isEditingLayout ? 'bg-black text-white' : 'bg-white hover:translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0'}`}
+                      >
+                        <div className={`p-2 rounded-xl border-2 ${isEditingLayout ? 'bg-accent text-black border-black' : 'bg-zinc-100 border-black'}`}>
+                          <LayoutGrid size={20} />
+                        </div>
+                        <span className="font-black italic text-sm">{t('reset_layout')}</span>
+                        {isEditingLayout && <div className="ml-auto bg-accent text-black text-[8px] font-black px-2 py-0.5 rounded-full border border-black animate-pulse">EDITING</div>}
+                      </button>
+
+                      <div className="p-4 bg-zinc-50 border-4 border-black rounded-2xl shadow-neo-sm space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-2">
+                            <MapPin size={18} className="text-zinc-400" />
+                            <span className="font-black italic text-sm">{t('settings_location_permission')}</span>
+                          </div>
+                          <span className={`text-[10px] font-black uppercase px-2 py-0.5 rounded-lg border-2 ${locationStatus === 'granted' ? 'bg-emerald-100 text-emerald-600 border-emerald-600' : 'bg-rose-100 text-rose-600 border-rose-600'}`}>
+                            {locationStatus === 'granted' ? t('location_granted_status') : t('location_denied_status')}
+                          </span>
+                        </div>
+                        <button 
+                          onClick={requestLocation}
+                          className="w-full bg-white border-2 border-black py-2 rounded-xl text-[10px] font-black uppercase hover:bg-zinc-100 transition-colors"
+                        >
+                          {t('location_request')}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Version History */}
+                    <div className="space-y-3">
+                      <div className="flex items-center gap-2 px-1">
+                        <History size={16} className="text-zinc-400" />
+                        <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('settings_version_history')}</span>
+                      </div>
+                      <div className="space-y-3">
+                        {VERSION_HISTORY.map((v, idx) => (
+                          <div key={v.version} className={`p-3 border-2 border-black rounded-2xl shadow-neo-xs ${idx === 0 ? 'bg-accent/10 border-accent/30' : 'bg-white'}`}>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="font-black text-sm italic">v{v.version}</span>
+                              <span className="text-[8px] font-bold text-zinc-400">{v.date}</span>
+                            </div>
+                            <ul className="space-y-1">
+                              {v.features.map((f, i) => (
+                                <li key={i} className="text-[10px] font-bold text-zinc-500 flex items-center gap-1.5">
+                                  <div className="w-1 h-1 bg-black rounded-full shrink-0" />
+                                  {f}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="text-center pt-4 opacity-30 grayscale">
+                       <p className="text-[10px] font-black italic uppercase tracking-widest">Daily Diet © 2026</p>
+                    </div>
+                  </div>
                 )}
 
                 {activeTab === 'language' && (

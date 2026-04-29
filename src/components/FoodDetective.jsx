@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, Bell } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import exifr from 'exifr';
@@ -10,57 +11,53 @@ import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANALYSIS_DURATION_SECONDS, IMAGE_MAX_DIMENSION, IMAGE_QUALITY } from '../lib/constants';
 
-const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
+const IntegratedCamera = ({ onCapture, onClose, onLocationReady, onOpenGallery, isInline }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
   const [stream, setStream] = useState(null);
   const [error, setError] = useState(null);
+  const [isInitializing, setIsInitializing] = useState(true);
 
   useEffect(() => {
     async function setupCamera() {
       try {
+        setIsInitializing(true);
         const s = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } } 
+          video: { 
+            facingMode: 'environment', 
+            width: { ideal: 1920 }, 
+            height: { ideal: 1080 } 
+          } 
         });
         setStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
+        setIsInitializing(false);
       } catch (err) {
         console.error("Camera access failed", err);
         setError(t('camera_error') || "Camera access denied or not found");
+        setIsInitializing(false);
       }
     }
     setupCamera();
 
-    // Silently start fetching location in the background if permission is granted
-    // iOS Safari oftens throws error on navigator.permissions.query('geolocation'), so we fallback to a localStorage flag tracking previous consent
+    // Silently start fetching location in the background
     const permissionGranted = localStorage.getItem('location_granted') === 'true';
     if (navigator.geolocation && onLocationReady) {
-      try {
-        navigator.permissions.query({ name: 'geolocation' }).then(permission => {
-          if (permission.state === 'granted' || permissionGranted) {
-            fetchBackground();
-          }
-        }).catch(() => {
-          if (permissionGranted) fetchBackground();
-        });
-      } catch (err) {
-        if (permissionGranted) fetchBackground();
+      if (permissionGranted) {
+        navigator.geolocation.getCurrentPosition(
+          pos => {
+            onLocationReady(pos.coords);
+          },
+          () => {}, 
+          { timeout: 8000, maximumAge: 30000 }
+        );
       }
     }
 
-    function fetchBackground() {
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          localStorage.setItem('location_granted', 'true');
-          onLocationReady(pos.coords);
-        },
-        () => {}, // silent fail
-        { timeout: 8000, maximumAge: 30000 }
-      );
-    }
-
     return () => {
-      if (stream) stream.getTracks().forEach(t => t.stop());
+      if (stream) {
+        stream.getTracks().forEach(t => t.stop());
+      }
     };
   }, []);
 
@@ -68,28 +65,44 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
     const video = videoRef.current;
     const canvas = canvasRef.current;
     if (video && canvas) {
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      canvas.getContext('2d').drawImage(video, 0, 0);
-      const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+      const videoWidth = video.videoWidth;
+      const videoHeight = video.videoHeight;
+      canvas.width = videoWidth;
+      canvas.height = videoHeight;
+      
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(video, 0, 0, videoWidth, videoHeight);
+      
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.9);
       onCapture(dataUrl);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black flex items-center justify-center">
+    <div className={twMerge(
+      "bg-black flex items-center justify-center overflow-hidden",
+      isInline ? "absolute inset-0" : "fixed inset-0 z-[500]"
+    )}>
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        className="relative w-full h-full flex items-center justify-center bg-black overflow-hidden"
+        exit={{ opacity: 0 }}
+        className="relative w-full h-full flex items-center justify-center bg-black"
       >
         {error ? (
-          <div className="flex flex-col items-center justify-center h-full text-white p-8 text-center max-w-md">
-            <AlertCircle size={48} className="text-rose-500 mb-4" />
-            <p className="font-black italic text-lg">{error}</p>
-            <button onClick={onClose} className="mt-6 bg-white text-black px-8 py-3 rounded-2xl font-black italic border-4 border-black shadow-neo">
-              {t('cancel')}
-            </button>
+          <div className="flex flex-col items-center justify-center h-full text-white p-6 text-center max-w-md">
+            <AlertCircle size={32} className="text-rose-500 mb-4" />
+            <p className="font-black italic text-sm">{error}</p>
+            <div className="flex gap-3 mt-6">
+              {!isInline && (
+                <button onClick={onClose} className="bg-white/10 text-white px-4 py-2 rounded-xl font-black italic border-2 border-white/20 text-xs">
+                  {t('cancel')}
+                </button>
+              )}
+              <button onClick={onOpenGallery} className="bg-accent text-black px-4 py-2 rounded-xl font-black italic border-4 border-black shadow-neo text-xs">
+                {t('gallery')}
+              </button>
+            </div>
           </div>
         ) : (
           <>
@@ -97,47 +110,82 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
               ref={videoRef} 
               autoPlay 
               playsInline 
+              muted
               className="w-full h-full object-cover" 
             />
             <canvas ref={canvasRef} className="hidden" />
             
             {/* UI Overlays */}
-            <div className="absolute inset-0 pointer-events-none">
-              {/* Top Controls */}
-              <div className="absolute top-0 left-0 right-0 p-6 flex justify-between items-start">
-                <div className="bg-black/40 backdrop-blur-md px-3 py-1.5 rounded-xl border border-white/10 flex items-center gap-2">
-                  <div className="w-1.5 h-1.5 bg-rose-500 rounded-full animate-pulse" />
-                  <span className="text-white text-[9px] font-black uppercase tracking-widest">{t('ai_mode')}</span>
+            <div className="absolute inset-0 pointer-events-none flex flex-col justify-between p-4 sm:p-6">
+              {/* Top Bar */}
+              <div className={twMerge(
+                "flex justify-between items-start",
+                !isInline && "pt-6"
+              )}>
+                <div className="bg-black/40 backdrop-blur-md px-2 py-1 rounded-lg border border-white/10 flex items-center gap-1.5">
+                  <div className="w-1 h-1 bg-rose-500 rounded-full animate-pulse" />
+                  <span className="text-white text-[8px] font-black uppercase tracking-widest">{t('ai_mode')}</span>
                 </div>
                 
-                <button 
-                  onClick={onClose} 
-                  className="pointer-events-auto bg-black/40 hover:bg-black text-white p-2.5 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-95 shadow-xl"
-                >
-                  <X size={20} />
-                </button>
+                {!isInline && (
+                  <button 
+                    onClick={onClose} 
+                    className="pointer-events-auto bg-black/40 hover:bg-black text-white p-2 rounded-full backdrop-blur-md border border-white/20 transition-all active:scale-95 shadow-xl"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
               </div>
 
-              {/* Viewfinder Corners - Subtle and Semi-transparent */}
-              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[90%] h-[80%] max-w-5xl max-h-[85vh] pointer-events-none">
-                <div className="absolute top-0 left-0 w-10 h-10 border-t-2 border-l-2 border-accent/40 rounded-tl-[2rem]" />
-                <div className="absolute top-0 right-0 w-10 h-10 border-t-2 border-r-2 border-accent/40 rounded-tr-[2rem]" />
-                <div className="absolute bottom-0 left-0 w-10 h-10 border-b-2 border-l-2 border-accent/40 rounded-bl-[2rem]" />
-                <div className="absolute bottom-0 right-0 w-10 h-10 border-b-2 border-r-2 border-accent/40 rounded-br-[2rem]" />
-              </div>
+              {/* Viewfinder Guide - Removed yellow box as requested */}
+              <div className="flex-1" />
 
-              {/* Shutter Button - Absolute Bottom and Very Small */}
-              <div className="absolute bottom-10 left-1/2 -translate-x-1/2 pb-4">
+              {/* Bottom Controls */}
+              <div className={twMerge(
+                "relative flex items-center justify-center",
+                isInline ? "p-2 pb-3" : "p-10 pb-16"
+              )}>
+                {/* Shutter Button */}
                 <button 
                   onClick={capture}
-                  className="pointer-events-auto group relative w-16 h-16 flex items-center justify-center transition-all active:scale-90"
+                  disabled={isInitializing}
+                  className={twMerge(
+                    "pointer-events-auto group relative flex items-center justify-center transition-all active:scale-90 disabled:opacity-50",
+                    isInline ? "w-12 h-12" : "w-20 h-20"
+                  )}
                 >
-                  <div className="absolute inset-0 bg-white/10 rounded-full scale-125 backdrop-blur-sm border border-white/5" />
-                  <div className="absolute inset-1.5 bg-white rounded-full border-2 border-black/10 group-hover:bg-zinc-100 transition-colors" />
-                  <div className="w-8 h-8 bg-white/50 rounded-full border border-black/5" />
+                  <div className="absolute inset-0 bg-white/20 rounded-full scale-125 backdrop-blur-sm border-2 border-white/10" />
+                  <div className="absolute inset-1.5 bg-white rounded-full border-4 border-black/5 group-hover:bg-zinc-100 transition-colors" />
+                  <div className={twMerge(
+                    "border-2 border-black/10 rounded-full",
+                    isInline ? "w-5 h-5" : "w-10 h-10"
+                  )} />
                 </button>
+
+                {/* Album Button (Right) */}
+                <div className={twMerge(
+                  "absolute",
+                  isInline ? "right-3" : "right-10"
+                )}>
+                  <button 
+                    onClick={onOpenGallery}
+                    className={twMerge(
+                      "pointer-events-auto bg-white/10 backdrop-blur-md rounded-xl border-2 border-white/20 flex items-center justify-center text-white active:scale-90 transition-all",
+                      isInline ? "w-8 h-8" : "w-12 h-12"
+                    )}
+                  >
+                    <ImageIcon size={isInline ? 16 : 24} />
+                  </button>
+                </div>
               </div>
             </div>
+
+            {isInitializing && (
+              <div className="absolute inset-0 bg-black flex flex-col items-center justify-center gap-4">
+                <Loader2 size={isInline ? 32 : 48} className="text-accent animate-spin" />
+                <span className="text-white/40 text-[8px] font-black uppercase tracking-[0.2em]">{t('analyzing')}</span>
+              </div>
+            )}
           </>
         )}
       </motion.div>
@@ -145,7 +193,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
   );
 };
 
-export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef, favoriteUpdateTrigger }) {
+export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef, favoriteUpdateTrigger, userName }) {
   const [mode, setMode] = useState('ai'); // 'ai', 'manual', or 'favorites'
   const [aiLoading, setAiLoading] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
@@ -180,17 +228,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     if (hour >= 17 && hour < 21) return 'dinner';
     return 'snack'; // Night snack
   });
-  const [wantsNotification, setWantsNotification] = useState(() => {
-    if (typeof window === 'undefined' || !window.Notification) return false;
-    return localStorage.getItem('diet_notifications_enabled') === 'true' && Notification.permission === 'granted';
-  });
-  const wantsNotificationRef = useRef(wantsNotification);
-
-  // Sync ref with state and persist preference
-  useEffect(() => {
-    wantsNotificationRef.current = wantsNotification;
-    localStorage.setItem('diet_notifications_enabled', wantsNotification.toString());
-  }, [wantsNotification]);
+  const [showRoast, setShowRoast] = useState(false);
 
   // Recovery Logic
   useEffect(() => {
@@ -440,7 +478,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           proteinGoal: goals.protein,
           water: summary.water,
           waterGoal: goals.water,
-          foodLogs: recentLogs
+          foodLogs: recentLogs,
+          userName: userName
         };
 
         const res = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
@@ -482,15 +521,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
         
         if (data.panda_comment && setAdvice) setAdvice(data.panda_comment);
-        if (data.fun_fact) {
-          const exists = await db.nutritionFacts.where('fact').equals(data.fun_fact).count();
-          if (exists === 0) await db.nutritionFacts.add({ fact: data.fun_fact, lang: getLanguage() });
-        }
-
-        // 🚀 Notify user
-        const title = t('ai_complete_title');
-        const body = `${t('ai_complete_body')}\n${data.dish_name}: ${data.calories}kcal`;
-        await notifyUser(title, body);
 
         if (document.visibilityState === 'visible' && mode !== 'ai') {
           setSuccessToast(data.dish_name);
@@ -504,13 +534,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       console.error("AI Analysis Error:", err);
       const errorMsg = err.message || t('ai_error') || "AI 辨識發生錯誤，請稍後再試。";
       setAiError(errorMsg);
-
-      // 🚀 Notify user of failure
-      const title = t('ai_fail_title');
-      const body = `${t('ai_fail_body')}\n${errorMsg}`;
-      
-      // Always call notifyUser for sensory feedback (sound/title)
-      await notifyUser(title, body);
 
       if (document.visibilityState === 'visible' && mode !== 'ai') {
         setErrorToast(errorMsg);
@@ -536,61 +559,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     db.pendingAnalysis.delete('current');
   };
 
-  // Generic Notification Helper
-  const notifyUser = async (title, body) => {
-    // If permission not granted, we can't do system notification but we can still flash title/sound
-    const baseUrl = import.meta.env.BASE_URL || '/';
-    const icon = `${baseUrl}pwa-192x192.png`.replace(/\/+/g, '/');
-    const badge = `${baseUrl}favicon.png`.replace(/\/+/g, '/');
-    
-    if (!wantsNotificationRef.current) return;
 
-    // 🔊 Fallback 1: Audio Feedback
-    try {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-      gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (e) {}
-
-    // 🏷️ Fallback 2: Title Flashing
-    const originalTitle = document.title;
-    let isFlashing = true;
-    const interval = setInterval(() => {
-      document.title = isFlashing ? `⚠️ ${title}` : originalTitle;
-      isFlashing = !isFlashing;
-    }, 1000);
-    const stopFlashing = () => {
-      clearInterval(interval);
-      document.title = originalTitle;
-      window.removeEventListener('focus', stopFlashing);
-    };
-    window.addEventListener('focus', stopFlashing);
-
-    // 📲 System Notification (only if hidden)
-    if (document.visibilityState !== 'hidden') return;
-    try {
-      if (typeof window !== 'undefined' && window.Notification && wantsNotificationRef.current && Notification.permission === 'granted') {
-        if ('serviceWorker' in navigator) {
-          const reg = await navigator.serviceWorker.getRegistration();
-          if (reg) {
-            await reg.showNotification(title, { body, icon, badge, tag: 'analysis-status', renotify: true });
-          } else {
-            new Notification(title, { body, icon });
-          }
-        } else {
-          new Notification(title, { body, icon });
-        }
-      }
-    } catch (err) {}
-  };
 
   // locationPromise: optional Promise<string|null> for background location resolution
   const handleAnalysis = async (base64, locationPromise = null) => {
@@ -750,28 +719,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setManualSaving(false);
   };
 
-  const handleNotificationToggle = async () => {
-    if (typeof window === 'undefined' || !window.Notification) return;
-    
-    if (Notification.permission === 'default') {
-      const permission = await Notification.requestPermission();
-      if (permission === 'granted') {
-        setWantsNotification(true);
-        localStorage.setItem('diet_notifications_enabled', 'true');
-        setFavToast(t('notification_granted'));
-      } else {
-        setWantsNotification(false);
-        localStorage.setItem('diet_notifications_enabled', 'false');
-        setFavToast(t('notification_denied'));
-      }
-    } else if (Notification.permission === 'granted') {
-      const newState = !wantsNotification;
-      setWantsNotification(newState);
-      localStorage.setItem('diet_notifications_enabled', String(newState));
-    } else {
-      setFavToast(t('notification_denied'));
-    }
-  };
+
 
   return (
     <NeoCard className="space-y-4 bg-white/60 backdrop-blur-sm relative overflow-hidden">
@@ -877,57 +825,76 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         </div>
       </div>
 
-
       {mode === 'ai' && !preview && (
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="grid grid-cols-2 gap-3 mt-2"
-        >
-          <button 
-            onClick={() => {
-              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-              if (isMobile) {
-                cameraInputRef.current?.click();
-              } else {
-                setShowDesktopCamera(true);
-                navigator.geolocation.getCurrentPosition(
-                  pos => { pendingCoordsRef.current = pos.coords; },
-                  () => {},
-                  { timeout: 5000 }
-                );
-              }
-            }}
-            className="group flex flex-col items-center justify-center gap-3 p-6 bg-accent border-4 border-black rounded-3xl shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
-          >
-            <div className="w-16 h-16 flex items-center justify-center bg-white rounded-2xl border-4 border-black shadow-neo-sm">
-              <Camera size={32} />
-            </div>
-            <span className="font-black italic text-lg">{t('camera')}</span>
-          </button>
-          
-          <button 
-            onClick={() => galleryInputRef.current?.click()}
-            className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-4 border-black rounded-3xl shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all"
-          >
-            <div className="w-16 h-16 flex items-center justify-center bg-zinc-100 rounded-2xl border-4 border-black shadow-neo-sm">
-              <ImageIcon size={32} />
-            </div>
-            <span className="font-black italic text-lg">{t('gallery')}</span>
-          </button>
+        <div className="relative w-full aspect-[3/4] rounded-[2rem] overflow-hidden border-4 border-black shadow-neo mt-2">
+          {aiLoading ? (
+            <div className="absolute inset-0 bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center z-50 rounded-[2rem]">
+              <div className="flex flex-col items-center gap-2 mb-4">
+                <div className="relative">
+                  <Loader2 size={40} className="text-accent animate-spin" strokeWidth={4} />
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span>
+                  </div>
+                </div>
+                <span className="text-accent text-[10px] font-black uppercase tracking-widest">{t('analyzing')}</span>
+              </div>
+              
+              <AnimatePresence mode="wait">
+                <motion.div
+                  key={currentFactIndex}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  className="space-y-1.5 px-2 mb-4"
+                >
+                  <div className="bg-accent text-black px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest inline-block border border-black mb-1">
+                    {t('food_fact')}
+                  </div>
+                  <p className="text-white font-black italic text-[11px] leading-tight max-w-[240px] mx-auto text-balance">
+                    {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
+                  </p>
+                </motion.div>
+              </AnimatePresence>
 
-          <input type="file" accept="image/jpeg,image/png,image/webp" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
-          <input type="file" accept="image/jpeg,image/png,image/webp" multiple="multiple" className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
-        </motion.div>
+              <div className="w-full max-w-[200px] space-y-4">
+                <div className="bg-rose-500/20 border-2 border-rose-500 px-3 py-2 rounded-xl">
+                  <p className="text-rose-500 text-[9px] font-black uppercase tracking-tight">
+                    {t('stay_on_page_warning')}
+                  </p>
+                </div>
+                <button 
+                  onClick={cancelAnalysis}
+                  className="mx-auto text-white/30 hover:text-white text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5"
+                >
+                  <X size={10} /> {t('cancel')}
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <IntegratedCamera 
+                key="integrated-camera"
+                isInline
+                onClose={() => setMode('manual')} 
+                onCapture={handleCameraCapture}
+                onOpenGallery={() => galleryInputRef.current?.click()}
+                onLocationReady={(coords) => { pendingCoordsRef.current = coords; }}
+              />
+              <input 
+                key="gallery-input"
+                type="file" 
+                accept="image/jpeg,image/png,image/webp" 
+                multiple="multiple" 
+                className="hidden" 
+                ref={galleryInputRef} 
+                onChange={handleImageUpload} 
+              />
+            </>
+          )}
+        </div>
       )}
 
-      {showDesktopCamera && (
-        <DesktopCamera 
-          onClose={() => setShowDesktopCamera(false)} 
-          onCapture={handleCameraCapture}
-          onLocationReady={(coords) => { pendingCoordsRef.current = coords; }}
-        />
-      )}
+
 
       {mode === 'ai' && preview && (
         <motion.div 
@@ -935,8 +902,48 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           animate={{ opacity: 1, y: 0 }}
           className="space-y-4"
         >
-          <div className="relative aspect-square sm:aspect-video rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo group">
+          <div className="relative aspect-[3/4] rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo group">
             <img src={preview} className="w-full h-full object-cover" alt="Preview" />
+            
+            {aiLoading && (
+              <div className="absolute inset-0 bg-black/80 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center z-50 rounded-[2.5rem]">
+                <div className="flex flex-col items-center gap-2 mb-4">
+                  <div className="relative">
+                    <Loader2 size={40} className="text-accent animate-spin" strokeWidth={4} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span>
+                    </div>
+                  </div>
+                  <span className="text-accent text-[10px] font-black uppercase tracking-widest">{t('analyzing')}</span>
+                </div>
+
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={currentFactIndex}
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    className="space-y-1.5 px-2 mb-4"
+                  >
+                    <div className="bg-accent text-black px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest inline-block border border-black mb-1">
+                      {t('food_fact')}
+                    </div>
+                    <p className="text-white font-black italic text-[11px] leading-tight max-w-[240px] mx-auto text-balance">
+                      {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
+                    </p>
+                  </motion.div>
+                </AnimatePresence>
+                
+                <div className="w-full max-w-[200px] space-y-4">
+                  <div className="bg-rose-500/20 border-2 border-rose-500 px-3 py-2 rounded-xl">
+                    <p className="text-rose-500 text-[9px] font-black uppercase tracking-tight">
+                      {t('stay_on_page_warning')}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {!aiLoading && (
               <button 
                 onClick={cancelAnalysis}
@@ -1105,7 +1112,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 )}
 
                 {result.panda_comment && (
-                  <div className="bg-accent/10 border-4 border-black p-4 rounded-[2rem] mb-6 relative shadow-neo-sm">
+                  <div className="bg-accent/10 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm">
                     <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
                       <MessageSquareQuote size={10} className="fill-black" />
                       <span className="text-[8px] font-black uppercase tracking-wider">{t('panda_coach')}</span>
@@ -1113,6 +1120,38 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     <p className="text-sm font-black italic leading-snug">
                       "{result.panda_comment}"
                     </p>
+                  </div>
+                )}
+
+                {result.roast && (
+                  <div className="bg-rose-50 border-4 border-black p-4 rounded-[2rem] mb-6 relative shadow-neo-sm overflow-hidden">
+                    <button 
+                      onClick={() => setShowRoast(!showRoast)}
+                      className="w-full flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm">🔥</span>
+                        <span className="text-xs font-black uppercase tracking-widest">{t('panda_roast_title')}</span>
+                      </div>
+                      <div className="flex items-center gap-1 text-[10px] font-bold text-rose-500 uppercase">
+                        {showRoast ? t('panda_roast_collapse') : t('panda_roast_expand')}
+                        {showRoast ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
+                      </div>
+                    </button>
+                    <AnimatePresence>
+                      {showRoast && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="pt-3"
+                        >
+                          <p className="text-sm font-black italic text-rose-600 leading-snug">
+                            "{result.roast}"
+                          </p>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
                   </div>
                 )}
 
@@ -1361,92 +1400,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         </motion.div>
       )}
 
-      {aiLoading && (
-        <div className="absolute -inset-6 z-[60] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center rounded-[2rem] overflow-hidden">
-          <div className="flex flex-col items-center gap-2 mb-4">
-            <div className="relative">
-              <Loader2 size={52} className="text-accent animate-spin" strokeWidth={4} />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span>
-              </div>
-            </div>
-            <div className="flex items-center gap-2 bg-white/10 px-3 py-1 rounded-full border border-white/10 backdrop-blur-sm">
-              <span className="text-sm">🐼</span>
-              <span className="text-white text-[9px] font-black tracking-tight uppercase">{t('ai_calculating')}</span>
-            </div>
-          </div>
-          
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentFactIndex}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-1.5 px-2 mb-4"
-            >
-              <div className="bg-accent text-black px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase tracking-widest inline-block border border-black mb-1">
-                {t('food_fact')}
-              </div>
-              <p className="text-white font-black italic text-sm sm:text-base leading-tight max-w-[240px] mx-auto text-balance">
-                {nutritionFacts[currentFactIndex]?.fact || t('analyzing')}
-              </p>
-            </motion.div>
-          </AnimatePresence>
 
-          <div className="flex gap-1.5 mb-6">
-            {[...Array(3)].map((_, i) => (
-              <motion.div
-                key={i}
-                animate={{ scale: [1, 1.2, 1], opacity: [0.3, 1, 0.3] }}
-                transition={{ repeat: Infinity, duration: 1, delay: i * 0.2 }}
-                className="w-1.5 h-1.5 bg-accent rounded-full"
-              />
-            ))}
-          </div>
-          
-          <div className="w-full max-w-[240px] space-y-3">
-            {isResuming && (
-              <p className="text-accent text-[9px] font-black italic animate-pulse">
-                {t('resuming_analysis')}
-              </p>
-            )}
 
-            {typeof window !== 'undefined' && window.Notification && (
-              <motion.div 
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ delay: 0.5 }}
-                className="bg-white/10 backdrop-blur-md border border-white/20 px-3 py-2 rounded-2xl flex items-center justify-between gap-3"
-              >
-                <div className="text-left min-w-0">
-                  <p className="text-white text-[8px] font-black uppercase tracking-tight leading-none mb-1 truncate">{t('notification_ask')}</p>
-                  <p className="text-white/60 text-[7px] font-bold leading-none truncate">{t('notification_ask_sub')}</p>
-                </div>
-                <button 
-                  onClick={handleNotificationToggle}
-                  className={twMerge(
-                    "w-8 h-4 rounded-full border border-white relative transition-all duration-300 shrink-0",
-                    wantsNotification ? "bg-emerald-400 border-emerald-400" : "bg-white/10"
-                  )}
-                >
-                  <motion.div 
-                    animate={{ x: wantsNotification ? 16 : 2 }}
-                    transition={{ type: "spring", stiffness: 500, damping: 30 }}
-                    className="absolute top-0.5 w-2.5 h-2.5 bg-white rounded-full shadow-lg" 
-                  />
-                </button>
-              </motion.div>
-            )}
 
-            <button 
-              onClick={cancelAnalysis}
-              className="mx-auto text-white/30 hover:text-white text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5 transition-all"
-            >
-              <X size={10} /> {t('cancel')}
-            </button>
-          </div>
-        </div>
-      )}
 
     </NeoCard>
   );

@@ -198,6 +198,32 @@ const translations = {
     notification_denied: "請允許通知權限以接收通知。",
     notification_title: "AI 辨識完成！",
     notification_body: "「{name}」已分析完畢，快回來記錄吧 🐼",
+    // v1.8.0 — Username system
+    name_prompt_title: "你好！我是熊貓營養師 🐼",
+    name_prompt_desc: "告訴我你的名字，讓我可以更貼心地為你服務！",
+    name_prompt_update_desc: "我們新增了個人化功能！告訴我你的名字，熊貓營養師會用你的名字給你專屬建議 🐼",
+    name_placeholder: "輸入你的暱稱...",
+    name_confirm: "開始吧！",
+    your_name: "你的名字",
+    change_name: "修改名稱",
+    // v1.8.0 — Settings redesign
+    settings_profile: "個人資料",
+    settings_app_info: "關於",
+    settings_version_history: "版本歷史",
+    settings_location_permission: "位置權限",
+    location_granted_status: "已授權",
+    location_denied_status: "未授權",
+    location_request: "重新請求權限",
+    reset_layout: "重新排列佈局",
+    layout_reset_done: "佈局已重置！",
+    // v1.8.0 — Stay on page
+    stay_on_page_warning: "⚠️ 辨識中，請勿離開此頁面",
+    // v1.8.0 — Roast section
+    panda_roast_title: "🐼 熊貓嘴砲",
+    panda_roast_expand: "展開查看",
+    panda_roast_collapse: "收起",
+    // v1.8.0 — Header
+    title_possessive: "的",
   },
   en: {
     app_title: "DAILY DIET",
@@ -398,6 +424,32 @@ const translations = {
     notification_denied: "Please enable notification permissions to receive updates.",
     notification_title: "AI Analysis Complete!",
     notification_body: "\"{name}\" is ready. Come back and log it! 🐼",
+    // v1.8.0 — Username system
+    name_prompt_title: "Hi! I'm Panda Nutritionist 🐼",
+    name_prompt_desc: "Tell me your name so I can give you a more personal experience!",
+    name_prompt_update_desc: "We've added personalization! Tell me your name and Panda Coach will use it in advice 🐼",
+    name_placeholder: "Enter your nickname...",
+    name_confirm: "Let's Go!",
+    your_name: "Your Name",
+    change_name: "Change Name",
+    // v1.8.0 — Settings redesign
+    settings_profile: "Profile",
+    settings_app_info: "About",
+    settings_version_history: "Version History",
+    settings_location_permission: "Location Permission",
+    location_granted_status: "Granted",
+    location_denied_status: "Not Granted",
+    location_request: "Request Permission",
+    reset_layout: "Reset Layout",
+    layout_reset_done: "Layout has been reset!",
+    // v1.8.0 — Stay on page
+    stay_on_page_warning: "⚠️ Please stay on this page during analysis",
+    // v1.8.0 — Roast section
+    panda_roast_title: "🐼 Panda Roast",
+    panda_roast_expand: "Tap to expand",
+    panda_roast_collapse: "Collapse",
+    // v1.8.0 — Header
+    title_possessive: "'s",
   }
 };
 

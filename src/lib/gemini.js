@@ -102,14 +102,14 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   throw lastError;
 }
 
-export async function analyzeFoodImage(base64Image, context = {}, language = 'zh') {
+export async function analyzeFoodImage(base64Image, context = {}, language = 'zh', userName = '') {
   return withRetryAndFallback((modelName, genAI) => {
     const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig: { temperature: 0 }
     });
 
-    const { calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [] } = context;
+    const { calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], userName = '' } = context;
     const now = new Date();
     const currentHour = now.getHours();
     const timeContext = currentHour < 5 ? 'Deep Night' : 
@@ -132,10 +132,11 @@ CRITICAL: Output all text fields in ${langDisplay}.
 - roast: Sarcastic but expert-level nutritional burn.
 - panda_comment: Professional nutritionist's evaluation with one actionable tip (Max 35 words).
 
-Context: ${timeContext}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}
+Context: ${timeContext}, User: ${userName || 'User'}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}
 History (Already eaten today): ${foodStrip || 'None'}
 
-Schema: {dish_name, calories, protein, water, description, fun_fact, roast, panda_comment}`;
+Schema: {dish_name, calories, protein, water, description, fun_fact, roast, panda_comment}
+STRICT: Occasionally use the user's name (${userName}) naturally in the roast or panda_comment.`;
 
     return model.generateContent({
       contents: [{ role: "user", parts: [{ text: customPrompt }, {
@@ -196,7 +197,7 @@ export async function suggestGoals(weight) {
   });
 }
 
-export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], language = 'zh') {
+export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], language = 'zh', userName = '') {
   try {
     const now = new Date();
     const currentHour = now.getHours();
@@ -216,10 +217,10 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
       const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
       
       const prompt = `Persona: Elite Registered Dietitian (RD) and Sports Nutritionist. You are witty, slightly sarcastic, but deeply professional and science-based.
-Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml.
+Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml. User: ${userName || 'User'}.
 History (Today): ${foodStrip || 'None'}
 Task: Provide an expert nutritional evaluation with exactly one specific, actionable professional suggestion based on the status.
-Tone: Evidence-based, expert, yet engagingly witty.
+Tone: Evidence-based, expert, yet engagingly witty. Occasionally address the user by name (${userName}) naturally.
 Constraint: Max 35 words.
 STRICT: Output only the evaluation sentence in ${langDisplay}. NO JSON. NO MARKDOWN. NO PREAMBLE.`;
 

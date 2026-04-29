@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin } from 'lucide-react';
+import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap } from 'lucide-react';
 import NeoButton from './NeoButton';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
@@ -51,28 +51,28 @@ const WhatsNew = ({ version, onClose }) => {
 
             <div className="space-y-4">
               <FeatureItem 
-                icon={Sparkles}
+                icon={User}
                 color="bg-yellow-400"
-                title="AI 辨識通知系統"
-                description="現在 AI 辨識完成後會自動發送通知、播放提示音並閃爍標題。即使離開頁面，也能第一時間收到結果！"
+                title="個人化名稱系統 🐼"
+                description="現在熊貓營養師會記住你的名字，並在建議與互動中親切地（或毒舌地）稱呼你！"
               />
               <FeatureItem 
-                icon={ChartIcon}
+                icon={Settings}
                 color="bg-rose-400"
-                title="趨勢範圍切換 (7/14/30D)"
-                description="歷史數據趨勢現在支援切換查看 7 天、14 天或 30 天，讓您更清楚掌握長期的攝取變化。"
+                title="設定區全面進化"
+                description="全新的設定選單，整合了個人資料、版本歷史、佈局重置與權限管理，操作更直覺。"
               />
               <FeatureItem 
-                icon={Move}
+                icon={Zap}
                 color="bg-emerald-400"
-                title="手機版佈局優化"
-                description="重新設計了紀錄列表的顯示方式，解決了熱量資訊與時間標籤重疊的問題，閱讀更輕鬆。"
+                title="AI 熊貓嘴砲區塊"
+                description="AI 辨識後新增了可展開的「嘴砲區塊」，想看營養師的真心話？點開就知道！"
               />
               <FeatureItem 
                 icon={Calculator}
                 color="bg-purple-400"
-                title="系統效能與穩定性"
-                description="優化了 Service Worker 的註冊流程與通知權限處理，並加入了多重備援機制確保提醒不遺漏。"
+                title="系統效能與 UI 優化"
+                description="移除了不穩定的通知系統以節省電力，並重新設計了更符合風格的水杯圖示。"
               />
             </div>
 

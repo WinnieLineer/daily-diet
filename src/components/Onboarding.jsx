@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../lib/translations';
 import NeoButton from './NeoButton';
-import { Sparkles, Camera, BarChart3, ChevronRight, X, Bell } from 'lucide-react';
+import { Sparkles, Camera, BarChart3, ChevronRight, X, User, MapPin } from 'lucide-react';
 
 const slides = [
   {
@@ -13,18 +13,19 @@ const slides = [
     color: 'bg-accent'
   },
   {
+    key: 'name',
+    title: 'name_prompt_title',
+    desc: 'name_prompt_desc',
+    icon: <User size={48} />,
+    color: 'bg-white',
+    isNameInput: true
+  },
+  {
     key: 'ai',
     title: 'onboarding_ai_title',
     desc: 'onboarding_ai_desc',
     icon: <Camera size={48} />,
     color: 'bg-white'
-  },
-  {
-    key: 'notifications',
-    title: 'onboarding_notif_title',
-    desc: 'onboarding_notif_desc',
-    icon: <Bell size={48} />,
-    color: 'bg-emerald-400'
   },
   {
     key: 'panda',
@@ -43,9 +44,9 @@ const slides = [
   },
   {
     key: 'permissions',
-    title: 'notification_title',
-    desc: 'notification_desc',
-    icon: '🔔',
+    title: 'settings_location_permission',
+    desc: 'location_hint',
+    icon: <MapPin size={48} />,
     color: 'bg-white',
     isPermission: true
   }
@@ -53,16 +54,22 @@ const slides = [
 
 const Onboarding = ({ onComplete }) => {
   const [currentSlide, setCurrentSlide] = useState(0);
+  const [name, setName] = useState('');
 
   const next = async () => {
+    // 🚀 Handle Name Input Slide
+    if (slides[currentSlide].isNameInput) {
+      if (name.trim()) {
+        localStorage.setItem('user_name', name.trim());
+      } else {
+        // Optionally prevent proceeding if name is required, 
+        // but here we just let them skip if they really want to (it'll be "Guest")
+      }
+    }
+
     // 🚀 Handle Permissions Slide
     if (slides[currentSlide].isPermission) {
-      // 1. Request Notification Permission
-      if ("Notification" in window && Notification.permission !== "granted") {
-        await Notification.requestPermission();
-      }
-
-      // 2. Request Location Permission
+      // Request Location Permission
       if (navigator.geolocation) {
         await new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
@@ -145,13 +152,30 @@ const Onboarding = ({ onComplete }) => {
             </motion.div>
 
             {/* Text Part */}
-            <div className="space-y-4">
+            <div className="space-y-4 w-full">
               <h2 className="text-3xl font-black italic tracking-tighter uppercase leading-tight">
                 {t(slides[currentSlide].title)}
               </h2>
               <p className="text-zinc-500 font-bold leading-relaxed px-4">
                 {t(slides[currentSlide].desc)}
               </p>
+
+              {slides[currentSlide].isNameInput && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className="px-6 pt-4"
+                >
+                  <input 
+                    type="text" 
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder={t('name_placeholder')}
+                    className="w-full border-4 border-black p-4 rounded-2xl font-bold text-center bg-zinc-50 focus:bg-white transition-all outline-none"
+                    autoFocus
+                  />
+                </motion.div>
+              )}
             </div>
           </motion.div>
         </AnimatePresence>

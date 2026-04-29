@@ -338,7 +338,7 @@ const FloatingEmoji = ({ emoji, id, onDone }) => {
 // ──────────────────────────────────────────────
 // Main Component
 // ──────────────────────────────────────────────
-const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
+const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
   const [expression, setExpression]     = useState('normal');
   const [bubble, setBubble]             = useState('');
   const [bubbleVisible, setBubbleVisible] = useState(false);
@@ -487,7 +487,27 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
     const interval = setInterval(() => {
       if (!bubbleVisible && !isDragging) {
         if (Math.random() < 0.4) {
-          showBubble(advice || getRandom(DIALOGUES[getLanguage()].idle), 3500);
+          let text = advice || getRandom(DIALOGUES[getLanguage()].idle);
+          
+          // 🚀 Add Personalized Greeting ~30% of the time if name exists
+          if (userName && !advice && Math.random() < 0.3) {
+            const greetings = getLanguage() === 'zh' ? [
+              `嘿 ${userName}！今天吃了什麼好料？ 😋`,
+              `${userName}，水喝夠了沒？💧`,
+              `看到 ${userName} 這麼認真記錄，我好感動（假的）🐼`,
+              `喲，${userName}！該去記錄下一餐了吧？`,
+              `${userName}，今天有乖乖達標嗎？👀`
+            ] : [
+              `Hey ${userName}! What's on the menu today? 😋`,
+              `${userName}, drank enough water? 💧`,
+              `Look at ${userName} tracking so hard... I'm touched (not) 🐼`,
+              `Yo ${userName}! Ready to log your next meal?`,
+              `${userName}, hitting those goals today? 👀`
+            ];
+            text = getRandom(greetings);
+          }
+          
+          showBubble(text, 3500);
         }
       }
     }, 8000);
@@ -496,7 +516,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice }) => {
       clearInterval(interval);
       document.removeEventListener('click', handleGlobalClick);
     };
-  }, [bubbleVisible, isDragging, advice, showBubble]);
+  }, [bubbleVisible, isDragging, advice, showBubble, userName]);
 
   const currentAdviceText = advice === 'ERROR_RETRY' ? (
     <div className="flex flex-col items-center gap-1">

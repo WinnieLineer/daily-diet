@@ -23,6 +23,48 @@ const getLocalDateString = () => {
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
 };
 
+const NamePromptModal = ({ onSave, isUpdate = false }) => {
+  const [name, setName] = useState('');
+  return (
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+      <motion.div 
+        initial={{ scale: 0.9, opacity: 0, y: 20 }}
+        animate={{ scale: 1, opacity: 1, y: 0 }}
+        className="bg-white border-4 border-black w-full max-w-sm rounded-[2.5rem] shadow-neo p-8 space-y-6"
+      >
+        <div className="text-center space-y-2">
+          <div className="w-20 h-20 bg-accent border-4 border-black rounded-3xl mx-auto flex items-center justify-center text-4xl mb-4">🐼</div>
+          <h2 className="text-2xl font-black italic tracking-tighter uppercase leading-tight">
+            {t('name_prompt_title')}
+          </h2>
+          <p className="text-zinc-500 font-bold leading-relaxed text-sm">
+            {isUpdate ? t('name_prompt_update_desc') : t('name_prompt_desc')}
+          </p>
+        </div>
+        
+        <input 
+          type="text" 
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder={t('name_placeholder')}
+          className="w-full border-4 border-black p-4 rounded-2xl font-bold text-center bg-zinc-50 focus:bg-white transition-all outline-none"
+          autoFocus
+          onKeyDown={(e) => e.key === 'Enter' && name.trim() && onSave(name.trim())}
+        />
+
+        <NeoButton 
+          variant="black" 
+          className="w-full h-16 text-lg"
+          onClick={() => name.trim() && onSave(name.trim())}
+          disabled={!name.trim()}
+        >
+          {t('name_confirm')}
+        </NeoButton>
+      </motion.div>
+    </div>
+  );
+};
+
 const LogDetailModal = ({ log, onClose }) => {
   if (!log) return null;
   return (
@@ -317,17 +359,32 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
   );
 };
 
-
 function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_seen'));
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
 
+  const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
+  const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);
+
+  useEffect(() => {
+    // If onboarding is seen but no name is set, it's an existing user who needs a name update prompt
+    if (localStorage.getItem('onboarding_seen') === 'true' && !userName) {
+      setShowNamePrompt(true);
+    }
+  }, [userName]);
+
+  const handleNameSave = (name) => {
+    localStorage.setItem('user_name', name);
+    setUserName(name);
+    setShowNamePrompt(false);
+  };
   
   const handleOnboardingComplete = () => {
     localStorage.setItem('onboarding_seen', 'true');
+    setUserName(localStorage.getItem('user_name') || '');
     setShowOnboarding(false);
   };
   
@@ -539,7 +596,8 @@ function App() {
           latestSummary.water,
           currentGoals.water,
           latestLogs, 
-          getLanguage()
+          getLanguage(),
+          userName
         ).then(currentAdvice => {
           if (currentAdvice) setAdvice(currentAdvice);
         }).catch(err => {
@@ -638,8 +696,9 @@ function App() {
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
       <AnimatePresence>
-        {showOnboarding && <Onboarding onComplete={handleOnboardingComplete} />}
-        {showWhatsNew && <WhatsNew version={APP_VERSION} onClose={() => setShowWhatsNew(false)} />}
+        {showOnboarding && <Onboarding key="onboarding" onComplete={handleOnboardingComplete} />}
+        {showWhatsNew && <WhatsNew key="whats-new" version={APP_VERSION} onClose={() => setShowWhatsNew(false)} />}
+        {showNamePrompt && <NamePromptModal key="name-prompt" onSave={handleNameSave} isUpdate={true} />}
       </AnimatePresence>
       {/* Toast notification */}
       <AnimatePresence>
@@ -658,8 +717,16 @@ function App() {
         )}
       </AnimatePresence>
       <header className="flex justify-between items-center py-4 gap-2">
-        <div className="flex items-center shrink min-w-[60px]">
-          <h1 className="text-xs sm:text-base md:text-xl font-black italic tracking-tight leading-tight whitespace-normal break-words">{t('app_title')}</h1>
+        <div className="flex flex-col shrink min-w-[60px]">
+          <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none">
+            {userName ? (
+              <span className="flex flex-col">
+                <span className="text-accent text-[10px] uppercase tracking-widest block mb-0.5">{userName}{t('title_possessive')}</span>
+                {t('app_title')}
+              </span>
+            ) : t('app_title')}
+          </h1>
+          <span className="text-[8px] font-bold text-zinc-400 mt-1">v{APP_VERSION}</span>
         </div>
         <div className="flex gap-2">
           <div className="bg-white border-[3px] sm:border-4 border-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center">
@@ -674,14 +741,6 @@ function App() {
           </div>
           <div className="flex items-center gap-2">
             <NeoButton 
-              variant={isEditingLayout ? "black" : "white"}
-              className="w-10 h-10 p-0 flex items-center justify-center"
-              onClick={() => setIsEditingLayout(!isEditingLayout)}
-              title={t('edit_layout') || "Edit Layout"}
-            >
-              <LayoutGrid size={18} className={isEditingLayout ? "text-white" : "text-black"} />
-            </NeoButton>
-            <NeoButton 
               variant="black" 
               className="w-10 h-10 p-0 flex items-center justify-center"
               onClick={() => setShowShare(true)}
@@ -693,6 +752,10 @@ function App() {
               onGoalsUpdated={refreshData} 
               onWatchTutorial={() => setShowOnboarding(true)}
               onLanguageChanged={() => setAdvice('')}
+              userName={userName}
+              onSetUserName={handleNameSave}
+              onToggleLayoutEdit={() => setIsEditingLayout(!isEditingLayout)}
+              isEditingLayout={isEditingLayout}
             />
           </div>
         </div>
@@ -707,6 +770,7 @@ function App() {
                 advice={advice} 
                 streak={streak} 
                 onRetryAdvice={() => refreshData('fetch')}
+                userName={userName}
               />
             );
           } else if (item === 'dashboard') {
@@ -721,6 +785,7 @@ function App() {
                 setAdvice={setAdvice}
                 adviceUpdateLockRef={adviceUpdateLockRef}
                 favoriteUpdateTrigger={favoriteUpdateTrigger}
+                userName={userName}
               />
             );
           } else if (item === 'today') {
@@ -936,16 +1001,6 @@ function App() {
           );
         })}
       </Reorder.Group>
-
-
-      <footer className="fixed bottom-2 sm:bottom-4 left-1/2 -translate-x-1/2 w-[calc(100%-2rem)] max-w-lg z-50">
-        <div className="bg-black/95 backdrop-blur-md border-[3px] sm:border-4 border-black text-white p-2 sm:p-3 rounded-2xl sm:rounded-3xl shadow-neo flex justify-center items-center">
-          <p className="text-[8px] sm:text-[10px] font-bold tracking-widest uppercase italic whitespace-nowrap">
-            <span className="text-accent">© 2026 DailyDiet - 飲控萬歲 🐼</span>
-            <span className="ml-2 text-zinc-500 opacity-80 font-black">v{APP_VERSION}</span>
-          </p>
-        </div>
-      </footer>
 
       <SharingCard 
         isOpen={showShare}
