@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap } from 'lucide-react';
+import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap, Database } from 'lucide-react';
 import NeoButton from './NeoButton';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
@@ -51,28 +51,28 @@ const WhatsNew = ({ version, onClose }) => {
 
             <div className="space-y-4">
               <FeatureItem 
-                icon={User}
-                color="bg-yellow-400"
-                title="個人化名稱系統 🐼"
-                description="現在熊貓營養師會記住你的名字，並在建議與互動中親切地（或毒舌地）稱呼你！"
-              />
-              <FeatureItem 
-                icon={Settings}
+                icon={Database}
                 color="bg-rose-400"
-                title="設定區全面進化"
-                description="全新的設定選單，整合了個人資料、版本歷史、佈局重置與權限管理，操作更直覺。"
+                title="資料安全大升級 ⚠️"
+                description="新增本地儲存警示，提醒你資料存在地端瀏覽器，請記得定期導出備份防遺失。"
               />
               <FeatureItem 
                 icon={Zap}
                 color="bg-emerald-400"
-                title="AI 熊貓嘴砲區塊"
-                description="AI 辨識後新增了可展開的「嘴砲區塊」，想看營養師的真心話？點開就知道！"
+                title="嘴砲功能全面展開"
+                description="專業建議與毒舌嘴砲現在統一直接展開，不再需要手動點擊，一眼看穿熊貓心事。"
               />
               <FeatureItem 
-                icon={Calculator}
+                icon={Settings}
+                color="bg-yellow-400"
+                title="UI 配色細節優化"
+                description="全站視覺色彩優化，對比度更高且更符合品牌感，給你最純粹的黑金風格。"
+              />
+              <FeatureItem 
+                icon={Move}
                 color="bg-purple-400"
-                title="系統效能與 UI 優化"
-                description="移除了不穩定的通知系統以節省電力，並重新設計了更符合風格的水杯圖示。"
+                title="份量輸入體驗改進"
+                description="客製份量時輸入框會自動清空，讓你輸入更順手，不再需要手動刪除預設數字。"
               />
             </div>
 
