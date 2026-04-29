@@ -428,6 +428,32 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     ) : (
                       <div className="space-y-4">
+                        {/* If we have the one-click prompt, show the big button at the top */}
+                        {pwaPrompt && (
+                          <motion.div 
+                            initial={{ opacity: 0, y: -10 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            className="space-y-3"
+                          >
+                            <NeoButton 
+                              variant="black" 
+                              className="w-full h-14 rounded-2xl text-lg shadow-neo"
+                              onClick={handlePwaInstall}
+                            >
+                              {t('pwa_install_btn')}
+                            </NeoButton>
+                            <div className="text-center text-[10px] font-bold text-zinc-400 italic">
+                              * {t('pwa_install_btn')} (Android / Chrome Only)
+                            </div>
+                            <div className="flex items-center gap-2 py-2">
+                              <div className="flex-1 h-[2px] bg-zinc-100" />
+                              <span className="text-[10px] font-black uppercase text-zinc-300">OR</span>
+                              <div className="flex-1 h-[2px] bg-zinc-100" />
+                            </div>
+                          </motion.div>
+                        )}
+
+                        {/* Manual Guide is always visible so the UI isn't empty */}
                         <div className="bg-zinc-50 border-4 border-black p-5 rounded-[2rem] shadow-neo-sm">
                           <p className="text-xs font-black italic mb-4 leading-relaxed">
                             {t('pwa_ios_hint').split('{icon}')[0]}
@@ -439,11 +465,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div className="flex justify-center">
                             <ArrowBigDown size={32} className="text-black animate-bounce" />
                           </div>
-                        </div>
-
-                        {/* Android Install Button if supported */}
-                        <div className="text-center text-[10px] font-bold text-zinc-400 italic">
-                          * {t('pwa_install_btn')} (Android / Chrome Only)
                         </div>
                       </div>
                     )}

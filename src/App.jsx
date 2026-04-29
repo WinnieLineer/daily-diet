@@ -507,6 +507,11 @@ function App() {
   const [pwaPrompt, setPwaPrompt] = useState(null);
 
   useEffect(() => {
+    // Check if index.html already caught it
+    if (window.deferredPwaPrompt) {
+      setPwaPrompt(window.deferredPwaPrompt);
+    }
+
     const handleBeforeInstallPrompt = (e) => {
       e.preventDefault();
       setPwaPrompt(e);
