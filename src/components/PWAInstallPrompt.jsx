@@ -4,9 +4,8 @@ import { Download, X, Share, PlusSquare, ArrowBigDown } from 'lucide-react';
 import { t } from '../lib/translations';
 import NeoButton from './NeoButton';
 
-const PWAInstallPrompt = ({ active = true }) => {
+const PWAInstallPrompt = ({ active = true, deferredPrompt, onPromptUsed }) => {
   const [showPrompt, setShowPrompt] = useState(false);
-  const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [isIOS, setIsIOS] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
@@ -24,21 +23,7 @@ const PWAInstallPrompt = ({ active = true }) => {
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(ios);
 
-    // 3. Listen for Android/Chrome install prompt
-    const handleBeforeInstallPrompt = (e) => {
-      e.preventDefault();
-      setDeferredPrompt(e);
-      // Delay showing the prompt even on Android if active just changed
-      setTimeout(() => {
-        if (!standalone && !localStorage.getItem('pwa_prompt_dismissed')) {
-          setShowPrompt(true);
-        }
-      }, 2000);
-    };
-
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-
-    // 4. For iOS/Other, show prompt after a short delay if not standalone
+    // 3. For iOS/Other, show prompt after a short delay if not standalone
     const timer = setTimeout(() => {
       const never = localStorage.getItem('pwa_prompt_never');
       const later = sessionStorage.getItem('pwa_prompt_later');
@@ -47,18 +32,20 @@ const PWAInstallPrompt = ({ active = true }) => {
       }
     }, 3000);
 
-    return () => {
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
-      clearTimeout(timer);
-    };
-  }, [active]);
+    // 4. Handle Android/Chrome prompt availability
+    if (deferredPrompt && !standalone && !localStorage.getItem('pwa_prompt_never') && !sessionStorage.getItem('pwa_prompt_later')) {
+      setShowPrompt(true);
+    }
+
+    return () => clearTimeout(timer);
+  }, [active, deferredPrompt]);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
     deferredPrompt.prompt();
     const { outcome } = await deferredPrompt.userChoice;
     if (outcome === 'accepted') {
-      setDeferredPrompt(null);
+      onPromptUsed();
       setShowPrompt(false);
     }
   };

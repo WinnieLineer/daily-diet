@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2 } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Share, ArrowBigDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
@@ -17,7 +17,7 @@ const VERSION_HISTORY = [
   { version: '1.5.0', date: '2026-03-10', features: ['全新 Neo-brutalism UI', '熊貓營養師登場'] }
 ];
 
-const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout }) => {
+const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'goals', 'language', 'appinfo', 'data', 'contact'
@@ -25,6 +25,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
   const [showCalculator, setShowCalculator] = useState(false);
+
+  const handlePwaInstall = async () => {
+    if (!pwaPrompt) return;
+    pwaPrompt.prompt();
+    const { outcome } = await pwaPrompt.userChoice;
+    if (outcome === 'accepted') {
+      onPwaPromptUsed();
+    }
+  };
 
   // Calculator State
   const [calc, setCalc] = useState({
@@ -198,6 +207,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                   { id: 'profile', icon: User },
                   { id: 'goals', icon: Target },
                   { id: 'appinfo', icon: Info },
+                  { id: 'pwa', icon: Download },
                   { id: 'language', icon: Globe },
                   { id: 'data', icon: Database },
                   { id: 'contact', icon: Mail }
@@ -397,6 +407,46 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         {t('save')}
                       </NeoButton>
                     </div>
+                  </div>
+                )}
+
+                {activeTab === 'pwa' && (
+                  <div className="space-y-6 py-2">
+                    <div className="flex flex-col items-center text-center gap-4">
+                      <div className="w-16 h-16 bg-accent border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-sm">
+                        <Download size={32} strokeWidth={3} />
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-black italic tracking-tighter">{t('pwa_install_title')}</h3>
+                        <p className="text-xs font-bold text-zinc-500 max-w-[200px] mx-auto mt-1">{t('pwa_install_desc')}</p>
+                      </div>
+                    </div>
+
+                    {window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone ? (
+                      <div className="bg-emerald-50 border-4 border-black p-4 rounded-2xl text-center">
+                        <p className="font-black italic text-emerald-600">{t('pwa_already_installed')}</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="bg-zinc-50 border-4 border-black p-5 rounded-[2rem] shadow-neo-sm">
+                          <p className="text-xs font-black italic mb-4 leading-relaxed">
+                            {t('pwa_ios_hint').split('{icon}')[0]}
+                            <span className="inline-flex items-center justify-center bg-white border border-black p-1 rounded-md mx-1 translate-y-0.5">
+                              <Share size={12} />
+                            </span>
+                            {t('pwa_ios_hint').split('{icon}')[1]}
+                          </p>
+                          <div className="flex justify-center">
+                            <ArrowBigDown size={32} className="text-black animate-bounce" />
+                          </div>
+                        </div>
+
+                        {/* Android Install Button if supported */}
+                        <div className="text-center text-[10px] font-bold text-zinc-400 italic">
+                          * {t('pwa_install_btn')} (Android / Chrome Only)
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
 

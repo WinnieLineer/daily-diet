@@ -504,6 +504,16 @@ function App() {
     return DEFAULT_LAYOUT;
   });
   const [isEditingLayout, setIsEditingLayout] = useState(false);
+  const [pwaPrompt, setPwaPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setPwaPrompt(e);
+    };
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('app_layout', JSON.stringify(layout));
@@ -706,7 +716,11 @@ function App() {
         {showWhatsNew && <WhatsNew key="whats-new" version={APP_VERSION} onClose={() => setShowWhatsNew(false)} />}
         {showNamePrompt && <NamePromptModal key="name-prompt" onSave={handleNameSave} isUpdate={true} />}
       </AnimatePresence>
-      <PWAInstallPrompt active={!showOnboarding && !showWhatsNew && !showNamePrompt} />
+      <PWAInstallPrompt 
+        active={!showOnboarding && !showWhatsNew && !showNamePrompt} 
+        deferredPrompt={pwaPrompt}
+        onPromptUsed={() => setPwaPrompt(null)}
+      />
       {/* Toast notification */}
       <AnimatePresence>
         {toast && (
@@ -763,6 +777,8 @@ function App() {
               onSetUserName={handleNameSave}
               onToggleLayoutEdit={() => setIsEditingLayout(!isEditingLayout)}
               isEditingLayout={isEditingLayout}
+              pwaPrompt={pwaPrompt}
+              onPwaPromptUsed={() => setPwaPrompt(null)}
             />
           </div>
         </div>
