@@ -595,12 +595,12 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
             </div>
             <div 
               className={`relative cursor-pointer group/advice ${!isExpanded ? 'max-h-24 overflow-hidden' : ''}`}
-              onClick={() => advice && advice.length > 60 && setIsExpanded(!isExpanded)}
+              onClick={() => advice && advice.length > 35 && setIsExpanded(!isExpanded)}
             >
-              <p className={`text-base sm:text-lg font-bold text-black leading-snug italic transition-all ${!isExpanded && advice && advice.length > 60 ? 'line-clamp-2' : ''}`}>
+              <p className={`text-base sm:text-lg font-bold text-black leading-snug italic transition-all ${!isExpanded && advice && advice.length > 35 ? 'line-clamp-2' : ''}`}>
                 {advice === 'ERROR_RETRY' ? (t('ai_error') || '連線出錯了') : (advice || t('default_panda_advice'))}
               </p>
-              {advice && advice.length > 60 && (
+              {advice && advice.length > 35 && (
                 <div className="flex justify-end mt-1">
                   <span className="text-[9px] font-black uppercase text-zinc-300 group-hover/advice:text-black transition-colors bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-100">
                     {isExpanded ? t('show_less') || '收起' : t('show_more') || '展開'}

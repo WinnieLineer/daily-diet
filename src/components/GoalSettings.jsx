@@ -510,7 +510,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                 )}
 
                 {activeTab === 'data' && (
-                   <div className="space-y-3 py-2">
+                   <div className="space-y-4 py-2">
+                    <div className="bg-rose-50 border-4 border-rose-500/10 p-4 rounded-3xl shadow-neo-xs">
+                      <p className="text-[11px] font-bold text-rose-500 leading-relaxed italic">
+                        {t('data_backup_hint')}
+                      </p>
+                    </div>
                     <button onClick={async () => {
                       const data = {
                         dietLogs: await db.dietLogs.toArray(),

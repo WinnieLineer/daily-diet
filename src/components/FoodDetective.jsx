@@ -131,7 +131,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     if (hour >= 17 && hour < 21) return 'dinner';
     return 'snack';
   });
-  const [isCommentExpanded, setIsCommentExpanded] = useState(false);
+  const [isRoastExpanded, setIsRoastExpanded] = useState(false);
 
   // Recovery Logic
   useEffect(() => {
@@ -603,24 +603,26 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   </div>
                 </div>
                 {result.panda_comment && (
-                  <div 
-                    onClick={() => result.panda_comment.length > 50 && setIsCommentExpanded(!isCommentExpanded)}
-                    className={`bg-accent/10 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm transition-all cursor-pointer group/comment ${!isCommentExpanded && result.panda_comment.length > 50 ? 'max-h-24 overflow-hidden' : ''}`}
-                  >
+                  <div className="bg-accent/5 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm">
                     <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <MessageSquareQuote size={10} className="fill-black" />
-                      <span className="text-[8px] font-black uppercase">{t('panda_coach')}</span>
+                      <Check size={10} className="text-black" strokeWidth={4} />
+                      <span className="text-[8px] font-black uppercase tracking-widest">{t('panda_coach')}</span>
                     </div>
-                    <p className={`text-sm font-black italic ${!isCommentExpanded && result.panda_comment.length > 50 ? 'line-clamp-2' : ''}`}>
+                    <p className="text-sm font-black italic leading-snug">
                       "{result.panda_comment}"
                     </p>
-                    {result.panda_comment.length > 50 && (
-                      <div className="flex justify-end mt-1">
-                        <span className="text-[7px] font-black uppercase text-zinc-400 group-hover/comment:text-black transition-colors">
-                          {isCommentExpanded ? t('show_less') : t('show_more')}
-                        </span>
-                      </div>
-                    )}
+                  </div>
+                )}
+
+                {result.roast && (
+                  <div className="bg-accent/10 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm transition-all">
+                    <div className="absolute top-[-12px] left-4 bg-black text-white border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                      <MessageSquareQuote size={10} className="fill-white" />
+                      <span className="text-[8px] font-black uppercase tracking-widest">{t('panda_roast')}</span>
+                    </div>
+                    <p className="text-sm font-black italic text-black leading-snug">
+                      "{result.roast}"
+                    </p>
                   </div>
                 )}
                 <div className="flex gap-2"><NeoButton variant="black" className="flex-1 h-16 text-lg flex items-center justify-center gap-2" onClick={saveLog}><Check size={24} />{t('log_meal')}</NeoButton><button onClick={() => { setPreview(null); setResult(null); }} className="w-16 h-16 bg-white border-4 border-black rounded-[1.5rem] flex items-center justify-center shadow-neo-sm"><Trash2 size={24} /></button></div>
