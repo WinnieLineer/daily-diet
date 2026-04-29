@@ -92,7 +92,6 @@ const PWAInstallPrompt = ({ active = true, deferredPrompt, onPromptUsed }) => {
                 </span>
                 {t('pwa_ios_hint').split('{icon}')[1]}
               </p>
-              <ArrowBigDown size={24} className="text-black animate-bounce shrink-0" />
             </div>
           ) : (
             <NeoButton 
