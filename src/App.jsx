@@ -25,8 +25,8 @@ const getLocalDateString = () => {
 
 const NamePromptModal = ({ onSave, isUpdate = false }) => {
   const [name, setName] = useState('');
-  return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
+  return createPortal(
+    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md">
       <motion.div 
         initial={{ scale: 0.9, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
@@ -61,14 +61,15 @@ const NamePromptModal = ({ onSave, isUpdate = false }) => {
           {t('name_confirm')}
         </NeoButton>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
 const LogDetailModal = ({ log, onClose }) => {
   if (!log) return null;
-  return (
-    <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+  return createPortal(
+    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
@@ -151,7 +152,8 @@ const LogDetailModal = ({ log, onClose }) => {
           </NeoButton>
         </div>
       </motion.div>
-    </div>
+    </div>,
+    document.body
   );
 };
 
@@ -989,7 +991,7 @@ function App() {
               {isEditingLayout && (
                 <div className="absolute -top-3 -left-3 -right-3 -bottom-3 border-4 border-dashed border-black/20 rounded-[2.5rem] pointer-events-none z-0" />
               )}
-              <div className="relative z-10">
+              <div className={`relative z-10 ${isEditingLayout ? 'pointer-events-none' : ''}`}>
                 {blockContent}
               </div>
               {isEditingLayout && (
@@ -1001,6 +1003,29 @@ function App() {
           );
         })}
       </Reorder.Group>
+      
+      {/* Layout Editing Overlay Button */}
+      <AnimatePresence>
+        {isEditingLayout && (
+          <motion.div 
+            initial={{ opacity: 0, y: 50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 50 }}
+            className="fixed bottom-10 left-1/2 -translate-x-1/2 z-[400] w-max"
+          >
+            <NeoButton 
+              variant="black" 
+              className="h-16 px-10 rounded-full shadow-2xl flex items-center gap-3 border-4 border-white active:scale-95"
+              onClick={() => setIsEditingLayout(false)}
+            >
+              <div className="bg-accent text-black p-1 rounded-full border-2 border-black">
+                <Check size={20} strokeWidth={4} />
+              </div>
+              <span className="font-black italic uppercase tracking-widest text-lg">{t('finish_edit')}</span>
+            </NeoButton>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       <SharingCard 
         isOpen={showShare}

@@ -224,6 +224,7 @@ const translations = {
     panda_roast_collapse: "收起",
     // v1.8.0 — Header
     title_possessive: "的",
+    finish_edit: "完成編輯",
   },
   en: {
     app_title: "DAILY DIET",
@@ -450,6 +451,7 @@ const translations = {
     panda_roast_collapse: "Collapse",
     // v1.8.0 — Header
     title_possessive: "'s",
+    finish_edit: "Finish Editing",
   }
 };
 

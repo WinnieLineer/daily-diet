@@ -99,12 +99,12 @@ const Onboarding = ({ onComplete }) => {
 
   const skip = () => onComplete();
 
-  return (
+  return createPortal(
     <motion.div 
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      className="fixed inset-0 z-[100] bg-white flex flex-col items-center justify-center p-6 overflow-hidden touch-none"
+      className="fixed inset-0 z-[600] bg-white flex flex-col items-center justify-center p-6 overflow-hidden touch-none"
     >
       {/* Background Decor */}
       <div className="absolute top-0 left-0 w-full h-full pointer-events-none opacity-5">
@@ -213,7 +213,8 @@ const Onboarding = ({ onComplete }) => {
           </NeoButton>
         </div>
       </div>
-    </motion.div>
+    </motion.div>,
+    document.body
   );
 };
 

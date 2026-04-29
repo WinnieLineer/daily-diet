@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
@@ -17,9 +17,7 @@ const VERSION_HISTORY = [
 
 const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
-  const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
-  const [showTip, setShowTip] = useState(false);
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'goals', 'language', 'appinfo', 'data', 'contact'
   const [newName, setNewName] = useState(userName || '');
   const [locationStatus, setLocationStatus] = useState('unknown');
@@ -103,13 +101,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   };
 
   const calculateSuggestion = () => {
-    // Mifflin-St Jeor Formula
     const bmr = (10 * calc.weight) + (6.25 * calc.height) - (5 * calc.age) + (calc.gender === 'male' ? 5 : -161);
     const tdee = bmr * calc.activity;
     
     let suggestedCals = tdee;
     if (calc.goal === 'lose') suggestedCals -= 500;
-    if (calc.goal === 'recomp') suggestedCals -= 200; // Small deficit for recomp
+    if (calc.goal === 'recomp') suggestedCals -= 200;
     if (calc.goal === 'gain') suggestedCals += 300;
 
     let suggestedPro = calc.weight * (calc.goal === 'recomp' ? 2.2 : calc.goal === 'lose' ? 2.0 : 1.8);
@@ -253,48 +250,64 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     </div>
 
+                    <div className="pt-4 border-t-4 border-black border-dotted space-y-3">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">{t('settings_show')}</label>
+                      <button 
+                        onClick={() => { onToggleLayoutEdit(); setIsOpen(false); }}
+                        className={`w-full flex items-center gap-4 p-4 border-4 border-black rounded-2xl shadow-neo-sm transition-all ${isEditingLayout ? 'bg-black text-white' : 'bg-white hover:translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0'}`}
+                      >
+                        <div className={`p-2 rounded-xl border-2 ${isEditingLayout ? 'bg-accent text-black border-black' : 'bg-zinc-100 border-black'}`}>
+                          <LayoutGrid size={20} />
+                        </div>
+                        <span className="font-black italic text-sm">{t('edit_layout')}</span>
+                        {isEditingLayout && <div className="ml-auto bg-accent text-black text-[8px] font-black px-2 py-0.5 rounded-full border border-black animate-pulse">EDITING</div>}
+                      </button>
+                    </div>
+
                     <div className="bg-zinc-50 border-4 border-black p-4 rounded-3xl shadow-neo-sm">
                       <p className="text-[10px] font-bold text-zinc-500 leading-relaxed italic">
-                        🐼 「名字不只是個代號，它讓我可以更精準地嘴砲（劃掉）建議你。改個帥一點的名字吧！」
+                        🐼 「名字不只是個代號，它讓我可以更精準地建議你。改個帥一點的名字吧！」
                       </p>
                     </div>
                   </div>
                 )}
 
                 {activeTab === 'goals' && (
-                  <>
-                    <div className="flex items-center justify-between mb-2">
-                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('goal_guide')}</span>
+                  <div className="space-y-6 pt-2">
+                    <div className="bg-accent/10 border-4 border-black p-4 rounded-2xl flex items-center justify-between shadow-neo-sm">
+                      <div>
+                        <h4 className="font-black italic text-sm">{t('smart_goal')}</h4>
+                        <p className="text-[10px] font-bold text-zinc-400">{t('formula_tdee')}</p>
+                      </div>
                       <button 
-                        onClick={() => setShowCalculator(!showCalculator)} 
-                        className={`transition-all px-3 py-1.5 rounded-xl border-2 border-black flex items-center gap-1.5 text-[10px] font-black uppercase shadow-neo-sm active:scale-95 ${showCalculator ? 'bg-accent text-black' : 'bg-white text-black'}`}
+                        onClick={() => setShowCalculator(!showCalculator)}
+                        className={`p-2 rounded-xl shadow-neo-xs active:scale-90 border-2 border-black ${showCalculator ? 'bg-accent text-black' : 'bg-white text-black'}`}
                       >
-                        <Calculator size={12} />
-                        {t('smart_goal')}
+                        <Calculator size={20} />
                       </button>
                     </div>
 
                     <AnimatePresence>
                       {showCalculator && (
                         <motion.div 
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: 'auto' }}
-                          exit={{ opacity: 0, height: 0 }}
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
                           className="overflow-hidden"
                         >
-                          <div className="bg-zinc-50 p-4 rounded-[2rem] border-4 border-black mb-4 space-y-4 shadow-neo-sm">
+                          <div className="p-4 border-4 border-black rounded-[2rem] bg-zinc-50 space-y-4 my-2">
                             <div className="grid grid-cols-2 gap-3">
                               <div>
                                 <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('height')} (cm)</label>
-                                <input type="number" value={calc.height} onChange={e => setCalc({...calc, height: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm" />
+                                <input type="number" value={calc.height} onChange={e => setCalc({...calc, height: e.target.value})} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-sm bg-white" />
                               </div>
                               <div>
                                 <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('weight')} (kg)</label>
-                                <input type="number" value={calc.weight} onChange={e => setCalc({...calc, weight: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm" />
+                                <input type="number" value={calc.weight} onChange={e => setCalc({...calc, weight: e.target.value})} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-sm bg-white" />
                               </div>
                               <div>
                                 <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('age')}</label>
-                                <input type="number" value={calc.age} onChange={e => setCalc({...calc, age: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm" />
+                                <input type="number" value={calc.age} onChange={e => setCalc({...calc, age: e.target.value})} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-sm bg-white" />
                               </div>
                               <div>
                                 <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('gender')}</label>
@@ -346,7 +359,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       )}
                     </AnimatePresence>
 
-                    <div className="space-y-4">
+                    <div className="space-y-4 pt-2">
                       <div className="grid grid-cols-1 gap-4">
                         <div className="relative group">
                           <label className="text-[10px] font-black uppercase tracking-widest block mb-2 text-zinc-400">{t('calories')} (kcal)</label>
@@ -382,12 +395,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         {t('save')}
                       </NeoButton>
                     </div>
-                  </>
+                  </div>
                 )}
 
                 {activeTab === 'appinfo' && (
                   <div className="space-y-6 py-2">
-                    {/* App Actions */}
                     <div className="grid grid-cols-1 gap-3">
                       <button 
                         onClick={() => { onWatchTutorial(); setIsOpen(false); }}
@@ -397,17 +409,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <RotateCcw size={20} />
                         </div>
                         <span className="font-black italic text-sm">{t('watch_tutorial')}</span>
-                      </button>
-
-                      <button 
-                        onClick={() => { onToggleLayoutEdit(); setIsOpen(false); }}
-                        className={`flex items-center gap-4 p-4 border-4 border-black rounded-2xl shadow-neo-sm transition-all ${isEditingLayout ? 'bg-black text-white' : 'bg-white hover:translate-x-1 hover:-translate-y-1 active:translate-x-0 active:translate-y-0'}`}
-                      >
-                        <div className={`p-2 rounded-xl border-2 ${isEditingLayout ? 'bg-accent text-black border-black' : 'bg-zinc-100 border-black'}`}>
-                          <LayoutGrid size={20} />
-                        </div>
-                        <span className="font-black italic text-sm">{t('reset_layout')}</span>
-                        {isEditingLayout && <div className="ml-auto bg-accent text-black text-[8px] font-black px-2 py-0.5 rounded-full border border-black animate-pulse">EDITING</div>}
                       </button>
 
                       <div className="p-4 bg-zinc-50 border-4 border-black rounded-2xl shadow-neo-sm space-y-3">
@@ -429,7 +430,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     </div>
 
-                    {/* Version History */}
                     <div className="space-y-3">
                       <div className="flex items-center gap-2 px-1">
                         <History size={16} className="text-zinc-400" />
@@ -482,16 +482,33 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                 )}
 
                 {activeTab === 'contact' && (
-                  <div className="space-y-4">
-                    <textarea rows={4} value={contactForm.message} onChange={e => setContactForm({ ...contactForm, message: e.target.value })} placeholder="Your feedback..." className="w-full border-4 border-black p-4 rounded-2xl font-bold" />
-                    <button onClick={handleContactSubmit} className={`w-full border-4 border-black py-4 rounded-2xl font-black italic shadow-neo-sm ${submitStatus === 'success' ? 'bg-emerald-500 text-white' : 'bg-black text-white'}`}>
-                      {submitStatus === 'success' ? t('contact_success') : t('contact_send')}
+                  <div className="space-y-4 py-2">
+                    <input 
+                      type="text" 
+                      value={contactForm.subject} 
+                      onChange={e => setContactForm({ ...contactForm, subject: e.target.value })} 
+                      placeholder={t('contact_subject') || "Subject"} 
+                      className="w-full border-4 border-black p-3 rounded-xl font-bold" 
+                    />
+                    <textarea 
+                      rows={4} 
+                      value={contactForm.message} 
+                      onChange={e => setContactForm({ ...contactForm, message: e.target.value })} 
+                      placeholder={t('contact_message') || "Your feedback..."} 
+                      className="w-full border-4 border-black p-4 rounded-2xl font-bold" 
+                    />
+                    <button 
+                      onClick={handleContactSubmit} 
+                      className={`w-full border-4 border-black py-4 rounded-2xl font-black italic shadow-neo-sm ${submitStatus === 'sending' ? 'opacity-50' : ''} ${submitStatus === 'success' ? 'bg-emerald-500 text-white' : 'bg-black text-white'}`}
+                      disabled={submitStatus === 'sending'}
+                    >
+                      {submitStatus === 'sending' ? <Loader2 className="animate-spin mx-auto" size={24} /> : (submitStatus === 'success' ? t('contact_success') : t('contact_send'))}
                     </button>
                   </div>
                 )}
 
                 {activeTab === 'data' && (
-                   <div className="space-y-3">
+                   <div className="space-y-3 py-2">
                     <button onClick={async () => {
                       const data = {
                         dietLogs: await db.dietLogs.toArray(),
