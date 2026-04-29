@@ -40,7 +40,9 @@ const PWAInstallPrompt = ({ active = true }) => {
 
     // 4. For iOS/Other, show prompt after a short delay if not standalone
     const timer = setTimeout(() => {
-      if (!standalone && !localStorage.getItem('pwa_prompt_dismissed')) {
+      const never = localStorage.getItem('pwa_prompt_never');
+      const later = sessionStorage.getItem('pwa_prompt_later');
+      if (!standalone && !never && !later) {
         setShowPrompt(true);
       }
     }, 3000);
@@ -61,9 +63,14 @@ const PWAInstallPrompt = ({ active = true }) => {
     }
   };
 
-  const dismissPrompt = () => {
+  const dismissLater = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa_prompt_dismissed', 'true');
+    sessionStorage.setItem('pwa_prompt_later', 'true');
+  };
+
+  const dismissNever = () => {
+    setShowPrompt(false);
+    localStorage.setItem('pwa_prompt_never', 'true');
   };
 
   if (isStandalone || !showPrompt) return null;
@@ -77,14 +84,7 @@ const PWAInstallPrompt = ({ active = true }) => {
         className="fixed bottom-24 left-4 right-4 z-[500]"
       >
         <div className="bg-white border-4 border-black p-5 rounded-[2rem] shadow-neo flex flex-col gap-4 relative overflow-hidden">
-          <button 
-            onClick={dismissPrompt}
-            className="absolute top-4 right-4 p-1 hover:bg-zinc-100 rounded-lg transition-colors"
-          >
-            <X size={18} />
-          </button>
-
-          <div className="flex gap-4 items-start pr-8">
+          <div className="flex gap-4 items-start pr-4">
             <div className="w-12 h-12 bg-accent border-4 border-black rounded-2xl flex items-center justify-center shrink-0 shadow-neo-sm">
               <Download size={24} className="text-black" />
             </div>
@@ -116,6 +116,21 @@ const PWAInstallPrompt = ({ active = true }) => {
               {t('pwa_install_btn')}
             </NeoButton>
           )}
+
+          <div className="flex justify-center gap-6 mt-1 border-t-2 border-zinc-100 pt-3">
+            <button 
+              onClick={dismissLater}
+              className="text-[10px] font-black uppercase text-zinc-400 hover:text-black transition-colors"
+            >
+              {t('pwa_dismiss_later')}
+            </button>
+            <button 
+              onClick={dismissNever}
+              className="text-[10px] font-black uppercase text-zinc-400 hover:text-black transition-colors"
+            >
+              {t('pwa_dismiss_never')}
+            </button>
+          </div>
         </div>
       </motion.div>
     </AnimatePresence>
