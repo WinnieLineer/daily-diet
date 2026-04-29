@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import PandaCoachCard from './components/PandaCoachCard';
 import Dashboard from './components/Dashboard';
 import HistoryTrends from './components/HistoryTrends';
@@ -69,20 +70,21 @@ const NamePromptModal = ({ onSave, isUpdate = false }) => {
 const LogDetailModal = ({ log, onClose }) => {
   if (!log) return null;
   return createPortal(
-    <div className="fixed inset-0 z-[600] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[600]">
       <motion.div 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="absolute inset-0 bg-black/80 backdrop-blur-md" 
+        className="fixed inset-0 bg-black/80 backdrop-blur-md" 
         onClick={onClose} 
       />
-      <motion.div 
-        initial={{ opacity: 0, scale: 0.9, y: 20 }}
-        animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.9, y: 20 }}
-        className="relative bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh]"
-      >
+      <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="relative bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh] pointer-events-auto"
+        >
         {/* Header */}
         <div className="p-4 border-b-4 border-black flex items-center justify-between bg-accent/10">
           <div className="flex items-center gap-3">
@@ -152,9 +154,10 @@ const LogDetailModal = ({ log, onClose }) => {
           </NeoButton>
         </div>
       </motion.div>
-    </div>,
-    document.body
-  );
+    </div>
+  </div>,
+  document.body
+);
 };
 
 const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite, onShowDetail }) => {
