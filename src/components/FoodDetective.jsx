@@ -119,6 +119,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [isResuming, setIsResuming] = useState(false);
   const [multiplier, setMultiplier] = useState(1);
+  const [multiplierInput, setMultiplierInput] = useState('1');
   const [originalResult, setOriginalResult] = useState(null);
   const [showCustomMultiplier, setShowCustomMultiplier] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -465,6 +466,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   };
 
   const handleMultiplierChange = (m) => {
+    setMultiplierInput(m.toString());
     const val = parseFloat(m);
     if (isNaN(val) || val <= 0) return;
     setMultiplier(val);
@@ -597,8 +599,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 <div className="flex justify-between items-start gap-4 mb-4">
                   <div className="flex-1">
                     <h3 className="text-2xl font-black italic mb-2">{result.dish_name}</h3>
-                    <div className="mb-4"><div className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div><div className="flex overflow-x-auto no-scrollbar gap-2 -mx-1 px-1">{[0.5, 1, 1.5, 2].map(m => (<button key={m} onClick={() => { handleMultiplierChange(m); setShowCustomMultiplier(false); }} className={twMerge("px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", multiplier === m && !showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>x{m}</button>))}<button onClick={() => setShowCustomMultiplier(true)} className={twMerge("px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>{t('custom')}...</button></div></div>
-                    {showCustomMultiplier && <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-4"><input type="number" step="0.1" min="0.1" value={multiplier} onChange={(e) => handleMultiplierChange(e.target.value)} className="w-20 border-2 border-black p-1.5 rounded-xl font-black text-center" autoFocus /><span className="font-black text-xs">{t('times_portion')}</span></motion.div>}
+                    <div className="mb-4"><div className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div><div className="flex overflow-x-auto no-scrollbar gap-2 -mx-1 px-1">{[0.5, 1, 1.5, 2].map(m => (<button key={m} onClick={() => { handleMultiplierChange(m); setShowCustomMultiplier(false); }} className={twMerge("px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", multiplier === m && !showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>x{m}</button>))}<button onClick={() => { setShowCustomMultiplier(true); setMultiplierInput(''); }} className={twMerge("px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>{t('custom')}...</button></div></div>
+                    {showCustomMultiplier && <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-4"><input type="number" step="0.1" min="0.1" value={multiplierInput} onChange={(e) => handleMultiplierChange(e.target.value)} className="w-20 border-4 border-black p-1.5 rounded-xl font-black text-center outline-none focus:bg-zinc-50 transition-all" autoFocus placeholder="1.0" /><span className="font-black text-xs">{t('times_portion')}</span></motion.div>}
                     <div className="flex flex-wrap items-center gap-2 mt-2"><div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5"><MapPin size={14} className="text-zinc-400" /><span className="text-[10px] font-bold text-zinc-500">{locationLoading ? t('locating') : (result.location || t('unknown_location'))}</span>{!locationLoading && !result.location && (<button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1"><RefreshCw size={12} className="animate-pulse" /></button>)}</div><div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
                   </div>
                 </div>
