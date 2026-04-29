@@ -421,12 +421,14 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             {locationStatus === 'granted' ? t('location_granted_status') : t('location_denied_status')}
                           </span>
                         </div>
-                        <button 
-                          onClick={requestLocation}
-                          className="w-full bg-white border-2 border-black py-2 rounded-xl text-[10px] font-black uppercase hover:bg-zinc-100 transition-colors"
-                        >
-                          {t('location_request')}
-                        </button>
+                        {locationStatus !== 'granted' && (
+                          <button 
+                            onClick={requestLocation}
+                            className="w-full bg-white border-2 border-black py-2 rounded-xl text-[10px] font-black uppercase hover:bg-zinc-100 transition-colors"
+                          >
+                            {t('location_request')}
+                          </button>
+                        )}
                       </div>
                     </div>
 

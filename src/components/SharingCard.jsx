@@ -7,7 +7,7 @@ import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { t, getLanguage } from '../lib/translations';
 
-const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
+const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName }) => {
   const cardRef = useRef(null);
   const [exportState, setExportState] = useState(null); // 'download' | 'share' | null
 
@@ -100,7 +100,14 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice }) => {
               {/* Header */}
               <div className="flex justify-between items-start mb-8">
                 <div>
-                  <h1 className="text-3xl font-black italic tracking-tighter leading-[0.85] mb-3">DAILY<br/>DIET</h1>
+                  <h1 className="text-3xl font-black italic tracking-tighter leading-[0.85] mb-2">DAILY<br/>DIET</h1>
+                  {userName && (
+                    <div className="mb-2">
+                      <span className="bg-black text-accent px-2 py-0.5 rounded-lg text-[10px] font-black italic uppercase tracking-wider">
+                        {userName}
+                      </span>
+                    </div>
+                  )}
                   <div className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-0.5">
                     <Calendar size={10} />
                     <span>{new Date().toLocaleDateString(getLanguage() === 'zh' ? 'zh-TW' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>

@@ -1037,6 +1037,7 @@ function App() {
         goals={goals}
         streak={streak}
         advice={advice}
+        userName={userName}
       />
 
       {/* Detail Modal */}
