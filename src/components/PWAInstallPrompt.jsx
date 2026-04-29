@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Download, X, Share, PlusSquare, ArrowBigDown } from 'lucide-react';
+import { Download, X, Share, PlusSquare } from 'lucide-react';
 import { t } from '../lib/translations';
 import NeoButton from './NeoButton';
 

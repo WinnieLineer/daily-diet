@@ -455,16 +455,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                         {/* Manual Guide is always visible so the UI isn't empty */}
                         <div className="bg-zinc-50 border-4 border-black p-5 rounded-[2rem] shadow-neo-sm">
-                          <p className="text-xs font-black italic mb-4 leading-relaxed">
+                          <p className="text-xs font-black italic leading-relaxed">
                             {t('pwa_ios_hint').split('{icon}')[0]}
                             <span className="inline-flex items-center justify-center bg-white border border-black p-1 rounded-md mx-1 translate-y-0.5">
                               <Share size={12} />
                             </span>
                             {t('pwa_ios_hint').split('{icon}')[1]}
                           </p>
-                          <div className="flex justify-center">
-                            <ArrowBigDown size={32} className="text-black animate-bounce" />
-                          </div>
                         </div>
                       </div>
                     )}
