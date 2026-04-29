@@ -343,7 +343,6 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
   const [bubble, setBubble]             = useState('');
   const [bubbleVisible, setBubbleVisible] = useState(false);
   const [isSquished, setIsSquished]     = useState(false);
-  const [isExpanded, setIsExpanded]     = useState(false);
   const [particles, setParticles]       = useState([]);
   const [isDragging, setIsDragging] = useState(false);
   const [initialPos, setInitialPos] = useState(() => {
@@ -593,20 +592,10 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                 </div>
               )}
             </div>
-            <div 
-              className={`relative cursor-pointer group/advice ${!isExpanded ? 'max-h-24 overflow-hidden' : ''}`}
-              onClick={() => advice && advice.length > 35 && setIsExpanded(!isExpanded)}
-            >
-              <p className={`text-base sm:text-lg font-bold text-black leading-snug italic transition-all ${!isExpanded && advice && advice.length > 35 ? 'line-clamp-2' : ''}`}>
+            <div className="relative group/advice">
+              <p className="text-base sm:text-lg font-bold text-black leading-snug italic transition-all">
                 {advice === 'ERROR_RETRY' ? (t('ai_error') || '連線出錯了') : (advice || t('default_panda_advice'))}
               </p>
-              {advice && advice.length > 35 && (
-                <div className="flex justify-end mt-1">
-                  <span className="text-[9px] font-black uppercase text-zinc-300 group-hover/advice:text-black transition-colors bg-zinc-50 px-1.5 py-0.5 rounded border border-zinc-100">
-                    {isExpanded ? t('show_less') || '收起' : t('show_more') || '展開'}
-                  </span>
-                </div>
-              )}
             </div>
           </div>
         </div>
