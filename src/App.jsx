@@ -706,7 +706,7 @@ function App() {
         {showWhatsNew && <WhatsNew key="whats-new" version={APP_VERSION} onClose={() => setShowWhatsNew(false)} />}
         {showNamePrompt && <NamePromptModal key="name-prompt" onSave={handleNameSave} isUpdate={true} />}
       </AnimatePresence>
-      <PWAInstallPrompt />
+      <PWAInstallPrompt active={!showOnboarding && !showWhatsNew && !showNamePrompt} />
       {/* Toast notification */}
       <AnimatePresence>
         {toast && (
