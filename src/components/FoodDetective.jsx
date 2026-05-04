@@ -137,7 +137,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [wantsNotification, setWantsNotification] = useState(() => {
     const saved = localStorage.getItem('wants_notification');
     if (saved !== null) return saved === 'true';
-    return Notification.permission === 'granted';
+    return typeof Notification !== 'undefined' && Notification.permission === 'granted';
   });
   const wantsNotificationRef = useRef(wantsNotification);
 
