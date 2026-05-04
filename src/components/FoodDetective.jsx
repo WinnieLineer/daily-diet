@@ -134,6 +134,47 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   });
   const [isRoastExpanded, setIsRoastExpanded] = useState(false);
 
+  const [wantsNotification, setWantsNotification] = useState(() => {
+    const saved = localStorage.getItem('wants_notification');
+    if (saved !== null) return saved === 'true';
+    return Notification.permission === 'granted';
+  });
+  const wantsNotificationRef = useRef(wantsNotification);
+
+  const [logTime, setLogTime] = useState(() => {
+    const now = new Date();
+    const tzoffset = now.getTimezoneOffset() * 60000;
+    return new Date(now - tzoffset).toISOString().slice(0, 16);
+  });
+
+  const isOutsideEatingWindow = (timeStrOrDate, startStr, endStr) => {
+    if (!startStr || !endStr) return false;
+    let date = new Date();
+    if (timeStrOrDate instanceof Date) {
+      date = timeStrOrDate;
+    } else if (typeof timeStrOrDate === 'string') {
+      date = new Date(timeStrOrDate);
+    }
+    
+    const hourMin = date.getHours() * 60 + date.getMinutes();
+    const [sH, sM] = startStr.split(':').map(Number);
+    const startMins = sH * 60 + sM;
+    const [eH, eM] = endStr.split(':').map(Number);
+    const endMins = eH * 60 + eM;
+    
+    if (startMins <= endMins) {
+      return hourMin < startMins || hourMin > endMins;
+    } else {
+      return hourMin < startMins && hourMin > endMins;
+    }
+  };
+
+  // Sync ref with state and persist preference
+  useEffect(() => {
+    wantsNotificationRef.current = wantsNotification;
+    localStorage.setItem('wants_notification', wantsNotification.toString());
+  }, [wantsNotification]);
+
   // Recovery Logic
   useEffect(() => {
     const checkPending = async () => {
@@ -421,7 +462,16 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     });
     setPreview(base64);
     const locationPromise = (async () => {
+      // 1. Try EXIF GPS & Date (fast, local)
       try {
+        const exifData = await exifr.parse(file);
+        if (exifData && exifData.DateTimeOriginal) {
+           const dt = new Date(exifData.DateTimeOriginal);
+           if (!isNaN(dt.getTime())) {
+             const tzoffset = dt.getTimezoneOffset() * 60000;
+             setLogTime(new Date(dt - tzoffset).toISOString().slice(0, 16));
+           }
+        }
         const gps = await exifr.gps(file);
         if (gps?.latitude && gps?.longitude) return await reverseGeocode(gps.latitude, gps.longitude);
       } catch (err) {}
@@ -489,12 +539,29 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       dataToSave = { dish_name: manualEntry.dish_name, calories: Number(manualEntry.calories) || 0, protein: Number(manualEntry.protein) || 0, water: Number(manualEntry.water) || 0, description: t('manual_desc') };
     }
     if (!dataToSave) return;
+    
+    const logDateObj = new Date(logTime);
+    if (goals.fasting_enabled) {
+      const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
+      if (outside) {
+        if (!window.confirm(t('fasting_break_confirm'))) {
+          return;
+        }
+      }
+    }
+
     setManualSaving(true);
-    const now = new Date();
-    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-    await db.dietLogs.add({ ...dataToSave, date: localDate, timestamp: Date.now(), location: dataToSave.location || null, category: selectedCategory });
+    const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+    const timestamp = logDateObj.getTime();
+
+    await db.dietLogs.add({ ...dataToSave, date: localDate, timestamp: timestamp, location: dataToSave.location || null, category: selectedCategory });
     if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); setMultiplier(1); setShowCustomMultiplier(false); }
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
+    
+    const now = new Date();
+    const tzoffset = now.getTimezoneOffset() * 60000;
+    setLogTime(new Date(now - tzoffset).toISOString().slice(0, 16));
+
     onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
     setManualSaving(false);
   };
@@ -502,6 +569,22 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   return (
     <NeoCard className="bg-white/60 backdrop-blur-sm relative overflow-hidden p-0">
       <div className="p-4 sm:p-6 space-y-4">
+      {goals.fasting_enabled && isOutsideEatingWindow(new Date(), goals.fasting_start, goals.fasting_end) && (
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-rose-50 border-4 border-rose-500 p-4 rounded-3xl mb-4 shadow-neo-sm relative overflow-hidden"
+        >
+          <div className="relative z-10">
+            <div className="font-black text-rose-600 text-sm mb-1 uppercase tracking-tight flex items-center gap-2">
+              <AlertCircle size={16} /> {t('fasting_warning_title')}
+            </div>
+            <div className="text-xs font-bold text-rose-500 leading-tight">
+              {t('fasting_warning_desc')}
+            </div>
+          </div>
+        </motion.div>
+      )}
       <div className="flex items-center justify-between gap-2 mb-2">
         <AnimatePresence>
           {successToast && (
@@ -602,6 +685,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     <div className="mb-4"><div className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div><div className="flex overflow-x-auto no-scrollbar gap-2 -mx-1 px-1">{[0.5, 1, 1.5, 2].map(m => (<button key={m} onClick={() => { handleMultiplierChange(m); setShowCustomMultiplier(false); }} className={twMerge("px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", multiplier === m && !showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>x{m}</button>))}<button onClick={() => { setShowCustomMultiplier(true); setMultiplierInput(''); }} className={twMerge("px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>{t('custom')}</button></div></div>
                     {showCustomMultiplier && <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-4"><input type="number" step="0.1" min="0.1" value={multiplierInput} onChange={(e) => handleMultiplierChange(e.target.value)} className="w-20 border-4 border-black p-1.5 rounded-xl font-black text-center outline-none focus:bg-zinc-50 transition-all" autoFocus placeholder="1.0" /><span className="font-black text-xs">{t('times_portion')}</span></motion.div>}
                     <div className="flex flex-wrap items-center gap-2 mt-2"><div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5"><MapPin size={14} className="text-zinc-400" /><span className="text-[10px] font-bold text-zinc-500">{locationLoading ? t('locating') : (result.location || t('unknown_location'))}</span>{!locationLoading && !result.location && (<button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1"><RefreshCw size={12} className="animate-pulse" /></button>)}</div><div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
+                    <div className="mt-4 mb-4">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1.5 ml-1">{t('log_time')}</label>
+                      <input 
+                        type="datetime-local" 
+                        value={logTime}
+                        onChange={(e) => setLogTime(e.target.value)}
+                        className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none text-sm"
+                      />
+                    </div>
                   </div>
                 </div>
                 {result.panda_comment && (
@@ -643,6 +735,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span></div>
             </div>
             <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none">{t('analyzing')}</span>
+            <div className="w-full mt-4 text-left px-2">
+              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1.5 ml-1">{t('log_time')}</label>
+              <input 
+                type="datetime-local" 
+                value={logTime}
+                onChange={(e) => setLogTime(e.target.value)}
+                className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none text-sm text-black"
+              />
+            </div>
           </div>
           
           <AnimatePresence mode="wait">
@@ -677,6 +778,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label><input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({ ...manualEntry, protein: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
               <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_unit')}</label><input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({ ...manualEntry, water: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
             </div>
+            <div>
+              <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('log_time')}</label>
+              <input 
+                type="datetime-local" 
+                value={logTime}
+                onChange={(e) => setLogTime(e.target.value)}
+                className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none text-sm"
+              />
+            </div>
             <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('category')}</label><div className="flex bg-white border-4 border-black p-1 rounded-2xl">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("flex-1 py-2 text-[10px] font-black uppercase rounded-xl", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
           </div>
           <NeoButton variant="black" className="w-full h-16 text-lg flex items-center justify-center gap-2 disabled:opacity-50" onClick={saveLog} disabled={!manualEntry.dish_name || manualSaving}>{manualSaving ? <Loader2 className="animate-spin" /> : <><Check size={24} /> {t('log_meal')}</>}</NeoButton>
@@ -693,9 +803,18 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   key={item.id} 
                   onClick={async () => { 
                     setManualSaving(true); 
-                    const now = new Date(); 
-                    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
-                    await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: Date.now(), category: selectedCategory }); 
+                    const logDateObj = new Date(logTime);
+                    if (goals.fasting_enabled) {
+                      const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
+                      if (outside) {
+                        if (!window.confirm(t('fasting_break_confirm'))) {
+                          setManualSaving(false);
+                          return;
+                        }
+                      }
+                    }
+                    const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`; 
+                    await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory }); 
                     setFavToast(t('added_to_today')); 
                     setTimeout(() => setFavToast(null), 1500); 
                     onLogAdded('fetch'); 
@@ -738,9 +857,18 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   key={item.id} 
                   onClick={async () => { 
                     setManualSaving(true); 
-                    const now = new Date(); 
-                    const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`; 
-                    await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: Date.now(), category: selectedCategory }); 
+                    const logDateObj = new Date(logTime);
+                    if (goals.fasting_enabled) {
+                      const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
+                      if (outside) {
+                        if (!window.confirm(t('fasting_break_confirm'))) {
+                          setManualSaving(false);
+                          return;
+                        }
+                      }
+                    }
+                    const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`; 
+                    await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory }); 
                     setFavToast(t('added_to_today')); 
                     setTimeout(() => setFavToast(null), 1500); 
                     onLogAdded('fetch'); 

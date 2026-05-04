@@ -18,7 +18,8 @@ const VERSION_HISTORY = [
 ];
 
 const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed }) => {
-  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00' });
+  const [loading, setLoading] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState('profile'); // 'profile', 'goals', 'language', 'appinfo', 'data', 'contact'
   const [newName, setNewName] = useState(userName || '');
@@ -88,11 +89,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     const cal = await db.settings.get('calorie_goal');
     const pro = await db.settings.get('protein_goal');
     const wat = await db.settings.get('water_goal');
+    const fEn = await db.settings.get('fasting_enabled');
+    const fSt = await db.settings.get('fasting_start');
+    const fEnTime = await db.settings.get('fasting_end');
     if (cal && pro) {
       setGoals({ 
         calories: cal.value, 
         protein: pro.value,
-        water: wat ? wat.value : 2500 
+        water: wat ? wat.value : 2500,
+        fasting_enabled: fEn ? fEn.value : false,
+        fasting_start: fSt ? fSt.value : '12:00',
+        fasting_end: fEnTime ? fEnTime.value : '20:00'
       });
     }
 
@@ -104,6 +111,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     await db.settings.put({ key: 'calorie_goal', value: Number(goals.calories) });
     await db.settings.put({ key: 'protein_goal', value: Number(goals.protein) });
     await db.settings.put({ key: 'water_goal', value: Number(goals.water) });
+    await db.settings.put({ key: 'fasting_enabled', value: goals.fasting_enabled });
+    await db.settings.put({ key: 'fasting_start', value: goals.fasting_start });
+    await db.settings.put({ key: 'fasting_end', value: goals.fasting_end });
     if (isLocal) {
       await db.settings.put({ key: 'user_api_key', value: apiKey });
     }
@@ -394,6 +404,30 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             <div className="absolute right-5 top-1/2 -translate-y-1/2 text-blue-400 font-black">H2O</div>
                           </div>
                         </div>
+                      </div>
+
+                      <div className="pt-4 border-t-4 border-zinc-100 border-dashed">
+                        <div className="flex items-center justify-between mb-4">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('fasting_mode')}</label>
+                          <button
+                            onClick={() => setGoals({...goals, fasting_enabled: !goals.fasting_enabled})}
+                            className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${goals.fasting_enabled ? 'bg-black' : 'bg-zinc-200'}`}
+                          >
+                            <div className={`w-4 h-4 rounded-full bg-white border-2 border-black absolute top-0.5 transition-all ${goals.fasting_enabled ? 'left-6' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+                        {goals.fasting_enabled && (
+                          <div className="grid grid-cols-2 gap-3 mb-4">
+                            <div>
+                              <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('fasting_start')}</label>
+                              <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
+                            </div>
+                            <div>
+                              <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('fasting_end')}</label>
+                              <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
+                            </div>
+                          </div>
+                        )}
                       </div>
 
                       {isLocal && (

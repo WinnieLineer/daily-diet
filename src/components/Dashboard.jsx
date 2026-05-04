@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
+import NeoButton from './NeoButton';
+import { db } from '../db';
 import { t } from '../lib/translations';
 
 const ProgressRing = ({ value, max, label }) => {
@@ -52,6 +54,22 @@ const ProgressRing = ({ value, max, label }) => {
 };
 
 const Dashboard = ({ summary, goals }) => {
+  const [lastPoop, setLastPoop] = useState(null);
+  
+  useEffect(() => {
+    fetchLastPoop();
+  }, []);
+
+  const fetchLastPoop = async () => {
+    const last = await db.poopLogs.orderBy('timestamp').last();
+    setLastPoop(last ? last.timestamp : null);
+  };
+
+  const logPoop = async () => {
+    await db.poopLogs.add({ timestamp: Date.now() });
+    fetchLastPoop();
+  };
+
   const CALORIE_GOAL = goals.calories || 2000;
   const PROTEIN_GOAL = goals.protein || 100;
   const WATER_GOAL   = goals.water   || 2500;
@@ -62,10 +80,22 @@ const Dashboard = ({ summary, goals }) => {
         <h2 className="text-xl font-black italic">📅 {t('dashboard_title')}</h2>
       </div>
 
-      <div className="grid grid-cols-3 items-center w-full">
+      <div className="grid grid-cols-3 items-center w-full mb-6">
         <ProgressRing value={summary.calories} max={CALORIE_GOAL} label={`🔥${t('dashboard_calories')}`} />
         <ProgressRing value={summary.protein} max={PROTEIN_GOAL} label={`🍖${t('dashboard_protein')}`} />
         <ProgressRing value={summary.water} max={WATER_GOAL} label={`🚰${t('dashboard_water')}`} />
+      </div>
+
+      <div className="pt-4 border-t-4 border-dashed border-zinc-100 flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('last_poop')}</span>
+          <span className="text-sm font-bold italic">
+            {lastPoop ? new Date(lastPoop).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : t('no_poop')}
+          </span>
+        </div>
+        <NeoButton variant="white" className="text-sm py-2 px-4 flex items-center gap-2" onClick={logPoop}>
+          {t('poop_record')}
+        </NeoButton>
       </div>
     </NeoCard>
   );
