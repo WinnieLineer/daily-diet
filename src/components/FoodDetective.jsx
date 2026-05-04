@@ -687,12 +687,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     <div className="flex flex-wrap items-center gap-2 mt-2"><div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5"><MapPin size={14} className="text-zinc-400" /><span className="text-[10px] font-bold text-zinc-500">{locationLoading ? t('locating') : (result.location || t('unknown_location'))}</span>{!locationLoading && !result.location && (<button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1"><RefreshCw size={12} className="animate-pulse" /></button>)}</div><div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
                     <div className="mt-4 mb-4">
                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1.5 ml-1">{t('log_time')}</label>
-                      <input 
-                        type="datetime-local" 
-                        value={logTime}
-                        onChange={(e) => setLogTime(e.target.value)}
-                        className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none text-sm"
-                      />
+                      <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
+                        <input 
+                          type="datetime-local" 
+                          value={logTime}
+                          onChange={(e) => setLogTime(e.target.value)}
+                          className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700"
+                        />
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -735,15 +737,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span></div>
             </div>
             <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none">{t('analyzing')}</span>
-            <div className="w-full mt-4 text-left px-2">
-              <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1.5 ml-1">{t('log_time')}</label>
-              <input 
-                type="datetime-local" 
-                value={logTime}
-                onChange={(e) => setLogTime(e.target.value)}
-                className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none text-sm text-black"
-              />
-            </div>
           </div>
           
           <AnimatePresence mode="wait">
@@ -780,12 +773,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             </div>
             <div>
               <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('log_time')}</label>
-              <input 
-                type="datetime-local" 
-                value={logTime}
-                onChange={(e) => setLogTime(e.target.value)}
-                className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-white focus:ring-4 ring-accent/20 transition-all outline-none text-sm"
-              />
+              <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
+                <input 
+                  type="datetime-local" 
+                  value={logTime}
+                  onChange={(e) => setLogTime(e.target.value)}
+                  className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700"
+                />
+              </div>
             </div>
             <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('category')}</label><div className="flex bg-white border-4 border-black p-1 rounded-2xl">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("flex-1 py-2 text-[10px] font-black uppercase rounded-xl", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
           </div>

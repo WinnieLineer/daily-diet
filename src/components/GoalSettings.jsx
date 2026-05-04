@@ -8,6 +8,7 @@ import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 
 const VERSION_HISTORY = [
+  { version: '1.8.3', date: '2026-05-04', features: ['16/8 斷食模式支援與提示 🕒', '排便追蹤與紀錄功能 💩', 'UI 元件與細節體驗優化'] },
   { version: '1.8.2', date: '2026-04-29', features: ['PWA 安裝引導系統 📱', 'iOS/Android 專屬安裝教學', '可自訂提示出現頻率'] },
   { version: '1.8.1', date: '2026-04-29', features: ['資料管理本地儲存警告 ⚠️', 'UI 配色與對比優化', '份量輸入體驗改進', '嘴砲區塊全面展開'] },
   { version: '1.8.0', date: '2026-04-29', features: ['個人化名稱系統 🐼', '設定區全面進化', 'AI 嘴砲區塊', '移除通知優化效能', '全新水杯圖示'] },
@@ -420,11 +421,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div className="grid grid-cols-2 gap-3 mb-4">
                             <div>
                               <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('fasting_start')}</label>
-                              <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
+                              <div className="bg-white border-2 border-black/20 rounded-xl p-1 overflow-hidden focus-within:border-black transition-all">
+                                <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700" />
+                              </div>
                             </div>
                             <div>
                               <label className="text-[9px] font-black uppercase text-zinc-400 block mb-1">{t('fasting_end')}</label>
-                              <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
+                              <div className="bg-white border-2 border-black/20 rounded-xl p-1 overflow-hidden focus-within:border-black transition-all">
+                                <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700" />
+                              </div>
                             </div>
                           </div>
                         )}
