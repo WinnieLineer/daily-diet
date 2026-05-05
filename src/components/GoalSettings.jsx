@@ -287,14 +287,26 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         setTimeout(() => setIsLoggingIn(false), 10000);
                       }} 
                       disabled={isLoggingIn}
-                      className="w-full flex items-center justify-between p-3 border-4 border-black rounded-2xl bg-white shadow-neo-sm hover:translate-x-0.5 transition-all disabled:opacity-50 overflow-hidden"
+                      className="w-full relative flex items-center justify-between p-3 border-4 border-black rounded-2xl bg-white shadow-neo-sm hover:translate-x-0.5 transition-all disabled:opacity-50 overflow-hidden"
                     >
-                      {/* Police Tape Effect */}
-                      <div className="absolute top-2 -right-12 bg-amber-400 text-black font-black text-[7px] py-1 px-14 border-y-2 border-black rotate-45 shadow-sm z-10 select-none pointer-events-none uppercase tracking-tighter">
-                        Under Review / 驗證中
+                      {/* Clean Static V1 Style */}
+                      <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none z-10">
+                        <div 
+                          className="absolute top-3 -right-12 bg-amber-400 text-black font-black text-[9px] py-1 px-20 border-black rotate-[30deg] shadow-lg text-center"
+                          style={{
+                            backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 6px, transparent 6px, transparent 12px), repeating-linear-gradient(45deg, #000, #000 6px, transparent 6px, transparent 12px)',
+                            backgroundSize: '100% 3px, 100% 3px',
+                            backgroundPosition: '0 0, 0 100%',
+                            backgroundRepeat: 'no-repeat',
+                            borderTop: '2px solid #000',
+                            borderBottom: '2px solid #000'
+                          }}
+                        >
+                          Under Review / 驗證中
+                        </div>
                       </div>
 
-                      <div className="flex items-center gap-3">
+                      <div className="flex items-center gap-3 relative z-0">
                         <div className="bg-zinc-100 p-2 rounded-lg border-2 border-black">
                           {isLoggingIn ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
                         </div>
