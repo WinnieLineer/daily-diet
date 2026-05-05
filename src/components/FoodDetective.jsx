@@ -806,12 +806,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             <div>
               <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('log_time')}</label>
               <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
-                <textarea
-                  value={aiSupplement}
-                  onChange={(e) => setAiSupplement(e.target.value)}
-                  placeholder={t('ai_supplement_placeholder')}
-                  className="w-full p-2 text-[16px] border-2 border-black rounded-xl focus:outline-none focus:ring-2 focus:ring-amber-500 resize-none h-16 shadow-neo-sm-flat"
-                />
                 <input 
                   type="datetime-local" 
                   value={logTime}

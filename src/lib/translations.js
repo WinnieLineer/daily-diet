@@ -526,6 +526,8 @@ const translations = {
     finish_edit: "Finish Editing",
     login_google: "Login with Google",
     logout_google: "Logout",
+    logged_in_google: "Logged in with Google",
+    backup_desc: "Login to enable cloud sync and backup features ☁️",
     google_connected: "Connected with Google",
     google_account: "Google Account",
     cloud_backup: "Cloud Backup",

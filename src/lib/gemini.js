@@ -71,8 +71,14 @@ function moveToNextModel(currentIndex) {
 async function runGeminiTask(modelName, genAI, oauthToken, config) {
   const { contents, generationConfig } = config;
   
+  // 🕒 Apply 30s artificial delay for UNLOGGED users to encourage login
+  if (!oauthToken) {
+    console.log("🕒 Unlogged user detected. Applying 30s quality-of-service delay...");
+    await new Promise(resolve => setTimeout(resolve, 30000));
+  }
+
   if (oauthToken) {
-    // 🚀 REST API Mode (OAuth)
+    // 🚀 REST API Mode (OAuth) - High Speed
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
     const response = await fetch(url, {
       method: 'POST',
@@ -96,7 +102,7 @@ async function runGeminiTask(modelName, genAI, oauthToken, config) {
     if (!text) throw new Error("Empty AI response");
     return text;
   } else {
-    // 🔑 SDK Mode (API Key)
+    // 🔑 SDK Mode (API Key) - Limited Speed
     const model = genAI.getGenerativeModel({ 
       model: modelName,
       generationConfig
@@ -119,11 +125,14 @@ async function runGeminiTask(modelName, genAI, oauthToken, config) {
  */
 async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   let lastError;
-  let chainIndex = getCurrentModelIndex();
   const oauthToken = getAccessToken();
   
-  while (chainIndex < FALLBACK_CHAIN.length) {
-    const modelName = FALLBACK_CHAIN[chainIndex];
+  // Differentiate model selection based on login status
+  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b"];
+  let chainIndex = oauthToken ? getCurrentModelIndex() : 0;
+  
+  while (chainIndex < modelChain.length) {
+    const modelName = modelChain[chainIndex];
     for (let n = 0; n <= maxRetries; n++) {
       try {
         const genAI = oauthToken ? null : await getGenAI();
@@ -134,9 +143,9 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
         const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
         const is503 = errMsg.includes("503") || errMsg.includes("Overloaded") || errMsg.includes("Service Unavailable");
 
-        if (is429) {
+        if (is429 && oauthToken) {
           chainIndex = moveToNextModel(chainIndex);
-          if (chainIndex >= FALLBACK_CHAIN.length) throw error;
+          if (chainIndex >= modelChain.length) throw error;
           break; 
         }
 
@@ -146,14 +155,16 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
           continue;
         }
 
-        if (is503) {
+        if (is503 && oauthToken) {
           chainIndex = moveToNextModel(chainIndex);
-          if (chainIndex >= FALLBACK_CHAIN.length) throw error;
+          if (chainIndex >= modelChain.length) throw error;
           break;
         }
         throw error;
       }
     }
+    // For unlogged users, we only have one model, so if it fails, it fails.
+    if (!oauthToken) break;
   }
   throw lastError;
 }

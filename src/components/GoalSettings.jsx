@@ -34,7 +34,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [syncStatus, setSyncStatus] = useState('idle');
   const [calc, setCalc] = useState({ height: 170, weight: 70, age: 25, gender: 'male', activity: 1.375, goal: 'maintain' });
   const [stats, setStats] = useState({ localSize: 0, cloudSize: 0, cloudTime: null, loading: false });
-  const [slimRange, setSlimRange] = useState({ start: '', end: '', count: 0 });
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV;
@@ -80,33 +79,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     }
   };
 
-  const updateSlimCount = async (start, end) => {
-    setSlimRange(prev => ({ ...prev, start, end }));
-    if (!start || !end) {
-      setSlimRange(prev => ({ ...prev, start, end, count: 0 }));
-      return;
-    }
-    const count = await db.dietLogs
-      .where('date')
-      .between(start, end, true, true)
-      .count();
-    setSlimRange({ start, end, count });
-  };
-
-  const handleSlimDown = async () => {
-    if (!slimRange.start || !slimRange.end) return;
-    if (!confirm(`確定要刪除 ${slimRange.start} 到 ${slimRange.end} 之間的 ${slimRange.count} 筆紀錄嗎？此操作不可恢復！🐼`)) return;
-    
-    await db.dietLogs
-      .where('date')
-      .between(slimRange.start, slimRange.end, true, true)
-      .delete();
-    
-    setSlimRange({ start: '', end: '', count: 0 });
-    refreshStats();
-    onGoalsUpdated();
-    alert('瘦身成功！🐼✨');
-  };
 
   const checkLocationPermission = () => {
     if ("geolocation" in navigator) {
@@ -421,14 +393,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </button>
                     </div>
                     {goals.fasting_enabled && (
-                      <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase text-zinc-400 pl-1">{t('fasting_start')}</label>
-                          <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
+                      <div className="flex items-center justify-center gap-3 bg-white border-2 border-dashed border-black/10 p-4 rounded-2xl">
+                        <div className="flex-1 max-w-[120px] space-y-1">
+                          <label className="text-[9px] font-black uppercase text-zinc-400 block text-center">{t('fasting_start')}</label>
+                          <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-xs bg-zinc-50 text-center" />
                         </div>
-                        <div className="space-y-1">
-                          <label className="text-[10px] font-black uppercase text-zinc-400 pl-1">{t('fasting_end')}</label>
-                          <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
+                        <div className="text-black font-black mt-4">~</div>
+                        <div className="flex-1 max-w-[120px] space-y-1">
+                          <label className="text-[9px] font-black uppercase text-zinc-400 block text-center">{t('fasting_end')}</label>
+                          <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-xs bg-zinc-50 text-center" />
                         </div>
                       </div>
                     )}
@@ -486,41 +459,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </button>
                     </div>
 
-                    {/* Slimming Tool */}
-                    <div className="bg-rose-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm">
-                      <div className="flex items-center gap-2 mb-4">
-                        <Zap size={18} className="text-rose-500" />
-                        <h4 className="font-black italic text-sm uppercase tracking-tighter">資料瘦身工具 (清空間)</h4>
-                      </div>
-                      
-                      <div className="space-y-3 mb-4">
-                        <div className="grid grid-cols-2 gap-2">
-                          <input 
-                            type="date" 
-                            className="bg-white border-2 border-black p-2 rounded-xl text-[10px] font-bold"
-                            value={slimRange.start}
-                            onChange={(e) => updateSlimCount(e.target.value, slimRange.end)}
-                          />
-                          <input 
-                            type="date" 
-                            className="bg-white border-2 border-black p-2 rounded-xl text-[10px] font-bold"
-                            value={slimRange.end}
-                            onChange={(e) => updateSlimCount(slimRange.start, e.target.value)}
-                          />
-                        </div>
-                        <div className="text-center">
-                          <span className="text-[10px] font-black italic text-rose-600">將刪除該區間內 {slimRange.count} 筆飲食紀錄</span>
-                        </div>
-                      </div>
-
-                      <button 
-                        onClick={handleSlimDown}
-                        disabled={slimRange.count === 0}
-                        className="w-full bg-rose-500 text-white py-3 rounded-2xl border-4 border-black font-black italic shadow-neo-xs active:scale-95 disabled:opacity-30 disabled:grayscale transition-all"
-                      >
-                        執行瘦身計畫 ✂️
-                      </button>
-                    </div>
 
                     <div className="pt-2 border-t-4 border-black border-dotted">
                        <button onClick={async () => {
