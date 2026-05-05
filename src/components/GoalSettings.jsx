@@ -10,6 +10,7 @@ import { login, logout, getUserInfo, isLoggedIn } from '../lib/googleAuth';
 import { uploadToDrive, downloadFromDrive, getBackupInfo } from '../lib/driveService';
 
 const VERSION_HISTORY = [
+  { version: '2.0.0', date: '2026-05-06', features: ['Google OAuth AI 極速辨識 ⚡', '雙模 AI 智慧備援系統 🛡️', '歷史紀錄圖片檢視功能 📸', '數據同步與手機版 UI 優化 📱'] },
   { version: '1.9.0', date: '2026-05-05', features: ['Google 帳號雲端同步功能 ☁️', '隱私權政策與服務條款整合 ⚖️', '斷食模式 UX/UI 全面進化 🕒', '排便紀錄優化且不干擾摘要 💩'] },
   { version: '1.8.4', date: '2026-05-04', features: ['斷食模式支援與提示 🕒', '排便追蹤與紀錄功能 💩', 'UI 元件與細節體驗優化'] },
   { version: '1.8.2', date: '2026-04-29', features: ['PWA 安裝引導系統 📱', 'iOS/Android 專屬安裝教學', '可自訂提示出現頻率'] },
@@ -396,12 +397,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     )}
                     <div className="space-y-4">
                       <div>
-                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1">{t('calories')}</label>
-                        <input type="number" value={goals.calories} onChange={e => setGoals({...goals, calories: e.target.value})} className="w-full border-4 border-black p-4 rounded-2xl font-black text-2xl" />
+                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label>
+                        <input type="number" value={goals.calories} onChange={e => setGoals({...goals, calories: e.target.value})} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1">{t('protein')}</label>
-                        <input type="number" value={goals.protein} onChange={e => setGoals({...goals, protein: e.target.value})} className="w-full border-4 border-black p-4 rounded-2xl font-black text-2xl" />
+                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label>
+                        <input type="number" value={goals.protein} onChange={e => setGoals({...goals, protein: e.target.value})} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
                       <NeoButton variant="black" className="w-full h-16 rounded-2xl shadow-neo" onClick={saveGoals}>{t('save')}</NeoButton>
                     </div>
@@ -421,13 +422,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     </div>
                     {goals.fasting_enabled && (
                       <div className="grid grid-cols-2 gap-4">
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase text-zinc-400">{t('fasting_start')}</label>
-                          <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full border-4 border-black p-3 rounded-2xl font-black" />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-zinc-400 pl-1">{t('fasting_start')}</label>
+                          <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
                         </div>
-                        <div className="space-y-2">
-                          <label className="text-[10px] font-black uppercase text-zinc-400">{t('fasting_end')}</label>
-                          <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full border-4 border-black p-3 rounded-2xl font-black" />
+                        <div className="space-y-1">
+                          <label className="text-[10px] font-black uppercase text-zinc-400 pl-1">{t('fasting_end')}</label>
+                          <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full border-2 border-black p-2 rounded-xl font-bold text-sm bg-white" />
                         </div>
                       </div>
                     )}
