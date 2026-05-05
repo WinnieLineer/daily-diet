@@ -34,6 +34,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [calc, setCalc] = useState({ height: 170, weight: 70, age: 25, gender: 'male', activity: 1.375, goal: 'maintain' });
   const [stats, setStats] = useState({ localSize: 0, cloudSize: 0, cloudTime: null, loading: false });
   const [slimRange, setSlimRange] = useState({ start: '', end: '', count: 0 });
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
   
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV;
 
@@ -43,6 +44,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     refreshStats();
     const handleAuthChange = () => {
       setGoogleUser(getUserInfo());
+      setIsLoggingIn(false); // Reset when auth finishes
       refreshStats();
     };
     window.addEventListener('google-auth-change', handleAuthChange);
@@ -277,16 +279,44 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     </div>
                   </div>
                 ) : (
-                  <button onClick={login} className="w-full flex items-center justify-between p-3 border-4 border-black rounded-2xl bg-white shadow-neo-sm hover:translate-x-0.5 transition-all">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-zinc-100 p-2 rounded-lg border-2 border-black"><Globe size={16} /></div>
-                      <div className="text-left">
-                        <div className="font-black italic text-xs leading-none mb-1">{t('login_google')}</div>
-                        <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{t('backup_desc')}</div>
+                  <div className="relative group">
+                    <button 
+                      onClick={() => {
+                        setIsLoggingIn(true);
+                        login();
+                        setTimeout(() => setIsLoggingIn(false), 10000);
+                      }} 
+                      disabled={isLoggingIn}
+                      className="w-full flex items-center justify-between p-3 border-4 border-black rounded-2xl bg-white shadow-neo-sm hover:translate-x-0.5 transition-all disabled:opacity-50 overflow-hidden"
+                    >
+                      {/* Police Tape Effect */}
+                      <div className="absolute top-2 -right-12 bg-amber-400 text-black font-black text-[7px] py-1 px-14 border-y-2 border-black rotate-45 shadow-sm z-10 select-none pointer-events-none uppercase tracking-tighter">
+                        Under Review / 驗證中
                       </div>
+
+                      <div className="flex items-center gap-3">
+                        <div className="bg-zinc-100 p-2 rounded-lg border-2 border-black">
+                          {isLoggingIn ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
+                        </div>
+                        <div className="text-left">
+                          <div className="font-black italic text-xs leading-none mb-1">
+                            {isLoggingIn ? "正在取得 Google 授權中..." : t('login_google')}
+                          </div>
+                          <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{t('backup_desc')}</div>
+                        </div>
+                      </div>
+                      {!isLoggingIn && <ChevronRight size={16} className="text-zinc-400" />}
+                    </button>
+                    
+                    <div className="mt-2 px-2 flex items-start gap-2">
+                      <Sparkles size={12} className="text-amber-500 shrink-0 mt-0.5" />
+                      <p className="text-[9px] font-bold text-zinc-500 leading-tight">
+                        Google 正在驗證此應用程式。您可以等驗證完再用，或現在就 <span className="text-black font-black underline">搶先體驗</span>！
+                        <br/>
+                        <span className="text-[7px] text-zinc-400">(若看到「Google 尚未驗證」警告，請點選「進階」並「前往...」即可繼續)</span>
+                      </p>
                     </div>
-                    <ChevronRight size={16} className="text-zinc-400" />
-                  </button>
+                  </div>
                 )}
               </div>
 
