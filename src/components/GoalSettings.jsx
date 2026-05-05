@@ -178,7 +178,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     setSyncStatus('syncing');
     try {
       const data = {
-        dietLogs: await db.dietLogs.toArray(),
+        dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => ({ ...rest, image: null })),
         weightLogs: await db.weightLogs.toArray(),
         settings: await db.settings.toArray(),
         favorites: await db.favorites.toArray(),

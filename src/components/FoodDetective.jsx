@@ -391,7 +391,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           proteinGoal: goals.protein,
           water: summary.water,
           waterGoal: goals.water,
-          foodLogs: recentLogs,
+          foodLogs: recentLogs.map(({ image, ...rest }) => rest),
           userName: userName,
           userInstructions: userInstructions // New: Pass instructions
         };

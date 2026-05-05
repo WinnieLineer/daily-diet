@@ -1,7 +1,7 @@
 const CLIENT_ID = "59091503979-3l5a1kue9umin15hk8arihu7rc2v2i83.apps.googleusercontent.com";
 const SCOPES = [
   "https://www.googleapis.com/auth/drive.appdata",
-  "https://www.googleapis.com/auth/generative-language.peruserquota",
+  "https://www.googleapis.com/auth/cloud-platform",
   "https://www.googleapis.com/auth/userinfo.profile",
   "https://www.googleapis.com/auth/userinfo.email"
 ].join(" ");
