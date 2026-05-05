@@ -4,6 +4,7 @@ import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
+import { isLoggedIn } from '../lib/googleAuth';
 import { db } from '../db';
 import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';
@@ -228,7 +229,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       };
       fetchFacts();
 
-      setLoadTime(ANALYSIS_DURATION_SECONDS);
+      setLoadTime(isLoggedIn() ? 10 : 30);
       interval = setInterval(() => {
         setLoadTime(prev => {
           const next = prev > 0 ? prev - 1 : 0;
@@ -239,7 +240,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         });
       }, 1000);
     } else {
-      setLoadTime(ANALYSIS_DURATION_SECONDS);
+      setLoadTime(isLoggedIn() ? 10 : 30);
       setCurrentFactIndex(0);
     }
     return () => clearInterval(interval);
@@ -366,7 +367,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const currentAnalysisId = ++analysisIdRef.current;
     setAiLoading(true);
     setAiError(null);
-    setLoadTime(ANALYSIS_DURATION_SECONDS);
+    setLoadTime(isLoggedIn() ? 10 : 30);
     document.body.classList.add('ai-analyzing');
 
     try {

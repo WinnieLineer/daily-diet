@@ -23,6 +23,8 @@ async function getGenAI() {
 
   if (!genAIInstance || currentKey !== apiKey) {
     if (!apiKey) throw new Error("Missing Gemini API Key. Please provide it in settings or environment.");
+    console.log("🔑 [AI Service] Initializing GoogleGenerativeAI with key:", apiKey.substring(0, 8) + "...");
+    // Try to specify API version if standard v1beta fails for specific models
     genAIInstance = new GoogleGenerativeAI(apiKey);
     currentKey = apiKey;
   }
@@ -71,14 +73,9 @@ function moveToNextModel(currentIndex) {
 async function runGeminiTask(modelName, genAI, oauthToken, config) {
   const { contents, generationConfig } = config;
   
-  // 🕒 Apply 30s artificial delay for UNLOGGED users to encourage login
-  if (!oauthToken) {
-    console.log("🕒 Unlogged user detected. Applying 30s quality-of-service delay...");
-    await new Promise(resolve => setTimeout(resolve, 30000));
-  }
-
   if (oauthToken) {
     // 🚀 REST API Mode (OAuth) - High Speed
+    console.log(`🚀 [AI Service] Hitting API via REST (OAuth): ${modelName}`);
     const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
     const response = await fetch(url, {
       method: 'POST',
@@ -128,7 +125,7 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   const oauthToken = getAccessToken();
   
   // Differentiate model selection based on login status
-  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b"];
+  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b-it"];
   let chainIndex = oauthToken ? getCurrentModelIndex() : 0;
   
   while (chainIndex < modelChain.length) {
