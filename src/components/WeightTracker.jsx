@@ -44,6 +44,22 @@ const WeightTracker = ({ pointerEventsNone }) => {
     fetchHistory();
   };
 
+  const [lastPoop, setLastPoop] = useState(null);
+  
+  useEffect(() => {
+    fetchLastPoop();
+  }, []);
+
+  const fetchLastPoop = async () => {
+    const last = await db.poopLogs.orderBy('timestamp').last();
+    setLastPoop(last ? last.timestamp : null);
+  };
+
+  const logPoop = async () => {
+    await db.poopLogs.add({ timestamp: Date.now() });
+    fetchLastPoop();
+  };
+
   return (
     <NeoCard className="space-y-4">
       <div className="flex items-center justify-between">
@@ -69,7 +85,7 @@ const WeightTracker = ({ pointerEventsNone }) => {
         </NeoButton>
       </form>
 
-      <div className="h-48 w-full">
+      <div className="h-40 w-full">
         {history.length > 0 ? (
           <ResponsiveContainer width="100%" height="100%">
             <LineChart data={history}>
@@ -78,7 +94,7 @@ const WeightTracker = ({ pointerEventsNone }) => {
                 dataKey="dateFormatted" 
                 axisLine={{ stroke: '#000', strokeWidth: 2 }}
                 tickLine={false}
-                tick={{ fontSize: 12, fontWeight: 'bold' }}
+                tick={{ fontSize: 10, fontWeight: 'bold' }}
               />
               <YAxis 
                 hide 
@@ -108,16 +124,28 @@ const WeightTracker = ({ pointerEventsNone }) => {
         )}
       </div>
 
+      <div className="pt-4 border-t-4 border-dashed border-zinc-100 flex items-center justify-between">
+        <div className="flex flex-col">
+          <span className="text-[9px] font-black uppercase tracking-widest text-zinc-400 mb-0.5">{t('last_poop')}</span>
+          <span className="text-xs font-bold italic">
+            {lastPoop ? new Date(lastPoop).toLocaleString([], { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : t('no_poop')}
+          </span>
+        </div>
+        <button onClick={logPoop} className="bg-white border-2 border-black px-3 py-1.5 rounded-xl text-[10px] font-black uppercase shadow-neo-xs active:translate-x-0 active:translate-y-0 hover:translate-x-0.5 hover:-translate-y-0.5 transition-all">
+          💩 {t('poop_record')}
+        </button>
+      </div>
+
       {history.length > 0 && (
-        <div className="pt-4 border-t-2 border-dashed border-gray-100 flex flex-col gap-2">
+        <div className="pt-2 flex flex-col gap-2">
           <button 
             onClick={() => setIsExpanded(!isExpanded)}
             className="flex items-center justify-between w-full px-1 group"
           >
             <div className="flex items-center gap-2">
               <History size={14} className="text-gray-400" />
-              <h3 className="text-[10px] font-black uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors">
-                Recent History
+              <h3 className="text-[9px] font-black uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors">
+                Recent Weight History
               </h3>
             </div>
             {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}
@@ -131,22 +159,22 @@ const WeightTracker = ({ pointerEventsNone }) => {
                 exit={{ height: 0, opacity: 0 }}
                 className="overflow-hidden"
               >
-                <div className="grid grid-cols-1 gap-2 max-h-52 overflow-y-auto pr-1 pt-2">
+                <div className="grid grid-cols-1 gap-2 max-h-40 overflow-y-auto pr-1 pt-2">
                   {history.slice().sort((a, b) => b.timestamp - a.timestamp).map(log => (
-                    <div key={log.id} className="flex justify-between items-center p-3 bg-zinc-50 rounded-2xl border-2 border-transparent hover:border-black transition-all">
+                    <div key={log.id} className="flex justify-between items-center p-2.5 bg-zinc-50 rounded-xl border-2 border-transparent hover:border-black transition-all">
                       <div className="flex items-center gap-3">
-                        <div className="bg-black text-white px-2 py-1 rounded-lg text-[10px] font-black italic">
+                        <div className="bg-black text-white px-2 py-0.5 rounded-lg text-[9px] font-black italic">
                           {log.date}
                         </div>
-                        <div className="font-black text-sm italic">
-                          {log.weight} <span className="text-[10px] uppercase text-gray-400">kg</span>
+                        <div className="font-black text-xs italic">
+                          {log.weight} <span className="text-[9px] uppercase text-gray-400">kg</span>
                         </div>
                       </div>
                       <button 
                         onClick={() => deleteWeight(log.id)}
-                        className="p-1.5 text-gray-300 hover:text-rose-500 transition-colors"
+                        className="p-1 text-gray-300 hover:text-rose-500 transition-colors"
                       >
-                        <Trash2 size={16} />
+                        <Trash2 size={14} />
                       </button>
                     </div>
                   ))}

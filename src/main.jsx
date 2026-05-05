@@ -74,6 +74,15 @@ window.addEventListener('unhandledrejection', (event) => {
   document.body.prepend(div);
 });
 
+// Register Service Worker for PWA
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/daily-diet/sw.js', { scope: '/daily-diet/' })
+      .then(reg => console.log('SW registered:', reg))
+      .catch(err => console.error('SW registration failed:', err));
+  });
+}
+
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
     <ErrorBoundary>

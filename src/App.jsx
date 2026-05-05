@@ -1124,15 +1124,6 @@ function App() {
           />
         )}
       </AnimatePresence>
-
-      {/* Google OAuth Verification Links */}
-      <footer className="pt-12 pb-6 text-center opacity-20 hover:opacity-100 transition-opacity">
-        <div className="flex justify-center gap-6 text-[10px] font-black uppercase tracking-widest">
-          <a href="/daily-diet/privacy.html" target="_blank" className="hover:underline">Privacy Policy</a>
-          <span>•</span>
-          <a href="/daily-diet/terms.html" target="_blank" className="hover:underline">Terms of Service</a>
-        </div>
-      </footer>
     </div>
   );
 }
