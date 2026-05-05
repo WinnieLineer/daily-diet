@@ -175,11 +175,13 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
                 </div>
 
                 {/* Roast Section */}
-                <AnimatePresence>
+                <AnimatePresence mode="wait">
                   {(aiRoast || isRoasting) && (
                     <motion.div 
+                      key="roast-bubble"
                       initial={{ opacity: 0, y: 10 }}
                       animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: -10 }}
                       className="bg-black text-white p-4 rounded-3xl relative mb-6 overflow-hidden"
                     >
                       <div className="relative z-10 flex items-start gap-3">
