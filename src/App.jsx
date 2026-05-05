@@ -370,7 +370,7 @@ function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_seen'));
   const [showWhatsNew, setShowWhatsNew] = useState(false);
-  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500 });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '20:00', fasting_end: '12:00' });
 
   const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
@@ -558,10 +558,16 @@ function App() {
     const calGoal = await db.settings.get('calorie_goal');
     const proGoal = await db.settings.get('protein_goal');
     const watGoal = await db.settings.get('water_goal');
+    const fEnabled = await db.settings.get('fasting_enabled');
+    const fStart = await db.settings.get('fasting_start');
+    const fEnd = await db.settings.get('fasting_end');
     const currentGoals = {
       calories: calGoal ? calGoal.value : 2000,
       protein: proGoal ? proGoal.value : 100,
-      water: watGoal ? watGoal.value : 2500
+      water: watGoal ? watGoal.value : 2500,
+      fasting_enabled: fEnabled ? fEnabled.value : false,
+      fasting_start: fStart ? fStart.value : '20:00',
+      fasting_end: fEnd ? fEnd.value : '12:00'
     };
     setGoals(currentGoals);
 
@@ -715,6 +721,26 @@ function App() {
     showToast(t('added_to_favorites'));
   };
 
+  const getFastingStatus = () => {
+    if (!goals.fasting_enabled) return null;
+    const now = new Date();
+    const hourMin = now.getHours() * 60 + now.getMinutes();
+    const [sH, sM] = goals.fasting_start.split(':').map(Number);
+    const startMins = sH * 60 + sM;
+    const [eH, eM] = goals.fasting_end.split(':').map(Number);
+    const endMins = eH * 60 + eM;
+    
+    let isEating = false;
+    if (startMins <= endMins) {
+      isEating = hourMin >= startMins && hourMin <= endMins;
+    } else {
+      isEating = hourMin >= startMins || hourMin <= endMins;
+    }
+    
+    return { isEating, start: goals.fasting_start, end: goals.fasting_end };
+  };
+
+  const fasting = getFastingStatus();
 
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
@@ -744,6 +770,30 @@ function App() {
             </motion.div>
         )}
       </AnimatePresence>
+
+      {fasting && (
+        <motion.div 
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className={`p-4 border-4 border-black rounded-3xl shadow-neo-sm mb-2 flex items-center justify-between ${fasting.isEating ? 'bg-emerald-50' : 'bg-rose-50'}`}
+        >
+          <div className="flex items-center gap-3">
+            <div className={`p-2 rounded-xl border-2 border-black ${fasting.isEating ? 'bg-emerald-400' : 'bg-rose-400'}`}>
+              <Clock size={18} />
+            </div>
+            <div>
+              <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{t('fasting_mode')}</div>
+              <div className="text-sm font-black italic">
+                {fasting.isEating ? t('eating_window') : t('fasting_window')} ({fasting.start} - {fasting.end})
+              </div>
+            </div>
+          </div>
+          <div className={`px-3 py-1 rounded-full border-2 border-black text-[10px] font-black uppercase ${fasting.isEating ? 'bg-emerald-400' : 'bg-rose-400'}`}>
+            {fasting.isEating ? 'Enjoy!' : 'Keep Going!'}
+          </div>
+        </motion.div>
+      )}
+
       <header className="flex justify-between items-center py-4 gap-2">
         <div className="flex flex-col shrink min-w-[60px]">
           <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none">

@@ -249,7 +249,7 @@ const translations = {
     restore_confirm: "這將會覆蓋您目前手機上的所有資料，確定要繼續嗎？",
     no_cloud_backup: "雲端尚無備份檔案",
     syncing: "同步中...",
-    fasting_mode: "168斷食模式",
+    fasting_mode: "斷食模式",
     fasting_start: "進食開始時間",
     fasting_end: "進食結束時間",
     fasting_warning_title: "⚠️ 非進食時段",
@@ -260,6 +260,8 @@ const translations = {
     last_poop: "上次排便：",
     no_poop: "尚無排便紀錄",
     log_time: "紀錄時間",
+    eating_window: "進食時段",
+    fasting_window: "斷食時段",
   },
   en: {
     app_title: "DAILY DIET",
@@ -511,7 +513,7 @@ const translations = {
     restore_confirm: "This will overwrite all local data. Proceed?",
     no_cloud_backup: "No backup found in cloud",
     syncing: "Syncing...",
-    fasting_mode: "16:8 Fasting Mode",
+    fasting_mode: "Fasting Mode",
     fasting_start: "Eating Window Start",
     fasting_end: "Eating Window End",
     fasting_warning_title: "⚠️ Outside Eating Window",
@@ -522,6 +524,8 @@ const translations = {
     last_poop: "Last poop:",
     no_poop: "No poop logs yet",
     log_time: "Log Time",
+    eating_window: "Eating Window",
+    fasting_window: "Fasting Window",
   }
 };
 

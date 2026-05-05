@@ -571,17 +571,25 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       <div className="p-4 sm:p-6 space-y-4">
       {goals.fasting_enabled && isOutsideEatingWindow(new Date(), goals.fasting_start, goals.fasting_end) && (
         <motion.div 
-          initial={{ opacity: 0, y: -10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="bg-rose-50 border-4 border-rose-500 p-4 rounded-3xl mb-4 shadow-neo-sm relative overflow-hidden"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          className="bg-rose-500 text-white p-4 rounded-3xl mb-4 shadow-neo-sm border-4 border-black relative overflow-hidden"
         >
-          <div className="relative z-10">
-            <div className="font-black text-rose-600 text-sm mb-1 uppercase tracking-tight flex items-center gap-2">
-              <AlertCircle size={16} /> {t('fasting_warning_title')}
+          <div className="flex items-start gap-3">
+            <div className="bg-white text-rose-500 p-2 rounded-xl border-2 border-black shrink-0">
+              <AlertCircle size={20} strokeWidth={3} />
             </div>
-            <div className="text-xs font-bold text-rose-500 leading-tight">
-              {t('fasting_warning_desc')}
+            <div>
+              <div className="font-black text-sm uppercase tracking-tight leading-none mb-1">
+                {t('fasting_warning_title')}
+              </div>
+              <div className="text-[10px] font-bold leading-tight opacity-90">
+                {t('fasting_warning_desc')}
+              </div>
             </div>
+          </div>
+          <div className="absolute -right-4 -bottom-4 opacity-10 transform rotate-12">
+            <Clock size={80} />
           </div>
         </motion.div>
       )}
