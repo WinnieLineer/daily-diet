@@ -18,6 +18,17 @@ db.version(8).stores({
   analysisCache: 'hash'
 });
 
+db.version(9).stores({
+  dietLogs: '++id, date, dish_name, calories, protein, water, timestamp, location',
+  weightLogs: '++id, date, weight, timestamp',
+  settings: 'key',
+  favorites: '++id, dish_name',
+  nutritionFacts: '++id, fact, lang',
+  pendingAnalysis: 'key',
+  analysisCache: 'hash',
+  poopLogs: '++id, timestamp'
+});
+
 export async function getDailySummary(date) {
   const logs = await db.dietLogs.where('date').equals(date).toArray();
   const summary = logs.reduce((acc, log) => {

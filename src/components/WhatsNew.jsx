@@ -51,28 +51,22 @@ const WhatsNew = ({ version, onClose }) => {
 
             <div className="space-y-4">
               <FeatureItem 
-                icon={Download}
-                color="bg-purple-400"
-                title="PWA 安裝引導系統 📱"
-                description="現在支援將 App 加入主螢幕！提供 iOS 與 Android 專屬安裝教學，享受全螢幕順暢體驗。"
+                icon={Sparkles}
+                color="bg-amber-300"
+                title="16/8 斷食模式支援與提示 🕒"
+                description="現在可以設定專屬進食時段，非進食時段紀錄飲食會跳出貼心警示！"
               />
               <FeatureItem 
                 icon={Database}
-                color="bg-rose-400"
-                title="資料管理大升級 ⚠️"
-                description="新增本地儲存警示，提醒你資料存在地端瀏覽器，請記得定期導出備份防遺失。"
-              />
-              <FeatureItem 
-                icon={Zap}
-                color="bg-emerald-400"
-                title="嘴砲功能全面展開"
-                description="專業建議與毒舌嘴砲現在統一直接展開，不再需要手動點擊，一眼看穿熊貓心事。"
+                color="bg-rose-300"
+                title="排便追蹤與紀錄功能 💩"
+                description="不僅紀錄飲食，現在連排便時間也能輕鬆紀錄在儀表板囉。"
               />
               <FeatureItem 
                 icon={Settings}
-                color="bg-yellow-400"
-                title="UI 配色細節優化"
-                description="全站視覺色彩優化，對比度更高且更符合品牌感，給你最純粹的黑金風格。"
+                color="bg-emerald-300"
+                title="UI 元件與細節體驗優化"
+                description="修復手機版輸入框過大與版面跑位問題，帶來更完美的視覺體驗。"
               />
             </div>
 
