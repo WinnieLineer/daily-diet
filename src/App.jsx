@@ -748,6 +748,7 @@ function App() {
         {showOnboarding && <Onboarding key="onboarding" onComplete={handleOnboardingComplete} />}
         {showWhatsNew && (
           <WhatsNew 
+            key="whats-new-modal"
             version={APP_VERSION} 
             onClose={() => {
               setShowWhatsNew(false);
@@ -755,7 +756,7 @@ function App() {
             }} 
           />
         )}
-        {showNamePrompt && <NamePromptModal key="name-prompt" onSave={handleNameSave} isUpdate={true} />}
+        {showNamePrompt && <NamePromptModal key="name-prompt-modal" onSave={handleNameSave} isUpdate={true} />}
       </AnimatePresence>
       <PWAInstallPrompt 
         active={!showOnboarding && !showWhatsNew && !showNamePrompt} 
@@ -766,6 +767,7 @@ function App() {
       <AnimatePresence>
         {toast && (
             <motion.div
+              key="toast-notification"
               initial={{ opacity: 0, y: -30, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
@@ -899,6 +901,7 @@ function App() {
                 <AnimatePresence>
                   {showToday && (
                     <motion.div
+                      key="today-logs-list"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
@@ -955,6 +958,7 @@ function App() {
                 <AnimatePresence>
                   {showHistory && (
                     <motion.div
+                      key="history-logs-list"
                       initial={{ height: 0, opacity: 0 }}
                       animate={{ height: "auto", opacity: 1 }}
                       exit={{ height: 0, opacity: 0 }}
