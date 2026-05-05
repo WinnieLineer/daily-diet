@@ -592,6 +592,26 @@ const translations = {
     whatsnew_v190_image_desc: "Tap the (i) icon to revisit food photos and AI reviews.",
     whatsnew_v190_terms_title: "Terms & Privacy ⚖️",
     whatsnew_v190_terms_desc: "Added Terms of Service and Privacy Policy for a professional experience.",
+    // v2.0.0
+    under_review: "Under Review / 驗證中",
+    google_auth_loading: "Obtaining Google Authorization...",
+    google_verifying_warning: "Google is verifying this app. You can wait or <span class='text-black font-black underline'>Try Early Access</span> now!",
+    google_verifying_sub: "(If you see 'Google hasn't verified this app', click 'Advanced' and 'Go to...' to continue)",
+    whatsnew_v200_ai_speed_title: "Google AI Ultra Speed ⚡",
+    whatsnew_v200_ai_speed_desc: "Use your personal quota for sub-10s, precise, and stable AI recognition. Highly recommended!",
+    whatsnew_v200_ai_fallback_title: "Hybrid AI Fallback 🛡️",
+    whatsnew_v200_ai_fallback_desc: "Unlogged users remain on legacy mode (30s delay). Sign in for the best experience!",
+    whatsnew_v200_cloud_sync_title: "Cloud Backup & Sync ☁️",
+    whatsnew_v200_cloud_sync_desc: "Enable cross-device sync via Google. 90% smaller data footprint, syncs in a flash!",
+    whatsnew_v200_history_img_title: "Historical Image View 📸",
+    whatsnew_v200_history_img_desc: "Tap the (i) icon to view past food images, AI comments, and precise values.",
+    whatsnew_v200_ai_memory_title: "AI Instruction Memory ✨",
+    whatsnew_v200_ai_memory_desc: "The app now remembers your custom AI instructions for personalized analysis.",
+    whatsnew_v200_ux_title: "Performance & UX Polish 🔧",
+    whatsnew_v200_ux_desc: "Optimized mobile inputs and overall fluidity. Fixed PWA issues on certain devices.",
+    data_usage_local: "Local Data",
+    data_usage_cloud: "Cloud Data",
+    data_stats_header: "Data Usage Overview",
   }
 };
 
