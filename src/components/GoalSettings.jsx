@@ -663,6 +663,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     </div>
 
+                    <div className="flex justify-center gap-4 py-2 border-t-2 border-black border-dotted">
+                      <a href="./privacy.html" target="_blank" className="text-[10px] font-black uppercase text-zinc-400 hover:text-black transition-colors underline">Privacy Policy</a>
+                      <a href="./terms.html" target="_blank" className="text-[10px] font-black uppercase text-zinc-400 hover:text-black transition-colors underline">Terms of Service</a>
+                    </div>
+
                     <div className="text-center pt-4 opacity-30 grayscale">
                        <p className="text-[10px] font-black italic uppercase tracking-widest">Daily Diet © 2026</p>
                     </div>
