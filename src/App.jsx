@@ -455,8 +455,9 @@ function App() {
 
             if (!isFrom16 && !isNewUser) {
               setShowWhatsNew(true);
+            } else {
+              localStorage.setItem('last_seen_version', APP_VERSION);
             }
-            localStorage.setItem('last_seen_version', APP_VERSION);
           }
         }
       } catch (err) {
@@ -741,12 +742,19 @@ function App() {
   };
 
   const fasting = getFastingStatus();
-
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
       <AnimatePresence>
         {showOnboarding && <Onboarding key="onboarding" onComplete={handleOnboardingComplete} />}
-        {showWhatsNew && <WhatsNew key="whats-new" version={APP_VERSION} onClose={() => setShowWhatsNew(false)} />}
+        {showWhatsNew && (
+          <WhatsNew 
+            version={APP_VERSION} 
+            onClose={() => {
+              setShowWhatsNew(false);
+              localStorage.setItem('last_seen_version', APP_VERSION);
+            }} 
+          />
+        )}
         {showNamePrompt && <NamePromptModal key="name-prompt" onSave={handleNameSave} isUpdate={true} />}
       </AnimatePresence>
       <PWAInstallPrompt 

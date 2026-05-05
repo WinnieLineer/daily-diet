@@ -2,7 +2,8 @@ import React, { useRef, useState } from 'react';
 import html2canvas from 'html2canvas';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
-import { X, Download, Share2, Sparkles, Flame, MapPin, Calendar, Loader2 } from 'lucide-react';
+import { X, Download, Share2, Sparkles, Flame, MapPin, Calendar, Loader2, Zap } from 'lucide-react';
+import { getPandaAdvice } from '../lib/gemini';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { t, getLanguage } from '../lib/translations';
@@ -10,6 +11,33 @@ import { t, getLanguage } from '../lib/translations';
 const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName }) => {
   const cardRef = useRef(null);
   const [exportState, setExportState] = useState(null); // 'download' | 'share' | null
+  const [aiRoast, setAiRoast] = useState('');
+  const [isRoasting, setIsRoasting] = useState(false);
+
+  const handleGetRoast = async () => {
+    if (isRoasting) return;
+    setIsRoasting(true);
+    try {
+      const isZero = summary.calories === 0 && summary.protein === 0 && summary.water === 0;
+      let prompt = "";
+      
+      if (isZero) {
+        prompt = `The user has eaten NOTHING today (all stats are 0). Give a SHARP, WITTY, and SAVAGE roast about them starving or being a "breatharian". Max 10 words. Language: ${getLanguage() === 'zh' ? 'Traditional Chinese' : 'English'}. No emojis in text.`;
+      } else {
+        prompt = `Today's stats: Calories ${summary.calories}/${goals.calories}, Protein ${summary.protein}/${goals.protein}, Water ${summary.water}/${goals.water}. 
+        Give a SHARP, SAVAGE, and SHORT roast (max 10 words) about this diet. 
+        If they ate too much, roast their greed. If they ate too little, roast their weakness. If it's perfect, be suspicious.
+        Language: ${getLanguage() === 'zh' ? 'Traditional Chinese' : 'English'}. No emojis in text, keep it purely punchy and "roasty".`;
+      }
+      
+      const result = await getPandaAdvice(prompt);
+      setAiRoast(result.replace(/[#*]/g, '').replace(/["「」]/g, '').trim().slice(0, 50));
+    } catch (err) {
+      console.error("Roast error:", err);
+    } finally {
+      setIsRoasting(false);
+    }
+  };
 
   const generateCanvas = async () => {
     return await html2canvas(cardRef.current, {
@@ -113,9 +141,18 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
                     <span>{new Date().toLocaleDateString(getLanguage() === 'zh' ? 'zh-TW' : 'en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
                   </div>
                 </div>
-                <div className="bg-accent border-4 border-black p-3 rounded-2xl shadow-neo-sm -rotate-6">
-                  <Sparkles className="text-black" size={24} fill="currentColor" />
-                </div>
+                <button 
+                  onClick={handleGetRoast}
+                  disabled={isRoasting}
+                  className={`bg-accent border-4 border-black p-3 rounded-2xl shadow-neo-sm transition-all active:scale-90 relative ${isRoasting ? 'animate-bounce' : 'hover:-rotate-12'}`}
+                >
+                  <Sparkles className={isRoasting ? 'animate-spin' : ''} size={24} fill="currentColor" />
+                  {!aiRoast && !isRoasting && (
+                    <div className="absolute -bottom-8 right-0 bg-black text-white text-[8px] font-black px-2 py-1 rounded-lg whitespace-nowrap animate-pulse">
+                      點擊銳評 👆
+                    </div>
+                  )}
+                </button>
               </div>
 
               {/* Stats Grid */}
@@ -136,6 +173,27 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
                     <div className="text-xl font-black italic">{summary.protein} <span className="text-[10px] opacity-40">g</span></div>
                   </div>
                 </div>
+
+                {/* Roast Section */}
+                <AnimatePresence>
+                  {(aiRoast || isRoasting) && (
+                    <motion.div 
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      className="bg-black text-white p-4 rounded-3xl relative mb-6 overflow-hidden"
+                    >
+                      <div className="relative z-10 flex items-start gap-3">
+                        <Zap size={14} className="text-accent shrink-0 mt-1" fill="currentColor" />
+                        <p className="font-black italic text-xs leading-relaxed tracking-tight">
+                          {isRoasting ? '熊貓正在醞釀毒舌...' : aiRoast}
+                        </p>
+                      </div>
+                      <div className="absolute -right-2 -bottom-2 opacity-20 rotate-12">
+                        <Sparkles size={48} className="text-accent" />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <div className="space-y-1.5">
                   <div className="flex justify-between items-end px-1">
