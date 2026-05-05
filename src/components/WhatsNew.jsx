@@ -51,22 +51,28 @@ const WhatsNew = ({ version, onClose }) => {
 
             <div className="space-y-4">
               <FeatureItem 
-                icon={Sparkles}
-                color="bg-amber-300"
-                title="16/8 斷食模式支援與提示 🕒"
-                description="現在可以設定專屬進食時段，非進食時段紀錄飲食會跳出貼心警示！"
+                icon={Database}
+                color="bg-emerald-300"
+                title="Google 雲端同步 ☁️"
+                description="支援跨裝置同步所有紀錄與設定，換手機也不怕資料弄丟囉！"
               />
               <FeatureItem 
-                icon={Database}
+                icon={Zap}
+                color="bg-amber-300"
+                title="斷食模式全面進化 🕒"
+                description="全新的獨立分頁設計，讓進食時段設定更直覺、更好找。"
+              />
+              <FeatureItem 
+                icon={Move}
                 color="bg-rose-300"
-                title="排便追蹤與紀錄功能 💩"
-                description="不僅紀錄飲食，現在連排便時間也能輕鬆紀錄在儀表板囉。"
+                title="排便紀錄優化搬遷 💩"
+                description="成功搬家至體重區塊，讓首頁摘要維持極致簡潔視覺。"
               />
               <FeatureItem 
                 icon={Settings}
-                color="bg-emerald-300"
-                title="UI 元件與細節體驗優化"
-                description="修復手機版輸入框過大與版面跑位問題，帶來更完美的視覺體驗。"
+                color="bg-blue-300"
+                title="合規條款整合 ⚖️"
+                description="新增服務條款與隱私權政策，邁向更專業、安全的 App 體驗。"
               />
             </div>
 
