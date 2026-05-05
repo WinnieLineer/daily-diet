@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { db } from '../db';
 import exifr from 'exifr';
@@ -133,6 +133,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     return 'snack';
   });
   const [isRoastExpanded, setIsRoastExpanded] = useState(false);
+  const [showFastingConfirm, setShowFastingConfirm] = useState(false);
+  const [pendingLogData, setPendingLogData] = useState(null);
+  const [userInstructions, setUserInstructions] = useState(() => localStorage.getItem('user_ai_instructions') || '');
+
+  useEffect(() => {
+    localStorage.setItem('user_ai_instructions', userInstructions);
+  }, [userInstructions]);
 
   const [wantsNotification, setWantsNotification] = useState(() => {
     const saved = localStorage.getItem('wants_notification');
@@ -385,7 +392,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           water: summary.water,
           waterGoal: goals.water,
           foodLogs: recentLogs,
-          userName: userName
+          userName: userName,
+          userInstructions: userInstructions // New: Pass instructions
         };
 
         const res = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
@@ -490,7 +498,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       }
       return null;
     })();
-    await handleAnalysis(base64, locationPromise);
+    handleAnalysis(base64, locationPromise);
   };
 
   const handleCameraCapture = async (base64) => {
@@ -543,10 +551,10 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const logDateObj = new Date(logTime);
     if (goals.fasting_enabled) {
       const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
-      if (outside) {
-        if (!window.confirm(t('fasting_break_confirm'))) {
-          return;
-        }
+      if (outside && !showFastingConfirm) {
+        setPendingLogData(dataToSave);
+        setShowFastingConfirm(true);
+        return;
       }
     }
 
@@ -660,6 +668,22 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
           <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
           <input type="file" accept="image/*" multiple className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
+          
+          {/* User Instructions Persisted on Start Page */}
+          <div className="col-span-2 mt-2">
+            <div className="relative">
+              <textarea 
+                placeholder={t('ai_instruction_placeholder')}
+                value={userInstructions}
+                onChange={(e) => setUserInstructions(e.target.value)}
+                className="w-full bg-white/80 backdrop-blur-sm border-4 border-black p-4 rounded-3xl font-bold text-sm shadow-neo-sm outline-none focus:bg-white transition-all min-h-[80px] resize-none"
+              />
+              <div className="absolute top-[-10px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                <Sparkles size={10} className="text-black" />
+                <span className="text-[8px] font-black uppercase tracking-widest">{t('ai_instruction_label')}</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -901,6 +925,73 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           </div>
         </motion.div>
       )}
+
+      {/* Fasting Break Confirmation Modal */}
+      <AnimatePresence>
+        {showFastingConfirm && (
+          <div className="fixed inset-0 z-[800] flex items-center justify-center p-4">
+            <motion.div 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setShowFastingConfirm(false)}
+            />
+            <motion.div 
+              initial={{ scale: 0.9, y: 20, rotate: -2 }}
+              animate={{ scale: 1, y: 0, rotate: 0 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-white border-8 border-black w-full max-w-sm rounded-[2.5rem] shadow-neo relative p-8 text-center"
+            >
+              <div className="w-24 h-24 bg-rose-500 border-4 border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-neo-sm">
+                <AlertCircle size={48} className="text-white" strokeWidth={3} />
+              </div>
+              
+              <h2 className="text-3xl font-black italic tracking-tighter mb-4 leading-none uppercase">
+                FASTING <br /> <span className="text-rose-500">BROKEN?</span>
+              </h2>
+              
+              <div className="bg-zinc-100 border-4 border-black p-4 rounded-2xl mb-8 italic font-bold text-sm">
+                "現在是斷食時間喔！你確定要對這份美食投降嗎？熊貓會很失望的...🐼"
+              </div>
+
+              <div className="flex flex-col gap-3">
+                <NeoButton 
+                  variant="black" 
+                  className="w-full py-4 text-xl"
+                  onClick={async () => {
+                    setShowFastingConfirm(false);
+                    const logDateObj = new Date(logTime);
+                    const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                    const timestamp = logDateObj.getTime();
+                    setManualSaving(true);
+                    await db.dietLogs.add({ 
+                      ...pendingLogData, 
+                      date: localDate, 
+                      timestamp: timestamp, 
+                      is_fasting_break: true,
+                      location: pendingLogData.location || null, 
+                      category: selectedCategory 
+                    });
+                    if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); }
+                    setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
+                    onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
+                    setManualSaving(false);
+                  }}
+                >
+                  是的，我投降了 🏳️
+                </NeoButton>
+                <button 
+                  onClick={() => setShowFastingConfirm(false)}
+                  className="w-full py-3 font-black text-sm text-zinc-400 hover:text-black transition-colors"
+                >
+                  點錯了，我還可以堅持！💪
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
       </div>
     </NeoCard>
   );

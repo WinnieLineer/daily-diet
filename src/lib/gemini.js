@@ -4,8 +4,12 @@ import { getAccessToken } from "./googleAuth";
 
 // Fallback values
 const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
-const PRIMARY_MODEL = "gemma-4-31b-it";
-const FALLBACK_MODEL = "gemini-3.1-flash-lite-preview";
+const FALLBACK_CHAIN = [
+  "gemini-3.1-flash-lite-preview",
+  "gemini-3-flash",
+  "gemini-2.5-flash-lite",
+  "gemini-2.5-flash"
+];
 
 let genAIInstance = null;
 let currentKey = null;
@@ -14,7 +18,7 @@ let currentKey = null;
  * REST helper for Gemini when using OAuth token
  */
 async function callGeminiRest(modelName, token, body) {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+  const url = `https://generativelanguage.googleapis.com/v1/models/${modelName}:generateContent`;
   const res = await fetch(url, {
     method: 'POST',
     headers: {
@@ -34,34 +38,14 @@ async function callGeminiRest(modelName, token, body) {
  * Get the Google AI instance with dynamic key loading.
  */
 async function getGenAI() {
+  // OAuth for Gemini via generativelanguage.googleapis.com is restricted.
+  // We will use API Keys for AI features.
+  /*
   const token = getAccessToken();
   if (token) {
-    return {
-      getGenerativeModel: ({ model: modelName, generationConfig }) => ({
-        generateContent: async (input) => {
-          // Normalizing input to standard REST format
-          let body = {};
-          if (typeof input === 'string') {
-            body = { contents: [{ parts: [{ text: input }] }] };
-          } else if (input.contents) {
-            body = input;
-          } else {
-            body = { contents: [{ parts: [input] }] };
-          }
-          
-          if (generationConfig) body.generationConfig = { ...body.generationConfig, ...generationConfig };
-          
-          const data = await callGeminiRest(modelName, token, body);
-          return {
-            response: {
-              text: () => data.candidates[0].content.parts.filter(p => !p.thought).map(p => p.text).join(''),
-              candidates: data.candidates
-            }
-          };
-        }
-      })
-    };
+    ...
   }
+  */
 
   const userKeyEntry = await db.settings.get('user_api_key');
   const apiKey = (userKeyEntry && userKeyEntry.value) || DEFAULT_API_KEY;
@@ -88,26 +72,31 @@ function getUTC8DateString() {
 /**
  * Get the current model name based on status.
  */
-function getCurrentModel() {
+/**
+ * Get the current starting index for the fallback chain.
+ */
+function getCurrentModelIndex() {
   const today = getUTC8DateString();
   const savedDate = localStorage.getItem('ai_fallback_date');
-  const savedModel = localStorage.getItem('ai_fallback_model');
+  const savedIndex = parseInt(localStorage.getItem('ai_fallback_index') || '0');
 
-  if (savedDate === today && savedModel === FALLBACK_MODEL) {
-    return FALLBACK_MODEL;
+  if (savedDate === today) {
+    return savedIndex;
   }
-  return PRIMARY_MODEL;
+  return 0;
 }
 
 /**
- * Switch to fallback model for the rest of the day.
+ * Move to the next model in the chain for the rest of the day.
  */
-function switchToFallback() {
+function moveToNextModel(currentIndex) {
+  if (currentIndex >= FALLBACK_CHAIN.length - 1) return currentIndex;
+  const nextIndex = currentIndex + 1;
   const today = getUTC8DateString();
   localStorage.setItem('ai_fallback_date', today);
-  localStorage.setItem('ai_fallback_model', FALLBACK_MODEL);
-  console.warn(`⚡ Switched to fallback model: ${FALLBACK_MODEL} until UTC-8 midnight`);
-  return FALLBACK_MODEL;
+  localStorage.setItem('ai_fallback_index', nextIndex.toString());
+  console.warn(`⚡ Switched to next fallback model: ${FALLBACK_CHAIN[nextIndex]} until UTC-8 midnight`);
+  return nextIndex;
 }
 
 /**
@@ -115,25 +104,24 @@ function switchToFallback() {
  */
 async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   let lastError;
-  for (let round = 0; round < 2; round++) {
-    const modelName = getCurrentModel();
+  let chainIndex = getCurrentModelIndex();
+  
+  while (chainIndex < FALLBACK_CHAIN.length) {
+    const modelName = FALLBACK_CHAIN[chainIndex];
     for (let n = 0; n <= maxRetries; n++) {
       try {
         const aiProvider = await getGenAI();
         return await fnFactory(modelName, aiProvider);
       } catch (error) {
         lastError = error;
-        // ... (rest of error handling remains the same)
         const errMsg = error.message || "";
         const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
         const is503 = errMsg.includes("503") || errMsg.includes("Overloaded") || errMsg.includes("Service Unavailable");
 
         if (is429) {
-          if (modelName !== FALLBACK_MODEL) {
-            switchToFallback();
-            break; // Try fallback model in next round
-          }
-          throw error;
+          chainIndex = moveToNextModel(chainIndex);
+          if (chainIndex >= FALLBACK_CHAIN.length) throw error;
+          break; // Try next model in chain
         }
 
         if (is503 && n < maxRetries) {
@@ -142,8 +130,9 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
           continue;
         }
 
-        if (is503 && modelName !== FALLBACK_MODEL) {
-          switchToFallback();
+        if (is503) {
+          chainIndex = moveToNextModel(chainIndex);
+          if (chainIndex >= FALLBACK_CHAIN.length) throw error;
           break;
         }
         throw error;
@@ -160,7 +149,7 @@ export async function analyzeFoodImage(base64Image, context = {}, language = 'zh
       generationConfig: { temperature: 0 }
     });
 
-    const { calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], userName = '' } = context;
+    const { calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], userName = '', userInstructions = '' } = context;
     const now = new Date();
     const currentHour = now.getHours();
     const timeContext = currentHour < 5 ? 'Deep Night' : 
@@ -174,6 +163,7 @@ export async function analyzeFoodImage(base64Image, context = {}, language = 'zh
     const customPrompt = `STRICT: DIRECT JSON ONLY. NO PREAMBLE. 
 Persona: Elite Registered Dietitian.
 Priority: Read packaging text, labels, or menu signs for accuracy.
+USER SPECIFIC INSTRUCTION (IMPORTANT): ${userInstructions || "None - Use standard visual analysis"}
 If NO FOOD is detected: Still return a JSON object with dish_name: "No food detected", 0 for all numbers, and a sarcastic roast about missing food.
 
 CRITICAL: Output all text fields in ${langDisplay}.

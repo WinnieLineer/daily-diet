@@ -7,7 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 import { login, logout, getUserInfo, isLoggedIn } from '../lib/googleAuth';
-import { uploadToDrive, downloadFromDrive } from '../lib/driveService';
+import { uploadToDrive, downloadFromDrive, getBackupInfo } from '../lib/driveService';
 
 const VERSION_HISTORY = [
   { version: '1.9.0', date: '2026-05-05', features: ['Google 帳號雲端同步功能 ☁️', '隱私權政策與服務條款整合 ⚖️', '斷食模式 UX/UI 全面進化 🕒', '排便紀錄優化且不干擾摘要 💩'] },
@@ -32,16 +32,78 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [googleUser, setGoogleUser] = useState(getUserInfo());
   const [syncStatus, setSyncStatus] = useState('idle');
   const [calc, setCalc] = useState({ height: 170, weight: 70, age: 25, gender: 'male', activity: 1.375, goal: 'maintain' });
+  const [stats, setStats] = useState({ localSize: 0, cloudSize: 0, cloudTime: null, loading: false });
+  const [slimRange, setSlimRange] = useState({ start: '', end: '', count: 0 });
   
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV;
 
   useEffect(() => {
     fetchGoals();
     checkLocationPermission();
-    const handleAuthChange = () => setGoogleUser(getUserInfo());
+    refreshStats();
+    const handleAuthChange = () => {
+      setGoogleUser(getUserInfo());
+      refreshStats();
+    };
     window.addEventListener('google-auth-change', handleAuthChange);
     return () => window.removeEventListener('google-auth-change', handleAuthChange);
   }, []);
+
+  const refreshStats = async () => {
+    setStats(prev => ({ ...prev, loading: true }));
+    try {
+      // Local Size
+      const dietLogs = await db.dietLogs.toArray();
+      const weightLogs = await db.weightLogs.toArray();
+      const settings = await db.settings.toArray();
+      const favorites = await db.favorites.toArray();
+      const localBlob = new Blob([JSON.stringify({ dietLogs, weightLogs, settings, favorites })]);
+      const localSize = localBlob.size;
+
+      // Cloud Size
+      let cloudSize = 0;
+      let cloudTime = null;
+      if (isLoggedIn()) {
+        const info = await getBackupInfo();
+        if (info) {
+          cloudSize = parseInt(info.size || '0');
+          cloudTime = info.modifiedTime;
+        }
+      }
+      setStats({ localSize, cloudSize, cloudTime, loading: false });
+    } catch (err) {
+      console.error("Stats failed", err);
+      setStats(prev => ({ ...prev, loading: false }));
+    }
+  };
+
+  const updateSlimCount = async (start, end) => {
+    setSlimRange(prev => ({ ...prev, start, end }));
+    if (!start || !end) {
+      setSlimRange(prev => ({ ...prev, start, end, count: 0 }));
+      return;
+    }
+    const count = await db.dietLogs
+      .where('date')
+      .between(start, end, true, true)
+      .count();
+    setSlimRange({ start, end, count });
+  };
+
+  const handleSlimDown = async () => {
+    if (!slimRange.start || !slimRange.end) return;
+    if (!confirm(`確定要刪除 ${slimRange.start} 到 ${slimRange.end} 之間的 ${slimRange.count} 筆紀錄嗎？此操作不可恢復！🐼`)) return;
+    
+    await db.dietLogs
+      .where('date')
+      .between(slimRange.start, slimRange.end, true, true)
+      .delete();
+    
+    setSlimRange({ start: '', end: '', count: 0 });
+    refreshStats();
+    onGoalsUpdated();
+    alert('瘦身成功！🐼✨');
+  };
 
   const checkLocationPermission = () => {
     if ("geolocation" in navigator) {
@@ -333,23 +395,97 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                 {activeTab === 'data' && (
                   <div className="space-y-6">
+                    {/* Data Stats Card */}
+                    <div className="bg-zinc-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Database size={18} className="text-black" />
+                        <h4 className="font-black italic text-sm uppercase tracking-tighter">數據儲存概況</h4>
+                      </div>
+                      
+                      <div className="grid grid-cols-2 gap-4 mb-4">
+                        <div className="bg-white border-2 border-black p-3 rounded-2xl">
+                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">地端佔用</div>
+                          <div className="text-lg font-black italic">{(stats.localSize / 1024 / 1024).toFixed(2)} <span className="text-[10px]">MB</span></div>
+                        </div>
+                        <div className="bg-white border-2 border-black p-3 rounded-2xl">
+                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">雲端備份</div>
+                          <div className="text-lg font-black italic">{(stats.cloudSize / 1024 / 1024).toFixed(2)} <span className="text-[10px]">MB</span></div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 bg-white/50 p-3 rounded-xl border-2 border-dashed border-black/10">
+                        <div className="flex items-center gap-1.5">
+                          <Clock size={12} />
+                          <span>預計同步: {Math.max(2, Math.ceil(stats.localSize / 1024 / 1024 * 0.5))} ~ {Math.max(5, Math.ceil(stats.localSize / 1024 / 1024 * 1.5))} 秒</span>
+                        </div>
+                        <button onClick={refreshStats} disabled={stats.loading} className="text-black hover:rotate-180 transition-transform">
+                          <RotateCcw size={14} className={stats.loading ? 'animate-spin' : ''} />
+                        </button>
+                      </div>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
-                      <button onClick={handleCloudBackup} className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 shadow-neo-sm">
-                        <Upload size={24} />
+                      <button 
+                        onClick={handleCloudBackup} 
+                        disabled={syncStatus === 'syncing'} 
+                        className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-emerald-50 hover:bg-emerald-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
+                      >
+                        {syncStatus === 'syncing' ? <Loader2 size={24} className="text-emerald-600 animate-spin" /> : <Upload size={24} className="text-emerald-600" />}
                         <span className="text-[10px] font-black uppercase">{t('backup_to_drive')}</span>
                       </button>
-                      <button onClick={handleCloudRestore} className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 shadow-neo-sm">
-                        <RotateCcw size={24} />
+                      <button 
+                        onClick={handleCloudRestore} 
+                        disabled={syncStatus === 'syncing'} 
+                        className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-amber-50 hover:bg-amber-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
+                      >
+                        {syncStatus === 'syncing' ? <Loader2 size={24} className="text-amber-600 animate-spin" /> : <RotateCcw size={24} className="text-amber-600" />}
                         <span className="text-[10px] font-black uppercase">{t('restore_from_drive')}</span>
                       </button>
                     </div>
-                    <div className="pt-6 border-t-4 border-black border-dotted">
+
+                    {/* Slimming Tool */}
+                    <div className="bg-rose-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm">
+                      <div className="flex items-center gap-2 mb-4">
+                        <Zap size={18} className="text-rose-500" />
+                        <h4 className="font-black italic text-sm uppercase tracking-tighter">資料瘦身工具 (清空間)</h4>
+                      </div>
+                      
+                      <div className="space-y-3 mb-4">
+                        <div className="grid grid-cols-2 gap-2">
+                          <input 
+                            type="date" 
+                            className="bg-white border-2 border-black p-2 rounded-xl text-[10px] font-bold"
+                            value={slimRange.start}
+                            onChange={(e) => updateSlimCount(e.target.value, slimRange.end)}
+                          />
+                          <input 
+                            type="date" 
+                            className="bg-white border-2 border-black p-2 rounded-xl text-[10px] font-bold"
+                            value={slimRange.end}
+                            onChange={(e) => updateSlimCount(slimRange.start, e.target.value)}
+                          />
+                        </div>
+                        <div className="text-center">
+                          <span className="text-[10px] font-black italic text-rose-600">將刪除該區間內 {slimRange.count} 筆飲食紀錄</span>
+                        </div>
+                      </div>
+
+                      <button 
+                        onClick={handleSlimDown}
+                        disabled={slimRange.count === 0}
+                        className="w-full bg-rose-500 text-white py-3 rounded-2xl border-4 border-black font-black italic shadow-neo-xs active:scale-95 disabled:opacity-30 disabled:grayscale transition-all"
+                      >
+                        執行瘦身計畫 ✂️
+                      </button>
+                    </div>
+
+                    <div className="pt-2 border-t-4 border-black border-dotted">
                        <button onClick={async () => {
                          const data = { dietLogs: await db.dietLogs.toArray(), weightLogs: await db.weightLogs.toArray(), settings: await db.settings.toArray(), favorites: await db.favorites.toArray() };
                          const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
                          const url = URL.createObjectURL(blob);
                          const a = document.createElement('a'); a.href = url; a.download = 'daily-diet-backup.json'; a.click();
-                       }} className="w-full bg-white border-4 border-black py-4 rounded-2xl font-black italic shadow-neo-sm flex items-center justify-center gap-2">
+                       }} className="w-full bg-white border-4 border-black py-4 rounded-2xl font-black italic shadow-neo-sm flex items-center justify-center gap-2 hover:bg-zinc-50 transition-all">
                          <Download size={18} /> {t('export_data')}
                        </button>
                     </div>

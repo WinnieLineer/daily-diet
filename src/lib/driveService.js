@@ -6,12 +6,21 @@ const BACKUP_FILENAME = 'daily-diet-backup.json';
  * Find the backup file in Google Drive AppDataFolder
  */
 async function findBackupFile(token) {
-  const url = `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${BACKUP_FILENAME}'&fields=files(id,name)`;
+  const url = `https://www.googleapis.com/drive/v3/files?spaces=appDataFolder&q=name='${BACKUP_FILENAME}'&fields=files(id,name,size,modifiedTime)`;
   const res = await fetch(url, {
     headers: { Authorization: `Bearer ${token}` }
   });
   const data = await res.json();
   return data.files && data.files.length > 0 ? data.files[0] : null;
+}
+
+/**
+ * Get info about the current backup on Drive
+ */
+export async function getBackupInfo() {
+  const token = getAccessToken();
+  if (!token) return null;
+  return await findBackupFile(token);
 }
 
 /**

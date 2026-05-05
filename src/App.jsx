@@ -391,6 +391,7 @@ function App() {
   
   const handleOnboardingComplete = () => {
     localStorage.setItem('onboarding_seen', 'true');
+    localStorage.setItem('last_seen_version', APP_VERSION); // 🚀 Mark version as seen to prevent immediate What's New modal
     setUserName(localStorage.getItem('user_name') || '');
     setShowOnboarding(false);
   };

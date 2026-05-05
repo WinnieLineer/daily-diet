@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap, Database, Download } from 'lucide-react';
+import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap, Database, Download, Image as ImageIcon } from 'lucide-react';
 import NeoButton from './NeoButton';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
@@ -50,11 +50,33 @@ const WhatsNew = ({ version, onClose }) => {
             </div>
 
             <div className="space-y-4">
+              {/* Major AI Update with Special Effects */}
+              <motion.div
+                initial={{ scale: 0.95 }}
+                animate={{ 
+                  scale: [0.95, 1, 0.95],
+                  boxShadow: [
+                    "0 0 0px rgba(253, 224, 71, 0)",
+                    "0 0 20px rgba(253, 224, 71, 0.5)",
+                    "0 0 0px rgba(253, 224, 71, 0)"
+                  ]
+                }}
+                transition={{ duration: 2, repeat: Infinity }}
+                className="relative rounded-3xl border-4 border-amber-400 overflow-hidden"
+              >
+                <FeatureItem 
+                  icon={Zap}
+                  color="bg-amber-400"
+                  title="AI 穩定性與極速升級 ⚡"
+                  description="徹底解決辨識失敗問題，全線搭載 Gemini 3.1，10 秒內極速給出精準分析！"
+                />
+              </motion.div>
+
               <FeatureItem 
-                icon={Database}
-                color="bg-emerald-300"
-                title="Google 雲端同步 ☁️"
-                description="支援跨裝置同步所有紀錄與設定，換手機也不怕資料弄丟囉！"
+                icon={Move}
+                color="bg-rose-300"
+                title="Google 帳號雲端同步 ☁️"
+                description="現在可以將紀錄備份至雲端，更換手機也不怕資料遺失了。"
               />
               <FeatureItem 
                 icon={Zap}
@@ -73,6 +95,12 @@ const WhatsNew = ({ version, onClose }) => {
                 color="bg-blue-300"
                 title="合規條款整合 ⚖️"
                 description="新增服務條款與隱私權政策，邁向更專業、安全的 App 體驗。"
+              />
+              <FeatureItem 
+                icon={ImageIcon}
+                color="bg-purple-300"
+                title="紀錄詳情支援圖片檢視 📸"
+                description="點擊紀錄旁的 (i) 圖示，即可重溫當時的美食影像與 AI 評語。"
               />
             </div>
 
