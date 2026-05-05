@@ -10,9 +10,9 @@ import { login, logout, getUserInfo, isLoggedIn } from '../lib/googleAuth';
 import { uploadToDrive, downloadFromDrive, getBackupInfo } from '../lib/driveService';
 
 const VERSION_HISTORY = [
-  { version: '2.0.0', date: '2026-05-06', features: ['Google OAuth AI 極速辨識 ⚡', '雙模 AI 智慧備援系統 🛡️', '歷史紀錄圖片檢視功能 📸', '數據同步與手機版 UI 優化 📱'] },
-  { version: '1.9.0', date: '2026-05-05', features: ['Google 帳號雲端同步功能 ☁️', '隱私權政策與服務條款整合 ⚖️', '斷食模式 UX/UI 全面進化 🕒', '排便紀錄優化且不干擾摘要 💩'] },
-  { version: '1.8.4', date: '2026-05-04', features: ['斷食模式支援與提示 🕒', '排便追蹤與紀錄功能 💩', 'UI 元件與細節體驗優化'] },
+  { version: '2.0.0', date: '2026-05-06', features: [t('v200_f1'), t('v200_f2'), t('v200_f3'), t('v200_f4')] },
+  { version: '1.9.0', date: '2026-05-05', features: [t('v190_f1'), t('v190_f2'), t('v190_f3'), t('v190_f4')] },
+  { version: '1.8.4', date: '2026-05-04', features: [t('v184_f1'), t('v184_f2'), t('v184_f3')] },
   { version: '1.8.2', date: '2026-04-29', features: ['PWA 安裝引導系統 📱', 'iOS/Android 專屬安裝教學', '可自訂提示出現頻率'] },
   { version: '1.8.1', date: '2026-04-29', features: ['資料管理本地儲存警告 ⚠️', 'UI 配色與對比優化', '份量輸入體驗改進', '嘴砲區塊全面展開'] },
   { version: '1.8.0', date: '2026-04-29', features: ['個人化名稱系統 🐼', '設定區全面進化', 'AI 嘴砲區塊', '移除通知優化效能', '全新水杯圖示'] },
@@ -275,7 +275,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             borderBottom: '2px solid #000'
                           }}
                         >
-                          Under Review / 驗證中
+                          {t('under_review')}
                         </div>
                       </div>
 
@@ -285,7 +285,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         </div>
                         <div className="text-left">
                           <div className="font-black italic text-xs leading-none mb-1">
-                            {isLoggingIn ? "正在取得 Google 授權中..." : t('login_google')}
+                            {isLoggingIn ? t('google_auth_loading') : t('login_google')}
                           </div>
                           <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{t('backup_desc')}</div>
                         </div>
@@ -296,9 +296,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <div className="mt-2 px-2 flex items-start gap-2">
                       <Sparkles size={12} className="text-amber-500 shrink-0 mt-0.5" />
                       <p className="text-[9px] font-bold text-zinc-500 leading-tight">
-                        Google 正在驗證此應用程式。您可以等驗證完再用，或現在就 <span className="text-black font-black underline">搶先體驗</span>！
+                        <span dangerouslySetInnerHTML={{ __html: t('google_verifying_warning') }} />
                         <br/>
-                        <span className="text-[7px] text-zinc-400">(若看到「Google 尚未驗證」警告，請點選「進階」並「前往...」即可繼續)</span>
+                        <span className="text-[7px] text-zinc-400">{t('google_verifying_sub')}</span>
                       </p>
                     </div>
                   </div>
@@ -415,16 +415,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <div className="bg-zinc-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm">
                       <div className="flex items-center gap-2 mb-4">
                         <Database size={18} className="text-black" />
-                        <h4 className="font-black italic text-sm uppercase tracking-tighter">資料空間概況</h4>
+                        <h4 className="font-black italic text-sm uppercase tracking-tighter">{t('data_stats_header')}</h4>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="bg-white border-2 border-black p-3 rounded-2xl">
-                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">地端資料</div>
+                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">{t('data_usage_local')}</div>
                           <div className="text-lg font-black italic">{(stats.localSize / 1024 / 1024).toFixed(2)} <span className="text-[10px]">MB</span></div>
                         </div>
                         <div className="bg-white border-2 border-black p-3 rounded-2xl">
-                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">雲端資料</div>
+                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">{t('data_usage_cloud')}</div>
                           <div className="text-lg font-black italic">{(stats.cloudSize / 1024 / 1024).toFixed(2)} <span className="text-[10px]">MB</span></div>
                         </div>
                       </div>
@@ -432,7 +432,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 bg-white/50 p-3 rounded-xl border-2 border-dashed border-black/10">
                         <div className="flex items-center gap-1.5">
                           <Clock size={12} />
-                          <span>預計同步: {Math.max(2, Math.ceil(stats.localSize / 1024 / 1024 * 0.5))} ~ {Math.max(5, Math.ceil(stats.localSize / 1024 / 1024 * 1.5))} 秒</span>
+                          <span>{t('est_sync_time')
+                            .replace('{min}', Math.max(2, Math.ceil(stats.localSize / 1024 / 1024 * 0.5)))
+                            .replace('{max}', Math.max(5, Math.ceil(stats.localSize / 1024 / 1024 * 1.5)))}</span>
                         </div>
                         <button onClick={refreshStats} disabled={stats.loading} className="text-black hover:rotate-180 transition-transform">
                           <RotateCcw size={14} className={stats.loading ? 'animate-spin' : ''} />

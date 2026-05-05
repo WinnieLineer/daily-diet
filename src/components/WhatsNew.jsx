@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History } from 'lucide-react';
 import NeoButton from './NeoButton';
+import { t } from '../lib/translations';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
   <div className="flex gap-4 p-4 bg-white border-4 border-black rounded-2xl shadow-neo-sm">
@@ -67,45 +68,45 @@ const WhatsNew = ({ version, onClose }) => {
                 <FeatureItem 
                   icon={Globe}
                   color="bg-amber-400"
-                  title="Google AI 極速整合 ⚡"
-                  description="登入後即享個人配額，體驗 10 秒內極速辨識，且分析更精準穩定。強烈建議登入使用！"
+                  title={t('whatsnew_v200_ai_speed_title')}
+                  description={t('whatsnew_v200_ai_speed_desc')}
                 />
               </motion.div>
 
               <FeatureItem 
                 icon={ShieldCheck}
                 color="bg-blue-300"
-                title="雙模 AI 智慧備援 🛡️"
-                description="未登入將維持舊版模式，載入需等待約 30 秒。想快人一步？現在就登入 Google 吧！"
+                title={t('whatsnew_v200_ai_fallback_title')}
+                description={t('whatsnew_v200_ai_fallback_desc')}
               />
 
               {/* V1.9.0 Features */}
               <FeatureItem 
                 icon={Cloud}
                 color="bg-rose-300"
-                title="雲端備份與同步 ☁️"
-                description="登入 Google 即可啟用跨裝置同步。優化後不傳圖片，體積縮小 90%，同步快如閃電！"
+                title={t('whatsnew_v200_cloud_sync_title')}
+                description={t('whatsnew_v200_cloud_sync_desc')}
               />
 
               <FeatureItem 
                 icon={ImageIcon}
                 color="bg-purple-300"
-                title="歷史紀錄圖片檢視 📸"
-                description="點擊紀錄旁的 (i) 圖示，即可查看當時拍攝的美食影像、AI 評語與精準數值。"
+                title={t('whatsnew_v200_history_img_title')}
+                description={t('whatsnew_v200_history_img_desc')}
               />
 
               <FeatureItem 
                 icon={MessageSquare}
                 color="bg-green-200"
-                title="AI 補充指令記憶 ✨"
-                description="App 現在會記住您的個人化補充指令，讓 AI 分析更懂您的飲食偏好。"
+                title={t('whatsnew_v200_ai_memory_title')}
+                description={t('whatsnew_v200_ai_memory_desc')}
               />
 
               <FeatureItem 
                 icon={History}
                 color="bg-zinc-200"
-                title="性能與 UX 全面優化 🔧"
-                description="優化手機版輸入框顯示與整體流暢度，修正 PWA 在部分裝置上的顯示異常。"
+                title={t('whatsnew_v200_ux_title')}
+                description={t('whatsnew_v200_ux_desc')}
               />
             </div>
 
@@ -114,7 +115,7 @@ const WhatsNew = ({ version, onClose }) => {
               className="w-full py-4 text-xl rounded-2xl"
               onClick={onClose}
             >
-              進入 v2.0.0 🐼
+              OK 🐼
             </NeoButton>
           </div>
         </div>
