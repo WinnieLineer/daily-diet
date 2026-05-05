@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Move, Calculator, LineChart as ChartIcon, Tag, MapPin, User, Settings, Zap, Database, Download, Image as ImageIcon } from 'lucide-react';
+import { Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History } from 'lucide-react';
 import NeoButton from './NeoButton';
 
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
@@ -9,7 +9,7 @@ const FeatureItem = ({ icon: Icon, title, description, color }) => (
       <Icon size={24} className="text-black" strokeWidth={3} />
     </div>
     <div className="space-y-1">
-      <h3 className="font-black text-lg italic tracking-tight">{title}</h3>
+      <h3 className="font-black text-lg italic tracking-tight leading-tight">{title}</h3>
       <p className="text-sm text-zinc-500 font-bold leading-relaxed">{description}</p>
     </div>
   </div>
@@ -27,7 +27,7 @@ const WhatsNew = ({ version, onClose }) => {
         initial={{ scale: 0.9, y: 20, rotate: -1 }}
         animate={{ scale: 1, y: 0, rotate: 0 }}
         exit={{ scale: 0.9, opacity: 0 }}
-        className="bg-accent border-4 border-black w-full max-w-md rounded-[2.5rem] shadow-neo relative flex flex-col max-h-[90vh] overflow-hidden"
+        className="bg-accent border-4 border-black w-full max-w-md rounded-[2.5rem] shadow-neo relative flex flex-col max-h-[95vh] overflow-hidden"
       >
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
         
@@ -40,7 +40,7 @@ const WhatsNew = ({ version, onClose }) => {
 
         <div className="overflow-y-auto p-6 sm:p-8 flex-1 custom-scrollbar">
           <div className="space-y-8">
-            <div className="space-y-2">
+            <div className="space-y-2 text-center sm:text-left">
               <div className="inline-block bg-black text-white px-3 py-1 rounded-lg text-xs font-black tracking-widest uppercase italic">
                 Update v{version}
               </div>
@@ -49,8 +49,8 @@ const WhatsNew = ({ version, onClose }) => {
               </h1>
             </div>
 
-            <div className="space-y-4">
-              {/* Major AI Update with Special Effects */}
+            <div className="space-y-5">
+              {/* V2.0.0 Highlights */}
               <motion.div
                 initial={{ scale: 0.95 }}
                 animate={{ 
@@ -65,42 +65,40 @@ const WhatsNew = ({ version, onClose }) => {
                 className="relative rounded-3xl border-4 border-amber-400 overflow-hidden"
               >
                 <FeatureItem 
-                  icon={Zap}
+                  icon={Globe}
                   color="bg-amber-400"
-                  title="AI 穩定性與極速升級 ⚡"
-                  description="徹底解決辨識失敗問題，全線搭載 Gemini 3.1，10 秒內極速給出精準分析！"
+                  title="Google AI 深度整合 ⚡"
+                  description="功能驗證中！登入後自動調用個人配額，體驗秒殺級、極度穩定的 AI 辨識體驗。"
                 />
               </motion.div>
 
               <FeatureItem 
-                icon={Move}
-                color="bg-rose-300"
-                title="Google 帳號雲端同步 ☁️"
-                description="現在可以將紀錄備份至雲端，更換手機也不怕資料遺失了。"
-              />
-              <FeatureItem 
-                icon={Zap}
-                color="bg-amber-300"
-                title="斷食模式全面進化 🕒"
-                description="全新的獨立分頁設計，讓進食時段設定更直覺、更好找。"
-              />
-              <FeatureItem 
-                icon={Move}
-                color="bg-rose-300"
-                title="排便紀錄優化搬遷 💩"
-                description="成功搬家至體重區塊，讓首頁摘要維持極致簡潔視覺。"
-              />
-              <FeatureItem 
-                icon={Settings}
+                icon={ShieldCheck}
                 color="bg-blue-300"
-                title="合規條款整合 ⚖️"
-                description="新增服務條款與隱私權政策，邁向更專業、安全的 App 體驗。"
+                title="雙模 AI 智慧備援 🛡️"
+                description="未登入將使用舊版 Gemma 4 31B 辨識，載入時間約需 30 秒。"
               />
+
+              {/* V1.9.0 Features */}
               <FeatureItem 
-                icon={ImageIcon}
+                icon={Cloud}
+                color="bg-rose-300"
+                title="數據同步大瘦身 ☁️"
+                description="優化雲端備份邏輯，自動移除冗餘圖片，同步體積縮小 90% 以上，快如閃電。"
+              />
+
+              <FeatureItem 
+                icon={MessageSquare}
                 color="bg-purple-300"
-                title="紀錄詳情支援圖片檢視 📸"
-                description="點擊紀錄旁的 (i) 圖示，即可重溫當時的美食影像與 AI 評語。"
+                title="AI 補充指令記憶 ✨"
+                description="現在 App 會記住您的補充指令，讓個人化分析更聰明、更懂您的需求。"
+              />
+
+              <FeatureItem 
+                icon={History}
+                color="bg-zinc-200"
+                title="性能與 UX 全面優化 🔧"
+                description="修正 PWA 在手機上的顯示異常，優化輸入框高度與操作流暢度。"
               />
             </div>
 
@@ -109,7 +107,7 @@ const WhatsNew = ({ version, onClose }) => {
               className="w-full py-4 text-xl rounded-2xl"
               onClick={onClose}
             >
-              立即體驗 🐼
+              進入 v2.0.0 🐼
             </NeoButton>
           </div>
         </div>
