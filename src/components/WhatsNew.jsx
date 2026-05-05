@@ -67,8 +67,8 @@ const WhatsNew = ({ version, onClose }) => {
                 <FeatureItem 
                   icon={Globe}
                   color="bg-amber-400"
-                  title="Google AI 深度整合 ⚡"
-                  description="功能驗證中！登入後自動調用個人配額，體驗秒殺級、極度穩定的 AI 辨識體驗。"
+                  title="Google AI 極速整合 ⚡"
+                  description="登入後即享個人配額，體驗 10 秒內極速辨識，且分析更精準穩定。強烈建議登入使用！"
                 />
               </motion.div>
 
@@ -76,29 +76,36 @@ const WhatsNew = ({ version, onClose }) => {
                 icon={ShieldCheck}
                 color="bg-blue-300"
                 title="雙模 AI 智慧備援 🛡️"
-                description="未登入將使用舊版 Gemma 4 31B 辨識，載入時間約需 30 秒。"
+                description="未登入將維持舊版模式，載入需等待約 30 秒。想快人一步？現在就登入 Google 吧！"
               />
 
               {/* V1.9.0 Features */}
               <FeatureItem 
                 icon={Cloud}
                 color="bg-rose-300"
-                title="數據同步大瘦身 ☁️"
-                description="優化雲端備份邏輯，自動移除冗餘圖片，同步體積縮小 90% 以上，快如閃電。"
+                title="雲端備份與同步 ☁️"
+                description="登入 Google 即可啟用跨裝置同步。優化後不傳圖片，體積縮小 90%，同步快如閃電！"
+              />
+
+              <FeatureItem 
+                icon={ImageIcon}
+                color="bg-purple-300"
+                title="歷史紀錄圖片檢視 📸"
+                description="點擊紀錄旁的 (i) 圖示，即可查看當時拍攝的美食影像、AI 評語與精準數值。"
               />
 
               <FeatureItem 
                 icon={MessageSquare}
-                color="bg-purple-300"
+                color="bg-green-200"
                 title="AI 補充指令記憶 ✨"
-                description="現在 App 會記住您的補充指令，讓個人化分析更聰明、更懂您的需求。"
+                description="App 現在會記住您的個人化補充指令，讓 AI 分析更懂您的飲食偏好。"
               />
 
               <FeatureItem 
                 icon={History}
                 color="bg-zinc-200"
                 title="性能與 UX 全面優化 🔧"
-                description="修正 PWA 在手機上的顯示異常，優化輸入框高度與操作流暢度。"
+                description="優化手機版輸入框顯示與整體流暢度，修正 PWA 在部分裝置上的顯示異常。"
               />
             </div>
 
