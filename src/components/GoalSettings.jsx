@@ -56,7 +56,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     setStats(prev => ({ ...prev, loading: true }));
     try {
       // Local Size
-      const dietLogs = await db.dietLogs.toArray();
+      const dietLogs = (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest);
       const weightLogs = await db.weightLogs.toArray();
       const settings = await db.settings.toArray();
       const favorites = await db.favorites.toArray();
@@ -442,16 +442,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <div className="bg-zinc-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm">
                       <div className="flex items-center gap-2 mb-4">
                         <Database size={18} className="text-black" />
-                        <h4 className="font-black italic text-sm uppercase tracking-tighter">數據儲存概況</h4>
+                        <h4 className="font-black italic text-sm uppercase tracking-tighter">資料空間概況</h4>
                       </div>
                       
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="bg-white border-2 border-black p-3 rounded-2xl">
-                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">地端佔用</div>
+                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">地端資料</div>
                           <div className="text-lg font-black italic">{(stats.localSize / 1024 / 1024).toFixed(2)} <span className="text-[10px]">MB</span></div>
                         </div>
                         <div className="bg-white border-2 border-black p-3 rounded-2xl">
-                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">雲端備份</div>
+                          <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">雲端資料</div>
                           <div className="text-lg font-black italic">{(stats.cloudSize / 1024 / 1024).toFixed(2)} <span className="text-[10px]">MB</span></div>
                         </div>
                       </div>
