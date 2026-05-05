@@ -88,13 +88,6 @@ const LogDetailModal = ({ log, onClose }) => {
           className="relative bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh] pointer-events-auto"
         >
         {/* Header */}
-        <div className="pt-8 pb-4 text-center opacity-30 hover:opacity-100 transition-opacity">
-          <div className="flex justify-center gap-4 text-[10px] font-black uppercase tracking-widest">
-            <a href="/daily-diet/privacy.html" target="_blank" className="hover:underline">Privacy Policy</a>
-            <span>•</span>
-            <a href="/daily-diet/terms.html" target="_blank" className="hover:underline">Terms of Service</a>
-          </div>
-        </div>
         <div className="p-4 border-b-4 border-black flex items-center justify-between bg-accent/10">
           <div className="flex items-center gap-3">
             <div className="bg-black text-white p-2 rounded-xl">
@@ -1131,6 +1124,15 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Google OAuth Verification Links */}
+      <footer className="pt-12 pb-6 text-center opacity-20 hover:opacity-100 transition-opacity">
+        <div className="flex justify-center gap-6 text-[10px] font-black uppercase tracking-widest">
+          <a href="/daily-diet/privacy.html" target="_blank" className="hover:underline">Privacy Policy</a>
+          <span>•</span>
+          <a href="/daily-diet/terms.html" target="_blank" className="hover:underline">Terms of Service</a>
+        </div>
+      </footer>
     </div>
   );
 }

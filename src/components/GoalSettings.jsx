@@ -33,11 +33,21 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [syncStatus, setSyncStatus] = useState('idle'); // 'idle', 'syncing', 'success', 'error'
 
   const handlePwaInstall = async () => {
-    if (!pwaPrompt) return;
-    pwaPrompt.prompt();
-    const { outcome } = await pwaPrompt.userChoice;
-    if (outcome === 'accepted') {
-      onPwaPromptUsed();
+    console.log("Install button clicked. Current pwaPrompt:", pwaPrompt);
+    if (!pwaPrompt) {
+      console.warn("No PWA install prompt available.");
+      return;
+    }
+    try {
+      console.log("Triggering pwaPrompt.prompt()...");
+      await pwaPrompt.prompt();
+      const { outcome } = await pwaPrompt.userChoice;
+      console.log(`User choice outcome: ${outcome}`);
+      if (outcome === 'accepted') {
+        onPwaPromptUsed();
+      }
+    } catch (err) {
+      console.error("PWA Installation failed:", err);
     }
   };
 
