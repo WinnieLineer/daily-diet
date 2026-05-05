@@ -19,6 +19,7 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION } from './lib/constants';
 import versionData from '../public/version.json';
+import { initGoogleAuth } from './lib/googleAuth';
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -645,6 +646,7 @@ function App() {
     };
     
     initFacts();
+    initGoogleAuth();
     
     refreshData().catch(err => {
       console.error("Initial refreshData error:", err);

@@ -1,5 +1,6 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 import { db } from "../db";
+import { getAccessToken } from "./googleAuth";
 
 // Fallback values
 const DEFAULT_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
@@ -10,9 +11,58 @@ let genAIInstance = null;
 let currentKey = null;
 
 /**
+ * REST helper for Gemini when using OAuth token
+ */
+async function callGeminiRest(modelName, token, body) {
+  const url = `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent`;
+  const res = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(body)
+  });
+  if (!res.ok) {
+    const err = await res.json();
+    throw new Error(err.error?.message || "AI API Error");
+  }
+  return await res.json();
+}
+
+/**
  * Get the Google AI instance with dynamic key loading.
  */
 async function getGenAI() {
+  const token = getAccessToken();
+  if (token) {
+    return {
+      getGenerativeModel: ({ model: modelName, generationConfig }) => ({
+        generateContent: async (input) => {
+          // Normalizing input to standard REST format
+          let body = {};
+          if (typeof input === 'string') {
+            body = { contents: [{ parts: [{ text: input }] }] };
+          } else if (input.contents) {
+            body = input;
+          } else {
+            body = { contents: [{ parts: [input] }] };
+          }
+          
+          if (generationConfig) body.generationConfig = { ...body.generationConfig, ...generationConfig };
+          
+          const data = await callGeminiRest(modelName, token, body);
+          return {
+            response: {
+              text: () => data.candidates[0].content.parts.filter(p => !p.thought).map(p => p.text).join(''),
+              candidates: data.candidates
+            }
+          };
+        }
+      })
+    };
+  }
+
   const userKeyEntry = await db.settings.get('user_api_key');
   const apiKey = (userKeyEntry && userKeyEntry.value) || DEFAULT_API_KEY;
 
@@ -69,10 +119,11 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
     const modelName = getCurrentModel();
     for (let n = 0; n <= maxRetries; n++) {
       try {
-        const genAI = await getGenAI();
-        return await fnFactory(modelName, genAI);
+        const aiProvider = await getGenAI();
+        return await fnFactory(modelName, aiProvider);
       } catch (error) {
         lastError = error;
+        // ... (rest of error handling remains the same)
         const errMsg = error.message || "";
         const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
         const is503 = errMsg.includes("503") || errMsg.includes("Overloaded") || errMsg.includes("Service Unavailable");

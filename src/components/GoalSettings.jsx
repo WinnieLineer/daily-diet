@@ -6,6 +6,8 @@ import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail,
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
+import { login, logout, getUserInfo, isLoggedIn } from '../lib/googleAuth';
+import { uploadToDrive, downloadFromDrive } from '../lib/driveService';
 
 const VERSION_HISTORY = [
   { version: '1.8.2', date: '2026-04-29', features: ['PWA 安裝引導系統 📱', 'iOS/Android 專屬安裝教學', '可自訂提示出現頻率'] },
@@ -25,6 +27,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
   const [showCalculator, setShowCalculator] = useState(false);
+  const [googleUser, setGoogleUser] = useState(getUserInfo());
+  const [syncStatus, setSyncStatus] = useState('idle'); // 'idle', 'syncing', 'success', 'error'
 
   const handlePwaInstall = async () => {
     if (!pwaPrompt) return;
@@ -57,6 +61,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   useEffect(() => {
     fetchGoals();
     checkLocationPermission();
+
+    const handleAuthChange = () => {
+      setGoogleUser(getUserInfo());
+    };
+    window.addEventListener('google-auth-change', handleAuthChange);
+    return () => window.removeEventListener('google-auth-change', handleAuthChange);
   }, []);
 
   const checkLocationPermission = () => {
@@ -163,6 +173,71 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     } catch (err) {
       setSubmitStatus('error');
       setTimeout(() => setSubmitStatus('idle'), 4000);
+    }
+  };
+
+  const handleCloudBackup = async () => {
+    if (!isLoggedIn()) {
+      login();
+      return;
+    }
+    
+    if (!confirm(t('backup_confirm'))) return;
+    
+    setSyncStatus('syncing');
+    try {
+      const data = {
+        dietLogs: await db.dietLogs.toArray(),
+        weightLogs: await db.weightLogs.toArray(),
+        settings: await db.settings.toArray(),
+        favorites: await db.favorites.toArray()
+      };
+      await uploadToDrive(data);
+      setSyncStatus('success');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
+  const handleCloudRestore = async () => {
+    if (!isLoggedIn()) {
+      login();
+      return;
+    }
+
+    if (!confirm(t('restore_confirm'))) return;
+
+    setSyncStatus('syncing');
+    try {
+      const data = await downloadFromDrive();
+      if (!data) {
+        alert(t('no_cloud_backup'));
+        setSyncStatus('error');
+        return;
+      }
+
+      await db.transaction('rw', db.dietLogs, db.weightLogs, db.settings, db.favorites, async () => {
+        await db.dietLogs.clear(); await db.weightLogs.clear(); await db.settings.clear(); await db.favorites.clear();
+        if (data.dietLogs) await db.dietLogs.bulkAdd(data.dietLogs.map(({id, ...r}) => r));
+        if (data.weightLogs) await db.weightLogs.bulkAdd(data.weightLogs.map(({id, ...r}) => r));
+        if (data.settings) await db.settings.bulkAdd(data.settings);
+        if (data.favorites) await db.favorites.bulkAdd(data.favorites.map(({id, ...r}) => r));
+      });
+      
+      setSyncStatus('success');
+      setTimeout(() => {
+        setSyncStatus('idle');
+        window.location.reload();
+      }, 1000);
+    } catch (err) {
+      console.error(err);
+      alert(err.message);
+      setSyncStatus('error');
+      setTimeout(() => setSyncStatus('idle'), 3000);
     }
   };
 
@@ -280,6 +355,28 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <p className="text-[10px] font-bold text-zinc-500 leading-relaxed italic">
                         🐼 「名字不只是個代號，它讓我可以更精準地建議你。改個帥一點的名字吧！」
                       </p>
+                    </div>
+
+                    <div className="pt-4 border-t-4 border-black border-dotted space-y-4">
+                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">{t('google_account')}</label>
+                       {googleUser ? (
+                         <div className="flex items-center gap-4 p-4 border-4 border-black rounded-2xl bg-zinc-50">
+                           <img src={googleUser.picture} className="w-12 h-12 rounded-full border-2 border-black" alt="" />
+                           <div className="flex-1 min-w-0">
+                             <div className="font-black text-sm truncate">{googleUser.name}</div>
+                             <div className="text-[10px] font-bold text-zinc-400 truncate">{googleUser.email}</div>
+                           </div>
+                           <button onClick={logout} className="text-[10px] font-black uppercase text-rose-500 hover:underline">{t('logout_google')}</button>
+                         </div>
+                       ) : (
+                         <button 
+                           onClick={login}
+                           className="w-full flex items-center justify-center gap-3 p-4 border-4 border-black rounded-2xl bg-white shadow-neo-sm hover:translate-x-1 hover:-translate-y-1 transition-all"
+                         >
+                           <Globe size={20} />
+                           <span className="font-black italic text-sm">{t('login_google')}</span>
+                         </button>
+                       )}
                     </div>
                   </div>
                 )}
@@ -585,6 +682,36 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <p className="text-[11px] font-bold text-rose-500 leading-relaxed italic">
                         {t('data_backup_hint')}
                       </p>
+                    </div>
+
+                    <div className="space-y-3 pt-2">
+                       <div className="flex items-center gap-2 px-1">
+                         <Globe size={16} className="text-zinc-400" />
+                         <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('cloud_backup')}</span>
+                       </div>
+                       <div className="grid grid-cols-2 gap-3">
+                         <button 
+                           onClick={handleCloudBackup}
+                           disabled={syncStatus === 'syncing'}
+                           className={`flex flex-col items-center justify-center gap-2 p-4 border-4 border-black rounded-2xl shadow-neo-sm transition-all bg-white hover:bg-zinc-50 ${syncStatus === 'syncing' ? 'opacity-50' : ''}`}
+                         >
+                           <Upload size={20} />
+                           <span className="text-[10px] font-black uppercase">{syncStatus === 'syncing' ? t('syncing') : t('backup_to_drive')}</span>
+                         </button>
+                         <button 
+                           onClick={handleCloudRestore}
+                           disabled={syncStatus === 'syncing'}
+                           className={`flex flex-col items-center justify-center gap-2 p-4 border-4 border-black rounded-2xl shadow-neo-sm transition-all bg-white hover:bg-zinc-50 ${syncStatus === 'syncing' ? 'opacity-50' : ''}`}
+                         >
+                           <History size={20} />
+                           <span className="text-[10px] font-black uppercase">{syncStatus === 'syncing' ? t('syncing') : t('restore_from_drive')}</span>
+                         </button>
+                       </div>
+                    </div>
+
+                    <div className="flex items-center gap-2 px-1 pt-2">
+                      <Database size={16} className="text-zinc-400" />
+                      <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400">{t('settings_data')}</span>
                     </div>
                     <button onClick={async () => {
                       const data = {
