@@ -626,7 +626,6 @@ const translations = {
     google_auth_loading: "Obtaining Google Authorization...",
     google_verifying_warning: "Google is verifying this app. You can wait or <span class='text-black font-black underline'>Try Early Access</span> now!",
     google_verifying_sub: "(If you see 'Google hasn't verified this app', click 'Advanced' and 'Go to...' to continue)",
-    google_verifying_sub: "(If you see 'Google hasn't verified this app', click 'Advanced' and 'Go to...' to continue)",
     v201_bugs_title: "Stability & Bug Fixes 🧼",
     v201_bugs_desc: "Fixed login sync, cleaned AI advice metadata, and optimized session recovery.",
     v201_feedback_title: "Report to Coach! 🐼",

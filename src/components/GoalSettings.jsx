@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Share, Clock, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
