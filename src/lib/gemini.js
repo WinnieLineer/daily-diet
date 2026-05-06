@@ -125,8 +125,13 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   const oauthToken = getAccessToken();
   
   // Differentiate model selection based on login status
-  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b-it"];
-  let chainIndex = oauthToken ? getCurrentModelIndex() : 0;
+  const hasUserSession = !!localStorage.getItem('google_user');
+  const modelChain = (oauthToken || hasUserSession) ? FALLBACK_CHAIN : ["gemma-4-31b-it"];
+  let chainIndex = (oauthToken || hasUserSession) ? getCurrentModelIndex() : 0;
+  
+  if (hasUserSession && !oauthToken) {
+    throw new Error("OAUTH_REQUIRED");
+  }
   
   while (chainIndex < modelChain.length) {
     const modelName = modelChain[chainIndex];

@@ -667,14 +667,20 @@ function App() {
     initFacts();
     initGoogleAuth();
     
-    // 🚀 Session Recovery: If we have user info but token is expired, try silent refresh
-    import('./lib/googleAuth').then(m => {
-      if (m.getUserInfo() && !m.isLoggedIn()) {
-        console.log("🔄 [Auth] Token expired but user session exists. Attempting silent refresh...");
-        m.refreshLogin();
-      }
-    });
-    
+    // 🚀 Session Recovery: Attempt to refresh token on first user interaction to bypass popup blockers
+    const recoverSession = () => {
+      import('./lib/googleAuth').then(m => {
+        if (m.getUserInfo() && !m.isLoggedIn()) {
+          console.log("🔄 [Auth] Attempting to recover session on user interaction...");
+          m.refreshLogin();
+        }
+      });
+      window.removeEventListener('mousedown', recoverSession);
+      window.removeEventListener('touchstart', recoverSession);
+    };
+    window.addEventListener('mousedown', recoverSession, { once: true });
+    window.addEventListener('touchstart', recoverSession, { once: true });
+
     refreshData().catch(err => {
       console.error("Initial refreshData error:", err);
     });

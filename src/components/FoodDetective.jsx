@@ -138,7 +138,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [pendingLogData, setPendingLogData] = useState(null);
   const [userInstructions, setUserInstructions] = useState(() => localStorage.getItem('user_ai_instructions') || '');
   const [isAuth, setIsAuth] = useState(isLoggedIn());
-
+  
   useEffect(() => {
     const handleAuthChange = () => setIsAuth(isLoggedIn());
     window.addEventListener('google-auth-change', handleAuthChange);
@@ -236,7 +236,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       };
       fetchFacts();
 
-      setLoadTime(isAuth ? 10 : 30);
+      setLoadTime(isAuth ? 3 : 30);
       interval = setInterval(() => {
         setLoadTime(prev => {
           const next = prev > 0 ? prev - 1 : 0;
@@ -247,7 +247,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         });
       }, 1000);
     } else {
-      setLoadTime(isAuth ? 10 : 30);
+      setLoadTime(isAuth ? 3 : 30);
       setCurrentFactIndex(0);
     }
     return () => clearInterval(interval);
@@ -374,7 +374,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const currentAnalysisId = ++analysisIdRef.current;
     setAiLoading(true);
     setAiError(null);
-    setLoadTime(isLoggedIn() ? 10 : 30);
+    setLoadTime(isAuth ? 3 : 30);
     document.body.classList.add('ai-analyzing');
 
     try {
@@ -435,8 +435,23 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       if (currentAnalysisId !== analysisIdRef.current) return;
       if (err.name === 'AbortError') return;
       console.error("AI Analysis Error:", err);
-      const errorMsg = err.message || t('ai_error');
-      setAiError(errorMsg);
+      const isAuthExpired = err.message === "OAUTH_REQUIRED" || err.message?.includes("OAuth Token Expired");
+      const errorMsg = isAuthExpired ? t('auth_expired_relogin') || "Session expired. Please Re-login for 3s Fast Mode." : (err.message || t('ai_error'));
+      
+      if (isAuthExpired) {
+        setAiError(
+          <div className="flex flex-col items-center gap-4">
+            <p>{errorMsg}</p>
+            <NeoButton variant="black" className="h-12 px-8 text-xs flex items-center justify-center gap-2" onClick={() => {
+              import('../lib/googleAuth').then(m => m.login());
+            }}>
+              <Zap size={16} /> {t('settings_login') || "Login with Google"}
+            </NeoButton>
+          </div>
+        );
+      } else {
+        setAiError(errorMsg);
+      }
     } finally {
       if (currentAnalysisId === analysisIdRef.current) {
         setAiLoading(false);
