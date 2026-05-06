@@ -11,7 +11,7 @@ const FeatureItem = ({ icon: Icon, title, description, color }) => (
     </div>
     <div className="space-y-1">
       <h3 className="font-black text-lg italic tracking-tight leading-tight">{title}</h3>
-      <p className="text-sm text-zinc-500 font-bold leading-relaxed">{description}</p>
+      <div className="text-sm text-zinc-500 font-bold leading-relaxed">{description}</div>
     </div>
   </div>
 );
@@ -53,19 +53,25 @@ const WhatsNew = ({ version, onClose, isFixOnly = false }) => {
             <div className="space-y-5">
               {isFixOnly ? (
                 <>
-                  <motion.div
-                    initial={{ scale: 0.95 }}
-                    animate={{ scale: [0.95, 1, 0.95] }}
-                    transition={{ duration: 2, repeat: Infinity }}
-                    className="relative rounded-3xl border-4 border-black overflow-hidden bg-white shadow-neo-sm"
-                  >
+                  <div className="relative rounded-3xl border-4 border-black overflow-hidden bg-white shadow-neo-sm">
                     <FeatureItem 
                       icon={ShieldCheck}
                       color="bg-emerald-400"
-                      title={t('v201_bugs_title')}
-                      description={t('v201_bugs_desc')}
+                      title={t('v201_t')}
+                      description={
+                        <div className="mt-4 space-y-3 p-4 bg-zinc-50/80 rounded-2xl border-2 border-zinc-100 italic">
+                          {[t('v201_f1'), t('v201_f2'), t('v201_f3')].map((fix, idx) => (
+                            <div key={idx} className="flex items-start gap-3 group">
+                              <div className="mt-1.5 w-2 h-2 rounded-full bg-emerald-500 ring-4 ring-emerald-500/20 shrink-0 group-hover:scale-125 transition-transform" />
+                              <p className="text-[13px] font-bold text-zinc-600 group-hover:text-black transition-colors leading-snug">
+                                {fix}
+                              </p>
+                            </div>
+                          ))}
+                        </div>
+                      }
                     />
-                  </motion.div>
+                  </div>
                   <motion.div 
                     whileTap={{ scale: 0.98 }}
                     onClick={() => {
