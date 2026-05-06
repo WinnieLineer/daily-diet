@@ -25,10 +25,10 @@ export function initGoogleAuth() {
     scope: SCOPES,
     callback: (response) => {
       if (response.error !== undefined) {
-        throw response;
+        // If it's a silent request that failed, just ignore
+        return;
       }
       accessToken = response.access_token;
-      // Fetch user info using the token
       fetchUserInfo(accessToken);
     },
   });
@@ -52,7 +52,21 @@ async function fetchUserInfo(token) {
 
 export function login() {
   if (!tokenClient) initGoogleAuth();
+  if (!tokenClient) {
+    console.error("Google Auth client not initialized. Is the SDK loaded?");
+    return;
+  }
   tokenClient.requestAccessToken({ prompt: 'consent' });
+}
+
+export function refreshLogin() {
+  if (!tokenClient) initGoogleAuth();
+  if (!tokenClient) {
+    // Silently fail if refreshing and client not ready
+    return;
+  }
+  // Try silent refresh
+  tokenClient.requestAccessToken({ prompt: '' });
 }
 
 export function logout() {

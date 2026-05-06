@@ -14,7 +14,7 @@ import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
 import SharingCard from './components/SharingCard';
 import { getPandaAdvice } from './lib/gemini';
-import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal, Info, Zap } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION } from './lib/constants';
@@ -144,7 +144,7 @@ const LogDetailModal = ({ log, onClose }) => {
             </div>
           </div>
         </div>
-
+        
         {/* Footer */}
         <div className="p-4 border-t-4 border-black flex gap-3">
           <NeoButton 
@@ -161,6 +161,7 @@ const LogDetailModal = ({ log, onClose }) => {
   document.body
 );
 };
+
 
 const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite, onShowDetail }) => {
   const isEditing = editingId === log.id;
@@ -370,6 +371,7 @@ function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_seen'));
   const [showWhatsNew, setShowWhatsNew] = useState(false);
+  const [isBugFixOnly, setIsBugFixOnly] = useState(false);
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '20:00', fasting_end: '12:00' });
 
   const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
@@ -455,6 +457,7 @@ function App() {
             const isNewUser = !lastSeenVersion;
 
             if (!isFrom16 && !isNewUser) {
+              setIsBugFixOnly(lastSeenVersion === '2.0.0');
               setShowWhatsNew(true);
             } else {
               localStorage.setItem('last_seen_version', APP_VERSION);
@@ -493,6 +496,14 @@ function App() {
   const [isDataLoaded, setIsDataLoaded] = useState(false);
   const [showShare, setShowShare] = useState(false);
   const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
+  const [settingsTab, setSettingsTab] = useState('profile');
+  const [isLoggedIn, setIsLoggedIn] = useState((() => { const token = localStorage.getItem('google_access_token'); const expiry = localStorage.getItem('google_token_expiry'); return !!token && !!expiry && Date.now() < Number(expiry); })());
+
+  useEffect(() => {
+    const handleAuth = () => setIsLoggedIn((() => { const token = localStorage.getItem('google_access_token'); const expiry = localStorage.getItem('google_token_expiry'); return !!token && !!expiry && Date.now() < Number(expiry); })());
+    window.addEventListener('google-auth-change', handleAuth);
+    return () => window.removeEventListener('google-auth-change', handleAuth);
+  }, []);
   
   const DEFAULT_LAYOUT = ['panda', 'dashboard', 'detective', 'today', 'weight', 'history'];
   const [layout, setLayout] = useState(() => {
@@ -656,6 +667,14 @@ function App() {
     initFacts();
     initGoogleAuth();
     
+    // 🚀 Session Recovery: If we have user info but token is expired, try silent refresh
+    import('./lib/googleAuth').then(m => {
+      if (m.getUserInfo() && !m.isLoggedIn()) {
+        console.log("🔄 [Auth] Token expired but user session exists. Attempting silent refresh...");
+        m.refreshLogin();
+      }
+    });
+    
     refreshData().catch(err => {
       console.error("Initial refreshData error:", err);
     });
@@ -739,7 +758,11 @@ function App() {
       isEating = hourMin >= startMins || hourMin <= endMins;
     }
     
-    return { isEating, start: goals.fasting_start, end: goals.fasting_end };
+    return { 
+      isEating, 
+      start: isEating ? goals.fasting_start : goals.fasting_end, 
+      end: isEating ? goals.fasting_end : goals.fasting_start 
+    };
   };
 
   const fasting = getFastingStatus();
@@ -749,12 +772,12 @@ function App() {
         {showOnboarding && <Onboarding key="onboarding" onComplete={handleOnboardingComplete} />}
         {showWhatsNew && (
           <WhatsNew 
-            key="whats-new-modal"
-            version={APP_VERSION} 
+            version={APP_VERSION}
+            isBugFixOnly={isBugFixOnly}
             onClose={() => {
               setShowWhatsNew(false);
               localStorage.setItem('last_seen_version', APP_VERSION);
-            }} 
+            }}
           />
         )}
         {showNamePrompt && <NamePromptModal key="name-prompt-modal" onSave={handleNameSave} isUpdate={true} />}
@@ -793,9 +816,9 @@ function App() {
               <Clock size={18} />
             </div>
             <div>
-              <div className="text-[10px] font-black uppercase tracking-widest text-zinc-500">{t('fasting_mode')}</div>
+              
               <div className="text-sm font-black italic">
-                {fasting.isEating ? t('eating_window') : t('fasting_window')} ({fasting.start} - {fasting.end})
+                {fasting.isEating ? '🔥 ' + t('eating_now') : '🌙 ' + t('fasting_now')} ({fasting.start} - {fasting.end})
               </div>
             </div>
           </div>
@@ -838,6 +861,7 @@ function App() {
               <Share2 size={18} />
             </NeoButton>
             <GoalSettings 
+            initialTab={settingsTab} 
               onGoalsUpdated={refreshData} 
               onWatchTutorial={() => setShowOnboarding(true)}
               onLanguageChanged={() => setAdvice('')}
@@ -1137,6 +1161,41 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* Feedback Banner */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="bg-black text-white p-6 rounded-[2.5rem] border-4 border-black shadow-neo-sm mt-8 mb-4 relative overflow-hidden mx-1"
+      >
+        <div className="relative z-10 flex flex-col gap-3">
+          <div className="flex items-center gap-2">
+            <span className="bg-accent text-black px-2 py-0.5 rounded-lg text-[10px] font-black uppercase tracking-widest border-2 border-black">
+              Beta Support
+            </span>
+            <h3 className="font-black italic text-xl">{t('feedback_title')}</h3>
+          </div>
+          <p className="text-zinc-400 font-bold text-xs leading-relaxed">
+            {t('feedback_desc')}
+          </p>
+          <button 
+            onClick={() => {
+              setSettingsTab('feedback');
+              window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'feedback' } }));
+            }}
+            className="w-full bg-white text-black h-12 rounded-2xl flex items-center justify-center gap-2 font-black text-sm hover:bg-accent transition-all active:scale-95"
+          >
+            <MessageSquareQuote size={18} />
+            {t('feedback_button')}
+          </button>
+        </div>
+        <div className="absolute -bottom-6 -right-6 opacity-20 pointer-events-none">
+          <Star size={120} className="text-white rotate-12" />
+        </div>
+      </motion.div>
+
+      {/* Navigation Footer Spacer */}
+      <div className="h-20" />
     </div>
   );
 }

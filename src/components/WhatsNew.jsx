@@ -16,7 +16,7 @@ const FeatureItem = ({ icon: Icon, title, description, color }) => (
   </div>
 );
 
-const WhatsNew = ({ version, onClose }) => {
+const WhatsNew = ({ version, onClose, isFixOnly = false }) => {
   return (
     <motion.div 
       initial={{ opacity: 0 }}
@@ -51,63 +51,100 @@ const WhatsNew = ({ version, onClose }) => {
             </div>
 
             <div className="space-y-5">
-              {/* V2.0.0 Highlights */}
-              <motion.div
-                initial={{ scale: 0.95 }}
-                animate={{ 
-                  scale: [0.95, 1, 0.95],
-                  boxShadow: [
-                    "0 0 0px rgba(253, 224, 71, 0)",
-                    "0 0 20px rgba(253, 224, 71, 0.5)",
-                    "0 0 0px rgba(253, 224, 71, 0)"
-                  ]
-                }}
-                transition={{ duration: 2, repeat: Infinity }}
-                className="relative rounded-3xl border-4 border-amber-400 overflow-hidden"
-              >
-                <FeatureItem 
-                  icon={Globe}
-                  color="bg-amber-400"
-                  title={t('whatsnew_v200_ai_speed_title')}
-                  description={t('whatsnew_v200_ai_speed_desc')}
-                />
-              </motion.div>
+              {isFixOnly ? (
+                <>
+                  <motion.div
+                    initial={{ scale: 0.95 }}
+                    animate={{ scale: [0.95, 1, 0.95] }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="relative rounded-3xl border-4 border-black overflow-hidden bg-white shadow-neo-sm"
+                  >
+                    <FeatureItem 
+                      icon={ShieldCheck}
+                      color="bg-emerald-400"
+                      title={t('v201_bugs_title')}
+                      description={t('v201_bugs_desc')}
+                    />
+                  </motion.div>
+                  <motion.div 
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      onClose();
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'feedback' } }));
+                      }, 300);
+                    }}
+                    className="cursor-pointer"
+                  >
+                    <FeatureItem 
+                      icon={MessageSquare}
+                      color="bg-amber-300"
+                      title={t('v201_feedback_title')}
+                      description={t('v201_feedback_desc')}
+                    />
+                  </motion.div>
+                </>
+              ) : (
+                <>
+                  {/* V2.0.0 Highlights */}
+                  <motion.div
+                    initial={{ scale: 0.95 }}
+                    animate={{ 
+                      scale: [0.95, 1, 0.95],
+                      boxShadow: [
+                        "0 0 0px rgba(253, 224, 71, 0)",
+                        "0 0 20px rgba(253, 224, 71, 0.5)",
+                        "0 0 0px rgba(253, 224, 71, 0)"
+                      ]
+                    }}
+                    transition={{ duration: 2, repeat: Infinity }}
+                    className="relative rounded-3xl border-4 border-amber-400 overflow-hidden"
+                  >
+                    <FeatureItem 
+                      icon={Globe}
+                      color="bg-amber-400"
+                      title={t('whatsnew_v200_ai_speed_title')}
+                      description={t('whatsnew_v200_ai_speed_desc')}
+                    />
+                  </motion.div>
 
-              <FeatureItem 
-                icon={ShieldCheck}
-                color="bg-blue-300"
-                title={t('whatsnew_v200_ai_fallback_title')}
-                description={t('whatsnew_v200_ai_fallback_desc')}
-              />
+                  <FeatureItem 
+                    icon={ShieldCheck}
+                    color="bg-blue-300"
+                    title={t('whatsnew_v200_ai_fallback_title')}
+                    description={t('whatsnew_v200_ai_fallback_desc')}
+                  />
 
-              {/* V1.9.0 Features */}
-              <FeatureItem 
-                icon={Cloud}
-                color="bg-rose-300"
-                title={t('whatsnew_v200_cloud_sync_title')}
-                description={t('whatsnew_v200_cloud_sync_desc')}
-              />
+                  {/* V1.9.0 Features */}
+                  <FeatureItem 
+                    icon={Cloud}
+                    color="bg-rose-300"
+                    title={t('whatsnew_v200_cloud_sync_title')}
+                    description={t('whatsnew_v200_cloud_sync_desc')}
+                  />
 
-              <FeatureItem 
-                icon={ImageIcon}
-                color="bg-purple-300"
-                title={t('whatsnew_v200_history_img_title')}
-                description={t('whatsnew_v200_history_img_desc')}
-              />
+                  <FeatureItem 
+                    icon={ImageIcon}
+                    color="bg-purple-300"
+                    title={t('whatsnew_v200_history_img_title')}
+                    description={t('whatsnew_v200_history_img_desc')}
+                  />
 
-              <FeatureItem 
-                icon={MessageSquare}
-                color="bg-green-200"
-                title={t('whatsnew_v200_ai_memory_title')}
-                description={t('whatsnew_v200_ai_memory_desc')}
-              />
+                  <FeatureItem 
+                    icon={MessageSquare}
+                    color="bg-green-200"
+                    title={t('whatsnew_v200_ai_memory_title')}
+                    description={t('whatsnew_v200_ai_memory_desc')}
+                  />
 
-              <FeatureItem 
-                icon={History}
-                color="bg-zinc-200"
-                title={t('whatsnew_v200_ux_title')}
-                description={t('whatsnew_v200_ux_desc')}
-              />
+                  <FeatureItem 
+                    icon={History}
+                    color="bg-zinc-200"
+                    title={t('whatsnew_v200_ux_title')}
+                    description={t('whatsnew_v200_ux_desc')}
+                  />
+                </>
+              )}
             </div>
 
             <NeoButton 

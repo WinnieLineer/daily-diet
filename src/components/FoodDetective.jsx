@@ -137,6 +137,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [showFastingConfirm, setShowFastingConfirm] = useState(false);
   const [pendingLogData, setPendingLogData] = useState(null);
   const [userInstructions, setUserInstructions] = useState(() => localStorage.getItem('user_ai_instructions') || '');
+  const [isAuth, setIsAuth] = useState(isLoggedIn());
+
+  useEffect(() => {
+    const handleAuthChange = () => setIsAuth(isLoggedIn());
+    window.addEventListener('google-auth-change', handleAuthChange);
+    return () => window.removeEventListener('google-auth-change', handleAuthChange);
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('user_ai_instructions', userInstructions);
@@ -229,7 +236,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       };
       fetchFacts();
 
-      setLoadTime(isLoggedIn() ? 10 : 30);
+      setLoadTime(isAuth ? 10 : 30);
       interval = setInterval(() => {
         setLoadTime(prev => {
           const next = prev > 0 ? prev - 1 : 0;
@@ -240,7 +247,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         });
       }, 1000);
     } else {
-      setLoadTime(isLoggedIn() ? 10 : 30);
+      setLoadTime(isAuth ? 10 : 30);
       setCurrentFactIndex(0);
     }
     return () => clearInterval(interval);

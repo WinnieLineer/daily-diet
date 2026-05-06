@@ -261,7 +261,9 @@ STRICT: Output ONLY the evaluation sentence in ${langDisplay}. NO JSON.`;
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 0.8, maxOutputTokens: 100 }
       });
-      return text.split('\n').pop().replace(/^["'「]+|["'」]+$/g, '').trim();
+      // 🚀 Clean up: Remove any word counts or metadata in brackets like (26字)
+      const cleaned = text.split('\n').pop().replace(/\(.*?\)|（.*?）/g, '').replace(/^["'「]+|["'」]+$/g, '').trim();
+      return cleaned;
     });
   } catch (err) {
     return getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language);

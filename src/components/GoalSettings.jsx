@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Share, Clock, ChevronDown, ChevronUp } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Mail, Globe, Calculator, User, Zap, Trophy, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Share, Clock, ChevronDown, ChevronUp, MessageSquare } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
@@ -10,6 +10,7 @@ import { login, logout, getUserInfo, isLoggedIn } from '../lib/googleAuth';
 import { uploadToDrive, downloadFromDrive, getBackupInfo } from '../lib/driveService';
 
 const VERSION_HISTORY = [
+  { version: '2.0.1', date: '2026-05-07', features: [t('v201_f1'), t('v201_f2'), t('v201_f3')] },
   { version: '2.0.0', date: '2026-05-06', features: [t('v200_f1'), t('v200_f2'), t('v200_f3'), t('v200_f4')] },
   { version: '1.9.0', date: '2026-05-05', features: [t('v190_f1'), t('v190_f2'), t('v190_f3'), t('v190_f4')] },
   { version: '1.8.4', date: '2026-05-04', features: [t('v184_f1'), t('v184_f2'), t('v184_f3')] },
@@ -22,10 +23,11 @@ const VERSION_HISTORY = [
   { version: '1.5.0', date: '2026-03-10', features: ['全新 Neo-brutalism UI', '熊貓營養師登場'] }
 ];
 
-const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed }) => {
+const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed, initialTab = 'profile' }) => {
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00' });
   const [isOpen, setIsOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState(initialTab);
+  const [contactForm, setContactForm] = useState({ subject: t('feedback_subject'), message: '' });
   const [newName, setNewName] = useState(userName || '');
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
@@ -49,6 +51,21 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     };
     window.addEventListener('google-auth-change', handleAuthChange);
     return () => window.removeEventListener('google-auth-change', handleAuthChange);
+  }, []);
+
+  useEffect(() => {
+    setActiveTab(initialTab);
+  }, [initialTab]);
+
+  useEffect(() => {
+    const handleOpenSettings = (e) => {
+      setIsOpen(true);
+      if (e.detail && e.detail.tab) {
+        setActiveTab(e.detail.tab);
+      }
+    };
+    window.addEventListener('open-settings', handleOpenSettings);
+    return () => window.removeEventListener('open-settings', handleOpenSettings);
   }, []);
 
   const refreshStats = async () => {
@@ -203,7 +220,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   return (
     <div className="relative">
-      <NeoButton variant="white" onClick={() => setIsOpen(!isOpen)} className="px-3">
+      <NeoButton 
+        data-settings-btn 
+        variant="white" 
+        onClick={() => setIsOpen(!isOpen)} 
+        className="px-3"
+      >
         <Settings size={20} />
       </NeoButton>
 
@@ -312,6 +334,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                   { id: 'goals', icon: Target, label: t('settings_goals') },
                   { id: 'fasting', icon: Clock, label: t('fasting_mode') },
                   { id: 'data', icon: Database, label: t('settings_data') },
+                  { id: 'feedback', icon: MessageSquare, label: t('settings_contact') },
                   { id: 'appinfo', icon: Info, label: t('settings_about') }
                 ].map(tab => (
                   <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center justify-center min-w-[65px] flex-1 p-2 rounded-xl border-2 transition-all ${activeTab === tab.id ? 'bg-black text-white border-black scale-105' : 'bg-transparent text-zinc-400 border-transparent hover:text-black'}`}>
@@ -471,6 +494,89 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                        }} className="w-full bg-white border-4 border-black py-4 rounded-2xl font-black italic shadow-neo-sm flex items-center justify-center gap-2 hover:bg-zinc-50 transition-all">
                          <Download size={18} /> {t('export_data')}
                        </button>
+                    </div>
+                  </div>
+                )}
+
+                {activeTab === 'feedback' && (
+                  <div className="space-y-6">
+                    <div className="p-6 bg-amber-50 border-4 border-black rounded-[2.5rem] shadow-neo-sm relative overflow-hidden">
+                      <div className="relative z-10 space-y-4">
+                        <div className="bg-black text-white w-12 h-12 rounded-2xl flex items-center justify-center shadow-neo-xs">
+                          <Zap size={24} className="text-amber-400" />
+                        </div>
+                        <h4 className="font-black italic text-xl tracking-tighter uppercase leading-none">
+                          {t('v201_feedback_title')}
+                        </h4>
+                        
+                        <div className="space-y-3">
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{t('contact_subject')}</label>
+                            <input 
+                              type="text" 
+                              value={contactForm.subject} 
+                              onChange={e => setContactForm({...contactForm, subject: e.target.value})}
+                              className="w-full bg-white border-4 border-black p-3 rounded-xl font-black italic text-sm shadow-neo-xs outline-none focus:bg-amber-100 transition-colors"
+                            />
+                          </div>
+                          <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{t('contact_message')}</label>
+                            <textarea 
+                              rows={4}
+                              value={contactForm.message} 
+                              onChange={e => setContactForm({...contactForm, message: e.target.value})}
+                              className="w-full bg-white border-4 border-black p-3 rounded-xl font-black italic text-sm shadow-neo-xs outline-none focus:bg-amber-100 transition-colors resize-none"
+                              placeholder="..."
+                            />
+                          </div>
+                        </div>
+
+                        <button 
+                          onClick={async () => {
+                            if (!contactForm.message.trim()) return;
+                            
+                            // 🚀 WEB3FORMS SUBMISSION (Restored from user snippet)
+                            try {
+                              setSyncStatus('syncing');
+                              const response = await fetch('https://api.web3forms.com/submit', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                  access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+                                  subject: `[Daily-Diet v${APP_VERSION}] ${contactForm.subject}`,
+                                  message: contactForm.message,
+                                  from_name: 'Daily Diet App User',
+                                  device: navigator.userAgent
+                                })
+                              });
+                              const data = await response.json();
+                              if (data.success) {
+                                alert(t('contact_success'));
+                                setContactForm({ subject: t('feedback_subject'), message: '' });
+                              } else {
+                                throw new Error('Submission failed');
+                              }
+                            } catch (err) {
+                              console.error("Feedback failed", err);
+                              alert(t('contact_error'));
+                            } finally {
+                              setSyncStatus('idle');
+                            }
+                          }}
+                          disabled={syncStatus === 'syncing'}
+                          className="flex items-center justify-center gap-3 w-full bg-black text-white p-4 rounded-2xl font-black italic hover:bg-zinc-800 transition-all active:scale-95 shadow-neo-xs disabled:opacity-50"
+                        >
+                          {syncStatus === 'syncing' ? (
+                            <Loader2 size={20} className="animate-spin" />
+                          ) : (
+                            <Check size={20} className="text-emerald-400" />
+                          )}
+                          {syncStatus === 'syncing' ? t('contact_sending') : t('contact_send')}
+                        </button>
+                      </div>
+                      <div className="absolute -bottom-6 -right-6 opacity-10 rotate-12 pointer-events-none">
+                        <MessageSquare size={120} className="text-black" />
+                      </div>
                     </div>
                   </div>
                 )}
