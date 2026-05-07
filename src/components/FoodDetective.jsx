@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap } from 'lucide-react';
 import { analyzeFoodImage } from '../lib/gemini';
 import { isLoggedIn } from '../lib/googleAuth';
 import { db } from '../db';
@@ -340,7 +340,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   };
 
   const compressImage = (base64) => {
-    return new Promise((resolve) => {
+    return new Promise((resolve, reject) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
@@ -359,6 +359,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         ctx.drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
       };
+      img.onerror = reject;
       img.src = base64;
     });
   };
@@ -479,7 +480,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       await performAnalysis(compressedBase64, locationPromise);
     } catch (err) {
       console.error("Preparation Error:", err);
-      setAiError(t('ai_error'));
+      const errMsg = err && err.message ? err.message : t('ai_error');
+      setAiError(errMsg);
     }
   };
 

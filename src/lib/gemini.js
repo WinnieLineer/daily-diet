@@ -126,7 +126,7 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   
   // Differentiate model selection based on login status
   const hasUserSession = !!localStorage.getItem('google_user');
-  const modelChain = (oauthToken || hasUserSession) ? FALLBACK_CHAIN : ["gemma-4-31b-it"];
+  const modelChain = (oauthToken || hasUserSession) ? FALLBACK_CHAIN : ["gemini-2.5-flash"];
   let chainIndex = (oauthToken || hasUserSession) ? getCurrentModelIndex() : 0;
   
   if (hasUserSession && !oauthToken) {
@@ -151,8 +151,9 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
           break; 
         }
 
-        if (is503 && n < maxRetries) {
-          const waitTime = Math.pow(2, n) * 1000;
+        if ((is503 || (is429 && !oauthToken)) && n < maxRetries) {
+          const waitTime = Math.pow(2, n) * 2000;
+          console.warn(`[AI Service] Rate limited or overloaded. Waiting ${waitTime}ms before retry...`);
           await new Promise(resolve => setTimeout(resolve, waitTime));
           continue;
         }
