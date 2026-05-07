@@ -371,7 +371,7 @@ function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_seen'));
   const [showWhatsNew, setShowWhatsNew] = useState(false);
-  const [isFixOnly, setIsFixOnly] = useState(false);
+  const [lastSeenVersionState, setLastSeenVersionState] = useState(null);
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '20:00', fasting_end: '12:00' });
 
   const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
@@ -457,7 +457,7 @@ function App() {
             const isNewUser = !lastSeenVersion;
 
             if (!isFrom16 && !isNewUser) {
-              setIsFixOnly(lastSeenVersion === '2.0.0');
+              setLastSeenVersionState(lastSeenVersion);
               setShowWhatsNew(true);
             } else {
               localStorage.setItem('last_seen_version', APP_VERSION);
@@ -779,7 +779,7 @@ function App() {
         {showWhatsNew && (
           <WhatsNew 
             version={APP_VERSION}
-            isFixOnly={isFixOnly}
+            lastSeenVersion={lastSeenVersionState}
             onClose={() => {
               setShowWhatsNew(false);
               localStorage.setItem('last_seen_version', APP_VERSION);
