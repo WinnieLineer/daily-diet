@@ -16,6 +16,17 @@ try {
 
   fs.writeFileSync(versionJsonPath, JSON.stringify(versionData, null, 2) + '\n');
   console.log(`✅ Successfully synced version ${version} to public/version.json`);
+
+  const constantsPath = path.resolve(__dirname, '../src/lib/constants.js');
+  if (fs.existsSync(constantsPath)) {
+    let constantsContent = fs.readFileSync(constantsPath, 'utf8');
+    constantsContent = constantsContent.replace(
+      /export const APP_VERSION = '.*?';/,
+      `export const APP_VERSION = '${version}';`
+    );
+    fs.writeFileSync(constantsPath, constantsContent);
+    console.log(`✅ Successfully synced version ${version} to src/lib/constants.js`);
+  }
 } catch (error) {
   console.error('❌ Error syncing version:', error.message);
   process.exit(1);
