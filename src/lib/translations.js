@@ -333,6 +333,14 @@ const translations = {
     feedback_title: "遇到 Bug 了嗎？🐼",
     feedback_desc: "Daily Diet v2.0.0 正在進化中，您的回報是我們最強大的動力！",
     feedback_button: "回報問題 / 建議",
+    whatsnew_v206_body_title: "整合式身體紀錄",
+    whatsnew_v206_body_desc: "體重與排便紀錄現在合併在同一個卡片中，並支援完整的增刪改查與時間編輯功能！",
+    whatsnew_v206_update_title: "自動版本同步",
+    whatsnew_v206_update_desc: "現在 App 會在背景自動偵測最新版本，並在適當時機強制重整，不再有舊版快取導致的錯誤！",
+    whatsnew_v206_header: "v2.0.6 更新特色",
+    whatsnew_v201_header: "v2.0.1 穩定性修復",
+    whatsnew_v200_header: "v2.0.0 核心亮點",
+    whatsnew_up_to_date: "您的系統已是最新版本！🚀",
   },
   en: {
     app_title: "DAILY DIET",
@@ -667,6 +675,14 @@ const translations = {
     feedback_title: "Found a Bug? 🐼",
     feedback_desc: "Daily Diet v2.0.0 is evolving! Your feedback helps us build the best version.",
     feedback_button: "Report Bug / Suggestion",
+    whatsnew_v206_body_title: "Unified Body Tracker",
+    whatsnew_v206_body_desc: "Weight and Poop logs are now merged into one card, complete with full CRUD and time editing features!",
+    whatsnew_v206_update_title: "Auto Version Sync",
+    whatsnew_v206_update_desc: "The app now automatically detects the latest version in the background and forces a refresh, eliminating old cache errors!",
+    whatsnew_v206_header: "v2.0.6 Features",
+    whatsnew_v201_header: "v2.0.1 Bug Fixes",
+    whatsnew_v200_header: "v2.0.0 Highlights",
+    whatsnew_up_to_date: "You are completely up to date! 🚀",
   }
 };
 

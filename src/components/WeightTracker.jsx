@@ -186,7 +186,7 @@ const WeightTracker = ({ pointerEventsNone }) => {
             <div className="flex items-center gap-2">
               <History size={14} className="text-gray-400" />
               <h3 className="text-[9px] font-black uppercase tracking-widest text-gray-400 group-hover:text-black transition-colors">
-                {t('history') || 'Recent History'}
+                {t('history_record')}
               </h3>
             </div>
             {isExpanded ? <ChevronUp size={14} className="text-gray-400" /> : <ChevronDown size={14} className="text-gray-400" />}

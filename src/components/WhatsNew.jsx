@@ -68,7 +68,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             <div className="space-y-5">
               {show206 && (
                 <div className="space-y-2">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">v2.0.6 Features</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v206_header') || 'v2.0.6 Features'}</div>
                   <FeatureItem 
                     icon={Activity}
                     color="bg-amber-300"
@@ -86,7 +86,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
 
               {show201 && (
                 <div className="space-y-2">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">v2.0.1 Bug Fixes</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v201_header') || 'v2.0.1 Bug Fixes'}</div>
                   <div className="relative rounded-3xl border-4 border-black overflow-hidden bg-white shadow-neo-sm mb-4">
                     <div className="flex gap-4 p-4">
                       <div className="shrink-0 w-12 h-12 bg-emerald-400 border-4 border-black rounded-xl flex items-center justify-center shadow-neo-sm">
@@ -129,7 +129,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
 
               {show200 && (
                 <div className="space-y-2 mt-6">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">v2.0.0 Highlights</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v200_header') || 'v2.0.0 Highlights'}</div>
                   <motion.div
                     initial={{ scale: 0.95 }}
                     animate={{ 
@@ -164,7 +164,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
               
               {!show206 && !show201 && !show200 && (
                 <div className="text-center p-8 border-4 border-black rounded-3xl bg-white shadow-neo-sm font-black italic">
-                  You are completely up to date! 🚀
+                  {t('whatsnew_up_to_date') || 'You are completely up to date! 🚀'}
                 </div>
               )}
             </div>
