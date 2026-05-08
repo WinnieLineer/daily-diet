@@ -21,8 +21,8 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
   useEffect(() => {
     async function setupCamera() {
       try {
-        const s = await navigator.mediaDevices.getUserMedia({ 
-          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } } 
+        const s = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: 'user', width: { ideal: 1280 }, height: { ideal: 720 } }
         });
         setStream(s);
         if (videoRef.current) videoRef.current.srcObject = s;
@@ -41,7 +41,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
             localStorage.setItem('location_granted', 'true');
             onLocationReady(pos.coords);
           },
-          () => {}, 
+          () => { },
           { timeout: 8000, maximumAge: 30000 }
         );
       }
@@ -82,7 +82,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
               <X size={24} />
             </button>
             <div className="absolute bottom-12 left-0 right-0 flex justify-center">
-              <button 
+              <button
                 onClick={capture}
                 className="w-20 h-20 bg-white rounded-full border-8 border-black/20 flex items-center justify-center active:scale-90 transition-all shadow-2xl"
               >
@@ -98,7 +98,7 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
 };
 
 export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef, favoriteUpdateTrigger, userName }) {
-  const [mode, setMode] = useState('ai'); 
+  const [mode, setMode] = useState('ai');
   const [aiLoading, setAiLoading] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
   const [successToast, setSuccessToast] = useState(null);
@@ -111,7 +111,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '', water: '' });
   const [locationLoading, setLocationLoading] = useState(false);
   const [showDesktopCamera, setShowDesktopCamera] = useState(false);
-  const pendingCoordsRef = useRef(null); 
+  const pendingCoordsRef = useRef(null);
   const analysisIdRef = useRef(0);
   const [favorites, setFavorites] = useState([]);
   const [favToast, setFavToast] = useState(null);
@@ -138,7 +138,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [pendingLogData, setPendingLogData] = useState(null);
   const [userInstructions, setUserInstructions] = useState(() => localStorage.getItem('user_ai_instructions') || '');
   const [isAuth, setIsAuth] = useState(isLoggedIn());
-  
+
   useEffect(() => {
     const handleAuthChange = () => setIsAuth(isLoggedIn());
     window.addEventListener('google-auth-change', handleAuthChange);
@@ -170,13 +170,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     } else if (typeof timeStrOrDate === 'string') {
       date = new Date(timeStrOrDate);
     }
-    
+
     const hourMin = date.getHours() * 60 + date.getMinutes();
     const [sH, sM] = startStr.split(':').map(Number);
     const startMins = sH * 60 + sM;
     const [eH, eM] = endStr.split(':').map(Number);
     const endMins = eH * 60 + eM;
-    
+
     if (startMins <= endMins) {
       return hourMin < startMins || hourMin > endMins;
     } else {
@@ -264,7 +264,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           .filter(log => log.dish_name.toLowerCase().includes(searchQuery.toLowerCase()))
           .reverse()
           .sortBy('timestamp');
-          
+
         const uniqueMatches = [];
         const seen = new Set();
         for (const m of matches) {
@@ -317,7 +317,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     try {
       const data = JSON.parse(cached);
       if (Date.now() - data.timestamp < 15 * 60 * 1000) return data.location;
-    } catch (e) {}
+    } catch (e) { }
     return null;
   };
 
@@ -408,7 +408,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         const res = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
         if (currentAnalysisId !== analysisIdRef.current) return;
         data = res;
-        
+
         if (data && data.dish_name) {
           await db.analysisCache.put({ hash: imgHash, result: data, timestamp: Date.now() });
         }
@@ -443,7 +443,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         : isGemmaUnavailable
           ? t('gemma_unavailable')
           : (err.message || t('ai_error'));
-      
+
       if (isAuthExpired) {
         setAiError(
           <div className="flex flex-col items-center gap-4">
@@ -504,15 +504,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       try {
         const exifData = await exifr.parse(file);
         if (exifData && exifData.DateTimeOriginal) {
-           const dt = new Date(exifData.DateTimeOriginal);
-           if (!isNaN(dt.getTime())) {
-             const tzoffset = dt.getTimezoneOffset() * 60000;
-             setLogTime(new Date(dt - tzoffset).toISOString().slice(0, 16));
-           }
+          const dt = new Date(exifData.DateTimeOriginal);
+          if (!isNaN(dt.getTime())) {
+            const tzoffset = dt.getTimezoneOffset() * 60000;
+            setLogTime(new Date(dt - tzoffset).toISOString().slice(0, 16));
+          }
         }
         const gps = await exifr.gps(file);
         if (gps?.latitude && gps?.longitude) return await reverseGeocode(gps.latitude, gps.longitude);
-      } catch (err) {}
+      } catch (err) { }
       if (navigator.geolocation) {
         try {
           const permission = await navigator.permissions.query({ name: 'geolocation' });
@@ -524,7 +524,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               );
             });
           }
-        } catch (err) {}
+        } catch (err) { }
       }
       return null;
     })();
@@ -546,7 +546,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             );
           });
         }
-      } catch (err) {}
+      } catch (err) { }
       finally { pendingCoordsRef.current = null; }
       return null;
     })();
@@ -577,7 +577,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       dataToSave = { dish_name: manualEntry.dish_name, calories: Number(manualEntry.calories) || 0, protein: Number(manualEntry.protein) || 0, water: Number(manualEntry.water) || 0, description: t('manual_desc') };
     }
     if (!dataToSave) return;
-    
+
     const logDateObj = new Date(logTime);
     if (goals.fasting_enabled) {
       const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
@@ -595,7 +595,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     await db.dietLogs.add({ ...dataToSave, date: localDate, timestamp: timestamp, location: dataToSave.location || null, category: selectedCategory });
     if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); setMultiplier(1); setShowCustomMultiplier(false); }
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
-    
+
     const now = new Date();
     const tzoffset = now.getTimezoneOffset() * 60000;
     setLogTime(new Date(now - tzoffset).toISOString().slice(0, 16));
@@ -607,188 +607,188 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   return (
     <NeoCard className="bg-white/60 backdrop-blur-sm relative overflow-hidden p-0">
       <div className="p-4 sm:p-6 space-y-4">
-      {goals.fasting_enabled && isOutsideEatingWindow(new Date(), goals.fasting_start, goals.fasting_end) && (
-        <motion.div 
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="bg-rose-500 text-white p-4 rounded-3xl mb-4 shadow-neo-sm border-4 border-black relative overflow-hidden"
-        >
-          <div className="flex items-start gap-3">
-            <div className="bg-white text-rose-500 p-2 rounded-xl border-2 border-black shrink-0">
-              <AlertCircle size={20} strokeWidth={3} />
-            </div>
-            <div>
-              <div className="font-black text-sm uppercase tracking-tight leading-none mb-1">
-                {t('fasting_warning_title')}
-              </div>
-              <div className="text-[10px] font-bold leading-tight opacity-90">
-                {t('fasting_warning_desc')}
-              </div>
-            </div>
-          </div>
-          <div className="absolute -right-4 -bottom-4 opacity-10 transform rotate-12">
-            <Clock size={80} />
-          </div>
-        </motion.div>
-      )}
-      <div className="flex items-center justify-between gap-2 mb-2">
-        <AnimatePresence>
-          {successToast && (
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute top-0 left-0 right-0 z-50 flex justify-center">
-              <div className="bg-emerald-500 text-white px-4 py-2 rounded-2xl shadow-neo-sm font-black italic text-xs flex items-center gap-2"><Check size={14} /> {successToast} {t('ai_complete_title')}</div>
-            </motion.div>
-          )}
-          {errorToast && (
-            <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute top-0 left-0 right-0 z-50 flex justify-center">
-              <div className="bg-rose-500 text-white px-4 py-2 rounded-2xl shadow-neo-sm font-black italic text-xs flex items-center gap-2"><AlertCircle size={14} /> {t('ai_fail_title')}</div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-        <div className="flex items-center gap-1.5 shrink-0">
-          <button 
-            onClick={async () => {
-              const now = new Date();
-              const timestamp = now.getTime();
-              const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-              const twoMinutesAgo = timestamp - (2 * 60 * 1000);
-              const lastWaterLog = await db.dietLogs.where('timestamp').above(twoMinutesAgo).filter(log => log.dish_name.includes(t('water'))).last();
-              if (lastWaterLog) { await db.dietLogs.update(lastWaterLog.id, { water: (Number(lastWaterLog.water) || 0) + 250, timestamp: timestamp }); }
-              else { await db.dietLogs.add({ dish_name: `🚰 ${t('water')}`, calories: 0, protein: 0, water: 250, date: localDate, timestamp: timestamp, location: null }); }
-              onLogAdded('fetch');
-            }}
-            className="w-12 h-12 flex items-center justify-center bg-white rounded-full border-4 border-black active:scale-90 transition-all shadow-neo-sm hover:bg-sky-50 shrink-0 overflow-hidden"
-            title={t('add_water')}
+        {goals.fasting_enabled && isOutsideEatingWindow(new Date(), goals.fasting_start, goals.fasting_end) && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="bg-rose-500 text-white p-4 rounded-3xl mb-4 shadow-neo-sm border-4 border-black relative overflow-hidden"
           >
-            <img src={`${import.meta.env.BASE_URL}water.png`} alt="250ml" className="w-10 h-10 object-contain" />
-          </button>
-        </div>
-        <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0 overflow-x-auto no-scrollbar">
-          {[{ id: 'ai', label: t('ai_mode') }, { id: 'manual', label: t('manual_mode') }, { id: 'favorites', label: t('favorites_mode') }, { id: 'search', label: t('search_mode') }].map(tab => (
-            <button key={tab.id} className={twMerge("px-2 py-1 text-[10px] sm:text-xs font-bold rounded-xl transition-all whitespace-nowrap border-2 border-transparent", mode === tab.id ? "bg-black text-white border-black" : "hover:bg-white text-gray-600")} onClick={() => setMode(tab.id)}>
-              <span className="relative">{tab.label}{tab.id === 'ai' && aiLoading && mode !== 'ai' && <motion.div layoutId="ai-bg-status" className="absolute -top-1.5 -right-1.5 w-2 h-2 bg-accent rounded-full border border-white animate-pulse" />}</span>
+            <div className="flex items-start gap-3">
+              <div className="bg-white text-rose-500 p-2 rounded-xl border-2 border-black shrink-0">
+                <AlertCircle size={20} strokeWidth={3} />
+              </div>
+              <div>
+                <div className="font-black text-sm uppercase tracking-tight leading-none mb-1">
+                  {t('fasting_warning_title')}
+                </div>
+                <div className="text-[10px] font-bold leading-tight opacity-90">
+                  {t('fasting_warning_desc')}
+                </div>
+              </div>
+            </div>
+            <div className="absolute -right-4 -bottom-4 opacity-10 transform rotate-12">
+              <Clock size={80} />
+            </div>
+          </motion.div>
+        )}
+        <div className="flex items-center justify-between gap-2 mb-2">
+          <AnimatePresence>
+            {successToast && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute top-0 left-0 right-0 z-50 flex justify-center">
+                <div className="bg-emerald-500 text-white px-4 py-2 rounded-2xl shadow-neo-sm font-black italic text-xs flex items-center gap-2"><Check size={14} /> {successToast} {t('ai_complete_title')}</div>
+              </motion.div>
+            )}
+            {errorToast && (
+              <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }} className="absolute top-0 left-0 right-0 z-50 flex justify-center">
+                <div className="bg-rose-500 text-white px-4 py-2 rounded-2xl shadow-neo-sm font-black italic text-xs flex items-center gap-2"><AlertCircle size={14} /> {t('ai_fail_title')}</div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+          <div className="flex items-center gap-1.5 shrink-0">
+            <button
+              onClick={async () => {
+                const now = new Date();
+                const timestamp = now.getTime();
+                const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+                const twoMinutesAgo = timestamp - (2 * 60 * 1000);
+                const lastWaterLog = await db.dietLogs.where('timestamp').above(twoMinutesAgo).filter(log => log.dish_name.includes(t('water'))).last();
+                if (lastWaterLog) { await db.dietLogs.update(lastWaterLog.id, { water: (Number(lastWaterLog.water) || 0) + 250, timestamp: timestamp }); }
+                else { await db.dietLogs.add({ dish_name: `🚰 ${t('water')}`, calories: 0, protein: 0, water: 250, date: localDate, timestamp: timestamp, location: null }); }
+                onLogAdded('fetch');
+              }}
+              className="w-12 h-12 flex items-center justify-center bg-white rounded-full border-4 border-black active:scale-90 transition-all shadow-neo-sm hover:bg-sky-50 shrink-0 overflow-hidden"
+              title={t('add_water')}
+            >
+              <img src={`${import.meta.env.BASE_URL}water.png`} alt="250ml" className="w-10 h-10 object-contain" />
             </button>
-          ))}
+          </div>
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0 overflow-x-auto no-scrollbar">
+            {[{ id: 'ai', label: t('ai_mode') }, { id: 'manual', label: t('manual_mode') }, { id: 'favorites', label: t('favorites_mode') }, { id: 'search', label: t('search_mode') }].map(tab => (
+              <button key={tab.id} className={twMerge("px-2 py-1 text-[10px] sm:text-xs font-bold rounded-xl transition-all whitespace-nowrap border-2 border-transparent", mode === tab.id ? "bg-black text-white border-black" : "hover:bg-white text-gray-600")} onClick={() => setMode(tab.id)}>
+                <span className="relative">{tab.label}{tab.id === 'ai' && aiLoading && mode !== 'ai' && <motion.div layoutId="ai-bg-status" className="absolute -top-1.5 -right-1.5 w-2 h-2 bg-accent rounded-full border border-white animate-pulse" />}</span>
+              </button>
+            ))}
+          </div>
         </div>
-      </div>
 
-      {mode === 'ai' && !preview && (
-        <div className="grid grid-cols-2 gap-4 w-full mt-2">
-          <button 
-            onClick={() => {
-              const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-              if (isMobile) cameraInputRef.current?.click();
-              else {
-                setShowDesktopCamera(true);
-                navigator.geolocation.getCurrentPosition(pos => { pendingCoordsRef.current = pos.coords; }, () => {}, { timeout: 5000 });
-              }
-            }}
-            className="group flex flex-col items-center justify-center gap-3 p-6 bg-accent border-4 border-black rounded-[2.5rem] shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0"
-          >
-            <div className="w-14 h-14 flex items-center justify-center bg-white rounded-2xl border-4 border-black shadow-neo-sm"><Camera size={28} /></div>
-            <span className="font-black italic text-lg uppercase tracking-tighter">{t('camera')}</span>
-          </button>
-          
-          <button 
-            onClick={() => galleryInputRef.current?.click()}
-            className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-4 border-black rounded-[2.5rem] shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0"
-          >
-            <div className="w-14 h-14 flex items-center justify-center bg-zinc-100 rounded-2xl border-4 border-black shadow-neo-sm"><ImageIcon size={28} /></div>
-            <span className="font-black italic text-lg uppercase tracking-tighter">{t('gallery')}</span>
-          </button>
+        {mode === 'ai' && !preview && (
+          <div className="grid grid-cols-2 gap-4 w-full mt-2">
+            <button
+              onClick={() => {
+                const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                if (isMobile) cameraInputRef.current?.click();
+                else {
+                  setShowDesktopCamera(true);
+                  navigator.geolocation.getCurrentPosition(pos => { pendingCoordsRef.current = pos.coords; }, () => { }, { timeout: 5000 });
+                }
+              }}
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-accent border-4 border-black rounded-[2.5rem] shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0"
+            >
+              <div className="w-14 h-14 flex items-center justify-center bg-white rounded-2xl border-4 border-black shadow-neo-sm"><Camera size={28} /></div>
+              <span className="font-black italic text-lg uppercase tracking-tighter">{t('camera')}</span>
+            </button>
 
-          <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
-          <input type="file" accept="image/*" multiple className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
-          
-          {/* User Instructions Persisted on Start Page */}
-          <div className="col-span-2 mt-2">
-            <div className="relative">
-              <textarea 
-                placeholder={t('ai_instruction_placeholder')}
-                value={userInstructions}
-                onChange={(e) => setUserInstructions(e.target.value)}
-                className="w-full bg-white/80 backdrop-blur-sm border-4 border-black p-4 rounded-3xl font-bold text-sm shadow-neo-sm outline-none focus:bg-white transition-all min-h-[80px] resize-none"
-              />
-              <div className="absolute top-[-10px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
-                <Sparkles size={10} className="text-black" />
-                <span className="text-[8px] font-black uppercase tracking-widest">{t('ai_instruction_label')}</span>
+            <button
+              onClick={() => galleryInputRef.current?.click()}
+              className="group flex flex-col items-center justify-center gap-3 p-6 bg-white border-4 border-black rounded-[2.5rem] shadow-neo hover:translate-x-[-2px] hover:translate-y-[-2px] transition-all active:translate-x-0 active:translate-y-0"
+            >
+              <div className="w-14 h-14 flex items-center justify-center bg-zinc-100 rounded-2xl border-4 border-black shadow-neo-sm"><ImageIcon size={28} /></div>
+              <span className="font-black italic text-lg uppercase tracking-tighter">{t('gallery')}</span>
+            </button>
+
+            <input type="file" accept="image/*" capture="environment" className="hidden" ref={cameraInputRef} onChange={handleImageUpload} />
+            <input type="file" accept="image/*" multiple className="hidden" ref={galleryInputRef} onChange={handleImageUpload} />
+
+            {/* User Instructions Persisted on Start Page */}
+            <div className="col-span-2 mt-2">
+              <div className="relative">
+                <textarea
+                  placeholder={t('ai_instruction_placeholder')}
+                  value={userInstructions}
+                  onChange={(e) => setUserInstructions(e.target.value)}
+                  className="w-full bg-white/80 backdrop-blur-sm border-4 border-black p-4 rounded-3xl font-bold text-sm shadow-neo-sm outline-none focus:bg-white transition-all min-h-[80px] resize-none"
+                />
+                <div className="absolute top-[-10px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                  <Sparkles size={10} className="text-black" />
+                  <span className="text-[8px] font-black uppercase tracking-widest">{t('ai_instruction_label')}</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
 
-      {showDesktopCamera && <DesktopCamera onClose={() => setShowDesktopCamera(false)} onCapture={handleCameraCapture} onLocationReady={(coords) => { pendingCoordsRef.current = coords; }} />}
+        {showDesktopCamera && <DesktopCamera onClose={() => setShowDesktopCamera(false)} onCapture={handleCameraCapture} onLocationReady={(coords) => { pendingCoordsRef.current = coords; }} />}
 
-      {mode === 'ai' && preview && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          <div className="relative aspect-[16/10] rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo">
-            <img src={preview} className="w-full h-full object-cover" alt="Preview" />
-            {!aiLoading && <button onClick={cancelAnalysis} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur-md border border-white/20"><X size={20} /></button>}
-            {aiError && <div className="absolute inset-0 bg-rose-500/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white z-[70]"><AlertCircle size={48} className="mb-4 animate-bounce" /><p className="font-black italic text-sm mb-6">{aiError}</p><NeoButton variant="black" className="h-12 px-8 text-xs flex items-center justify-center gap-2" onClick={() => performAnalysis(preview, null)}><RefreshCw size={16} /> {t('retry')}</NeoButton></div>}
-          </div>
+        {mode === 'ai' && preview && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className="relative aspect-[16/10] rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo">
+              <img src={preview} className="w-full h-full object-cover" alt="Preview" />
+              {!aiLoading && <button onClick={cancelAnalysis} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur-md border border-white/20"><X size={20} /></button>}
+              {aiError && <div className="absolute inset-0 bg-rose-500/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white z-[70]"><AlertCircle size={48} className="mb-4 animate-bounce" /><p className="font-black italic text-sm mb-6">{aiError}</p><NeoButton variant="black" className="h-12 px-8 text-xs flex items-center justify-center gap-2" onClick={() => performAnalysis(preview, null)}><RefreshCw size={16} /> {t('retry')}</NeoButton></div>}
+            </div>
 
-          {result && (
-            <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-accent border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
-                  <div className="flex items-center gap-2 mb-1 opacity-60"><Flame size={14} /><span className="text-[10px] font-black uppercase">{t('calories')}</span></div>
-                  <div className="text-2xl font-black italic">{result.calories} <span className="text-xs">kcal</span></div>
+            {result && (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-accent border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
+                    <div className="flex items-center gap-2 mb-1 opacity-60"><Flame size={14} /><span className="text-[10px] font-black uppercase">{t('calories')}</span></div>
+                    <div className="text-2xl font-black italic">{result.calories} <span className="text-xs">kcal</span></div>
+                  </div>
+                  <div className="bg-white border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
+                    <div className="flex items-center gap-2 mb-1 opacity-60"><Star size={14} /><span className="text-[10px] font-black uppercase">{t('protein')}</span></div>
+                    <div className="text-2xl font-black italic">{result.protein} <span className="text-xs">g</span></div>
+                  </div>
                 </div>
-                <div className="bg-white border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
-                  <div className="flex items-center gap-2 mb-1 opacity-60"><Star size={14} /><span className="text-[10px] font-black uppercase">{t('protein')}</span></div>
-                  <div className="text-2xl font-black italic">{result.protein} <span className="text-xs">g</span></div>
-                </div>
-              </div>
 
-              <NeoCard className="bg-white border-4 border-black">
-                <div className="flex justify-between items-start gap-4 mb-4">
-                  <div className="flex-1">
-                    <h3 className="text-2xl font-black italic mb-2">{result.dish_name}</h3>
-                    <div className="mb-4"><div className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div><div className="flex overflow-x-auto no-scrollbar gap-2 -mx-1 px-1">{[0.5, 1, 1.5, 2].map(m => (<button key={m} onClick={() => { handleMultiplierChange(m); setShowCustomMultiplier(false); }} className={twMerge("px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", multiplier === m && !showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>x{m}</button>))}<button onClick={() => { setShowCustomMultiplier(true); setMultiplierInput(''); }} className={twMerge("px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>{t('custom')}</button></div></div>
-                    {showCustomMultiplier && <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-4"><input type="number" step="0.1" min="0.1" value={multiplierInput} onChange={(e) => handleMultiplierChange(e.target.value)} className="w-20 border-4 border-black p-1.5 rounded-xl font-black text-center outline-none focus:bg-zinc-50 transition-all" autoFocus placeholder="1.0" /><span className="font-black text-xs">{t('times_portion')}</span></motion.div>}
-                    <div className="flex flex-wrap items-center gap-2 mt-2"><div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5"><MapPin size={14} className="text-zinc-400" /><span className="text-[10px] font-bold text-zinc-500">{locationLoading ? t('locating') : (result.location || t('unknown_location'))}</span>{!locationLoading && !result.location && (<button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1"><RefreshCw size={12} className="animate-pulse" /></button>)}</div><div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
-                    <div className="mt-4 mb-4">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1.5 ml-1">{t('log_time')}</label>
-                      <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
-                        <input 
-                          type="datetime-local" 
-                          value={logTime}
-                          onChange={(e) => setLogTime(e.target.value)}
-                          className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700"
-                        />
+                <NeoCard className="bg-white border-4 border-black">
+                  <div className="flex justify-between items-start gap-4 mb-4">
+                    <div className="flex-1">
+                      <h3 className="text-2xl font-black italic mb-2">{result.dish_name}</h3>
+                      <div className="mb-4"><div className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div><div className="flex overflow-x-auto no-scrollbar gap-2 -mx-1 px-1">{[0.5, 1, 1.5, 2].map(m => (<button key={m} onClick={() => { handleMultiplierChange(m); setShowCustomMultiplier(false); }} className={twMerge("px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", multiplier === m && !showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>x{m}</button>))}<button onClick={() => { setShowCustomMultiplier(true); setMultiplierInput(''); }} className={twMerge("px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>{t('custom')}</button></div></div>
+                      {showCustomMultiplier && <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-4"><input type="number" step="0.1" min="0.1" value={multiplierInput} onChange={(e) => handleMultiplierChange(e.target.value)} className="w-20 border-4 border-black p-1.5 rounded-xl font-black text-center outline-none focus:bg-zinc-50 transition-all" autoFocus placeholder="1.0" /><span className="font-black text-xs">{t('times_portion')}</span></motion.div>}
+                      <div className="flex flex-wrap items-center gap-2 mt-2"><div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5"><MapPin size={14} className="text-zinc-400" /><span className="text-[10px] font-bold text-zinc-500">{locationLoading ? t('locating') : (result.location || t('unknown_location'))}</span>{!locationLoading && !result.location && (<button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1"><RefreshCw size={12} className="animate-pulse" /></button>)}</div><div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
+                      <div className="mt-4 mb-4">
+                        <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1.5 ml-1">{t('log_time')}</label>
+                        <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
+                          <input
+                            type="datetime-local"
+                            value={logTime}
+                            onChange={(e) => setLogTime(e.target.value)}
+                            className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-                {result.panda_comment && (
-                  <div className="bg-accent/5 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm">
-                    <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <Check size={10} className="text-black" strokeWidth={4} />
-                      <span className="text-[8px] font-black uppercase tracking-widest">{t('panda_coach')}</span>
+                  {result.panda_comment && (
+                    <div className="bg-accent/5 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm">
+                      <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <Check size={10} className="text-black" strokeWidth={4} />
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t('panda_coach')}</span>
+                      </div>
+                      <p className="text-sm font-black italic leading-snug">
+                        "{result.panda_comment}"
+                      </p>
                     </div>
-                    <p className="text-sm font-black italic leading-snug">
-                      "{result.panda_comment}"
-                    </p>
-                  </div>
-                )}
+                  )}
 
-                {result.roast && (
-                  <div className="bg-accent/10 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm transition-all">
-                    <div className="absolute top-[-12px] left-4 bg-black text-white border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <MessageSquareQuote size={10} className="fill-white" />
-                      <span className="text-[8px] font-black uppercase tracking-widest">{t('panda_roast')}</span>
+                  {result.roast && (
+                    <div className="bg-accent/10 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm transition-all">
+                      <div className="absolute top-[-12px] left-4 bg-black text-white border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <MessageSquareQuote size={10} className="fill-white" />
+                        <span className="text-[8px] font-black uppercase tracking-widest">{t('panda_roast')}</span>
+                      </div>
+                      <p className="text-sm font-black italic text-black leading-snug">
+                        "{result.roast}"
+                      </p>
                     </div>
-                    <p className="text-sm font-black italic text-black leading-snug">
-                      "{result.roast}"
-                    </p>
-                  </div>
-                )}
-                <div className="flex gap-2"><NeoButton variant="black" className="flex-1 h-16 text-lg flex items-center justify-center gap-2" onClick={saveLog}><Check size={24} />{t('log_meal')}</NeoButton><button onClick={() => { setPreview(null); setResult(null); }} className="w-16 h-16 bg-white border-4 border-black rounded-[1.5rem] flex items-center justify-center shadow-neo-sm"><Trash2 size={24} /></button></div>
-              </NeoCard>
-            </motion.div>
-          )}
-        </motion.div>
-      )}
+                  )}
+                  <div className="flex gap-2"><NeoButton variant="black" className="flex-1 h-16 text-lg flex items-center justify-center gap-2" onClick={saveLog}><Check size={24} />{t('log_meal')}</NeoButton><button onClick={() => { setPreview(null); setResult(null); }} className="w-16 h-16 bg-white border-4 border-black rounded-[1.5rem] flex items-center justify-center shadow-neo-sm"><Trash2 size={24} /></button></div>
+                </NeoCard>
+              </motion.div>
+            )}
+          </motion.div>
+        )}
       </div>
 
       {aiLoading && (
@@ -800,13 +800,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             </div>
             <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none">{t('analyzing')}</span>
           </div>
-          
+
           <AnimatePresence mode="wait">
-            <motion.div 
-              key={currentFactIndex} 
-              initial={{ opacity: 0, scale: 0.95 }} 
-              animate={{ opacity: 1, scale: 1 }} 
-              exit={{ opacity: 0, scale: 0.95 }} 
+            <motion.div
+              key={currentFactIndex}
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
               className="space-y-1 px-2 mb-4"
             >
               <div className="bg-accent text-black px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase inline-block border border-black mb-1">{t('food_fact')}</div>
@@ -824,204 +824,204 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       )}
 
       <div className="p-4 sm:p-6 space-y-4 pt-0">
-      {mode === 'manual' && (
-        <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-          <div className="space-y-3">
-            <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('food_name')}</label><input type="text" placeholder={t('manual_placeholder')} value={manualEntry.dish_name} onChange={(e) => setManualEntry({ ...manualEntry, dish_name: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-bold bg-white outline-none" /></div>
-            <div className="grid grid-cols-3 gap-3">
-              <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label><input type="number" placeholder="0" value={manualEntry.calories} onChange={(e) => setManualEntry({ ...manualEntry, calories: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
-              <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label><input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({ ...manualEntry, protein: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
-              <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_unit')}</label><input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({ ...manualEntry, water: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
-            </div>
-            <div>
-              <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('log_time')}</label>
-              <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
-                <input 
-                  type="datetime-local" 
-                  value={logTime}
-                  onChange={(e) => setLogTime(e.target.value)}
-                  className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700"
-                />
+        {mode === 'manual' && (
+          <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+            <div className="space-y-3">
+              <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('food_name')}</label><input type="text" placeholder={t('manual_placeholder')} value={manualEntry.dish_name} onChange={(e) => setManualEntry({ ...manualEntry, dish_name: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-bold bg-white outline-none" /></div>
+              <div className="grid grid-cols-3 gap-3">
+                <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label><input type="number" placeholder="0" value={manualEntry.calories} onChange={(e) => setManualEntry({ ...manualEntry, calories: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label><input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({ ...manualEntry, protein: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_unit')}</label><input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({ ...manualEntry, water: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
               </div>
-            </div>
-            <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('category')}</label><div className="flex bg-white border-4 border-black p-1 rounded-2xl">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("flex-1 py-2 text-[10px] font-black uppercase rounded-xl", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
-          </div>
-          <NeoButton variant="black" className="w-full h-16 text-lg flex items-center justify-center gap-2 disabled:opacity-50" onClick={saveLog} disabled={!manualEntry.dish_name || manualSaving}>{manualSaving ? <Loader2 className="animate-spin" /> : <><Check size={24} /> {t('log_meal')}</>}</NeoButton>
-        </motion.div>
-      )}
-
-      {mode === 'favorites' && (
-        <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
-          {favToast && <div className="bg-black text-white text-[10px] font-black px-3 py-2 rounded-xl text-center animate-bounce">{favToast}</div>}
-          {favorites.length > 0 ? (
-            <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-              {favorites.map((item) => (
-                <div 
-                  key={item.id} 
-                  onClick={async () => { 
-                    setManualSaving(true); 
-                    const logDateObj = new Date(logTime);
-                    if (goals.fasting_enabled) {
-                      const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
-                      if (outside) {
-                        if (!window.confirm(t('fasting_break_confirm'))) {
-                          setManualSaving(false);
-                          return;
-                        }
-                      }
-                    }
-                    const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`; 
-                    await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory }); 
-                    setFavToast(t('added_to_today')); 
-                    setTimeout(() => setFavToast(null), 1500); 
-                    onLogAdded('fetch'); 
-                    setManualSaving(false); 
-                  }} 
-                  className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group cursor-pointer"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-sm truncate">{item.dish_name}</div>
-                    <div className="flex gap-2 text-[10px] font-bold font-mono text-zinc-400"><span>🔥 {item.calories}</span><span>🍖 {item.protein}</span>{item.water > 0 && <span>🚰 {item.water}</span>}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
-                    <button 
-                      onClick={(e) => { e.stopPropagation(); db.favorites.delete(item.id); loadFavorites(); }} 
-                      className="p-1 hover:text-rose-500"
-                    >
-                      <Trash2 size={14} />
-                    </button>
-                  </div>
+              <div>
+                <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('log_time')}</label>
+                <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
+                  <input
+                    type="datetime-local"
+                    value={logTime}
+                    onChange={(e) => setLogTime(e.target.value)}
+                    className="w-full bg-transparent p-1.5 font-bold text-xs sm:text-sm text-center outline-none text-zinc-700"
+                  />
                 </div>
-              ))}
+              </div>
+              <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('category')}</label><div className="flex bg-white border-4 border-black p-1 rounded-2xl">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("flex-1 py-2 text-[10px] font-black uppercase rounded-xl", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
             </div>
-          ) : (
-            <div className="text-center py-10 border-4 border-dashed border-zinc-200 rounded-3xl">
-              <Star size={32} className="mx-auto text-zinc-200 mb-2" />
-              <p className="text-zinc-400 font-bold italic text-sm">{t('no_favorites')}</p>
-            </div>
-          )}
-        </motion.div>
-      )}
+            <NeoButton variant="black" className="w-full h-16 text-lg flex items-center justify-center gap-2 disabled:opacity-50" onClick={saveLog} disabled={!manualEntry.dish_name || manualSaving}>{manualSaving ? <Loader2 className="animate-spin" /> : <><Check size={24} /> {t('log_meal')}</>}</NeoButton>
+          </motion.div>
+        )}
 
-      {mode === 'search' && (
-        <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-          <div className="relative"><input type="text" placeholder={t('search_placeholder')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full border-4 border-black p-4 rounded-2xl font-bold bg-white outline-none" autoFocus /></div>
-          <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
-            {searchResults.length > 0 ? (
-              searchResults.map((item) => (
-                <div 
-                  key={item.id} 
-                  onClick={async () => { 
-                    setManualSaving(true); 
-                    const logDateObj = new Date(logTime);
-                    if (goals.fasting_enabled) {
-                      const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
-                      if (outside) {
-                        if (!window.confirm(t('fasting_break_confirm'))) {
-                          setManualSaving(false);
-                          return;
+        {mode === 'favorites' && (
+          <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
+            {favToast && <div className="bg-black text-white text-[10px] font-black px-3 py-2 rounded-xl text-center animate-bounce">{favToast}</div>}
+            {favorites.length > 0 ? (
+              <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
+                {favorites.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={async () => {
+                      setManualSaving(true);
+                      const logDateObj = new Date(logTime);
+                      if (goals.fasting_enabled) {
+                        const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
+                        if (outside) {
+                          if (!window.confirm(t('fasting_break_confirm'))) {
+                            setManualSaving(false);
+                            return;
+                          }
                         }
                       }
-                    }
-                    const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`; 
-                    await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory }); 
-                    setFavToast(t('added_to_today')); 
-                    setTimeout(() => setFavToast(null), 1500); 
-                    onLogAdded('fetch'); 
-                    setManualSaving(false); 
-                    setMode('ai'); 
-                    setSearchQuery(''); 
-                  }} 
-                  className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group cursor-pointer"
-                >
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-sm truncate">{item.dish_name}</div>
-                    <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold font-mono text-zinc-400 mt-1">
-                      {item.category && item.dish_name && !item.dish_name.startsWith(t(item.category)) && (
-                        <span className="text-[7px] font-black uppercase tracking-tighter px-1 py-0.5 rounded bg-zinc-100 text-zinc-400 border border-zinc-200 shrink-0">{t(item.category)}</span>
-                      )}
-                      <span>🔥 {item.calories}</span><span>🍖 {item.protein}</span>
+                      const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                      await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory });
+                      setFavToast(t('added_to_today'));
+                      setTimeout(() => setFavToast(null), 1500);
+                      onLogAdded('fetch');
+                      setManualSaving(false);
+                    }}
+                    className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-sm truncate">{item.dish_name}</div>
+                      <div className="flex gap-2 text-[10px] font-bold font-mono text-zinc-400"><span>🔥 {item.calories}</span><span>🍖 {item.protein}</span>{item.water > 0 && <span>🚰 {item.water}</span>}</div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
+                      <button
+                        onClick={(e) => { e.stopPropagation(); db.favorites.delete(item.id); loadFavorites(); }}
+                        className="p-1 hover:text-rose-500"
+                      >
+                        <Trash2 size={14} />
+                      </button>
                     </div>
                   </div>
-                  <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
-                </div>
-              ))
-            ) : searchQuery.trim() !== '' ? (
+                ))}
+              </div>
+            ) : (
               <div className="text-center py-10 border-4 border-dashed border-zinc-200 rounded-3xl">
-                <p className="text-zinc-400 font-bold italic text-sm">{t('no_search_results')}</p>
+                <Star size={32} className="mx-auto text-zinc-200 mb-2" />
+                <p className="text-zinc-400 font-bold italic text-sm">{t('no_favorites')}</p>
               </div>
-            ) : null}
-          </div>
-        </motion.div>
-      )}
-
-      {/* Fasting Break Confirmation Modal */}
-      <AnimatePresence>
-        {showFastingConfirm && (
-          <div className="fixed inset-0 z-[800] flex items-center justify-center p-4">
-            <motion.div 
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-              onClick={() => setShowFastingConfirm(false)}
-            />
-            <motion.div 
-              initial={{ scale: 0.9, y: 20, rotate: -2 }}
-              animate={{ scale: 1, y: 0, rotate: 0 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              className="bg-white border-8 border-black w-full max-w-sm rounded-[2.5rem] shadow-neo relative p-8 text-center"
-            >
-              <div className="w-24 h-24 bg-rose-500 border-4 border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-neo-sm">
-                <AlertCircle size={48} className="text-white" strokeWidth={3} />
-              </div>
-              
-              <h2 className="text-3xl font-black italic tracking-tighter mb-4 leading-none uppercase">
-                FASTING <br /> <span className="text-rose-500">BROKEN?</span>
-              </h2>
-              
-              <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', fontSize: '16px' }} className="bg-zinc-100 border-4 border-black p-4 rounded-2xl mb-8 italic font-bold text-sm">
-                "現在是斷食時間喔！你確定要對這份美食投降嗎？熊貓會很失望的...🐼"
-              </div>
-
-              <div className="flex flex-col gap-3">
-                <NeoButton 
-                  variant="black" 
-                  className="w-full py-4 text-xl"
-                  onClick={async () => {
-                    setShowFastingConfirm(false);
-                    const logDateObj = new Date(logTime);
-                    const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
-                    const timestamp = logDateObj.getTime();
-                    setManualSaving(true);
-                    await db.dietLogs.add({ 
-                      ...pendingLogData, 
-                      date: localDate, 
-                      timestamp: timestamp, 
-                      is_fasting_break: true,
-                      location: pendingLogData.location || null, 
-                      category: selectedCategory 
-                    });
-                    if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); }
-                    setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
-                    onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
-                    setManualSaving(false);
-                  }}
-                >
-                  是的，我投降了 🏳️
-                </NeoButton>
-                <button 
-                  onClick={() => setShowFastingConfirm(false)}
-                  className="w-full py-3 font-black text-sm text-zinc-400 hover:text-black transition-colors"
-                >
-                  點錯了，我還可以堅持！💪
-                </button>
-              </div>
-            </motion.div>
-          </div>
+            )}
+          </motion.div>
         )}
-      </AnimatePresence>
+
+        {mode === 'search' && (
+          <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
+            <div className="relative"><input type="text" placeholder={t('search_placeholder')} value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)} className="w-full border-4 border-black p-4 rounded-2xl font-bold bg-white outline-none" autoFocus /></div>
+            <div className="grid grid-cols-1 gap-2 max-h-[300px] overflow-y-auto pr-2 custom-scrollbar">
+              {searchResults.length > 0 ? (
+                searchResults.map((item) => (
+                  <div
+                    key={item.id}
+                    onClick={async () => {
+                      setManualSaving(true);
+                      const logDateObj = new Date(logTime);
+                      if (goals.fasting_enabled) {
+                        const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
+                        if (outside) {
+                          if (!window.confirm(t('fasting_break_confirm'))) {
+                            setManualSaving(false);
+                            return;
+                          }
+                        }
+                      }
+                      const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                      await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory });
+                      setFavToast(t('added_to_today'));
+                      setTimeout(() => setFavToast(null), 1500);
+                      onLogAdded('fetch');
+                      setManualSaving(false);
+                      setMode('ai');
+                      setSearchQuery('');
+                    }}
+                    className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group cursor-pointer"
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className="font-black text-sm truncate">{item.dish_name}</div>
+                      <div className="flex flex-wrap items-center gap-2 text-[10px] font-bold font-mono text-zinc-400 mt-1">
+                        {item.category && item.dish_name && !item.dish_name.startsWith(t(item.category)) && (
+                          <span className="text-[7px] font-black uppercase tracking-tighter px-1 py-0.5 rounded bg-zinc-100 text-zinc-400 border border-zinc-200 shrink-0">{t(item.category)}</span>
+                        )}
+                        <span>🔥 {item.calories}</span><span>🍖 {item.protein}</span>
+                      </div>
+                    </div>
+                    <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
+                  </div>
+                ))
+              ) : searchQuery.trim() !== '' ? (
+                <div className="text-center py-10 border-4 border-dashed border-zinc-200 rounded-3xl">
+                  <p className="text-zinc-400 font-bold italic text-sm">{t('no_search_results')}</p>
+                </div>
+              ) : null}
+            </div>
+          </motion.div>
+        )}
+
+        {/* Fasting Break Confirmation Modal */}
+        <AnimatePresence>
+          {showFastingConfirm && (
+            <div className="fixed inset-0 z-[800] flex items-center justify-center p-4">
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+                onClick={() => setShowFastingConfirm(false)}
+              />
+              <motion.div
+                initial={{ scale: 0.9, y: 20, rotate: -2 }}
+                animate={{ scale: 1, y: 0, rotate: 0 }}
+                exit={{ scale: 0.9, opacity: 0 }}
+                className="bg-white border-8 border-black w-full max-w-sm rounded-[2.5rem] shadow-neo relative p-8 text-center"
+              >
+                <div className="w-24 h-24 bg-rose-500 border-4 border-black rounded-full flex items-center justify-center mx-auto mb-6 shadow-neo-sm">
+                  <AlertCircle size={48} className="text-white" strokeWidth={3} />
+                </div>
+
+                <h2 className="text-3xl font-black italic tracking-tighter mb-4 leading-none uppercase">
+                  FASTING <br /> <span className="text-rose-500">BROKEN?</span>
+                </h2>
+
+                <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', fontSize: '16px' }} className="bg-zinc-100 border-4 border-black p-4 rounded-2xl mb-8 italic font-bold text-sm">
+                  "現在是斷食時間喔！你確定要對這份美食投降嗎？熊貓會很失望的...🐼"
+                </div>
+
+                <div className="flex flex-col gap-3">
+                  <NeoButton
+                    variant="black"
+                    className="w-full py-4 text-xl"
+                    onClick={async () => {
+                      setShowFastingConfirm(false);
+                      const logDateObj = new Date(logTime);
+                      const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                      const timestamp = logDateObj.getTime();
+                      setManualSaving(true);
+                      await db.dietLogs.add({
+                        ...pendingLogData,
+                        date: localDate,
+                        timestamp: timestamp,
+                        is_fasting_break: true,
+                        location: pendingLogData.location || null,
+                        category: selectedCategory
+                      });
+                      if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); }
+                      setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
+                      onLogAdded(mode === 'ai' ? 'skip' : 'fetch');
+                      setManualSaving(false);
+                    }}
+                  >
+                    是的，我投降了 🏳️
+                  </NeoButton>
+                  <button
+                    onClick={() => setShowFastingConfirm(false)}
+                    className="w-full py-3 font-black text-sm text-zinc-400 hover:text-black transition-colors"
+                  >
+                    點錯了，我還可以堅持！💪
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     </NeoCard>
   );

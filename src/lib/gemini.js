@@ -132,7 +132,7 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
 
   // 已登入有效 token → FALLBACK_CHAIN + OAuth REST
   // 完全未登入 → gemma-4-31b-it 優先，失敗自動備援 gemini-2.0-flash-lite
-  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b-it"];
+  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b-it", "gemma-4-31b-it", "gemma-4-31b-it", "gemma-4-31b-it", "gemma-4-31b-it"];
   let chainIndex = oauthToken ? getCurrentModelIndex() : 0;
 
   while (chainIndex < modelChain.length) {
