@@ -409,8 +409,8 @@ function App() {
       }
 
       try {
-        // Fetch version.json with a unique timestamp to bypass all caches
-        const response = await fetch(`/daily-diet/version.json?t=${Date.now()}`, {
+        // 抓取 version.json，優先嘗試相對路徑以相容開發環境
+        const response = await fetch(`./version.json?t=${Date.now()}`, {
           cache: 'no-store'
         });
         const data = await response.json();

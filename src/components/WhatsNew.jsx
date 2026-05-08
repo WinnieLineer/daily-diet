@@ -33,8 +33,8 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
-  // 若是從 2.0.8 以前來的，特別顯示 patch notes旗
-  const isBugFixOnly = show208 && !show206 && !show201 && !show200;
+  // 只有從 2.0.8 版本過來的用戶，才顯示專屬 Patch Notes UI（道歉與修復公告）
+  const isBugFixOnly = lastSeenVersion === '2.0.8';
 
   return (
     <motion.div 
