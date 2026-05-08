@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity } from 'lucide-react';
+import { Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
@@ -28,9 +28,13 @@ const isNewer = (v1, v2) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show208 = isNewer('2.0.9', lastSeenVersion);
   const show206 = isNewer('2.0.6', lastSeenVersion);
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
+
+  // 若是從 2.0.8 以前來的，特別顯示 patch notes旗
+  const isBugFixOnly = show208 && !show206 && !show201 && !show200;
 
   return (
     <motion.div 
@@ -57,15 +61,87 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
         <div className="overflow-y-auto p-6 sm:p-8 flex-1 custom-scrollbar">
           <div className="space-y-8">
             <div className="space-y-2 text-center sm:text-left">
-              <div className="inline-block bg-black text-white px-3 py-1 rounded-lg text-xs font-black tracking-widest uppercase italic">
-                Update v{version}
+              <div className={`inline-block px-3 py-1 rounded-lg text-xs font-black tracking-widest uppercase italic border-2 border-black ${
+                isBugFixOnly ? 'bg-zinc-800 text-white' : 'bg-black text-white'
+              }`}>
+                {isBugFixOnly ? '🛠 Patch v' + version : 'Update v' + version}
               </div>
               <h1 className="text-4xl font-black italic tracking-tighter leading-none uppercase">
-                What's <br /> <span className="text-white drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">New?</span>
+                {isBugFixOnly ? (
+                  <>{t('whatsnew_v208_header').split(' ')[0]} <br /><span className="text-white drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">Patch.</span></>
+                ) : (
+                  <>What's <br /> <span className="text-white drop-shadow-[2px_2px_0_rgba(0,0,0,1)]">New?</span></>
+                )}
               </h1>
             </div>
 
             <div className="space-y-5">
+              {show208 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v208_header')}</div>
+                  
+                  {/* 道歉主卡 - 展開動畫 + 深色調 */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.1 }}
+                    className="relative bg-zinc-900 text-white border-4 border-black rounded-3xl overflow-hidden shadow-neo p-5"
+                  >
+                    <div className="absolute -top-8 -right-8 w-24 h-24 bg-white/5 rounded-full" />
+                    <div className="flex items-start gap-4">
+                      <div className="text-3xl mt-0.5">🙇</div>
+                      <div>
+                        <h3 className="font-black text-lg italic tracking-tight leading-tight mb-2">{t('whatsnew_v208_sorry_title')}</h3>
+                        <p className="text-sm text-zinc-300 font-bold leading-relaxed">{t('whatsnew_v208_sorry_desc')}</p>
+                      </div>
+                    </div>
+                  </motion.div>
+
+                  {/* 修復清單 - 深灰調 */}
+                  <div className="bg-zinc-100 border-4 border-black rounded-2xl overflow-hidden shadow-neo-sm">
+                    <div className="px-4 pt-4 pb-2">
+                      <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-3">Fixes in this patch</div>
+                      <div className="space-y-3">
+                        {[
+                          { title: t('whatsnew_v208_fix1_title'), desc: t('whatsnew_v208_fix1_desc') },
+                          { title: t('whatsnew_v208_fix2_title'), desc: t('whatsnew_v208_fix2_desc') },
+                        ].map((fix, idx) => (
+                          <div key={idx} className="flex items-start gap-3 pb-3 border-b-2 border-zinc-200 last:border-0 last:pb-0">
+                            <div className="mt-1 w-6 h-6 rounded-lg bg-zinc-800 border-2 border-black flex items-center justify-center shrink-0">
+                              <Wrench size={12} className="text-white" strokeWidth={3} />
+                            </div>
+                            <div>
+                              <p className="text-xs font-black text-zinc-800 leading-snug mb-0.5">{fix.title}</p>
+                              <p className="text-[11px] font-bold text-zinc-500 leading-snug">{fix.desc}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 鼓勵回報 CTA */}
+                  <motion.div
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => {
+                      onClose();
+                      setTimeout(() => {
+                        window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'feedback' } }));
+                      }, 300);
+                    }}
+                    className="cursor-pointer flex items-center gap-4 p-4 bg-white border-4 border-black rounded-2xl shadow-neo-sm hover:bg-zinc-50 transition-colors"
+                  >
+                    <div className="shrink-0 w-12 h-12 bg-rose-400 border-4 border-black rounded-xl flex items-center justify-center shadow-neo-sm">
+                      <Heart size={22} className="text-black" strokeWidth={3} />
+                    </div>
+                    <div>
+                      <h3 className="font-black text-base italic tracking-tight leading-tight">{t('whatsnew_v208_feedback_title')}</h3>
+                      <p className="text-xs text-zinc-500 font-bold leading-relaxed mt-0.5">{t('whatsnew_v208_feedback_desc')}</p>
+                    </div>
+                  </motion.div>
+                </div>
+              )}
+
               {show206 && (
                 <div className="space-y-2">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v206_header') || 'v2.0.6 Features'}</div>
@@ -162,7 +238,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                 </div>
               )}
               
-              {!show206 && !show201 && !show200 && (
+              {!show208 && !show206 && !show201 && !show200 && (
                 <div className="text-center p-8 border-4 border-black rounded-3xl bg-white shadow-neo-sm font-black italic">
                   {t('whatsnew_up_to_date') || 'You are completely up to date! 🚀'}
                 </div>

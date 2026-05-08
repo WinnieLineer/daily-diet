@@ -123,16 +123,18 @@ async function runGeminiTask(modelName, genAI, oauthToken, config) {
 async function withRetryAndFallback(fnFactory, maxRetries = 2) {
   let lastError;
   const oauthToken = getAccessToken();
-  
-  // Differentiate model selection based on login status
   const hasUserSession = !!localStorage.getItem('google_user');
-  const modelChain = (oauthToken || hasUserSession) ? FALLBACK_CHAIN : ["gemini-2.5-flash"];
-  let chainIndex = (oauthToken || hasUserSession) ? getCurrentModelIndex() : 0;
-  
+
+  // 已登入但 token 過期 → 要求重新登入
   if (hasUserSession && !oauthToken) {
     throw new Error("OAUTH_REQUIRED");
   }
-  
+
+  // 已登入有效 token → FALLBACK_CHAIN + OAuth REST
+  // 完全未登入 → gemma-4-31b-it 優先，失敗自動備援 gemini-2.0-flash-lite
+  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b-it", "gemini-2.0-flash-lite"];
+  let chainIndex = oauthToken ? getCurrentModelIndex() : 0;
+
   while (chainIndex < modelChain.length) {
     const modelName = modelChain[chainIndex];
     for (let n = 0; n <= maxRetries; n++) {
@@ -144,11 +146,20 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
         const errMsg = error.message || "";
         const is429 = errMsg.includes("429") || errMsg.includes("RESOURCE_EXHAUSTED");
         const is503 = errMsg.includes("503") || errMsg.includes("Overloaded") || errMsg.includes("Service Unavailable");
+        const is500 = errMsg.includes("500") || errMsg.includes("Internal Server Error");
 
         if (is429 && oauthToken) {
           chainIndex = moveToNextModel(chainIndex);
           if (chainIndex >= modelChain.length) throw error;
-          break; 
+          break;
+        }
+
+        // 500 (model unavailable) → 直接切換下一個模型，不重試
+        if (is500) {
+          console.warn(`[AI Service] Model ${modelChain[chainIndex]} returned 500. Switching to next model...`);
+          chainIndex++;
+          if (chainIndex >= modelChain.length) throw error;
+          break;
         }
 
         if ((is503 || (is429 && !oauthToken)) && n < maxRetries) {
@@ -166,8 +177,15 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
         throw error;
       }
     }
-    // For unlogged users, we only have one model, so if it fails, it fails.
-    if (!oauthToken) break;
+    // 未登入走完 modelChain 後結束
+    if (!oauthToken && chainIndex >= modelChain.length) break;
+  }
+  // 未登入且最終錯誤為 500 → 顯示明確說明
+  if (!oauthToken) {
+    const errMsg = lastError?.message || '';
+    if (errMsg.includes('500') || errMsg.includes('Internal Server Error')) {
+      throw new Error('GEMMA_UNAVAILABLE');
+    }
   }
   throw lastError;
 }

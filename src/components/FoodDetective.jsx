@@ -236,7 +236,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       };
       fetchFacts();
 
-      setLoadTime(isAuth ? 3 : 30);
+      setLoadTime(isAuth ? 10 : 30);
       interval = setInterval(() => {
         setLoadTime(prev => {
           const next = prev > 0 ? prev - 1 : 0;
@@ -247,7 +247,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         });
       }, 1000);
     } else {
-      setLoadTime(isAuth ? 3 : 30);
+      setLoadTime(isAuth ? 10 : 30);
       setCurrentFactIndex(0);
     }
     return () => clearInterval(interval);
@@ -375,7 +375,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const currentAnalysisId = ++analysisIdRef.current;
     setAiLoading(true);
     setAiError(null);
-    setLoadTime(isAuth ? 3 : 30);
+    setLoadTime(isAuth ? 10 : 30);
     document.body.classList.add('ai-analyzing');
 
     try {
@@ -437,7 +437,12 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       if (err.name === 'AbortError') return;
       console.error("AI Analysis Error:", err);
       const isAuthExpired = err.message === "OAUTH_REQUIRED" || err.message?.includes("OAuth Token Expired");
-      const errorMsg = isAuthExpired ? t('auth_expired_relogin') || "Session expired. Please Re-login for 3s Fast Mode." : (err.message || t('ai_error'));
+      const isGemmaUnavailable = err.message === "GEMMA_UNAVAILABLE";
+      const errorMsg = isAuthExpired
+        ? t('auth_expired_relogin')
+        : isGemmaUnavailable
+          ? t('gemma_unavailable')
+          : (err.message || t('ai_error'));
       
       if (isAuthExpired) {
         setAiError(

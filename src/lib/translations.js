@@ -320,6 +320,7 @@ const translations = {
     v201_f2: "淨化 AI 建議口語，移除冗餘字數標註 🧼",
     v201_f3: "優化 Session 續期，減少頻繁登入要求 🔑",
     auth_expired_relogin: "登入已過期，請點擊重新連線以享受 3 秒極速辨識 🚀",
+    gemma_unavailable: "AI 模型暫時不可用，這通常發生於未登入情況下。請按「重試」或稍後再試 🐼",
     v200_t: "v2.0.0 國際化與 AI 升級",
     v200_f3: "歷史紀錄圖片檢視功能 📸",
     v200_f4: "數據同步與手機版 UI 優化 📱",
@@ -341,6 +342,16 @@ const translations = {
     whatsnew_v201_header: "v2.0.1 穩定性修復",
     whatsnew_v200_header: "v2.0.0 核心亮點",
     whatsnew_up_to_date: "您的系統已是最新版本！🚀",
+    // v2.0.8
+    whatsnew_v208_header: "v2.0.8 修復公告",
+    whatsnew_v208_sorry_title: "非常抱歉造成不便 🙇",
+    whatsnew_v208_sorry_desc: "我們收到了大家的反饋，發現 v2.0.7 與 v2.0.8 之間出現了嚴重的 AI 辨識失敗問題。感謝每位回報的用戶，正是你們讓 Daily Diet 變得更好！",
+    whatsnew_v208_fix1_title: "修復未登入 AI 辨識失敗 🛠️",
+    whatsnew_v208_fix1_desc: "未登入用戶的 AI 辨識模型設定錯誤，已修復並改用支援圖片辨識的正確模型，未登入仍可正常使用！",
+    whatsnew_v208_fix2_title: "恢復正確 Loading 倒數時間 ⏱️",
+    whatsnew_v208_fix2_desc: "已登入顯示 10 秒、未登入顯示 30 秒，貼近實際辨識速度，不再讓你以為 App 卡住了。",
+    whatsnew_v208_feedback_title: "繼續告訴我們哪裡壞了！🐼",
+    whatsnew_v208_feedback_desc: "有任何問題都請不要客氣，點這裡直接回報給熊貓教練！每一筆回饋都會被認真看待。"  
   },
   en: {
     app_title: "DAILY DIET",
@@ -640,6 +651,7 @@ const translations = {
     v201_feedback_title: "Report to Coach! 🐼",
     v201_feedback_desc: "Found something weird? Tap to tell the Panda Coach directly!",
     auth_expired_relogin: "Session expired. Re-login for 3s Fast Mode 🚀",
+    gemma_unavailable: "AI model temporarily unavailable (common for logged-out users). Please tap Retry or try again later 🐼",
     feedback_subject: "[Daily Diet 🐼] Coach! I captured a wild bug!",
     settings_feedback: "Feedback",
     whatsnew_v200_ai_speed_title: "Google AI Ultra Speed ⚡",
@@ -683,6 +695,16 @@ const translations = {
     whatsnew_v201_header: "v2.0.1 Bug Fixes",
     whatsnew_v200_header: "v2.0.0 Highlights",
     whatsnew_up_to_date: "You are completely up to date! 🚀",
+    // v2.0.8
+    whatsnew_v208_header: "v2.0.8 Patch Notes",
+    whatsnew_v208_sorry_title: "We're truly sorry for the trouble 🙇",
+    whatsnew_v208_sorry_desc: "We received your feedback and found a critical AI recognition failure affecting v2.0.7 to v2.0.8 users. Thank you to everyone who reported it — your feedback makes Daily Diet better!",
+    whatsnew_v208_fix1_title: "Fixed: AI Recognition for Logged-Out Users 🛠️",
+    whatsnew_v208_fix1_desc: "An incorrect model was assigned for unlogged users, causing complete AI failure. Fixed — image recognition now works again without login!",
+    whatsnew_v208_fix2_title: "Restored: Correct Loading Countdown ⏱️",
+    whatsnew_v208_fix2_desc: "Logged-in users now show a 10s countdown, and logged-out users show 30s — matching real analysis time so it no longer looks frozen.",
+    whatsnew_v208_feedback_title: "Keep telling us what's broken! 🐼",
+    whatsnew_v208_feedback_desc: "Don't hold back — tap here to report any issues directly to Panda Coach. Every single piece of feedback is read seriously."
   }
 };
 
