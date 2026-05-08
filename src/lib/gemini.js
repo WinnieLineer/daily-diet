@@ -72,7 +72,7 @@ function moveToNextModel(currentIndex) {
  */
 async function runGeminiTask(modelName, genAI, oauthToken, config) {
   const { contents, generationConfig } = config;
-  
+
   if (oauthToken) {
     // 🚀 REST API Mode (OAuth) - High Speed
     console.log(`🚀 [AI Service] Hitting API via REST (OAuth): ${modelName}`);
@@ -100,7 +100,7 @@ async function runGeminiTask(modelName, genAI, oauthToken, config) {
     return text;
   } else {
     // 🔑 SDK Mode (API Key) - Limited Speed
-    const model = genAI.getGenerativeModel({ 
+    const model = genAI.getGenerativeModel({
       model: modelName,
       generationConfig
     });
@@ -132,7 +132,7 @@ async function withRetryAndFallback(fnFactory, maxRetries = 2) {
 
   // 已登入有效 token → FALLBACK_CHAIN + OAuth REST
   // 完全未登入 → gemma-4-31b-it 優先，失敗自動備援 gemini-2.0-flash-lite
-  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b-it", "gemini-2.0-flash-lite"];
+  const modelChain = oauthToken ? FALLBACK_CHAIN : ["gemma-4-31b-it"];
   let chainIndex = oauthToken ? getCurrentModelIndex() : 0;
 
   while (chainIndex < modelChain.length) {
@@ -195,11 +195,11 @@ export async function analyzeFoodImage(base64Image, context = {}, language = 'zh
     const { calories, calorieGoal, protein, proteinGoal, foodLogs = [], userName = '', userInstructions = '' } = context;
     const now = new Date();
     const currentHour = now.getHours();
-    const timeContext = currentHour < 5 ? 'Deep Night' : 
-                        currentHour < 10 ? 'Morning' : 
-                        currentHour < 14 ? 'Lunch Time' : 
-                        currentHour < 17 ? 'Afternoon' : 
-                        currentHour < 21 ? 'Dinner' : 'Night';
+    const timeContext = currentHour < 5 ? 'Deep Night' :
+      currentHour < 10 ? 'Morning' :
+        currentHour < 14 ? 'Lunch Time' :
+          currentHour < 17 ? 'Afternoon' :
+            currentHour < 21 ? 'Dinner' : 'Night';
     const foodStrip = foodLogs.map(l => l.dish_name).join(', ');
 
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
@@ -229,10 +229,10 @@ STRICT: Occasionally use the user's name (${userName}) naturally in the roast or
           { inlineData: { mimeType: "image/jpeg", data: base64Image.split(',')[1] } }
         ]
       }],
-      generationConfig: { 
+      generationConfig: {
         temperature: 0,
         maxOutputTokens: 500,
-        responseMimeType: "application/json" 
+        responseMimeType: "application/json"
       }
     });
 
@@ -273,7 +273,7 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
     const calStatus = (calories / calorieGoal) * 100;
     const foodStrip = foodLogs.map(l => l.dish_name).join(', ');
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
-    
+
     const prompt = `Persona: Elite Dietitian RD. Witty, professional, science-based.
 Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml. User: ${userName || 'User'}.
 History: ${foodStrip || 'None'}
