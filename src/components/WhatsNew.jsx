@@ -16,13 +16,16 @@ const FeatureItem = ({ icon: Icon, title, description, color }) => (
   </div>
 );
 
-const isNewer = (v1, v2) => {
-  if (!v1 || !v2) return true;
-  const p1 = v1.split('.').map(Number);
-  const p2 = v2.split('.').map(Number);
-  for (let i = 0; i < 3; i++) {
-    if ((p1[i] || 0) > (p2[i] || 0)) return true;
-    if ((p1[i] || 0) < (p2[i] || 0)) return false;
+const isNewer = (newVer, oldVer) => {
+  if (!oldVer) return true;
+  if (newVer === oldVer) return false;
+  const n = String(newVer).split('.').map(Number);
+  const o = String(oldVer).split('.').map(Number);
+  for (let i = 0; i < Math.max(n.length, o.length); i++) {
+    const nVal = n[i] || 0;
+    const oVal = o[i] || 0;
+    if (nVal > oVal) return true;
+    if (nVal < oVal) return false;
   }
   return false;
 };
@@ -34,8 +37,8 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
   // 只要是從 2.0.8 之後（包含 2.0.8）更新上來的，都顯示 Patch Notes UI
-  // (避免自動跳號導致判斷失效)
-  const isBugFixOnly = lastSeenVersion && !isNewer(lastSeenVersion, '2.0.7') && isNewer('2.0.13', lastSeenVersion);
+  // (修復邏輯：lastSeenVersion 必須大於 2.0.7 且小於目前的版本)
+  const isBugFixOnly = lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.0.15', lastSeenVersion);
 
   return (
     <motion.div 

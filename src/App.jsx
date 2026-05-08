@@ -417,46 +417,55 @@ function App() {
         const remoteVersion = data.version;
 
         if (remoteVersion && remoteVersion !== APP_VERSION) {
-          console.log(`New version detected: ${remoteVersion}. Clearing cache and reloading...`);
+          console.log(`[VersionCheck] Mismatch! Remote: ${remoteVersion}, Local: ${APP_VERSION}`);
           
-          // Prevent infinite loop: if we already tried reloading for this remote version, skip
+          // 強制檢查：即使版本不對，如果是 2.0.8 用戶也要先看到公告
+          const lastSeen = localStorage.getItem('last_seen_version');
+          if (lastSeen === '2.0.8') {
+            console.log("[VersionCheck] Emergency trigger for 2.0.8 patch notes!");
+            setLastSeenVersionState(lastSeen);
+            setShowWhatsNew(true);
+          }
+
           const lastReloadAttempt = localStorage.getItem('last_reload_version');
           if (lastReloadAttempt === remoteVersion) {
             console.log('Already attempted reload for this version, skipping.');
-            return;
-          }
-          localStorage.setItem('last_reload_version', remoteVersion);
-          
-          // 1. Clear Service Worker caches if possible
-          if ('caches' in window) {
-            const cacheNames = await caches.keys();
-            await Promise.all(cacheNames.map(name => caches.delete(name)));
-          }
-
-          // 2. Unregister Service Workers completely
-          if ('serviceWorker' in navigator) {
-            const registrations = await navigator.serviceWorker.getRegistrations();
-            for (let registration of registrations) {
-              await registration.unregister();
+          } else {
+            console.log('Attempting reload...');
+            localStorage.setItem('last_reload_version', remoteVersion);
+            
+            // 1. Clear Service Worker caches if possible
+            if ('caches' in window) {
+              const cacheNames = await caches.keys();
+              await Promise.all(cacheNames.map(name => caches.delete(name)));
             }
-          }
 
-          // 3. Clear stale AI model fallback state
-          localStorage.removeItem('ai_fallback_date');
-          localStorage.removeItem('ai_fallback_model');
-           
-          // 4. Final Hard Reload (forcing a fresh hit to the server by appending version)
-          window.location.href = window.location.origin + window.location.pathname + '?v=' + remoteVersion;
+            // 2. Unregister Service Workers completely
+            if ('serviceWorker' in navigator) {
+              const registrations = await navigator.serviceWorker.getRegistrations();
+              for (let registration of registrations) {
+                await registration.unregister();
+              }
+            }
+
+            // 3. Clear stale AI model fallback state
+            localStorage.removeItem('ai_fallback_date');
+            localStorage.removeItem('ai_fallback_model');
+             
+            // 4. Final Hard Reload (forcing a fresh hit to the server by appending version)
+            window.location.href = window.location.origin + window.location.pathname + '?v=' + remoteVersion;
+          }
         } else {
           // If version matches, check if we should show the "What's New" intro
           const lastSeenVersion = localStorage.getItem('last_seen_version');
+          console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
+          
           if (lastSeenVersion !== APP_VERSION) {
-            // 🚀 Skip "What's New" for users coming from 1.6.x as requested
-            // Also skip for brand new users (they will see Onboarding)
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
-            const isNewUser = !lastSeenVersion;
+            console.log("[VersionCheck] Needs update modal. isFrom16:", isFrom16);
 
-            if (!isFrom16 && !isNewUser) {
+            if (!isFrom16) {
+              console.log("[VersionCheck] Triggering WhatsNew modal!");
               setLastSeenVersionState(lastSeenVersion);
               setShowWhatsNew(true);
             } else {
