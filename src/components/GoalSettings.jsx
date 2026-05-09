@@ -399,6 +399,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label>
                         <input type="number" value={goals.protein} onChange={e => setGoals({...goals, protein: e.target.value})} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
+                      {isLocal && (
+                        <div className="pt-2">
+                          <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('settings_api_key')}</label>
+                          <input 
+                            type="password" 
+                            value={apiKey} 
+                            onChange={e => setApiKey(e.target.value)} 
+                            className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-zinc-50 focus:bg-white transition-all"
+                            placeholder="AI_..."
+                          />
+                          <div className="mt-1 flex items-start gap-1 ml-1">
+                            <Info size={10} className="text-zinc-400 mt-0.5" />
+                            <span className="text-[8px] font-bold text-zinc-400 leading-tight">{t('api_key_hint')}</span>
+                          </div>
+                        </div>
+                      )}
                       <NeoButton variant="black" className="w-full h-16 rounded-2xl shadow-neo" onClick={saveGoals}>{t('save')}</NeoButton>
                     </div>
                   </div>
