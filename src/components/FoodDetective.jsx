@@ -139,11 +139,31 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [userInstructions, setUserInstructions] = useState(() => localStorage.getItem('user_ai_instructions') || '');
   const [isAuth, setIsAuth] = useState(isLoggedIn());
 
+  const checkAndResumeAnalysis = async () => {
+    try {
+      const pending = await db.pendingAnalysis.get('current');
+      if (pending && (Date.now() - pending.timestamp < 5 * 60 * 1000) && !aiLoading && !result) {
+        setIsResuming(true);
+        setPreview(pending.base64);
+        await performAnalysis(pending.base64, pending.location);
+        setIsResuming(false);
+      } else if (pending && (Date.now() - pending.timestamp >= 5 * 60 * 1000)) {
+        await db.pendingAnalysis.delete('current');
+      }
+    } catch (err) {
+      console.warn("Recovery failed:", err);
+    }
+  };
+
   useEffect(() => {
-    const handleAuthChange = () => setIsAuth(isLoggedIn());
+    const handleAuthChange = () => {
+      const loggedIn = isLoggedIn();
+      setIsAuth(loggedIn);
+      if (loggedIn) checkAndResumeAnalysis();
+    };
     window.addEventListener('google-auth-change', handleAuthChange);
     return () => window.removeEventListener('google-auth-change', handleAuthChange);
-  }, []);
+  }, [aiLoading, result]);
 
   useEffect(() => {
     localStorage.setItem('user_ai_instructions', userInstructions);
@@ -192,22 +212,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
   // Recovery Logic
   useEffect(() => {
-    const checkPending = async () => {
-      try {
-        const pending = await db.pendingAnalysis.get('current');
-        if (pending && (Date.now() - pending.timestamp < 5 * 60 * 1000)) {
-          setIsResuming(true);
-          setPreview(pending.base64);
-          await performAnalysis(pending.base64, pending.location);
-          setIsResuming(false);
-        } else if (pending) {
-          await db.pendingAnalysis.delete('current');
-        }
-      } catch (err) {
-        console.warn("Recovery failed:", err);
-      }
-    };
-    checkPending();
+    checkAndResumeAnalysis();
   }, []);
 
   const loadFavorites = async () => {

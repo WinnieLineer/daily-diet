@@ -26,6 +26,7 @@ const translations = {
     retry: "重試",
     notifications: "通知提醒",
     analyzing: "正在分析...",
+    settings_login: "重新登入",
     no_favorites: "尚無常用清單",
     no_logs_today: "今天還沒有紀錄喔 🐼",
     food_detective: "覓食",
@@ -351,7 +352,7 @@ const translations = {
     whatsnew_v208_fix2_title: "恢復正確 Loading 倒數時間 ⏱️",
     whatsnew_v208_fix2_desc: "已登入顯示 10 秒、未登入顯示 30 秒，貼近實際辨識速度，不再讓你以為 App 卡住了。",
     whatsnew_v208_feedback_title: "繼續告訴我們哪裡壞了！🐼",
-    whatsnew_v208_feedback_desc: "有任何問題都請不要客氣，點這裡直接回報給熊貓教練！每一筆回饋都會被認真看待。"  
+    whatsnew_v208_feedback_desc: "有任何問題都請不要客氣，點這裡直接回報給熊貓教練！每一筆回饋都會被認真看待。"
   },
   en: {
     app_title: "DAILY DIET",
@@ -380,6 +381,7 @@ const translations = {
     retry: "Retry",
     notifications: "Notifications",
     analyzing: "Analyzing...",
+    settings_login: "Login with Google",
     no_favorites: "No favorites yet",
     no_logs_today: "No logs today 🐼",
     food_detective: "Food Detective",
