@@ -13,8 +13,7 @@ const VISION_MODELS = [
 
 // Text-only models (for advice / goal suggestions)
 const TEXT_MODELS = [
-  "Qwen/Qwen3.6-35B-A3B",
-  "Qwen/Qwen3.6-27B",
+  "deepseek-ai/DeepSeek-V3"
 ];
 
 /**
