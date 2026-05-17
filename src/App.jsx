@@ -464,6 +464,7 @@ function App() {
             console.log("[VersionCheck] Needs update modal. isFrom16:", isFrom16);
 
             const hasNewContent = !lastSeenVersion || 
+                                  isNewer('2.1.1', lastSeenVersion) || 
                                   isNewer('2.1.0', lastSeenVersion) || 
                                   isNewer('2.0.6', lastSeenVersion) || 
                                   isNewer('2.0.1', lastSeenVersion) || 
