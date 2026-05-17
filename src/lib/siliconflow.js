@@ -22,7 +22,9 @@ const TEXT_MODELS = [
  */
 async function getApiKey() {
   const userKeyEntry = await db.settings.get('user_api_key');
-  const apiKey = (userKeyEntry && userKeyEntry.value) || DEFAULT_API_KEY;
+  const userKey = userKeyEntry ? userKeyEntry.value : null;
+  const apiKey = (userKey && userKey.trim()) || DEFAULT_API_KEY;
+
   if (!apiKey) throw new Error("Missing SiliconFlow API Key. Please provide it in settings or environment.");
   return apiKey;
 }
@@ -230,9 +232,11 @@ export async function suggestGoals(weight) {
  * Get Panda Coach advice.
  */
 export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], language = 'zh', userName = '') {
-  // Overload: If only one argument is provided and it's a string, treat it as a raw prompt
-  if (arguments.length === 1 && typeof calories === 'string') {
-    return await completeText(calories, { temperature: 0.8, maxTokens: 100 });
+  // Overload: If the first argument is a string, treat it as a raw prompt
+  if (typeof calories === 'string') {
+    // Increase to 1024 to accommodate reasoning chain-of-thought tokens + final output
+    // Lower temperature to 0.3 for instruct models to ensure clean and correct Traditional Chinese outputs
+    return await completeText(calories, { temperature: 0.3, maxTokens: 1024 });
   }
 
   try {
@@ -241,14 +245,14 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
 
     const prompt = `Persona: Elite Dietitian RD. Witty, professional, science-based.
-Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml. User: ${userName || 'User'}.
-History: ${foodStrip || 'None'}
-Task: Expert evaluation + 1 specific tip. Tone: Evidence-based, expert, witty. Max 35 words.
-STRICT: Output ONLY the evaluation sentence in ${langDisplay}. NO JSON.`;
+    Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml. User: ${userName || 'User'}.
+    History: ${foodStrip || 'None'}
+    Task: Expert evaluation + 1 specific tip. Tone: Evidence-based, expert, witty. Max 35 words.
+    STRICT: Output ONLY the evaluation sentence in ${langDisplay}. NO JSON.`;
 
     return await completeText(prompt, {
-      temperature: 0.8,
-      maxTokens: 100,
+      temperature: 0.3,
+      maxTokens: 1024,
     });
   } catch (err) {
     return getLocalPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, language);
@@ -263,7 +267,7 @@ export async function completeText(prompt, options = {}) {
     const messages = [{ role: 'user', content: prompt }];
     const text = await callSiliconFlow(apiKey, modelName, messages, options);
     // Clean up: Remove any word counts or metadata in brackets like (26字)
-    const cleaned = text.split('\n').pop().replace(/\(.*?\)|（.*?）/g, '').replace(/^["'「]+|["'」]+$/g, '').trim();
+    const cleaned = text.trim().split('\n').pop().replace(/\(.*?\)|（.*?）/g, '').replace(/^["'「]+|["'」]+$/g, '').trim();
     return cleaned;
   });
 }

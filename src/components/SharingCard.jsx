@@ -22,18 +22,27 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
       let prompt = "";
       
       if (isZero) {
-        prompt = `The user has eaten NOTHING today (all stats are 0). Give a SHARP, WITTY, and SAVAGE roast about them starving or being a "breatharian". Max 10 words. Language: ${getLanguage() === 'zh' ? 'Traditional Chinese' : 'English'}. No emojis in text.`;
+        prompt = `The user has eaten NOTHING today (all stats are 0). Give a SHARP, WITTY, and SAVAGE roast about them starving or being a "breatharian". Max 10 words. 
+        Language: ${getLanguage() === 'zh' ? 'Traditional Chinese (Taiwan, 繁體中文)' : 'English'}. 
+        STRICT: Output ONLY the raw roast sentence. No emojis, no markdown, no HTML, no backslashes, no template tags.`;
       } else {
         prompt = `Today's stats: Calories ${summary.calories}/${goals.calories}, Protein ${summary.protein}/${goals.protein}, Water ${summary.water}/${goals.water}. 
         Give a SHARP, SAVAGE, and SHORT roast (max 10 words) about this diet. 
         If they ate too much, roast their greed. If they ate too little, roast their weakness. If it's perfect, be suspicious.
-        Language: ${getLanguage() === 'zh' ? 'Traditional Chinese' : 'English'}. No emojis in text, keep it purely punchy and "roasty".`;
+        Language: ${getLanguage() === 'zh' ? 'Traditional Chinese (Taiwan, 繁體中文)' : 'English'}. 
+        STRICT: Output ONLY the raw roast sentence. No emojis, no markdown, no HTML, no backslashes, no template tags, keep it purely punchy.`;
       }
       
       const result = await getPandaAdvice(prompt);
       setAiRoast(result.replace(/[#*]/g, '').replace(/["「」]/g, '').trim().slice(0, 50));
     } catch (err) {
       console.error("Roast error:", err);
+      const rawMsg = err.message || '';
+      let displayMsg = getLanguage() === 'zh' ? '銳評失敗，請確認設定中的 API 金鑰是否正確！🔑' : 'Roast failed. Please check your API key in settings! 🔑';
+      if (rawMsg.includes('Invalid token') || rawMsg.includes('401')) {
+        displayMsg = getLanguage() === 'zh' ? '金鑰無效 (Invalid token)！請至設定更新 SiliconFlow API 金鑰 🔑' : 'Invalid token! Please check your SiliconFlow API Key in Settings 🔑';
+      }
+      setAiRoast(displayMsg);
     } finally {
       setIsRoasting(false);
     }
