@@ -3,8 +3,7 @@ import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap } from 'lucide-react';
-import { analyzeFoodImage } from '../lib/gemini';
-import { isLoggedIn } from '../lib/googleAuth';
+import { analyzeFoodImage } from '../lib/siliconflow';
 import { db } from '../db';
 import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';
@@ -137,7 +136,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [showFastingConfirm, setShowFastingConfirm] = useState(false);
   const [pendingLogData, setPendingLogData] = useState(null);
   const [userInstructions, setUserInstructions] = useState(() => localStorage.getItem('user_ai_instructions') || '');
-  const [isAuth, setIsAuth] = useState(isLoggedIn());
 
   const checkAndResumeAnalysis = async () => {
     try {
@@ -156,14 +154,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   };
 
   useEffect(() => {
-    const handleAuthChange = () => {
-      const loggedIn = isLoggedIn();
-      setIsAuth(loggedIn);
-      if (loggedIn) checkAndResumeAnalysis();
-    };
-    window.addEventListener('google-auth-change', handleAuthChange);
-    return () => window.removeEventListener('google-auth-change', handleAuthChange);
-  }, [aiLoading, result]);
+    checkAndResumeAnalysis();
+  }, []);
 
   useEffect(() => {
     localStorage.setItem('user_ai_instructions', userInstructions);
@@ -241,7 +233,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       };
       fetchFacts();
 
-      setLoadTime(isAuth ? 10 : 30);
+      setLoadTime(ANALYSIS_DURATION_SECONDS);
       interval = setInterval(() => {
         setLoadTime(prev => {
           const next = prev > 0 ? prev - 1 : 0;
@@ -252,7 +244,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         });
       }, 1000);
     } else {
-      setLoadTime(isAuth ? 10 : 30);
+      setLoadTime(ANALYSIS_DURATION_SECONDS);
       setCurrentFactIndex(0);
     }
     return () => clearInterval(interval);
@@ -380,7 +372,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const currentAnalysisId = ++analysisIdRef.current;
     setAiLoading(true);
     setAiError(null);
-    setLoadTime(isAuth ? 10 : 30);
+    setLoadTime(ANALYSIS_DURATION_SECONDS);
     document.body.classList.add('ai-analyzing');
 
     try {
@@ -441,28 +433,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       if (currentAnalysisId !== analysisIdRef.current) return;
       if (err.name === 'AbortError') return;
       console.error("AI Analysis Error:", err);
-      const isAuthExpired = err.message === "OAUTH_REQUIRED" || err.message?.includes("OAuth Token Expired");
-      const isGemmaUnavailable = err.message === "GEMMA_UNAVAILABLE";
-      const errorMsg = isAuthExpired
-        ? t('auth_expired_relogin')
-        : isGemmaUnavailable
-          ? t('gemma_unavailable')
-          : (err.message || t('ai_error'));
-
-      if (isAuthExpired) {
-        setAiError(
-          <div className="flex flex-col items-center gap-4">
-            <p>{errorMsg}</p>
-            <NeoButton variant="black" className="h-12 px-8 text-xs flex items-center justify-center gap-2" onClick={() => {
-              import('../lib/googleAuth').then(m => m.login());
-            }}>
-              <Zap size={16} /> {t('settings_login') || "Login with Google"}
-            </NeoButton>
-          </div>
-        );
-      } else {
-        setAiError(errorMsg);
-      }
+      setAiError(err.message || t('ai_error'));
     } finally {
       if (currentAnalysisId === analysisIdRef.current) {
         setAiLoading(false);

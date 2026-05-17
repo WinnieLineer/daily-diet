@@ -13,13 +13,12 @@ import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
 import SharingCard from './components/SharingCard';
-import { getPandaAdvice } from './lib/gemini';
+import { getPandaAdvice } from './lib/siliconflow';
 import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION } from './lib/constants';
 import versionData from '../public/version.json';
-import { initGoogleAuth } from './lib/googleAuth';
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -506,13 +505,6 @@ function App() {
   const [showShare, setShowShare] = useState(false);
   const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
   const [settingsTab, setSettingsTab] = useState('profile');
-  const [isLoggedIn, setIsLoggedIn] = useState((() => { const token = localStorage.getItem('google_access_token'); const expiry = localStorage.getItem('google_token_expiry'); return !!token && !!expiry && Date.now() < Number(expiry); })());
-
-  useEffect(() => {
-    const handleAuth = () => setIsLoggedIn((() => { const token = localStorage.getItem('google_access_token'); const expiry = localStorage.getItem('google_token_expiry'); return !!token && !!expiry && Date.now() < Number(expiry); })());
-    window.addEventListener('google-auth-change', handleAuth);
-    return () => window.removeEventListener('google-auth-change', handleAuth);
-  }, []);
   
   const DEFAULT_LAYOUT = ['panda', 'dashboard', 'detective', 'today', 'weight', 'history'];
   const [layout, setLayout] = useState(() => {
@@ -674,21 +666,6 @@ function App() {
     };
     
     initFacts();
-    initGoogleAuth();
-    
-    // 🚀 Session Recovery: Attempt to refresh token on first user interaction to bypass popup blockers
-    const recoverSession = () => {
-      import('./lib/googleAuth').then(m => {
-        if (m.getUserInfo() && !m.isLoggedIn()) {
-          console.log("🔄 [Auth] Attempting to recover session on user interaction...");
-          m.refreshLogin();
-        }
-      });
-      window.removeEventListener('mousedown', recoverSession);
-      window.removeEventListener('touchstart', recoverSession);
-    };
-    window.addEventListener('mousedown', recoverSession, { once: true });
-    window.addEventListener('touchstart', recoverSession, { once: true });
 
     refreshData().catch(err => {
       console.error("Initial refreshData error:", err);

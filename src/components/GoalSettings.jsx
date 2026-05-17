@@ -2,12 +2,11 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
-import { login, logout, getUserInfo, isLoggedIn } from '../lib/googleAuth';
-import { uploadToDrive, downloadFromDrive, getBackupInfo } from '../lib/driveService';
+import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 
 const VERSION_HISTORY = [
   { version: '2.0.1', date: '2026-05-07', features: [t('v201_f1'), t('v201_f2'), t('v201_f3')] },
@@ -31,12 +30,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [newName, setNewName] = useState(userName || '');
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
+  const [githubPat, setGithubPat] = useState(localStorage.getItem('github_pat') || '');
+  const [copiedGistId, setCopiedGistId] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
-  const [googleUser, setGoogleUser] = useState(getUserInfo());
   const [syncStatus, setSyncStatus] = useState('idle');
   const [calc, setCalc] = useState({ height: 170, weight: 70, age: 25, gender: 'male', activity: 1.375, goal: 'maintain' });
   const [stats, setStats] = useState({ localSize: 0, cloudSize: 0, cloudTime: null, loading: false });
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [gistIdInput, setGistIdInput] = useState(getCurrentGistId() || '');
   
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV;
 
@@ -44,13 +44,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     fetchGoals();
     checkLocationPermission();
     refreshStats();
-    const handleAuthChange = () => {
-      setGoogleUser(getUserInfo());
-      setIsLoggingIn(false); // Reset when auth finishes
-      refreshStats();
-    };
-    window.addEventListener('google-auth-change', handleAuthChange);
-    return () => window.removeEventListener('google-auth-change', handleAuthChange);
   }, []);
 
   useEffect(() => {
@@ -79,15 +72,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       const localBlob = new Blob([JSON.stringify({ dietLogs, weightLogs, settings, favorites })]);
       const localSize = localBlob.size;
 
-      // Cloud Size
+      // Cloud Size (Always check Gist if ID exists)
       let cloudSize = 0;
       let cloudTime = null;
-      if (isLoggedIn()) {
-        const info = await getBackupInfo();
-        if (info) {
-          cloudSize = parseInt(info.size || '0');
-          cloudTime = info.modifiedTime;
-        }
+      const info = await getBackupInfo();
+      if (info) {
+        cloudSize = parseInt(info.size || '0');
+        cloudTime = info.modifiedTime;
       }
       setStats({ localSize, cloudSize, cloudTime, loading: false });
     } catch (err) {
@@ -165,7 +156,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   };
 
   const handleCloudBackup = async () => {
-    if (!isLoggedIn()) { login(); return; }
     if (!confirm(t('backup_confirm'))) return;
     setSyncStatus('syncing');
     try {
@@ -182,8 +172,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
           location_granted: localStorage.getItem('location_granted')
         }
       };
-      await uploadToDrive(data);
+      await uploadToGist(data);
+      setGistIdInput(getCurrentGistId() || '');
       setSyncStatus('success');
+      refreshStats();
       setTimeout(() => setSyncStatus('idle'), 3000);
     } catch (err) {
       alert(err.message);
@@ -193,11 +185,14 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   };
 
   const handleCloudRestore = async () => {
-    if (!isLoggedIn()) { login(); return; }
+    if (!getCurrentGistId()) {
+      alert(t('no_gist_backup') || "No Gist ID found. Please set it in Data tab.");
+      return;
+    }
     if (!confirm(t('restore_confirm'))) return;
     setSyncStatus('syncing');
     try {
-      const data = await downloadFromDrive();
+      const data = await downloadFromGist();
       if (!data) { alert(t('no_cloud_backup')); setSyncStatus('error'); return; }
       await db.transaction('rw', db.dietLogs, db.weightLogs, db.settings, db.favorites, async () => {
         await db.dietLogs.clear(); await db.weightLogs.clear(); await db.settings.clear(); await db.favorites.clear();
@@ -215,6 +210,14 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       alert(err.message);
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 3000);
+    }
+  };
+
+  const handleManualGistIdSave = () => {
+    if (gistIdInput.trim()) {
+      setGistId(gistIdInput.trim());
+      refreshStats();
+      alert(t('gist_id_saved') || "Gist ID saved!");
     }
   };
 
@@ -259,72 +262,23 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
               {/* User Header */}
               <div className="px-4 py-3 bg-white border-b-4 border-black border-dotted shrink-0">
-                {googleUser ? (
-                  <div className="flex items-center gap-3 p-3 border-4 border-black rounded-2xl bg-emerald-50 shadow-neo-sm">
-                    <img src={googleUser.picture} className="w-10 h-10 rounded-full border-2 border-black shrink-0" alt="" />
-                    <div className="flex-1 min-w-0">
-                      <div className="font-black text-xs truncate uppercase">{googleUser.name}</div>
-                      <div className="text-[8px] font-bold text-emerald-600 truncate uppercase tracking-widest">{t('logged_in_google')}</div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button onClick={handleCloudBackup} disabled={syncStatus === 'syncing'} className="p-2 rounded-lg border-2 border-black bg-white hover:bg-emerald-400 active:scale-90">
-                        <Upload size={14} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
-                      </button>
-                      <button onClick={() => { logout(); setGoogleUser(null); }} className="text-[9px] font-black uppercase text-rose-500 hover:underline px-1">{t('logout_google')}</button>
-                    </div>
+                <div className="flex items-center gap-3 p-3 border-4 border-black rounded-2xl bg-zinc-50 shadow-neo-sm">
+                  <div className="bg-black text-white p-2 rounded-xl shrink-0">
+                    <Database size={16} />
                   </div>
-                ) : (
-                  <div className="relative group">
-                    <button 
-                      onClick={() => {
-                        setIsLoggingIn(true);
-                        login();
-                        setTimeout(() => setIsLoggingIn(false), 10000);
-                      }} 
-                      disabled={isLoggingIn}
-                      className="w-full relative flex items-center justify-between p-3 border-4 border-black rounded-2xl bg-white shadow-neo-sm hover:translate-x-0.5 transition-all disabled:opacity-50 overflow-hidden"
-                    >
-                      {/* Clean Static V1 Style */}
-                      <div className="absolute inset-0 overflow-hidden rounded-xl pointer-events-none z-10">
-                        <div 
-                          className="absolute top-3 -right-12 bg-amber-400 text-black font-black text-[9px] py-1 px-20 border-black rotate-[30deg] shadow-lg text-center"
-                          style={{
-                            backgroundImage: 'repeating-linear-gradient(45deg, #000, #000 6px, transparent 6px, transparent 12px), repeating-linear-gradient(45deg, #000, #000 6px, transparent 6px, transparent 12px)',
-                            backgroundSize: '100% 3px, 100% 3px',
-                            backgroundPosition: '0 0, 0 100%',
-                            backgroundRepeat: 'no-repeat',
-                            borderTop: '2px solid #000',
-                            borderBottom: '2px solid #000'
-                          }}
-                        >
-                          {t('under_review')}
-                        </div>
-                      </div>
-
-                      <div className="flex items-center gap-3 relative z-0">
-                        <div className="bg-zinc-100 p-2 rounded-lg border-2 border-black">
-                          {isLoggingIn ? <Loader2 size={16} className="animate-spin" /> : <Globe size={16} />}
-                        </div>
-                        <div className="text-left">
-                          <div className="font-black italic text-xs leading-none mb-1">
-                            {isLoggingIn ? t('google_auth_loading') : t('login_google')}
-                          </div>
-                          <div className="text-[8px] font-bold text-zinc-400 uppercase tracking-widest">{t('backup_desc')}</div>
-                        </div>
-                      </div>
-                      {!isLoggingIn && <ChevronRight size={16} className="text-zinc-400" />}
+                  <div className="flex-1 min-w-0">
+                    <div className="font-black text-[10px] truncate uppercase">{getCurrentGistId() ? "GIST BACKUP ACTIVE" : "NO CLOUD BACKUP"}</div>
+                    <div className="text-[8px] font-bold text-zinc-400 truncate uppercase tracking-widest">{getCurrentGistId() ? `ID: ${getCurrentGistId()}` : t('backup_desc')}</div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button onClick={handleCloudBackup} disabled={syncStatus === 'syncing'} className="p-2 rounded-lg border-2 border-black bg-white hover:bg-emerald-400 active:scale-90">
+                      <Upload size={14} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
                     </button>
-                    
-                    <div className="mt-2 px-2 flex items-start gap-2">
-                      <Sparkles size={12} className="text-amber-500 shrink-0 mt-0.5" />
-                      <p className="text-[9px] font-bold text-zinc-500 leading-tight">
-                        <span dangerouslySetInnerHTML={{ __html: t('google_verifying_warning') }} />
-                        <br/>
-                        <span className="text-[7px] text-zinc-400">{t('google_verifying_sub')}</span>
-                      </p>
-                    </div>
+                    <button onClick={handleCloudRestore} disabled={syncStatus === 'syncing'} className="p-2 rounded-lg border-2 border-black bg-white hover:bg-amber-400 active:scale-90">
+                      <Download size={14} />
+                    </button>
                   </div>
-                )}
+                </div>
               </div>
 
               {/* Tabs */}
@@ -488,7 +442,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-emerald-50 hover:bg-emerald-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
                       >
                         {syncStatus === 'syncing' ? <Loader2 size={24} className="text-emerald-600 animate-spin" /> : <Upload size={24} className="text-emerald-600" />}
-                        <span className="text-[10px] font-black uppercase">{t('backup_to_drive')}</span>
+                        <span className="text-[10px] font-black uppercase">{t('backup_to_gist') || "Backup to Gist"}</span>
                       </button>
                       <button 
                         onClick={handleCloudRestore} 
@@ -496,21 +450,98 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-amber-50 hover:bg-amber-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
                       >
                         {syncStatus === 'syncing' ? <Loader2 size={24} className="text-amber-600 animate-spin" /> : <RotateCcw size={24} className="text-amber-600" />}
-                        <span className="text-[10px] font-black uppercase">{t('restore_from_drive')}</span>
+                        <span className="text-[10px] font-black uppercase">{t('restore_from_gist') || "Restore from Gist"}</span>
                       </button>
                     </div>
 
-
-                    <div className="pt-2 border-t-4 border-black border-dotted">
-                       <button onClick={async () => {
-                         const data = { dietLogs: await db.dietLogs.toArray(), weightLogs: await db.weightLogs.toArray(), settings: await db.settings.toArray(), favorites: await db.favorites.toArray() };
-                         const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
-                         const url = URL.createObjectURL(blob);
-                         const a = document.createElement('a'); a.href = url; a.download = 'daily-diet-backup.json'; a.click();
-                       }} className="w-full bg-white border-4 border-black py-4 rounded-2xl font-black italic shadow-neo-sm flex items-center justify-center gap-2 hover:bg-zinc-50 transition-all">
-                         <Download size={18} /> {t('export_data')}
-                       </button>
+                    <div className="space-y-2 p-4 bg-zinc-50 border-4 border-black rounded-3xl">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
+                        {t('gist_id_label') || "GITHUB GIST ID"}
+                      </label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          value={gistIdInput} 
+                          onChange={e => setGistIdInput(e.target.value)} 
+                          placeholder="e.g. 1a2b3c4d5e6f..."
+                          className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none" 
+                        />
+                        {getCurrentGistId() && (
+                          <button
+                            onClick={() => {
+                              navigator.clipboard.writeText(getCurrentGistId());
+                              setCopiedGistId(true);
+                              setTimeout(() => setCopiedGistId(false), 2000);
+                            }}
+                            className={`px-3 rounded-xl border-4 border-black font-black italic text-xs active:scale-95 transition-colors ${
+                              copiedGistId ? 'bg-emerald-400 text-black' : 'bg-white text-black'
+                            }`}
+                            title="Copy Gist ID"
+                          >
+                            {copiedGistId ? <Check size={16} strokeWidth={3} /> : <Copy size={16} strokeWidth={3} />}
+                          </button>
+                        )}
+                        <button 
+                          onClick={handleManualGistIdSave}
+                          className="bg-black text-white px-4 rounded-xl font-black italic text-xs active:scale-95"
+                        >
+                          {t('save')}
+                        </button>
+                      </div>
+                      <p className="text-[8px] font-bold text-zinc-400 mt-1 ml-1 leading-tight">
+                        {t('gist_id_hint') || "Backup creates this automatically. Manually paste here to sync on other devices."}
+                      </p>
                     </div>
+
+                    {isLocal && (
+                      <>
+                        <div className="space-y-2 pt-4 border-t-4 border-black border-dotted">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
+                            SiliconFlow API Key (Local)
+                          </label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="password" 
+                              value={apiKey} 
+                              onChange={e => setApiKey(e.target.value)} 
+                              className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none" 
+                            />
+                            <button 
+                              onClick={async () => {
+                                await db.settings.put({ key: 'user_api_key', value: apiKey });
+                                alert('API Key Saved');
+                              }}
+                              className="bg-black text-white px-4 rounded-xl font-black italic text-xs active:scale-95"
+                            >
+                              {t('save')}
+                            </button>
+                          </div>
+                        </div>
+
+                        <div className="space-y-2 pt-4 border-t-4 border-black border-dotted">
+                          <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
+                            GitHub PAT (Local Backup)
+                          </label>
+                          <div className="flex gap-2">
+                            <input 
+                              type="password" 
+                              value={githubPat} 
+                              onChange={e => setGithubPat(e.target.value)} 
+                              className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none" 
+                            />
+                            <button 
+                              onClick={() => {
+                                localStorage.setItem('github_pat', githubPat);
+                                alert('GitHub PAT Saved');
+                              }}
+                              className="bg-black text-white px-4 rounded-xl font-black italic text-xs active:scale-95"
+                            >
+                              {t('save')}
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                     )}
                   </div>
                 )}
 
