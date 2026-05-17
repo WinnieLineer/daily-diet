@@ -9,7 +9,8 @@ import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 
 const VERSION_HISTORY = [
-  { version: '2.1.0', date: '2026-05-17', features: [t('v210_f1'), t('v210_f2'), t('v210_f3'), t('v211_f1')] },
+  { version: '2.1.1', date: '2026-05-18', features: [t('v211_f1')] },
+  { version: '2.1.0', date: '2026-05-17', features: [t('v210_f1'), t('v210_f2'), t('v210_f3')] },
   { version: '2.0.1', date: '2026-05-07', features: [t('v201_f1'), t('v201_f2'), t('v201_f3')] },
   { version: '2.0.0', date: '2026-05-06', features: [t('v200_f1'), t('v200_f2'), t('v200_f3'), t('v200_f4')] },
   { version: '1.9.0', date: '2026-05-05', features: [t('v190_f1'), t('v190_f2'), t('v190_f3'), t('v190_f4')] },

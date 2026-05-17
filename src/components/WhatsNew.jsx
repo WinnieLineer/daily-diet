@@ -31,6 +31,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show211 = isNewer('2.1.1', lastSeenVersion);
   const show210 = isNewer('2.1.0', lastSeenVersion);
   const show208 = isNewer('2.0.9', lastSeenVersion);
   const show206 = isNewer('2.0.6', lastSeenVersion);
@@ -80,6 +81,18 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show211 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v211_header') || 'v2.1.1 Optimization'}</div>
+                  <FeatureItem 
+                    icon={Wrench}
+                    color="bg-emerald-300"
+                    title={t('whatsnew_v211_backup_title')}
+                    description={t('whatsnew_v211_backup_desc')}
+                  />
+                </div>
+              )}
+
               {show210 && (
                 <div className="space-y-2">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v210_header') || 'v2.1.0 Highlights'}</div>
