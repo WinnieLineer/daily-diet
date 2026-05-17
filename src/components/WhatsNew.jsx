@@ -16,7 +16,7 @@ const FeatureItem = ({ icon: Icon, title, description, color }) => (
   </div>
 );
 
-const isNewer = (newVer, oldVer) => {
+export const isNewer = (newVer, oldVer) => {
   if (!oldVer) return true;
   if (newVer === oldVer) return false;
   const n = String(newVer).split('.').map(Number);

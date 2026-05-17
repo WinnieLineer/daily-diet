@@ -6,7 +6,7 @@ import HistoryTrends from './components/HistoryTrends';
 import FoodDetective from './components/FoodDetective';
 import WeightTracker from './components/WeightTracker';
 import GoalSettings from './components/GoalSettings';
-import WhatsNew from './components/WhatsNew';
+import WhatsNew, { isNewer } from './components/WhatsNew';
 import Onboarding from './components/Onboarding';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import NeoCard from './components/NeoCard';
@@ -463,7 +463,13 @@ function App() {
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
             console.log("[VersionCheck] Needs update modal. isFrom16:", isFrom16);
 
-            if (!isFrom16) {
+            const hasNewContent = !lastSeenVersion || 
+                                  isNewer('2.1.0', lastSeenVersion) || 
+                                  isNewer('2.0.6', lastSeenVersion) || 
+                                  isNewer('2.0.1', lastSeenVersion) || 
+                                  isNewer('2.0.0', lastSeenVersion);
+
+            if (!isFrom16 && hasNewContent) {
               console.log("[VersionCheck] Triggering WhatsNew modal!");
               setLastSeenVersionState(lastSeenVersion);
               setShowWhatsNew(true);
