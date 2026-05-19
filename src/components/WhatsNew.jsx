@@ -31,6 +31,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show212 = isNewer('2.1.2', lastSeenVersion);
   const show211 = isNewer('2.1.1', lastSeenVersion);
   const show210 = isNewer('2.1.0', lastSeenVersion);
   const show208 = isNewer('2.0.9', lastSeenVersion);
@@ -39,7 +40,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
   // Only show "Patch" UI if no major new content (v2.1.0+) is being shown
-  const isBugFixOnly = !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -81,6 +82,18 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show212 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v212_header') || 'v2.1.2 Update'}</div>
+                  <FeatureItem 
+                    icon={Heart}
+                    color="bg-rose-300"
+                    title={t('whatsnew_v212_520_title')}
+                    description={t('whatsnew_v212_520_desc')}
+                  />
+                </div>
+              )}
+
               {show211 && (
                 <div className="space-y-2">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v211_header') || 'v2.1.1 Optimization'}</div>
@@ -214,7 +227,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                 </div>
               )}
               
-              {!show210 && !show208 && !show206 && !show201 && !show200 && (
+              {!show212 && !show211 && !show210 && !show208 && !show206 && !show201 && !show200 && (
                 <div className="text-center p-8 border-4 border-black rounded-3xl bg-white shadow-neo-sm font-black italic">
                   {t('whatsnew_up_to_date') || 'You are completely up to date! 🚀'}
                 </div>
