@@ -477,6 +477,16 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     resetExpression(2000);
   }, [initialPos, showBubble, addParticle, resetExpression]);
 
+  // Listen for reset panda position event
+  useEffect(() => {
+    const handleResetPosition = () => {
+      setInitialPos({ x: 0, y: 0 });
+      controls.start({ x: 0, y: 0, transition: { type: 'spring', damping: 15 } });
+    };
+    window.addEventListener('reset-panda-position', handleResetPosition);
+    return () => window.removeEventListener('reset-panda-position', handleResetPosition);
+  }, [controls]);
+
   // ── IDLE chatter & Click-away ──────────────────
   useEffect(() => {
     const handleGlobalClick = () => {

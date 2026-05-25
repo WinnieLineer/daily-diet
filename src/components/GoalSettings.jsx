@@ -326,6 +326,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <LayoutGrid size={20} />
                       <span className="font-black italic text-sm">{t('edit_layout')}</span>
                     </button>
+                    <button 
+                      onClick={() => {
+                        localStorage.setItem('panda_position', JSON.stringify({ x: 0, y: 0 }));
+                        window.dispatchEvent(new CustomEvent('reset-panda-position'));
+                        setIsOpen(false);
+                      }}
+                      className="w-full flex items-center gap-4 p-4 border-4 border-black rounded-2xl shadow-neo-sm transition-all bg-white hover:bg-rose-50 active:scale-95"
+                    >
+                      <RotateCcw size={20} className="text-rose-500" />
+                      <span className="font-black italic text-sm">{t('reset_panda')}</span>
+                    </button>
                   </div>
                 )}
 

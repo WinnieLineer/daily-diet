@@ -562,6 +562,7 @@ function App() {
 
   const adviceUpdateLockRef = useRef(false);
   const adviceTimerRef = useRef(null);
+  const kofiRef = useRef(null);
 
   const refreshData = async (adviceMode = 'none') => {
     // adviceMode: 'none' (just refresh data), 'fetch' (call AI), 'skip' (already have fresh AI advice)
@@ -870,6 +871,16 @@ function App() {
             )}
           </div>
           <div className="flex items-center gap-2">
+            <NeoButton 
+              variant="black" 
+              className="w-10 h-10 p-0 flex items-center justify-center text-rose-500 hover:text-rose-600 active:scale-95"
+              onClick={() => {
+                kofiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+              }}
+              title="Support Us"
+            >
+              <Heart size={18} className="fill-rose-500" />
+            </NeoButton>
             <NeoButton 
               variant="black" 
               className="w-10 h-10 p-0 flex items-center justify-center"
@@ -1214,6 +1225,7 @@ function App() {
 
       {/* ☕ Ko-fi Support Card */}
       <a
+        ref={kofiRef}
         href="https://ko-fi.com/winnielinspace"
         target="_blank"
         rel="noopener noreferrer"
@@ -1252,9 +1264,14 @@ function App() {
         </div>
         <div className="relative z-10 space-y-3">
           <div className="p-4 bg-zinc-50 border-2 border-black border-dashed rounded-xl">
-            <div className="flex justify-between items-center mb-2">
+            <div className="flex justify-between items-center flex-wrap gap-2 mb-2">
               <span className="font-black text-sm italic">匿名贊助者</span>
-              <span className="text-[10px] font-black italic text-zinc-400 bg-zinc-200/50 px-2 py-0.5 rounded-md border-2 border-zinc-200">NT$ 150</span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[9px] font-black italic bg-emerald-400 text-black px-1.5 py-0.5 rounded-md border-2 border-black shadow-sm transform -rotate-1">
+                  讓網站多存活了 17 天 ⏳
+                </span>
+                <span className="text-[10px] font-black italic text-zinc-400 bg-zinc-200/50 px-2 py-0.5 rounded-md border-2 border-zinc-200">NT$ 150</span>
+              </div>
             </div>
             <p className="text-[11px] font-bold text-zinc-600 leading-relaxed italic">
               「剛剛用linebank贊助一小杯咖啡錢，轉帳備注不能打太長，只好來這裡寫了，雖然只是一點點心意，但真的感謝你開發這麼好用的飲食記錄工具，而且還一直在進化，真的超厲害的，對於我減重的飲食控制幫助非常大👍🏻。」

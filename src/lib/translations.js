@@ -220,6 +220,7 @@ const translations = {
     location_request: "重新請求權限",
     reset_layout: "重新排列佈局",
     layout_reset_done: "佈局已重置！",
+    reset_panda: "熊貓位置歸位 🐼",
     // v1.8.0 — Stay on page
     stay_on_page_warning: "⚠️ 辨識中，請勿離開此頁面",
     // v1.8.0 — Roast section
@@ -592,6 +593,7 @@ const translations = {
     location_request: "Request Permission",
     reset_layout: "Reset Layout",
     layout_reset_done: "Layout has been reset!",
+    reset_panda: "Reset Panda Position 🐼",
     // v1.8.0 — Stay on page
     stay_on_page_warning: "⚠️ Please stay on this page during analysis",
     // v1.8.0 — Roast section
