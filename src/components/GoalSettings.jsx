@@ -1397,19 +1397,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText("174533815287");
-                    alert("📋 中信帳號 174533815287 已成功複製到剪貼簿！\n正在為您跳轉啟動中國信託網銀 APP... 📱✨");
-                    
-                    // Direct Deep Link for CTBC App
-                    window.location.href = "ctbcmobile://";
-                    
-                    // Fallback to CTBC Home Web
-                    setTimeout(() => {
-                      window.open("https://www.ctbcbank.com/", "_blank");
-                    }, 600);
+                    alert("📋 中信帳號 174533815287 已成功複製到剪貼簿！");
                   }}
                   className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-xs py-3 rounded-2xl border-2 border-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
                 >
-                  📲 複製帳號並一鍵啟動中信網銀
+                  📋 複製中信帳號
                 </button>
               </div>
             )}
