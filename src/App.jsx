@@ -14,7 +14,7 @@ import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
 import SharingCard from './components/SharingCard';
 import { getPandaAdvice } from './lib/siliconflow';
-import { Trash2, History, ChevronDown, ChevronUp, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
@@ -1233,6 +1233,23 @@ function App() {
           );
         })}
       </Reorder.Group>
+
+      {/* Scheme C: Honesty Shop Bottom Banner */}
+      {!isEditingLayout && (
+        <div 
+          onClick={() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'shop' } }))}
+          className="cursor-pointer border-4 border-black p-4 rounded-3xl bg-amber-100 hover:bg-amber-200 transition-colors shadow-neo-sm flex items-center justify-between gap-4 mt-2"
+        >
+          <div className="flex items-center gap-3">
+            <span className="text-2xl animate-bounce">🐼</span>
+            <div className="text-left">
+              <h4 className="font-black italic text-sm text-black">Daily Diet 誠實良心小舖 開張囉！</h4>
+              <p className="text-[10px] font-bold text-zinc-600 leading-tight">無強制的付費牆與廣告，我們相信使用者的誠實。點擊查看如何投幣支持 🎋💰</p>
+            </div>
+          </div>
+          <ChevronRight size={20} className="text-black shrink-0" strokeWidth={3} />
+        </div>
+      )}
       
       {/* Layout Editing Overlay Button */}
       <AnimatePresence>

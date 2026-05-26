@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
@@ -27,6 +27,15 @@ const VERSION_HISTORY = [
 ];
 
 const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed, initialTab = 'profile' }) => {
+  // 誠實商店銀行帳戶設定 (在此修改您的收款帳戶資訊即可！)
+  const BANK_INFO = {
+    bankName: "台新銀行",
+    bankCode: "812",
+    accountNumber: "910-10-123456-700", // 顯示格式 (帶分節號)
+    rawAccount: "91010123456700",      // 複製格式 (純數字)
+    accountHolder: "林XX"
+  };
+
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00', show_carbs_fat: false, carbs: 200, fat: 60 });
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab);
@@ -313,6 +322,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                   { id: 'profile', icon: User, label: t('settings_profile') },
                   { id: 'goals', icon: Target, label: t('settings_goals') },
                   { id: 'fasting', icon: Clock, label: t('fasting_mode') },
+                  { id: 'shop', icon: Heart, label: t('settings_shop') || '良心小舖' },
                   { id: 'data', icon: Database, label: t('settings_data') },
                   { id: 'feedback', icon: MessageSquare, label: t('settings_contact') },
                   { id: 'appinfo', icon: Info, label: t('settings_about') }
@@ -566,6 +576,137 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     )}
                     <NeoButton variant="black" className="w-full h-16 rounded-2xl shadow-neo" onClick={saveGoals}>{t('save')}</NeoButton>
+                  </div>
+                )}
+
+                {activeTab === 'shop' && (
+                  <div className="space-y-6 text-left">
+                    {/* Header Intro Card */}
+                    <div className="p-5 border-4 border-black rounded-[2rem] bg-amber-50 shadow-neo-sm relative overflow-hidden">
+                      <div className="absolute top-0 right-0 w-24 h-24 bg-amber-200/40 rounded-full blur-2xl pointer-events-none" />
+                      <div className="flex items-center gap-3 mb-3">
+                        <span className="text-3xl animate-pulse">🐼</span>
+                        <h3 className="font-black italic text-xl tracking-tight">誠實良心小舖</h3>
+                      </div>
+                      <p className="text-sm font-bold text-zinc-700 leading-relaxed">
+                        Daily Diet 是一個完全<strong>沒有廣告</strong>，且<strong>不強制鎖定功能</strong>的 App。
+                      </p>
+                      <p className="text-sm font-bold text-zinc-700 leading-relaxed mt-2">
+                        我們非常珍視與每位使用者之間的「誠實與信任」。如果您覺得這個 App 幫您實現了更健康的生活，歡迎依照您的心意，自由投幣支持這間小小的無人商店。
+                      </p>
+                    </div>
+
+                    {/* Pricing Cards Grid */}
+                    <div className="grid grid-cols-3 gap-3">
+                      {[
+                        { title: '一日良心價', price: '$2', period: 'TWD / 天', desc: '健康飲控，每天 2 塊錢', color: 'bg-emerald-100' },
+                        { title: '單月溫馨價', price: '$50', period: 'TWD / 月', desc: '省下一杯手搖，支持一個月', color: 'bg-rose-100' },
+                        { title: '全年優惠價', price: '$150', period: 'TWD / 年', desc: '超值超商便當價，健康一整年', color: 'bg-amber-100', popular: true }
+                      ].map((item, idx) => (
+                        <div key={idx} className={`relative p-3 border-4 border-black rounded-2xl ${item.color} shadow-neo-xs flex flex-col justify-between text-center group hover:scale-[1.02] transition-transform`}>
+                          {item.popular && (
+                            <span className="absolute -top-3 px-2 py-0.5 bg-black text-white text-[8px] font-black uppercase tracking-widest rounded-full border-2 border-black z-10">
+                              最推薦 🌟
+                            </span>
+                          )}
+                          <div className="space-y-1">
+                            <div className="font-black text-[10px] uppercase text-zinc-500">{item.title}</div>
+                            <div className="font-black text-2xl italic tracking-tight">{item.price}</div>
+                            <div className="text-[8px] font-bold text-zinc-400">{item.period}</div>
+                          </div>
+                          <div className="text-[8px] font-bold text-zinc-500 mt-2 leading-tight">{item.desc}</div>
+                        </div>
+                      ))}
+                    </div>
+
+                    {/* Payment Sections */}
+                    <div className="space-y-4">
+                      {/* Bank Transfer Box */}
+                      <div className="p-4 border-4 border-black rounded-2xl bg-zinc-50 shadow-neo-sm relative">
+                        <h4 className="font-black text-xs uppercase text-zinc-400 mb-2 ml-1">方式一：銀行帳戶轉帳 💳</h4>
+                        <div className="bg-white border-2 border-black p-3 rounded-xl flex items-center justify-between gap-4">
+                          <div className="space-y-1">
+                            <div className="text-xs font-black text-zinc-700">{BANK_INFO.bankName} ({BANK_INFO.bankCode})</div>
+                            <div className="text-sm font-black italic tracking-wider select-all">{BANK_INFO.accountNumber}</div>
+                            <div className="text-[9px] font-bold text-zinc-400">戶名：{BANK_INFO.accountHolder}</div>
+                          </div>
+                          <button 
+                            onClick={() => {
+                              navigator.clipboard.writeText(BANK_INFO.rawAccount);
+                              alert('帳號已複製！可以開啟網銀轉帳囉 🐼💳');
+                            }}
+                            className="bg-black hover:bg-zinc-800 text-white font-black text-xs italic px-3 py-2 rounded-lg flex items-center gap-1 active:scale-95 transition-transform shrink-0"
+                          >
+                            <Copy size={12} /> {t('copy') || "複製"}
+                          </button>
+                        </div>
+                        <p className="text-[8px] font-bold text-zinc-400 mt-1 ml-1">
+                          ※ 複製後可直接貼上網銀，完成轉帳！
+                        </p>
+                      </div>
+
+                      {/* LINE Pay / Jkos Grid */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* LINE Pay */}
+                        <div className="p-4 border-4 border-black rounded-2xl bg-emerald-50 shadow-neo-sm flex flex-col items-center text-center">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-base">🟢</span>
+                            <h4 className="font-black text-xs text-emerald-800">LINE Pay 轉帳</h4>
+                          </div>
+                          
+                          <div className="w-28 h-28 bg-white border-2 border-black rounded-xl p-2 flex items-center justify-center relative overflow-hidden group/qr">
+                            <img 
+                              src="/linepay_qr.png" 
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                              className="w-full h-full object-contain"
+                              alt="LINE Pay QR" 
+                            />
+                            <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
+                              <span className="text-xl mb-1">📲</span>
+                              <span className="text-[7px] font-black leading-tight text-zinc-500">放於 public/<br/>linepay_qr.png</span>
+                            </div>
+                          </div>
+                          <p className="text-[8px] font-bold text-emerald-700 mt-2 leading-tight">
+                            使用 LINE 掃描<br/>即可直接轉帳支持
+                          </p>
+                        </div>
+
+                        {/* Jkos */}
+                        <div className="p-4 border-4 border-black rounded-2xl bg-rose-50 shadow-neo-sm flex flex-col items-center text-center">
+                          <div className="flex items-center gap-1.5 mb-2">
+                            <span className="text-base">🔴</span>
+                            <h4 className="font-black text-xs text-rose-800">街口支付 轉帳</h4>
+                          </div>
+                          
+                          <div className="w-28 h-28 bg-white border-2 border-black rounded-xl p-2 flex items-center justify-center relative overflow-hidden group/qr">
+                            <img 
+                              src="/jkos_qr.png" 
+                              onError={(e) => {
+                                e.target.style.display = 'none';
+                                e.target.nextSibling.style.display = 'flex';
+                              }}
+                              className="w-full h-full object-contain"
+                              alt="街口支付 QR" 
+                            />
+                            <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
+                              <span className="text-xl mb-1">📲</span>
+                              <span className="text-[7px] font-black leading-tight text-zinc-500">放於 public/<br/>jkos_qr.png</span>
+                            </div>
+                          </div>
+                          <p className="text-[8px] font-bold text-rose-700 mt-2 leading-tight">
+                            使用街口 APP 掃描<br/>即可快速投幣支持
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Thank You Note */}
+                    <div className="text-center font-black italic text-xs text-zinc-500 pt-2">
+                      「您的支持，是讓這隻熊貓教練繼續為您服務的最大動力！🎋❤️」
+                    </div>
                   </div>
                 )}
 
