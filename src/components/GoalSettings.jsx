@@ -581,87 +581,143 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                 {activeTab === 'shop' && (
                   <div className="space-y-6 text-left">
-                    {/* Header Intro Card */}
-                    <div className="p-5 border-4 border-black rounded-[2rem] bg-amber-50 shadow-neo-sm relative overflow-hidden">
-                      <div className="absolute top-0 right-0 w-24 h-24 bg-amber-200/40 rounded-full blur-2xl pointer-events-none" />
-                      <div className="flex items-center gap-3 mb-3">
-                        <span className="text-3xl animate-pulse">🐼</span>
-                        <h3 className="font-black italic text-xl tracking-tight">誠實良心小舖</h3>
+                    {/* Header Intro Card - Elegant Warm Sunset Clay Style */}
+                    <div className="p-6 border-4 border-black rounded-[2.5rem] bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-100 shadow-neo relative overflow-hidden group">
+                      {/* 3D coin background decoration */}
+                      <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-300/20 border-4 border-dashed border-amber-500/30 rounded-full flex items-center justify-center font-black text-2xl text-amber-500/40 select-none transform rotate-12 transition-transform duration-700 group-hover:rotate-45" />
+                      
+                      <div className="flex items-center gap-4 mb-4 relative z-10">
+                        <div className="w-14 h-14 bg-black border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-sm transform -rotate-3 hover:rotate-3 transition-transform duration-300">
+                          <span className="text-3xl animate-bounce">🪙</span>
+                        </div>
+                        <div>
+                          <h3 className="font-black italic text-2xl tracking-tight leading-none uppercase text-black">誠實良心小舖</h3>
+                          <span className="text-[9px] font-black tracking-widest uppercase text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full border border-amber-300 mt-1 inline-block">HONESTY SYSTEM</span>
+                        </div>
                       </div>
-                      <p className="text-sm font-bold text-zinc-700 leading-relaxed">
-                        Daily Diet 是一個完全<strong>沒有廣告</strong>，且<strong>不強制鎖定功能</strong>的 App。
+                      <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed relative z-10">
+                        Daily Diet 是一款堅持<strong>無廣告、無強制付費</strong>的獨立 App。
                       </p>
-                      <p className="text-sm font-bold text-zinc-700 leading-relaxed mt-2">
-                        我們非常珍視與每位使用者之間的「誠實與信任」。如果您覺得這個 App 幫您實現了更健康的生活，歡迎依照您的心意，自由投幣支持這間小小的無人商店。
+                      <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed mt-2.5 relative z-10">
+                        我們非常珍視與每位使用者之間的「誠實與信任」。若這個 App 確實為您的健康飲控帶來了幫助，歡迎依照您的心意，自由投幣支持它的日常運作與維護。
                       </p>
                     </div>
 
-                    {/* Pricing Cards Grid */}
+                    {/* Pricing Cards Grid - 3D Punched Ticket Style */}
                     <div className="grid grid-cols-3 gap-3">
                       {[
-                        { title: '一日良心價', price: '$2', period: 'TWD / 天', desc: '健康飲控，每天 2 塊錢', color: 'bg-emerald-100' },
-                        { title: '單月溫馨價', price: '$50', period: 'TWD / 月', desc: '省下一杯手搖，支持一個月', color: 'bg-rose-100' },
-                        { title: '全年優惠價', price: '$150', period: 'TWD / 年', desc: '超值超商便當價，健康一整年', color: 'bg-amber-100', popular: true }
+                        { title: '一日良心價', price: '2', unit: '元', desc: '每天只要 2 元，小資無負擔', color: 'from-emerald-50 to-teal-100/50', accent: 'bg-emerald-400' },
+                        { title: '單月溫馨價', price: '50', unit: '元', desc: '省下一杯手搖，支持一整月', color: 'from-rose-50 to-pink-100/50', accent: 'bg-rose-400' },
+                        { title: '全年優惠價', price: '150', unit: '元', desc: '不到一份便當，健康一整年', color: 'from-amber-50 to-yellow-100/50', accent: 'bg-amber-400', popular: true }
                       ].map((item, idx) => (
-                        <div key={idx} className={`relative p-3 border-4 border-black rounded-2xl ${item.color} shadow-neo-xs flex flex-col justify-between text-center group hover:scale-[1.02] transition-transform`}>
+                        <div 
+                          key={idx} 
+                          className={`relative p-3.5 border-4 border-black rounded-[1.8rem] bg-gradient-to-br ${item.color} shadow-neo flex flex-col justify-between text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden group`}
+                        >
                           {item.popular && (
-                            <span className="absolute -top-3 px-2 py-0.5 bg-black text-white text-[8px] font-black uppercase tracking-widest rounded-full border-2 border-black z-10">
-                              最推薦 🌟
-                            </span>
+                            <div className="absolute top-0 right-0 bg-black text-white text-[7px] font-black uppercase tracking-widest px-2.5 py-1 rounded-bl-xl border-l-2 border-b-2 border-black z-10 flex items-center gap-0.5">
+                              熱門 🌟
+                            </div>
                           )}
-                          <div className="space-y-1">
-                            <div className="font-black text-[10px] uppercase text-zinc-500">{item.title}</div>
-                            <div className="font-black text-2xl italic tracking-tight">{item.price}</div>
-                            <div className="text-[8px] font-bold text-zinc-400">{item.period}</div>
+                          <div className="space-y-1 relative z-10">
+                            {/* Ticket punched notches on left and right */}
+                            <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
+                            <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
+                            
+                            <div className="font-black text-[9px] uppercase tracking-widest text-zinc-500">{item.title}</div>
+                            <div className="flex items-baseline justify-center gap-0.5">
+                              <span className="font-black text-3xl italic tracking-tight text-black">{item.price}</span>
+                              <span className="text-[10px] font-black text-black/60">{item.unit}</span>
+                            </div>
                           </div>
-                          <div className="text-[8px] font-bold text-zinc-500 mt-2 leading-tight">{item.desc}</div>
+                          <div className="text-[8px] font-extrabold text-zinc-500 mt-4 leading-tight border-t-2 border-black/10 pt-2.5">
+                            {item.desc}
+                          </div>
                         </div>
                       ))}
                     </div>
 
                     {/* Payment Sections */}
                     <div className="space-y-4">
-                      {/* Bank Transfer Box */}
-                      <div className="p-4 border-4 border-black rounded-2xl bg-zinc-50 shadow-neo-sm relative">
-                        <h4 className="font-black text-xs uppercase text-zinc-400 mb-2 ml-1">方式一：銀行帳戶轉帳 💳</h4>
-                        <div className="bg-white border-2 border-black p-3 rounded-xl flex items-center justify-between gap-4">
-                          <div className="space-y-1">
-                            <div className="text-xs font-black text-zinc-700">{BANK_INFO.bankName} ({BANK_INFO.bankCode})</div>
-                            <div className="text-sm font-black italic tracking-wider select-all">{BANK_INFO.accountNumber}</div>
-                            <div className="text-[9px] font-bold text-zinc-400">戶名：{BANK_INFO.accountHolder}</div>
+                      {/* Bank Transfer Box - Luxury Black Card Style */}
+                      <div className="p-1 border-4 border-black rounded-[2rem] bg-black shadow-neo relative overflow-hidden group">
+                        {/* Background light reflections */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none transition-transform duration-1000 group-hover:translate-x-full" />
+                        
+                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 p-5 rounded-[1.8rem] space-y-4 relative z-10">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-lg bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center shadow-inner">
+                                <span className="text-sm">💳</span>
+                              </div>
+                              <div className="text-left">
+                                <div className="text-[10px] font-black uppercase text-amber-400 tracking-wider">PREMIUM BANK TRANSFER</div>
+                                <div className="text-[8px] font-bold text-zinc-500">方式一：銀行帳戶轉帳支持</div>
+                              </div>
+                            </div>
+                            {/* Metallic Bank Chip Illustration */}
+                            <div className="w-9 h-7 rounded-md bg-gradient-to-br from-zinc-300 via-zinc-400 to-zinc-500 border border-zinc-600 relative overflow-hidden shadow-inner flex flex-col justify-around p-1 opacity-80">
+                              <div className="h-[1px] bg-zinc-800/40 w-full" />
+                              <div className="h-[1px] bg-zinc-800/40 w-full" />
+                              <div className="h-[1px] bg-zinc-800/40 w-full" />
+                            </div>
                           </div>
-                          <button 
-                            onClick={() => {
-                              navigator.clipboard.writeText(BANK_INFO.rawAccount);
-                              alert('帳號已複製！可以開啟網銀轉帳囉 🐼💳');
-                            }}
-                            className="bg-black hover:bg-zinc-800 text-white font-black text-xs italic px-3 py-2 rounded-lg flex items-center gap-1 active:scale-95 transition-transform shrink-0"
-                          >
-                            <Copy size={12} /> {t('copy') || "複製"}
-                          </button>
-                        </div>
-                        <p className="text-[8px] font-bold text-zinc-400 mt-1 ml-1">
-                          ※ 複製後可直接貼上網銀，完成轉帳！
-                        </p>
-                      </div>
 
-                      {/* LINE Pay / Jkos Grid */}
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* LINE Pay */}
-                        <div className="p-4 border-4 border-black rounded-2xl bg-emerald-50 shadow-neo-sm flex flex-col items-center text-center">
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <span className="text-base">🟢</span>
-                            <h4 className="font-black text-xs text-emerald-800">LINE Pay 轉帳</h4>
+                          {/* Account Number Area */}
+                          <div className="flex items-center justify-between gap-4 py-2 border-y border-zinc-800/60">
+                            <div className="space-y-1 text-left">
+                              <div className="text-xs font-black text-zinc-300 tracking-wider flex items-center gap-1.5">
+                                {BANK_INFO.bankName} 
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold border border-zinc-700">{BANK_INFO.bankCode}</span>
+                              </div>
+                              <div className="text-xl font-black italic tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] font-mono selection:bg-amber-400 selection:text-black">
+                                {BANK_INFO.accountNumber}
+                              </div>
+                              <div className="text-[10px] font-black text-zinc-400 flex items-center gap-1">
+                                <span>戶名：</span>
+                                <span className="text-zinc-200">{BANK_INFO.accountHolder}</span>
+                              </div>
+                            </div>
+                            
+                            <button 
+                              onClick={() => {
+                                navigator.clipboard.writeText(BANK_INFO.rawAccount);
+                                alert('帳號已複製！可以開啟網銀轉帳囉 🐼💳');
+                              }}
+                              className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase px-4 py-3 rounded-2xl flex items-center gap-1.5 active:scale-95 transition-all shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] border-2 border-black shrink-0"
+                            >
+                              <Copy size={12} strokeWidth={3} /> 複製帳號
+                            </button>
                           </div>
                           
-                          <div className="w-28 h-28 bg-white border-2 border-black rounded-xl p-2 flex items-center justify-center relative overflow-hidden group/qr">
+                          <p className="text-[8px] font-bold text-zinc-500 text-left">
+                            ※ 帳號已進行防呆處理，點擊「複製帳號」按鈕後即可直接在網銀貼上轉帳。
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* LINE Pay / Jkos Grid - Polaroid Card Style */}
+                      <div className="grid grid-cols-2 gap-4">
+                        {/* LINE Pay Polaroid */}
+                        <div className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform -rotate-1 hover:rotate-0 transition-all duration-300 relative group/line">
+                          <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
+                          <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
+                          
+                          <div className="flex items-center gap-1.5 mb-3 bg-emerald-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                            <h4 className="font-black text-[9px] text-emerald-800 tracking-wider">LINE Pay 轉帳</h4>
+                          </div>
+                          
+                          <div className="w-28 h-28 bg-zinc-50 border-4 border-black rounded-2xl p-2 flex items-center justify-center relative overflow-hidden shadow-inner group-hover/line:scale-[1.03] transition-transform">
+                            {/* Glass sheen overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover/line:opacity-100 transition-opacity" />
                             <img 
                               src="/linepay_qr.png" 
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                               }}
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-contain filter contrast-125"
                               alt="LINE Pay QR" 
                             />
                             <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
@@ -669,26 +725,31 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               <span className="text-[7px] font-black leading-tight text-zinc-500">放於 public/<br/>linepay_qr.png</span>
                             </div>
                           </div>
-                          <p className="text-[8px] font-bold text-emerald-700 mt-2 leading-tight">
-                            使用 LINE 掃描<br/>即可直接轉帳支持
+                          <p className="text-[8px] font-bold text-zinc-400 mt-3 leading-relaxed">
+                            開啟 LINE 掃描器<br/>即可一鍵投幣支持
                           </p>
                         </div>
 
-                        {/* Jkos */}
-                        <div className="p-4 border-4 border-black rounded-2xl bg-rose-50 shadow-neo-sm flex flex-col items-center text-center">
-                          <div className="flex items-center gap-1.5 mb-2">
-                            <span className="text-base">🔴</span>
-                            <h4 className="font-black text-xs text-rose-800">街口支付 轉帳</h4>
+                        {/* Jkos Polaroid */}
+                        <div className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform rotate-1 hover:rotate-0 transition-all duration-300 relative group/jkos">
+                          <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
+                          <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
+                          
+                          <div className="flex items-center gap-1.5 mb-3 bg-rose-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
+                            <h4 className="font-black text-[9px] text-rose-800 tracking-wider">街口支付 轉帳</h4>
                           </div>
                           
-                          <div className="w-28 h-28 bg-white border-2 border-black rounded-xl p-2 flex items-center justify-center relative overflow-hidden group/qr">
+                          <div className="w-28 h-28 bg-zinc-50 border-4 border-black rounded-2xl p-2 flex items-center justify-center relative overflow-hidden shadow-inner group-hover/jkos:scale-[1.03] transition-transform">
+                            {/* Glass sheen overlay */}
+                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover/jkos:opacity-100 transition-opacity" />
                             <img 
                               src="/jkos_qr.png" 
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                               }}
-                              className="w-full h-full object-contain"
+                              className="w-full h-full object-contain filter contrast-125"
                               alt="街口支付 QR" 
                             />
                             <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
@@ -696,8 +757,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               <span className="text-[7px] font-black leading-tight text-zinc-500">放於 public/<br/>jkos_qr.png</span>
                             </div>
                           </div>
-                          <p className="text-[8px] font-bold text-rose-700 mt-2 leading-tight">
-                            使用街口 APP 掃描<br/>即可快速投幣支持
+                          <p className="text-[8px] font-bold text-zinc-400 mt-3 leading-relaxed">
+                            開啟街口 App 掃描<br/>即可快速完成付款
                           </p>
                         </div>
                       </div>
