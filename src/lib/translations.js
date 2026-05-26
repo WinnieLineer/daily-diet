@@ -211,6 +211,7 @@ const translations = {
     // v1.8.0 — Settings redesign
     settings_profile: "個人資料",
     settings_goals: "目標",
+    settings_shop: "良心小舖",
     settings_data: "備份同步",
     settings_about: "關於",
     settings_version_history: "版本歷史",
@@ -603,6 +604,7 @@ const translations = {
     // v1.8.0 — Settings redesign
     settings_profile: "Profile",
     settings_goals: "Goals",
+    settings_shop: "Shop",
     settings_data: "Sync & Backup",
     settings_about: "About",
     settings_version_history: "Version History",
