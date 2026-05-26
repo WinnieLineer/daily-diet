@@ -35,13 +35,17 @@ export async function getDailySummary(date) {
     acc.calories += Number(log.calories) || 0;
     acc.protein += Number(log.protein) || 0;
     acc.water += Number(log.water) || 0;
+    acc.carbs += Number(log.carbs) || 0;
+    acc.fat += Number(log.fat) || 0;
     return acc;
-  }, { calories: 0, protein: 0, water: 0 });
+  }, { calories: 0, protein: 0, water: 0, carbs: 0, fat: 0 });
 
   return {
     calories: Math.round(summary.calories),
     protein: Math.round(summary.protein * 10) / 10,
-    water: Math.round(summary.water)
+    water: Math.round(summary.water),
+    carbs: Math.round(summary.carbs * 10) / 10,
+    fat: Math.round(summary.fat * 10) / 10
   };
 }
 

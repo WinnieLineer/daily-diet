@@ -143,11 +143,13 @@ CRITICAL: Output all text fields in ${langDisplay}.
 - fun_fact: Science-based nutritional fact.
 - roast: Sarcastic but expert-level nutritional burn.
 - panda_comment: Professional nutritionist's evaluation with one actionable tip (Max 35 words).
+- carbs: Estimated carbohydrates in grams (g) as a number.
+- fat: Estimated fat in grams (g) as a number.
 
 Context: ${timeContext}, User: ${userName || 'User'}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}
 History (Already eaten today): ${foodStrip || 'None'}
 
-Schema: {dish_name, calories, protein, water, description, fun_fact, roast, panda_comment}
+Schema: {dish_name, calories, protein, water, carbs, fat, description, fun_fact, roast, panda_comment}
 STRICT: Occasionally use the user's name (${userName}) naturally in the roast or panda_comment.`;
 
     // Build base64 image URL for SiliconFlow vision
@@ -177,6 +179,66 @@ STRICT: Occasionally use the user's name (${userName}) naturally in the roast or
     const text = await callSiliconFlow(apiKey, modelName, messages, {
       temperature: 0,
       maxTokens: 4096,
+    });
+
+    try {
+      const lastBrace = text.lastIndexOf('}');
+      const firstBrace = text.indexOf('{');
+      if (lastBrace !== -1 && firstBrace !== -1) {
+        return JSON.parse(text.substring(firstBrace, lastBrace + 1));
+      }
+      return JSON.parse(text);
+    } catch (e) {
+      console.error("Parse Error. Raw text:", text);
+      throw new Error(language === 'zh' ? "無法解析 AI 回應。" : "Failed to parse AI response.");
+    }
+  });
+}
+
+/**
+ * Estimate food nutrition from a text-only prompt (e.g. McDonald's Big Mac) using DeepSeek-V3.
+ */
+export async function analyzeFoodText(textInstruction, context = {}, language = 'zh') {
+  return withRetryAndFallback(TEXT_MODELS, async (apiKey, modelName) => {
+    const { calories, calorieGoal, protein, proteinGoal, foodLogs = [], userName = '' } = context;
+    const now = new Date();
+    const currentHour = now.getHours();
+    const timeContext = currentHour < 5 ? 'Deep Night' :
+      currentHour < 10 ? 'Morning' :
+        currentHour < 14 ? 'Lunch Time' :
+          currentHour < 17 ? 'Afternoon' :
+            currentHour < 21 ? 'Dinner' : 'Night';
+    const foodStrip = foodLogs.map(l => l.dish_name).join(', ');
+
+    const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
+    const customPrompt = `STRICT: DIRECT JSON ONLY. NO PREAMBLE. NO FENCED CODEBLOCKS.
+Persona: Elite Registered Dietitian.
+Task: The user has typed a meal description or product name. Analyze it and estimate its calories, protein, water, carbs, and fat content.
+USER INPUT: "${textInstruction}"
+
+CRITICAL Rules:
+- If a specific brand or item is named (e.g., "麥當勞大麥克", "7-11茶葉蛋"), find or estimate the exact standard nutritional facts for this specific item.
+- Output all text fields in ${langDisplay}.
+- dish_name: Accurate name.
+- description: Brief nutritional overview.
+- fun_fact: Science-based nutritional fact.
+- roast: Sarcastic but expert-level nutritional burn.
+- panda_comment: Professional nutritionist's evaluation with one actionable tip (Max 35 words).
+- carbs: Estimated carbohydrates in grams (g) as a number.
+- fat: Estimated fat in grams (g) as a number.
+
+Context: ${timeContext}, User: ${userName || 'User'}, Cal:${calories}/${calorieGoal}, Pro:${protein}/${proteinGoal}
+History (Already eaten today): ${foodStrip || 'None'}
+
+Schema: {dish_name, calories, protein, water, carbs, fat, description, fun_fact, roast, panda_comment}
+STRICT: Occasionally use the user's name (${userName}) naturally in the roast or panda_comment.`;
+
+    const text = await callSiliconFlow(apiKey, modelName, [
+      { role: 'user', content: customPrompt }
+    ], {
+      temperature: 0.2,
+      maxTokens: 1024,
+      jsonMode: true
     });
 
     try {

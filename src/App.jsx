@@ -69,7 +69,7 @@ const NamePromptModal = ({ onSave, isUpdate = false }) => {
   );
 };
 
-const LogDetailModal = ({ log, onClose }) => {
+const LogDetailModal = ({ log, goals, onClose }) => {
   if (!log) return null;
   return createPortal(
     <div className="fixed inset-0 z-[600]">
@@ -124,6 +124,18 @@ const LogDetailModal = ({ log, onClose }) => {
               <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('protein')}</div>
               <div className="text-2xl font-black italic">{log.protein} <span className="text-xs">g</span></div>
             </div>
+            {goals?.show_carbs_fat && (
+              <>
+                <div className="bg-zinc-50 border-4 border-black p-4 rounded-3xl shadow-neo-sm">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('carbs')}</div>
+                  <div className="text-2xl font-black italic">{log.carbs ?? 0} <span className="text-xs">g</span></div>
+                </div>
+                <div className="bg-zinc-50 border-4 border-black p-4 rounded-3xl shadow-neo-sm">
+                  <div className="text-[10px] font-black uppercase tracking-widest text-zinc-400 mb-1">{t('fat')}</div>
+                  <div className="text-2xl font-black italic">{log.fat ?? 0} <span className="text-xs">g</span></div>
+                </div>
+              </>
+            )}
           </div>
 
           {/* Advice Section */}
@@ -163,7 +175,7 @@ const LogDetailModal = ({ log, onClose }) => {
 };
 
 
-const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite, onShowDetail }) => {
+const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite, onShowDetail }) => {
   const isEditing = editingId === log.id;
   const [showActions, setShowActions] = React.useState(false);
   const longPressTimer = React.useRef(null);
@@ -186,35 +198,90 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             className="w-full border-4 border-black p-2 rounded-xl font-bold bg-white"
           />
         </div>
-        <div className="flex gap-3">
-          <div className="flex-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('calories')} (kcal)</label>
-          <input 
-            type="number" 
-            value={editValues.calories}
-            onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
-            className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('protein')} (g)</label>
-          <input 
-            type="number" 
-            value={editValues.protein}
-            onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
-            className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
-          />
-        </div>
-        <div className="flex-1">
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('water_unit')} (ml)</label>
-          <input 
-            type="number" 
-            value={editValues.water}
-            onChange={(e) => setEditValues({ ...editValues, water: e.target.value })}
-            className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
-          />
-        </div>
-      </div>
+
+        {!goals?.show_carbs_fat ? (
+          <div className="flex gap-3">
+            <div className="flex-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('calories')} (kcal)</label>
+              <input 
+                type="number" 
+                value={editValues.calories}
+                onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
+                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('protein')} (g)</label>
+              <input 
+                type="number" 
+                value={editValues.protein}
+                onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
+                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+              />
+            </div>
+            <div className="flex-1">
+              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('water_unit')} (ml)</label>
+              <input 
+                type="number" 
+                value={editValues.water}
+                onChange={(e) => setEditValues({ ...editValues, water: e.target.value })}
+                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+              />
+            </div>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('calories')} (kcal)</label>
+                <input 
+                  type="number" 
+                  value={editValues.calories}
+                  onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('water_unit')} (ml)</label>
+                <input 
+                  type="number" 
+                  value={editValues.water}
+                  onChange={(e) => setEditValues({ ...editValues, water: e.target.value })}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-3 gap-3">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('protein')} (g)</label>
+                <input 
+                  type="number" 
+                  value={editValues.protein}
+                  onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('carbs')} (g)</label>
+                <input 
+                  type="number" 
+                  value={editValues.carbs}
+                  onChange={(e) => setEditValues({ ...editValues, carbs: e.target.value })}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                />
+              </div>
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('fat')} (g)</label>
+                <input 
+                  type="number" 
+                  value={editValues.fat}
+                  onChange={(e) => setEditValues({ ...editValues, fat: e.target.value })}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       
       <div>
         <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('category')}</label>
@@ -292,6 +359,12 @@ const LogItem = ({ log, isRecent, editingId, editValues, setEditValues, cancelEd
             )}
             {log.water > 0 && (
               <span className="text-[10px] font-black text-black border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}</span>
+            )}
+            {goals?.show_carbs_fat && log.carbs > 0 && (
+              <span className="text-[10px] font-black bg-white text-[#d97706] border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🍞{log.carbs}</span>
+            )}
+            {goals?.show_carbs_fat && log.fat > 0 && (
+              <span className="text-[10px] font-black bg-white text-[#e11d48] border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🥑{log.fat}</span>
             )}
           </div>
         </div>
@@ -465,6 +538,7 @@ function App() {
             console.log("[VersionCheck] Needs update modal. isFrom16:", isFrom16);
 
             const hasNewContent = !lastSeenVersion || 
+                                  isNewer('2.2.0', lastSeenVersion) || 
                                   isNewer('2.1.2', lastSeenVersion) || 
                                   isNewer('2.1.1', lastSeenVersion) ||
                                   isNewer('2.1.0', lastSeenVersion) || 
@@ -585,13 +659,19 @@ function App() {
     const fEnabled = await db.settings.get('fasting_enabled');
     const fStart = await db.settings.get('fasting_start');
     const fEnd = await db.settings.get('fasting_end');
+    const showCarbs = await db.settings.get('show_carbs_fat');
+    const carbsGoal = await db.settings.get('carbs_goal');
+    const fatGoal = await db.settings.get('fat_goal');
     const currentGoals = {
       calories: calGoal ? calGoal.value : 2000,
       protein: proGoal ? proGoal.value : 100,
       water: watGoal ? watGoal.value : 2500,
       fasting_enabled: fEnabled ? fEnabled.value : false,
       fasting_start: fStart ? fStart.value : '20:00',
-      fasting_end: fEnd ? fEnd.value : '12:00'
+      fasting_end: fEnd ? fEnd.value : '12:00',
+      show_carbs_fat: showCarbs ? showCarbs.value : false,
+      carbs: carbsGoal ? carbsGoal.value : 200,
+      fat: fatGoal ? fatGoal.value : 60
     };
     setGoals(currentGoals);
 
@@ -694,6 +774,8 @@ function App() {
       calories: log.calories,
       protein: log.protein,
       water: log.water || 0,
+      carbs: log.carbs || 0,
+      fat: log.fat || 0,
       category: log.category || 'snack'
     });
   };
@@ -708,6 +790,8 @@ function App() {
       calories: Number(editValues.calories) || 0,
       protein: Number(editValues.protein) || 0,
       water: Number(editValues.water) || 0,
+      carbs: Number(editValues.carbs) || 0,
+      fat: Number(editValues.fat) || 0,
       category: editValues.category
     });
     setEditingId(null);
@@ -967,6 +1051,7 @@ function App() {
                             <LogItem 
                               key={log.id} 
                               log={log} 
+                              goals={goals}
                               isRecent={true}
                               editingId={editingId}
                               editValues={editValues}
@@ -1097,6 +1182,7 @@ function App() {
                                       <LogItem 
                                         key={log.id} 
                                         log={log} 
+                                        goals={goals}
                                         isRecent={false}
                                         editingId={editingId}
                                         editValues={editValues}
@@ -1186,6 +1272,7 @@ function App() {
         {selectedLogForDetail && (
           <LogDetailModal 
             log={selectedLogForDetail} 
+            goals={goals}
             onClose={() => setSelectedLogForDetail(null)} 
           />
         )}

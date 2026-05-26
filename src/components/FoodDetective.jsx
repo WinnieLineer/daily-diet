@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap } from 'lucide-react';
-import { analyzeFoodImage } from '../lib/siliconflow';
+import { analyzeFoodImage, analyzeFoodText } from '../lib/siliconflow';
 import { db } from '../db';
 import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';
@@ -107,7 +107,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [result, setResult] = useState(null);
   const cameraInputRef = useRef(null);
   const galleryInputRef = useRef(null);
-  const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '', water: '' });
+  const [manualEntry, setManualEntry] = useState({ dish_name: '', calories: '', protein: '', water: '', carbs: '', fat: '' });
   const [locationLoading, setLocationLoading] = useState(false);
   const [showDesktopCamera, setShowDesktopCamera] = useState(false);
   const pendingCoordsRef = useRef(null);
@@ -454,6 +454,62 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     db.pendingAnalysis.delete('current');
   };
 
+  const handleTextOnlyAnalysis = async () => {
+    if (!userInstructions.trim()) return;
+    const currentAnalysisId = ++analysisIdRef.current;
+    setAiLoading(true);
+    setAiError(null);
+    setLoadTime(ANALYSIS_DURATION_SECONDS);
+    document.body.classList.add('ai-analyzing');
+
+    try {
+      let location = getCachedLocation();
+      if (!location && navigator.geolocation) {
+        location = await new Promise((resolve) => {
+          navigator.geolocation.getCurrentPosition(
+            async (pos) => resolve(await reverseGeocode(pos.coords.latitude, pos.coords.longitude)),
+            () => resolve(null), { timeout: 5000 }
+          );
+        });
+        if (location) saveLocationToCache(location);
+      }
+
+      const dailyContext = {
+        calories: summary.calories,
+        calorieGoal: goals.calories,
+        protein: summary.protein,
+        proteinGoal: goals.protein,
+        water: summary.water,
+        waterGoal: goals.water,
+        foodLogs: recentLogs.map(({ image, ...rest }) => rest),
+        userName: userName
+      };
+
+      const res = await analyzeFoodText(userInstructions, dailyContext, getLanguage());
+      if (currentAnalysisId !== analysisIdRef.current) return;
+
+      if (res && res.dish_name) {
+        const finalResult = { ...res, location };
+        setResult(finalResult);
+        setOriginalResult(finalResult);
+        setMultiplier(1);
+        setShowCustomMultiplier(false);
+        await db.pendingAnalysis.delete('current');
+        if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
+        if (res.panda_comment && setAdvice) setAdvice(res.panda_comment);
+      }
+    } catch (err) {
+      if (currentAnalysisId !== analysisIdRef.current) return;
+      console.error("AI Text Analysis Error:", err);
+      setAiError(err.message || t('ai_error'));
+    } finally {
+      if (currentAnalysisId === analysisIdRef.current) {
+        setAiLoading(false);
+        document.body.classList.remove('ai-analyzing');
+      }
+    }
+  };
+
   const handleAnalysis = async (base64, locationPromise = null) => {
     try {
       const compressedBase64 = await compressImage(base64);
@@ -540,6 +596,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       calories: Math.round(originalResult.calories * val),
       protein: Number((originalResult.protein * val).toFixed(1)),
       water: Math.round(originalResult.water * val),
+      carbs: originalResult.carbs ? Number((originalResult.carbs * val).toFixed(1)) : 0,
+      fat: originalResult.fat ? Number((originalResult.fat * val).toFixed(1)) : 0,
       dish_name: val === 1 ? originalResult.dish_name : t('multiplier_format').replace('{n}', val).replace('{name}', originalResult.dish_name)
     };
     setResult(updatedResult);
@@ -550,7 +608,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     if (mode === 'ai' && result) {
       dataToSave = { ...result, image: preview, advice: result.panda_comment || null };
     } else if (mode === 'manual' && manualEntry.dish_name) {
-      dataToSave = { dish_name: manualEntry.dish_name, calories: Number(manualEntry.calories) || 0, protein: Number(manualEntry.protein) || 0, water: Number(manualEntry.water) || 0, description: t('manual_desc') };
+      dataToSave = { 
+        dish_name: manualEntry.dish_name, 
+        calories: Number(manualEntry.calories) || 0, 
+        protein: Number(manualEntry.protein) || 0, 
+        water: Number(manualEntry.water) || 0, 
+        carbs: Number(manualEntry.carbs) || 0,
+        fat: Number(manualEntry.fat) || 0,
+        description: t('manual_desc') 
+      };
     }
     if (!dataToSave) return;
 
@@ -570,7 +636,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
     await db.dietLogs.add({ ...dataToSave, date: localDate, timestamp: timestamp, location: dataToSave.location || null, category: selectedCategory });
     if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); setMultiplier(1); setShowCustomMultiplier(false); }
-    setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
+    setManualEntry({ dish_name: '', calories: '', protein: '', water: '', carbs: '', fat: '' });
 
     const now = new Date();
     const tzoffset = now.getTimezoneOffset() * 60000;
@@ -647,7 +713,45 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           </div>
         </div>
 
-        {mode === 'ai' && !preview && (
+        {/* 1. Loader screen inside AI tab */}
+        {mode === 'ai' && aiLoading && (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative w-full aspect-[16/10] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo z-[60]"
+          >
+            <div className="flex flex-col items-center gap-2 mb-3">
+              <div className="relative">
+                <Loader2 size={40} className="text-accent animate-spin" strokeWidth={4} />
+                <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span></div>
+              </div>
+              <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none">{t('analyzing')}</span>
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentFactIndex}
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                exit={{ opacity: 0, scale: 0.95 }}
+                className="space-y-1 px-2 mb-4"
+              >
+                <div className="bg-accent text-black px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase inline-block border border-black mb-1">{t('food_fact')}</div>
+                <p className="text-white font-black italic text-xs leading-tight max-w-[220px] mx-auto line-clamp-3">{nutritionFacts[currentFactIndex]?.fact || t('analyzing')}</p>
+              </motion.div>
+            </AnimatePresence>
+
+            <div className="w-full max-w-[180px] space-y-3">
+              <div className="bg-rose-500/20 border-2 border-rose-500 px-3 py-1.5 rounded-xl">
+                <p className="text-rose-500 text-[8px] font-black uppercase leading-tight">{t('stay_on_page_warning')}</p>
+              </div>
+              <button onClick={cancelAnalysis} className="mx-auto text-white/30 hover:text-white text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5"><X size={10} /> {t('cancel')}</button>
+            </div>
+          </motion.div>
+        )}
+
+        {/* 2. Upload / Input Screen */}
+        {mode === 'ai' && !aiLoading && !preview && !result && (
           <div className="grid grid-cols-2 gap-4 w-full mt-2">
             <button
               onClick={() => {
@@ -690,17 +794,46 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 </div>
               </div>
             </div>
+
+            {/* AI Fast calculation button when instruction is not empty */}
+            {userInstructions.trim() !== '' && (
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="col-span-2 mt-2"
+              >
+                <NeoButton
+                  variant="black"
+                  className="w-full h-14 text-base font-black italic rounded-2xl flex items-center justify-center gap-2"
+                  onClick={handleTextOnlyAnalysis}
+                >
+                  <Sparkles size={18} className="text-accent animate-pulse" />
+                  AI 快速計算 ⚡
+                </NeoButton>
+              </motion.div>
+            )}
           </div>
         )}
 
+        {/* 3. Desktop Camera Overlay */}
         {showDesktopCamera && <DesktopCamera onClose={() => setShowDesktopCamera(false)} onCapture={handleCameraCapture} onLocationReady={(coords) => { pendingCoordsRef.current = coords; }} />}
 
-        {mode === 'ai' && preview && (
+        {/* 4. Results Screen */}
+        {mode === 'ai' && !aiLoading && (preview || result) && (
           <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} className="space-y-4">
-            <div className="relative aspect-[16/10] rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo">
-              <img src={preview} className="w-full h-full object-cover" alt="Preview" />
+            <div className="relative aspect-[16/10] rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo bg-gradient-to-br from-amber-100 to-orange-200 flex flex-col items-center justify-center p-6 text-center">
+              {preview ? (
+                <img src={preview} className="w-full h-full object-cover" alt="Preview" />
+              ) : (
+                <>
+                  <div className="w-16 h-16 bg-white border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-sm mb-3">
+                    <Sparkles size={32} className="text-amber-500 animate-pulse" />
+                  </div>
+                  <div className="font-black italic text-lg uppercase tracking-tight">AI 快速免圖辨識</div>
+                  <div className="text-xs font-bold text-zinc-500 mt-1 max-w-[200px]">"{userInstructions}"</div>
+                </>
+              )}
               {!aiLoading && <button onClick={cancelAnalysis} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur-md border border-white/20"><X size={20} /></button>}
-              {aiError && <div className="absolute inset-0 bg-rose-500/90 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center text-white z-[70]"><AlertCircle size={48} className="mb-4 animate-bounce" /><p className="font-black italic text-sm mb-6">{aiError}</p><NeoButton variant="black" className="h-12 px-8 text-xs flex items-center justify-center gap-2" onClick={() => performAnalysis(preview, null)}><RefreshCw size={16} /> {t('retry')}</NeoButton></div>}
             </div>
 
             {result && (
@@ -714,6 +847,18 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     <div className="flex items-center gap-2 mb-1 opacity-60"><Star size={14} /><span className="text-[10px] font-black uppercase">{t('protein')}</span></div>
                     <div className="text-2xl font-black italic">{result.protein} <span className="text-xs">g</span></div>
                   </div>
+                  {goals.show_carbs_fat && (
+                    <>
+                      <div className="bg-white border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
+                        <div className="flex items-center gap-2 mb-1 opacity-60"><span>🍞</span><span className="text-[10px] font-black uppercase">{t('carbs')}</span></div>
+                        <div className="text-2xl font-black italic">{result.carbs ?? 0} <span className="text-xs">g</span></div>
+                      </div>
+                      <div className="bg-white border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
+                        <div className="flex items-center gap-2 mb-1 opacity-60"><span>🥑</span><span className="text-[10px] font-black uppercase">{t('fat')}</span></div>
+                        <div className="text-2xl font-black italic">{result.fat ?? 0} <span className="text-xs">g</span></div>
+                      </div>
+                    </>
+                  )}
                 </div>
 
                 <NeoCard className="bg-white border-4 border-black">
@@ -767,48 +912,30 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         )}
       </div>
 
-      {aiLoading && (
-        <div className="absolute inset-0 z-[60] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center rounded-[2rem] overflow-hidden">
-          <div className="flex flex-col items-center gap-2 mb-3">
-            <div className="relative">
-              <Loader2 size={40} className="text-accent animate-spin" strokeWidth={4} />
-              <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span></div>
-            </div>
-            <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none">{t('analyzing')}</span>
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentFactIndex}
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="space-y-1 px-2 mb-4"
-            >
-              <div className="bg-accent text-black px-1.5 py-0.5 rounded-lg text-[8px] font-black uppercase inline-block border border-black mb-1">{t('food_fact')}</div>
-              <p className="text-white font-black italic text-xs leading-tight max-w-[220px] mx-auto line-clamp-3">{nutritionFacts[currentFactIndex]?.fact || t('analyzing')}</p>
-            </motion.div>
-          </AnimatePresence>
-
-          <div className="w-full max-w-[180px] space-y-3">
-            <div className="bg-rose-500/20 border-2 border-rose-500 px-3 py-1.5 rounded-xl">
-              <p className="text-rose-500 text-[8px] font-black uppercase leading-tight">{t('stay_on_page_warning')}</p>
-            </div>
-            <button onClick={cancelAnalysis} className="mx-auto text-white/30 hover:text-white text-[8px] font-black uppercase tracking-widest flex items-center gap-1.5"><X size={10} /> {t('cancel')}</button>
-          </div>
-        </div>
-      )}
-
       <div className="p-4 sm:p-6 space-y-4 pt-0">
         {mode === 'manual' && (
           <motion.div initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} className="space-y-4">
             <div className="space-y-3">
               <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('food_name')}</label><input type="text" placeholder={t('manual_placeholder')} value={manualEntry.dish_name} onChange={(e) => setManualEntry({ ...manualEntry, dish_name: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-bold bg-white outline-none" /></div>
-              <div className="grid grid-cols-3 gap-3">
-                <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label><input type="number" placeholder="0" value={manualEntry.calories} onChange={(e) => setManualEntry({ ...manualEntry, calories: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
-                <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label><input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({ ...manualEntry, protein: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
-                <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_unit')}</label><input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({ ...manualEntry, water: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
-              </div>
+              {!goals.show_carbs_fat ? (
+                <div className="grid grid-cols-3 gap-3">
+                  <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label><input type="number" placeholder="0" value={manualEntry.calories} onChange={(e) => setManualEntry({ ...manualEntry, calories: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                  <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label><input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({ ...manualEntry, protein: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                  <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_unit')}</label><input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({ ...manualEntry, water: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label><input type="number" placeholder="0" value={manualEntry.calories} onChange={(e) => setManualEntry({ ...manualEntry, calories: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_unit')}</label><input type="number" placeholder="0" value={manualEntry.water} onChange={(e) => setManualEntry({ ...manualEntry, water: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                  </div>
+                  <div className="grid grid-cols-3 gap-3">
+                    <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label><input type="number" placeholder="0" value={manualEntry.protein} onChange={(e) => setManualEntry({ ...manualEntry, protein: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('carbs')}</label><input type="number" placeholder="0" value={manualEntry.carbs} onChange={(e) => setManualEntry({ ...manualEntry, carbs: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                    <div><label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('fat')}</label><input type="number" placeholder="0" value={manualEntry.fat} onChange={(e) => setManualEntry({ ...manualEntry, fat: e.target.value })} className="w-full border-4 border-black p-4 rounded-2xl font-mono font-bold bg-white outline-none" /></div>
+                  </div>
+                </div>
+              )}
               <div>
                 <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('log_time')}</label>
                 <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">

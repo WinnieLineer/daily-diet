@@ -2,13 +2,14 @@ import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 
 const VERSION_HISTORY = [
+  { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
   { version: '2.1.2', date: '2026-05-19', features: [t('v212_f1')] },
   { version: '2.1.1', date: '2026-05-18', features: [t('v211_f1')] },
   { version: '2.1.0', date: '2026-05-17', features: [t('v210_f1'), t('v210_f2'), t('v210_f3')] },
@@ -26,7 +27,7 @@ const VERSION_HISTORY = [
 ];
 
 const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed, initialTab = 'profile' }) => {
-  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00' });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00', show_carbs_fat: false, carbs: 200, fat: 60 });
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [contactForm, setContactForm] = useState({ subject: t('feedback_subject'), message: '' });
@@ -40,6 +41,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [calc, setCalc] = useState({ height: 170, weight: 70, age: 25, gender: 'male', activity: 1.375, goal: 'maintain' });
   const [stats, setStats] = useState({ localSize: 0, cloudSize: 0, cloudTime: null, loading: false });
   const [gistIdInput, setGistIdInput] = useState(getCurrentGistId() || '');
+  const [showApiKey, setShowApiKey] = useState(false);
+  const [showGithubPat, setShowGithubPat] = useState(false);
   
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV;
 
@@ -114,16 +117,21 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     const fEn = await db.settings.get('fasting_enabled');
     const fSt = await db.settings.get('fasting_start');
     const fEnTime = await db.settings.get('fasting_end');
-    if (cal) {
-      setGoals({ 
-        calories: cal.value, 
-        protein: pro ? pro.value : 100,
-        water: wat ? wat.value : 2500,
-        fasting_enabled: fEn ? fEn.value : false,
-        fasting_start: fSt ? fSt.value : '12:00',
-        fasting_end: fEnTime ? fEnTime.value : '20:00'
-      });
-    }
+    const showCarbs = await db.settings.get('show_carbs_fat');
+    const carbsGoal = await db.settings.get('carbs_goal');
+    const fatGoal = await db.settings.get('fat_goal');
+    
+    setGoals({ 
+      calories: cal ? cal.value : 2000, 
+      protein: pro ? pro.value : 100,
+      water: wat ? wat.value : 2500,
+      fasting_enabled: fEn ? fEn.value : false,
+      fasting_start: fSt ? fSt.value : '12:00',
+      fasting_end: fEnTime ? fEnTime.value : '20:00',
+      show_carbs_fat: showCarbs ? showCarbs.value : false,
+      carbs: carbsGoal ? carbsGoal.value : 200,
+      fat: fatGoal ? fatGoal.value : 60
+    });
     const ak = await db.settings.get('user_api_key');
     if (ak) setApiKey(ak.value);
   };
@@ -135,20 +143,35 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     await db.settings.put({ key: 'fasting_enabled', value: goals.fasting_enabled });
     await db.settings.put({ key: 'fasting_start', value: goals.fasting_start });
     await db.settings.put({ key: 'fasting_end', value: goals.fasting_end });
+    await db.settings.put({ key: 'show_carbs_fat', value: goals.show_carbs_fat });
+    await db.settings.put({ key: 'carbs_goal', value: Number(goals.carbs) });
+    await db.settings.put({ key: 'fat_goal', value: Number(goals.fat) });
     if (isLocal) await db.settings.put({ key: 'user_api_key', value: apiKey });
     setIsOpen(false);
     onGoalsUpdated();
   };
 
   const calculateSuggestion = () => {
-    const bmr = (10 * calc.weight) + (6.25 * calc.height) - (5 * calc.age) + (calc.gender === 'male' ? 5 : -161);
-    const tdee = bmr * calc.activity;
+    const bmr = (10 * Number(calc.weight)) + (6.25 * Number(calc.height)) - (5 * Number(calc.age)) + (calc.gender === 'male' ? 5 : -161);
+    const tdee = bmr * Number(calc.activity);
     let suggestedCals = tdee;
     if (calc.goal === 'lose') suggestedCals -= 500;
     if (calc.goal === 'recomp') suggestedCals -= 200;
     if (calc.goal === 'gain') suggestedCals += 300;
-    let suggestedPro = calc.weight * (calc.goal === 'recomp' ? 2.2 : calc.goal === 'lose' ? 2.0 : 1.8);
-    setGoals({ ...goals, calories: Math.round(suggestedCals), protein: Math.round(suggestedPro), water: Math.round(calc.weight * 35) });
+    let suggestedPro = Number(calc.weight) * (calc.goal === 'recomp' ? 2.2 : calc.goal === 'lose' ? 2.0 : 1.8);
+    
+    // Suggest Carbs and Fat values symmetrically
+    const suggestedFat = (suggestedCals * 0.25) / 9;
+    const suggestedCarb = (suggestedCals - (suggestedPro * 4) - (suggestedFat * 9)) / 4;
+
+    setGoals({ 
+      ...goals, 
+      calories: Math.round(suggestedCals), 
+      protein: Math.round(suggestedPro), 
+      water: Math.round(Number(calc.weight) * 35),
+      carbs: Math.round(suggestedCarb),
+      fat: Math.round(suggestedFat)
+    });
     setShowCalculator(false);
   };
 
@@ -350,12 +373,84 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <button onClick={() => setShowCalculator(!showCalculator)} className="p-2 rounded-xl shadow-neo-xs border-2 border-black bg-white"><Calculator size={20} /></button>
                     </div>
                     {showCalculator && (
-                      <div className="p-4 border-4 border-black rounded-[2rem] bg-zinc-50 space-y-4">
+                      <div className="p-4 border-4 border-black rounded-[2rem] bg-white space-y-4 shadow-neo-sm text-left">
                         <div className="grid grid-cols-2 gap-3">
-                          <input type="number" placeholder="Height" value={calc.height} onChange={e => setCalc({...calc, height: e.target.value})} className="border-2 border-black p-2 rounded-xl" />
-                          <input type="number" placeholder="Weight" value={calc.weight} onChange={e => setCalc({...calc, weight: e.target.value})} className="border-2 border-black p-2 rounded-xl" />
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('height')} (cm)</label>
+                            <input 
+                              type="number" 
+                              placeholder="170" 
+                              value={calc.height} 
+                              onChange={e => setCalc({...calc, height: e.target.value})} 
+                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none" 
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('weight')} (kg)</label>
+                            <input 
+                              type="number" 
+                              placeholder="70" 
+                              value={calc.weight} 
+                              onChange={e => setCalc({...calc, weight: e.target.value})} 
+                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none" 
+                            />
+                          </div>
                         </div>
-                        <button onClick={calculateSuggestion} className="w-full bg-black text-white py-3 rounded-xl font-black italic">{t('apply_suggestion')}</button>
+
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('age')}</label>
+                            <input 
+                              type="number" 
+                              placeholder="25" 
+                              value={calc.age} 
+                              onChange={e => setCalc({...calc, age: e.target.value})} 
+                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none" 
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('gender')}</label>
+                            <select 
+                              value={calc.gender} 
+                              onChange={e => setCalc({...calc, gender: e.target.value})} 
+                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 outline-none text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-8"
+                            >
+                              <option value="male">{t('male')}</option>
+                              <option value="female">{t('female')}</option>
+                            </select>
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('activity_level')}</label>
+                          <select 
+                            value={calc.activity} 
+                            onChange={e => setCalc({...calc, activity: Number(e.target.value)})} 
+                            className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 outline-none text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-8"
+                          >
+                            <option value={1.2}>{t('activity_sedentary')}</option>
+                            <option value={1.375}>{t('activity_light')}</option>
+                            <option value={1.55}>{t('activity_moderate')}</option>
+                            <option value={1.725}>{t('activity_active')}</option>
+                            <option value={1.9}>{t('activity_athlete')}</option>
+                          </select>
+                        </div>
+
+                        <div>
+                          <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('fitness_goal')}</label>
+                          <select 
+                            value={calc.goal} 
+                            onChange={e => setCalc({...calc, goal: e.target.value})} 
+                            className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 outline-none text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-8"
+                          >
+                            <option value="maintain">{t('goal_maintain')}</option>
+                            <option value="lose">{t('goal_lose')}</option>
+                            <option value="recomp">{t('goal_recomp')}</option>
+                            <option value="gain">{t('goal_gain')}</option>
+                          </select>
+                        </div>
+
+                        <button onClick={calculateSuggestion} className="w-full bg-black text-white py-3 rounded-xl font-black italic shadow-neo-xs active:scale-[0.98] transition-transform">{t('apply_suggestion')}</button>
                       </div>
                     )}
                     <div className="space-y-4">
@@ -367,16 +462,74 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label>
                         <input type="number" value={goals.protein} onChange={e => setGoals({...goals, protein: e.target.value})} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
+
+                      {/* Carb & Fat Toggle Switch */}
+                      <div className="flex items-center justify-between p-4 bg-zinc-50 border-4 border-black rounded-2xl shadow-neo-sm mt-2">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">🥑</span>
+                          <div className="text-left">
+                            <span className="font-black italic text-sm">{t('settings_show_carbs_fat')}</span>
+                            <div className="text-[9px] font-bold text-zinc-400 mt-0.5">{t('show_carbs_fat_hint')}</div>
+                          </div>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => setGoals({...goals, show_carbs_fat: !goals.show_carbs_fat})} 
+                          className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors shrink-0 ${goals.show_carbs_fat ? 'bg-black' : 'bg-zinc-200'}`}
+                        >
+                          <div className={`w-4 h-4 rounded-full bg-white border-2 border-black absolute top-0.5 transition-all ${goals.show_carbs_fat ? 'left-6' : 'left-0.5'}`} />
+                        </button>
+                      </div>
+
+                      {/* Carb & Fat Goal Inputs */}
+                      {goals.show_carbs_fat && (
+                        <motion.div 
+                          initial={{ opacity: 0, height: 0 }} 
+                          animate={{ opacity: 1, height: "auto" }} 
+                          className="grid grid-cols-2 gap-4 mt-2 overflow-hidden"
+                        >
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('carbs_goal')}</label>
+                            <input 
+                              type="number" 
+                              value={goals.carbs} 
+                              onChange={e => setGoals({...goals, carbs: e.target.value})} 
+                              className="w-full border-2 border-black p-3 rounded-xl font-black text-xl bg-white" 
+                            />
+                          </div>
+                          <div>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('fat_goal')}</label>
+                            <input 
+                              type="number" 
+                              value={goals.fat} 
+                              onChange={e => setGoals({...goals, fat: e.target.value})} 
+                              className="w-full border-2 border-black p-3 rounded-xl font-black text-xl bg-white" 
+                            />
+                          </div>
+                        </motion.div>
+                      )}
+
                       {isLocal && (
                         <div className="pt-2">
                           <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('settings_api_key')}</label>
-                          <input 
-                            type="password" 
-                            value={apiKey} 
-                            onChange={e => setApiKey(e.target.value)} 
-                            className="w-full border-2 border-black p-3 rounded-xl font-bold text-sm bg-zinc-50 focus:bg-white transition-all"
-                            placeholder="AI_..."
-                          />
+                          <div className="relative">
+                            <input 
+                              type="text" 
+                              value={apiKey} 
+                              onChange={e => setApiKey(e.target.value)} 
+                              style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' }}
+                              className="w-full border-2 border-black p-3 pr-12 rounded-xl font-bold text-sm bg-zinc-50 focus:bg-white transition-all"
+                              placeholder="AI_..."
+                              autoComplete="off"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowApiKey(!showApiKey)}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black transition-colors"
+                            >
+                              {showApiKey ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                          </div>
                           <div className="mt-1 flex items-start gap-1 ml-1">
                             <Info size={10} className="text-zinc-400 mt-0.5" />
                             <span className="text-[8px] font-bold text-zinc-400 leading-tight">{t('api_key_hint')}</span>
@@ -513,13 +666,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
                             SiliconFlow API Key (Local)
                           </label>
-                          <div className="flex gap-2">
-                            <input 
-                              type="password" 
-                              value={apiKey} 
-                              onChange={e => setApiKey(e.target.value)} 
-                              className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none" 
-                            />
+                          <div className="flex gap-2 w-full">
+                            <div className="flex-1 relative">
+                              <input 
+                                type="text" 
+                                value={apiKey} 
+                                onChange={e => setApiKey(e.target.value)} 
+                                style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' }}
+                                className="w-full bg-white border-4 border-black p-3 pr-10 rounded-xl font-bold text-xs shadow-neo-xs outline-none" 
+                                autoComplete="off"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowApiKey(!showApiKey)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black transition-colors"
+                              >
+                                {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                            </div>
                             <button 
                               onClick={async () => {
                                 await db.settings.put({ key: 'user_api_key', value: apiKey });
@@ -536,13 +700,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
                             GitHub PAT (Local Backup)
                           </label>
-                          <div className="flex gap-2">
-                            <input 
-                              type="password" 
-                              value={githubPat} 
-                              onChange={e => setGithubPat(e.target.value)} 
-                              className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none" 
-                            />
+                          <div className="flex gap-2 w-full">
+                            <div className="flex-1 relative">
+                              <input 
+                                type="text" 
+                                value={githubPat} 
+                                onChange={e => setGithubPat(e.target.value)} 
+                                style={{ WebkitTextSecurity: showGithubPat ? 'none' : 'disc' }}
+                                className="w-full bg-white border-4 border-black p-3 pr-10 rounded-xl font-bold text-xs shadow-neo-xs outline-none" 
+                                autoComplete="off"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => setShowGithubPat(!showGithubPat)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black transition-colors"
+                              >
+                                {showGithubPat ? <EyeOff size={16} /> : <Eye size={16} />}
+                              </button>
+                            </div>
                             <button 
                               onClick={() => {
                                 localStorage.setItem('github_pat', githubPat);

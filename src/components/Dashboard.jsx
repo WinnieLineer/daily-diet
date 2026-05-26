@@ -12,7 +12,7 @@ const ProgressRing = ({ value, max, label }) => {
     if (percentage > 110) ringColor = "#f43f5e";
     else if (percentage >= 100) ringColor = "#000000";
     else ringColor = "#FDE047";
-  } else if (label.includes('🍖')) {
+  } else if (label.includes('🍖') || label.includes('🍞') || label.includes('🥑')) {
     if (percentage >= 100) ringColor = "#000000";
     else ringColor = "rgba(0,0,0,0.1)";
     if (percentage > 0 && percentage < 100) ringColor = "#FDE047"; 
@@ -20,6 +20,9 @@ const ProgressRing = ({ value, max, label }) => {
     if (percentage >= 100) ringColor = "#000000";
     else ringColor = "#FDE047";
   }
+
+  const isGram = label.includes('🍖') || label.includes('🍞') || label.includes('🥑');
+  const unit = label.includes('🔥') ? 'kcal' : isGram ? 'g' : 'ml';
 
   return (
     <div className="flex flex-col items-center">
@@ -45,7 +48,7 @@ const ProgressRing = ({ value, max, label }) => {
       </div>
       <span className="mt-2 font-black text-[10px] sm:text-xs uppercase tracking-tight text-zinc-500">{label}</span>
       <span className="text-[9px] sm:text-[10px] opacity-40 font-mono font-bold mt-0.5">
-        {value}/{max}{label.includes('🔥') ? 'kcal' : label.includes('🍖') ? 'g' : 'ml'}
+        {value}/{max}{unit}
       </span>
     </div>
   );
@@ -55,6 +58,8 @@ const Dashboard = ({ summary, goals }) => {
   const CALORIE_GOAL = goals.calories || 2000;
   const PROTEIN_GOAL = goals.protein || 100;
   const WATER_GOAL   = goals.water   || 2500;
+  const CARBS_GOAL   = goals.carbs   || 200;
+  const FAT_GOAL     = goals.fat     || 60;
 
   return (
     <NeoCard className="bg-white">
@@ -62,11 +67,27 @@ const Dashboard = ({ summary, goals }) => {
         <h2 className="text-xl font-black italic">📅 {t('dashboard_title')}</h2>
       </div>
 
-      <div className="grid grid-cols-3 items-center w-full">
-        <ProgressRing value={summary.calories} max={CALORIE_GOAL} label={`🔥${t('dashboard_calories')}`} />
-        <ProgressRing value={summary.protein} max={PROTEIN_GOAL} label={`🍖${t('dashboard_protein')}`} />
-        <ProgressRing value={summary.water} max={WATER_GOAL} label={`🚰${t('dashboard_water')}`} />
-      </div>
+      {goals.show_carbs_fat ? (
+        <div className="space-y-6">
+          {/* Row 1: Calorie and Water (Symmetric 2-column layout) */}
+          <div className="grid grid-cols-2 items-center w-full max-w-[80%] mx-auto">
+            <ProgressRing value={summary.calories} max={CALORIE_GOAL} label={`🔥${t('dashboard_calories')}`} />
+            <ProgressRing value={summary.water} max={WATER_GOAL} label={`🚰${t('dashboard_water')}`} />
+          </div>
+          {/* Row 2: Protein, Carbs, and Fat (Symmetric 3-column layout) */}
+          <div className="grid grid-cols-3 items-center w-full pt-2 border-t-2 border-dashed border-black/5">
+            <ProgressRing value={summary.protein} max={PROTEIN_GOAL} label={`🍖${t('dashboard_protein')}`} />
+            <ProgressRing value={summary.carbs || 0} max={CARBS_GOAL} label={`🍞${t('dashboard_carbs')}`} />
+            <ProgressRing value={summary.fat || 0} max={FAT_GOAL} label={`🥑${t('dashboard_fat')}`} />
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-3 items-center w-full">
+          <ProgressRing value={summary.calories} max={CALORIE_GOAL} label={`🔥${t('dashboard_calories')}`} />
+          <ProgressRing value={summary.protein} max={PROTEIN_GOAL} label={`🍖${t('dashboard_protein')}`} />
+          <ProgressRing value={summary.water} max={WATER_GOAL} label={`🚰${t('dashboard_water')}`} />
+        </div>
+      )}
     </NeoCard>
   );
 };
