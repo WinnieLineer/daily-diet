@@ -67,6 +67,7 @@ async function callSiliconFlow(apiKey, modelName, messages, options = {}) {
   const data = await response.json();
   const text = data.choices?.[0]?.message?.content;
   if (!text) throw new Error("Empty AI response");
+
   return text;
 }
 

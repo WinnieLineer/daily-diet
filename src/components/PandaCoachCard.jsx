@@ -3,6 +3,16 @@ import NeoCard from './NeoCard';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
 import { Flame } from 'lucide-react';
 import { t, getLanguage } from '../lib/translations';
+import { PandaSticker } from './PandaStickers';
+
+const EMOJI_TO_STICKER_ID = {
+  '🐼👑': 'crown',
+  '🐼🎋': 'bamboo',
+  '🐼☕': 'coffee',
+  '🐼💪': 'muscles',
+  '🐼🍕': 'pizza'
+};
+
 
 // ──────────────────────────────────────────────
 // Dialogue banks per interaction type
@@ -27,9 +37,9 @@ const DIALOGUES = {
       '記錄飲食的第一步是：承認你剛才吃了那個 🙄',
       '你以為不記錄熱量就不存在？ 哈，天真！',
       '你今天是不是還沒喝水？快去！ 🚰',
-      '💡 餵食熊貓教練兩塊錢，健康飲控一整天！設定區有良心商店喔 🐼💰',
-      '💡 這是一間誠實良心小舖，覺得好用歡迎到設定區支持我吃竹子 🎋💰',
-      '💡 免費沒廣告很佛吧？我們相信使用者的誠實！歡迎到設定區逛逛良心商店 🐼✨',
+      '💡 餵食熊貓教練兩塊錢，健康飲控一整天！設定區有良心燃料商店喔 🐼💰',
+      '💡 這是一間良心燃料商店，覺得好用歡迎到設定區支持我吃竹子 🎋💰',
+      '💡 免費沒廣告很佛吧？我們相信使用者的誠實！歡迎到設定區逛逛良心燃料商店 🐼✨',
     ],
     click: [
       '你按我幹嘛啦！ 😤',
@@ -154,7 +164,7 @@ function getRandom(arr) {
 }
 
 // High-quality Panda mascot designed with dynamic SVG to match the favicon's style without the background and with full expressiveness
-const PandaFace = ({ expression = 'normal', isSquished = false }) => {
+const PandaFace = ({ expression = 'normal', isSquished = false, hasCrown = false }) => {
   const scaleY = isSquished ? 0.92 : 1;
   const isHappy = expression === 'happy';
   const isSad = expression === 'sad';
@@ -209,6 +219,44 @@ const PandaFace = ({ expression = 'normal', isSquished = false }) => {
           {/* Leaf Vein */}
           <path d="M 0 0 Q 2 -8, 6 -13" stroke="#166534" strokeWidth="1" strokeLinecap="round" opacity="0.5"/>
         </g>
+
+        {/* Golden Crown for Support Sponsors */}
+        {hasCrown && (
+          <g transform="translate(50, 11) scale(0.65) translate(-20, -22) rotate(6)">
+            {/* Crown shadow */}
+            <path 
+              d="M 2 24 L 6 8 L 13 17 L 20 5 L 27 17 L 34 8 L 38 24 Z" 
+              fill="rgba(0,0,0,0.15)" 
+            />
+            {/* Gold crown base */}
+            <path 
+              d="M 4 22 L 8 6 L 15 15 L 22 3 L 29 15 L 36 6 L 40 22 Z" 
+              fill="#fbbf24" 
+              stroke="#000" 
+              strokeWidth="3" 
+              strokeLinejoin="round" 
+            />
+            {/* Highlights */}
+            <path 
+              d="M 5 20 L 7 8 L 14 16 L 22 5 L 30 16 L 37 8 L 39 20" 
+              fill="none" 
+              stroke="#fff" 
+              strokeWidth="1.5" 
+              strokeLinecap="round" 
+              opacity="0.75" 
+            />
+            {/* Crown bottom band */}
+            <rect x="3" y="21" width="38" height="4" rx="2" fill="#d97706" stroke="#000" strokeWidth="3" />
+            {/* Jewels */}
+            <circle cx="8" cy="6" r="2.5" fill="#ef4444" stroke="#000" strokeWidth="1.2" />
+            <circle cx="22" cy="3" r="3" fill="#3b82f6" stroke="#000" strokeWidth="1.5" />
+            <circle cx="36" cy="6" r="2.5" fill="#ef4444" stroke="#000" strokeWidth="1.2" />
+            {/* Jewel on band */}
+            <circle cx="12" cy="23" r="1.5" fill="#3b82f6" />
+            <circle cx="22" cy="23" r="1.8" fill="#22c55e" />
+            <circle cx="32" cy="23" r="1.5" fill="#3b82f6" />
+          </g>
+        )}
 
         {/* Face */}
         <ellipse cx="50" cy="56" rx="44" ry="40" fill="url(#faceGrad)" stroke="#e4e4e7" strokeWidth="1" />
@@ -348,6 +396,8 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
   const [isSquished, setIsSquished]     = useState(false);
   const [particles, setParticles]       = useState([]);
   const [isDragging, setIsDragging] = useState(false);
+  const [hasCrown, setHasCrown]     = useState(() => localStorage.getItem('panda_sponsor_crown') === 'true');
+  const [activeSticker, setActiveSticker] = useState(() => localStorage.getItem('panda_active_sticker') || '');
   const [initialPos, setInitialPos] = useState(() => {
     try {
       const saved = localStorage.getItem('panda_position');
@@ -357,6 +407,22 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
       return { x: 0, y: 0 };
     }
   });
+
+  // Listen for crown & sticker updates from 良心商店
+  useEffect(() => {
+    const handleCrownChange = () => {
+      setHasCrown(localStorage.getItem('panda_sponsor_crown') === 'true');
+    };
+    const handleStickersChange = () => {
+      setActiveSticker(localStorage.getItem('panda_active_sticker') || '');
+    };
+    window.addEventListener('panda-crown-updated', handleCrownChange);
+    window.addEventListener('panda-stickers-updated', handleStickersChange);
+    return () => {
+      window.removeEventListener('panda-crown-updated', handleCrownChange);
+      window.removeEventListener('panda-stickers-updated', handleStickersChange);
+    };
+  }, []);
 
   const controls   = useAnimation();
   const pokeCount  = useRef(0);
@@ -581,14 +647,26 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
               onHoverEnd={handleTickleEnd}
               onContextMenu={handlePoke}
               whileTap={{ scale: 0.92 }}
-              className="w-full h-full outline-none"
+              className="w-full h-full outline-none relative"
               style={{ 
                 cursor: isDragging ? 'grabbing' : 'grab', 
                 touchAction: 'none',
                 WebkitTapHighlightColor: 'transparent'
               }}
             >
-              <PandaFace expression={expression} isSquished={isSquished} />
+              <PandaFace expression={expression} isSquished={isSquished} hasCrown={hasCrown} />
+              
+              {/* Exquisite Mascot Sticker Overlay */}
+              {EMOJI_TO_STICKER_ID[activeSticker] && (
+                <motion.div
+                  initial={{ scale: 0, rotate: -45 }}
+                  animate={{ scale: 1, rotate: 12 }}
+                  transition={{ type: 'spring', stiffness: 260, damping: 20 }}
+                  className="absolute bottom-[-4px] right-[-4px] w-6 h-6 sm:w-7 sm:h-7 z-[100]"
+                >
+                  <PandaSticker id={EMOJI_TO_STICKER_ID[activeSticker]} />
+                </motion.div>
+              )}
             </motion.div>
           </div>
 

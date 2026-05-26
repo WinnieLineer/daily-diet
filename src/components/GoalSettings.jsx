@@ -7,6 +7,8 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
+import { PandaSticker } from './PandaStickers';
+
 
 const VERSION_HISTORY = [
   { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
@@ -52,7 +54,102 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [gistIdInput, setGistIdInput] = useState(getCurrentGistId() || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [showGithubPat, setShowGithubPat] = useState(false);
-  
+
+  // 誠實支持商店擴展狀態
+  const [hasCrown, setHasCrown] = useState(localStorage.getItem('panda_sponsor_crown') === 'true');
+  const [hasStickers, setHasStickers] = useState(localStorage.getItem('panda_stickers_unlocked') === 'true');
+  const [activeSticker, setActiveSticker] = useState(() => localStorage.getItem('panda_active_sticker') || '');
+  const [selectedQr, setSelectedQr] = useState(null);
+
+  const isEn = getLanguage() === 'en';
+
+  const shopText = {
+    title: isEn ? "Conscience Fuel Store" : "良心燃料商店",
+    subtitle: isEn ? "SUPPORT SERVER & API COSTS" : "資助伺服器與 AI 額度開銷",
+    desc1: isEn
+      ? "Daily Diet is built with a no-login, no-ad, 100% free ethos. However, high-speed AI image recognition & data backup incur ongoing server and API token costs."
+      : "Daily Diet 是一款堅持無登入、無強制廣告、無付費牆的獨立 App。然而，高精度的 AI 影像辨識與雲端同步會產生真實的伺服器與 API 燃料開銷。",
+    desc2: isEn
+      ? "We are incredibly grateful for your companionship and support. If this app helps you on your health and diet journey, feel free to support its daily operations based on your usage to refuel our servers and feed Coach Panda some delicious bamboo! 🐼🎋"
+      : "我們非常感謝有您的陪伴與支持。若這款 App 確實為您的健康飲控帶來了幫助，歡迎依照您的用量支持它的日常運作，為熊貓教練補充一些美味竹子與伺服器燃料！🐼🎋",
+
+    // Pricing Cards
+    card1Title: isEn ? "AI Recognition Support" : "AI 辨識燃料罐",
+    card1Desc: isEn ? "Sponsor 200 high-speed AI recognitions" : "贊助 200 次 AI 辨識燃料",
+    card1Unit: isEn ? "NTD" : "元",
+    card2Title: isEn ? "Panda Lover" : "溫馨補給包",
+    card2Desc: isEn ? "Cover server costs for 1 month" : "資助教練一個月伺服器開銷",
+    card2Unit: isEn ? "NTD" : "元",
+    card3Title: isEn ? "Lifetime Hero" : "尊榮大罐頭",
+    card3Desc: isEn ? "Keep Daily Diet alive & growing!" : "超值支持！為教練補滿一年燃料",
+    card3Unit: isEn ? "NTD" : "元",
+    popular: isEn ? "HOT" : "熱門 🌟",
+
+    // Payment Section Title
+    channels: isEn ? "💳 HONEST SUPPORT CHANNELS (TAP QR TO ZOOM)" : "💳 誠實支持管道 (點擊圖片可放大掃碼)",
+    linebank: isEn ? "LINE Bank" : "LINE Bank (連線商業銀行)",
+    linebankCode: isEn ? "Code: 824 · Project Account" : "代碼: 824 · 專案支持帳戶",
+    ctbc: isEn ? "CTBC Bank" : "中國信託 (CTBC BANK)",
+    ctbcCode: isEn ? "Code: 822 · Account: 174533815287" : "中信代碼: 822 · 帳號: 174-53381528-7",
+    ctbcPay: isEn ? "CTBC Pay" : "中信付款 (CTBC Pay)",
+    ctbcPayDesc: isEn ? "Tap to Copy & Open APP 📱" : "點選複製並啟動網銀 APP 📱",
+    jkopay: isEn ? "JKOPAY" : "街口支付 (JKOPAY)",
+    jkopayCode: isEn ? "Code: 396 · Account: 904720058" : "街口代碼: 396 · 帳號: 904720058",
+    verified: isEn ? "Verified 🐼" : "已驗證 🐼",
+    copyAccount: isEn ? "📋 Copy Account" : "📋 複製帳號",
+    openLine: isEn ? "💬 Open LINE" : "💬 開啟 LINE",
+    openJko: isEn ? "🐷 Open JKO" : "🐷 開啟街口",
+    copiedAlert: isEn
+      ? "📋 Account copied to clipboard! Panda Coach thanks you for your support 🐼✨"
+      : "📋 帳號已複製！熊貓教練非常感謝您的溫馨支持 🐼✨",
+
+    // Crown section
+    crownTitle: isEn ? "Coach Panda's Honor Crown" : "熊貓教練的榮譽皇冠",
+    crownSubtitle: isEn ? "Exclusive Unlock for Supporters" : "贊助支持者專屬解鎖區",
+    crownDesc: isEn
+      ? "Supporters who sponsor coach's fuel can wear a shiny golden Honor Crown! Operating on a self-serve system, if you supported us, click to wear it proudly!"
+      : "支持教練特製補給罐頭或咖啡的贊助者，可以在這裡戴上象徵榮譽的黃金皇冠！我們採用自助解鎖設計，如果您已完成支持，請光榮地解鎖它！",
+    crownActive: isEn ? "👑 Crown Active! (Click to hide)" : "👑 已戴上皇冠 (點擊收起)",
+    crownInactive: isEn ? "✨ 自助解鎖榮譽皇冠 👑" : "✨ 自助解鎖榮譽皇冠 👑",
+    crownToastRemove: isEn ? "Honor crown packed away. Coach is always here! 🎋" : "已收起榮譽皇冠，熊貓教練隨時歡迎您的支持 🎋",
+    crownOath: isEn
+      ? "🎋 A Warm Message from Coach Panda\n\n\"Thank you so much for your support! Your kind contribution keeps this ad-free, login-free home alive and kicking!\"\n\nReady to put on the Golden Honor Crown?"
+      : "🎋 熊貓教練的溫馨小卡\n\n「非常感謝您的支持！您的溫馨補給是我們持續運作的最大動力，讓我們能繼續為您的健康把關！」\n\n準備好戴上榮譽黃金皇冠了嗎？",
+    crownToastUnlock: isEn
+      ? "🎉 Congratulations! The Golden Crown is now shining on Coach Panda's head! Go to the home screen to check it out! 👑🐼✨"
+      : "🎉 恭喜！榮譽黃金皇冠已成功戴在熊貓教練頭上！\n快回主畫面看看戴著皇冠的可愛教練吧 👑🐼✨",
+
+    // Sticker section
+    stickerTitle: isEn ? "Exclusive Panda Sticker Book" : "限定熊貓紀念貼紙簿",
+    stickerSubtitle: isEn ? "Interactive Mascot Stickers" : "贊助支持者專屬超萌貼紙",
+    stickerDesc: isEn
+      ? "For conscience fuel store supporters! Unlock 5 adorable 3D-style stickers. Tap any sticker to paste it directly onto Coach Panda on the main screen (tap again to remove)! Self-serve unlock 🎋"
+      : "支持良心燃料商店的贊助者專屬！解鎖 5 款超萌的立體限量紀念貼紙，點選任何一張貼紙，即可直接貼在主畫面的熊貓教練身上（再次點選即可拿掉），讓教練戴著貼紙陪您一起做飮控日記！採用自助解鎖設計 🎋",
+    sticker1Label: isEn ? "Crown Master" : "皇冠霸主",
+    sticker1Text: isEn ? "👑🐼✨ [Panda: Today, I am the ultimate calories controller!]" : "👑🐼✨ [熊貓教練：今天也是自律的熱量掌控者！]",
+    sticker2Label: isEn ? "Happy Eating" : "幸福爆吃",
+    sticker2Text: isEn ? "🐼🎋❤️ [Panda: Eat well to have energy for healthy fat loss!]" : "🐼🎋❤️ [熊貓教練：吃飽飽才有力氣健康減脂！]",
+    sticker3Label: isEn ? "Elegant Sir" : "優雅紳士",
+    sticker3Text: isEn ? "🐼☕🧐 [Panda: Had my coffee. Now my reviews are even sharper!]" : "🐼☕🧐 [熊貓教練：喝了咖啡，毒舌銳評更犀利！]",
+    sticker4Label: isEn ? "Get Buffed" : "熱血爆肌",
+    sticker4Text: isEn ? "🐼💪🔥 [Panda: No excuses! Get moving and burn those calories!]" : "🐼💪🔥 [熊貓教練：不要藉口！動起來燃燒熱量！]",
+    sticker5Label: isEn ? "Cheat Meal" : "放縱偷吃",
+    sticker5Text: isEn ? "🐼🍕🤫 [Panda: Shh! This cheat meal is fully approved by coach!]" : "🐼🍕🤫 [熊貓教練：嘘！這餐是教練特許的放縱餐！]",
+
+    stickerActive: isEn ? "🎁 Sticker Book Unlocked (Click to hide)" : "🎁 已收起貼紙簿 (點擊封存)",
+    stickerInactive: isEn ? "✨ 自助解鎖限定貼紙簿 🎁" : "✨ 自助解鎖限定貼紙簿 🎁",
+    stickerLockTip: isEn ? "🔒 This sticker is locked! Tap \"Unlock Custom Sticker Book\" below to access 🎋" : "🔒 此紀念貼紙尚未解鎖！請點選下方「自助解鎖限定貼紙簿」解鎖 🎋",
+    stickerCopied: isEn ? "🎉 Sticker applied to Coach Panda!" : "🎉 紀念貼紙已成功貼在熊貓教練身上囉！",
+    stickerToastUnlock: isEn ? "🎉 Success! The 5 custom 3D Panda stickers are unlocked! Tap any sticker to paste it directly onto Coach Panda! 🐼✨" : "🎉 恭喜！5 款超萌的「限定熊貓表情包 / 紀念貼紙」已成功解鎖！\n點選任何一張貼紙，即可直接貼在主畫面的熊貓教練身上囉 🐼✨",
+    stickerToastRemove: isEn ? "Sticker book packed away. Come back anytime! 🎋" : "已封存限定貼紙簿，隨時歡迎您的溫馨支持 🎋",
+
+    // Lightbox
+    bankHolderName: isEn ? "Shih-Ting Lin" : "林詩婷",
+    verifiedAccountBadge: isEn ? "Verified Supporter Account 🐼" : "【已驗證專案支持帳戶】",
+    conscienceStoreTitleBadge: isEn ? "Daily Diet Conscience Store 🎋" : "【每日飲食良心商店】",
+    closeWindow: isEn ? "Close 🐼" : "關閉視窗 🐼"
+  };
+
   const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV;
 
   useEffect(() => {
@@ -129,9 +226,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     const showCarbs = await db.settings.get('show_carbs_fat');
     const carbsGoal = await db.settings.get('carbs_goal');
     const fatGoal = await db.settings.get('fat_goal');
-    
-    setGoals({ 
-      calories: cal ? cal.value : 2000, 
+
+    setGoals({
+      calories: cal ? cal.value : 2000,
       protein: pro ? pro.value : 100,
       water: wat ? wat.value : 2500,
       fasting_enabled: fEn ? fEn.value : false,
@@ -168,15 +265,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     if (calc.goal === 'recomp') suggestedCals -= 200;
     if (calc.goal === 'gain') suggestedCals += 300;
     let suggestedPro = Number(calc.weight) * (calc.goal === 'recomp' ? 2.2 : calc.goal === 'lose' ? 2.0 : 1.8);
-    
+
     // Suggest Carbs and Fat values symmetrically
     const suggestedFat = (suggestedCals * 0.25) / 9;
     const suggestedCarb = (suggestedCals - (suggestedPro * 4) - (suggestedFat * 9)) / 4;
 
-    setGoals({ 
-      ...goals, 
-      calories: Math.round(suggestedCals), 
-      protein: Math.round(suggestedPro), 
+    setGoals({
+      ...goals,
+      calories: Math.round(suggestedCals),
+      protein: Math.round(suggestedPro),
       water: Math.round(Number(calc.weight) * 35),
       carbs: Math.round(suggestedCarb),
       fat: Math.round(suggestedFat)
@@ -231,10 +328,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       if (!data) { alert(t('no_cloud_backup')); setSyncStatus('error'); return; }
       await db.transaction('rw', db.dietLogs, db.weightLogs, db.settings, db.favorites, async () => {
         await db.dietLogs.clear(); await db.weightLogs.clear(); await db.settings.clear(); await db.favorites.clear();
-        if (data.dietLogs) await db.dietLogs.bulkAdd(data.dietLogs.map(({id, ...r}) => r));
-        if (data.weightLogs) await db.weightLogs.bulkAdd(data.weightLogs.map(({id, ...r}) => r));
+        if (data.dietLogs) await db.dietLogs.bulkAdd(data.dietLogs.map(({ id, ...r }) => r));
+        if (data.weightLogs) await db.weightLogs.bulkAdd(data.weightLogs.map(({ id, ...r }) => r));
         if (data.settings) await db.settings.bulkAdd(data.settings);
-        if (data.favorites) await db.favorites.bulkAdd(data.favorites.map(({id, ...r}) => r));
+        if (data.favorites) await db.favorites.bulkAdd(data.favorites.map(({ id, ...r }) => r));
       });
       if (data.localStorage) {
         Object.entries(data.localStorage).forEach(([key, value]) => { if (value !== null) localStorage.setItem(key, value); });
@@ -258,10 +355,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   return (
     <div className="relative">
-      <NeoButton 
-        data-settings-btn 
-        variant="white" 
-        onClick={() => setIsOpen(!isOpen)} 
+      <NeoButton
+        data-settings-btn
+        variant="white"
+        onClick={() => setIsOpen(!isOpen)}
         className="px-3"
       >
         <Settings size={20} />
@@ -269,14 +366,14 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
       <AnimatePresence>
         {isOpen && (
-          <motion.div 
+          <motion.div
             className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
           >
             <div className="absolute inset-0" onClick={() => setIsOpen(false)} />
-            <motion.div 
+            <motion.div
               className="relative bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh] pointer-events-auto"
               initial={{ scale: 0.95, y: 10 }}
               animate={{ scale: 1, y: 0 }}
@@ -359,7 +456,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <LayoutGrid size={20} />
                       <span className="font-black italic text-sm">{t('edit_layout')}</span>
                     </button>
-                    <button 
+                    <button
                       onClick={() => {
                         localStorage.setItem('panda_position', JSON.stringify({ x: 0, y: 0 }));
                         window.dispatchEvent(new CustomEvent('reset-panda-position'));
@@ -387,22 +484,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('height')} (cm)</label>
-                            <input 
-                              type="number" 
-                              placeholder="170" 
-                              value={calc.height} 
-                              onChange={e => setCalc({...calc, height: e.target.value})} 
-                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none" 
+                            <input
+                              type="number"
+                              placeholder="170"
+                              value={calc.height}
+                              onChange={e => setCalc({ ...calc, height: e.target.value })}
+                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none"
                             />
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('weight')} (kg)</label>
-                            <input 
-                              type="number" 
-                              placeholder="70" 
-                              value={calc.weight} 
-                              onChange={e => setCalc({...calc, weight: e.target.value})} 
-                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none" 
+                            <input
+                              type="number"
+                              placeholder="70"
+                              value={calc.weight}
+                              onChange={e => setCalc({ ...calc, weight: e.target.value })}
+                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none"
                             />
                           </div>
                         </div>
@@ -410,19 +507,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="grid grid-cols-2 gap-3">
                           <div>
                             <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('age')}</label>
-                            <input 
-                              type="number" 
-                              placeholder="25" 
-                              value={calc.age} 
-                              onChange={e => setCalc({...calc, age: e.target.value})} 
-                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none" 
+                            <input
+                              type="number"
+                              placeholder="25"
+                              value={calc.age}
+                              onChange={e => setCalc({ ...calc, age: e.target.value })}
+                              className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 text-left outline-none"
                             />
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('gender')}</label>
-                            <select 
-                              value={calc.gender} 
-                              onChange={e => setCalc({...calc, gender: e.target.value})} 
+                            <select
+                              value={calc.gender}
+                              onChange={e => setCalc({ ...calc, gender: e.target.value })}
                               className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 outline-none text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-8"
                             >
                               <option value="male">{t('male')}</option>
@@ -433,9 +530,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                         <div>
                           <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('activity_level')}</label>
-                          <select 
-                            value={calc.activity} 
-                            onChange={e => setCalc({...calc, activity: Number(e.target.value)})} 
+                          <select
+                            value={calc.activity}
+                            onChange={e => setCalc({ ...calc, activity: Number(e.target.value) })}
                             className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 outline-none text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-8"
                           >
                             <option value={1.2}>{t('activity_sedentary')}</option>
@@ -448,9 +545,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                         <div>
                           <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('fitness_goal')}</label>
-                          <select 
-                            value={calc.goal} 
-                            onChange={e => setCalc({...calc, goal: e.target.value})} 
+                          <select
+                            value={calc.goal}
+                            onChange={e => setCalc({ ...calc, goal: e.target.value })}
                             className="w-full border-2 border-black p-2.5 rounded-xl font-bold bg-zinc-50 outline-none text-sm appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-8"
                           >
                             <option value="maintain">{t('goal_maintain')}</option>
@@ -466,11 +563,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <div className="space-y-4">
                       <div>
                         <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label>
-                        <input type="number" value={goals.calories} onChange={e => setGoals({...goals, calories: e.target.value})} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
+                        <input type="number" value={goals.calories} onChange={e => setGoals({ ...goals, calories: e.target.value })} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
                       <div>
                         <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label>
-                        <input type="number" value={goals.protein} onChange={e => setGoals({...goals, protein: e.target.value})} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
+                        <input type="number" value={goals.protein} onChange={e => setGoals({ ...goals, protein: e.target.value })} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
 
                       {/* Carb & Fat Toggle Switch */}
@@ -482,9 +579,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             <div className="text-[9px] font-bold text-zinc-400 mt-0.5">{t('show_carbs_fat_hint')}</div>
                           </div>
                         </div>
-                        <button 
+                        <button
                           type="button"
-                          onClick={() => setGoals({...goals, show_carbs_fat: !goals.show_carbs_fat})} 
+                          onClick={() => setGoals({ ...goals, show_carbs_fat: !goals.show_carbs_fat })}
                           className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors shrink-0 ${goals.show_carbs_fat ? 'bg-black' : 'bg-zinc-200'}`}
                         >
                           <div className={`w-4 h-4 rounded-full bg-white border-2 border-black absolute top-0.5 transition-all ${goals.show_carbs_fat ? 'left-6' : 'left-0.5'}`} />
@@ -493,27 +590,27 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                       {/* Carb & Fat Goal Inputs */}
                       {goals.show_carbs_fat && (
-                        <motion.div 
-                          initial={{ opacity: 0, height: 0 }} 
-                          animate={{ opacity: 1, height: "auto" }} 
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
                           className="grid grid-cols-2 gap-4 mt-2 overflow-hidden"
                         >
                           <div>
                             <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('carbs_goal')}</label>
-                            <input 
-                              type="number" 
-                              value={goals.carbs} 
-                              onChange={e => setGoals({...goals, carbs: e.target.value})} 
-                              className="w-full border-2 border-black p-3 rounded-xl font-black text-xl bg-white" 
+                            <input
+                              type="number"
+                              value={goals.carbs}
+                              onChange={e => setGoals({ ...goals, carbs: e.target.value })}
+                              className="w-full border-2 border-black p-3 rounded-xl font-black text-xl bg-white"
                             />
                           </div>
                           <div>
                             <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('fat_goal')}</label>
-                            <input 
-                              type="number" 
-                              value={goals.fat} 
-                              onChange={e => setGoals({...goals, fat: e.target.value})} 
-                              className="w-full border-2 border-black p-3 rounded-xl font-black text-xl bg-white" 
+                            <input
+                              type="number"
+                              value={goals.fat}
+                              onChange={e => setGoals({ ...goals, fat: e.target.value })}
+                              className="w-full border-2 border-black p-3 rounded-xl font-black text-xl bg-white"
                             />
                           </div>
                         </motion.div>
@@ -523,10 +620,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="pt-2">
                           <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('settings_api_key')}</label>
                           <div className="relative">
-                            <input 
-                              type="text" 
-                              value={apiKey} 
-                              onChange={e => setApiKey(e.target.value)} 
+                            <input
+                              type="text"
+                              value={apiKey}
+                              onChange={e => setApiKey(e.target.value)}
                               style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' }}
                               className="w-full border-2 border-black p-3 pr-12 rounded-xl font-bold text-sm bg-zinc-50 focus:bg-white transition-all"
                               placeholder="AI_..."
@@ -558,7 +655,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <Clock className="text-black" size={24} />
                         <span className="font-black italic">{t('fasting_mode')}</span>
                       </div>
-                      <button onClick={() => setGoals({...goals, fasting_enabled: !goals.fasting_enabled})} className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${goals.fasting_enabled ? 'bg-black' : 'bg-zinc-200'}`}>
+                      <button onClick={() => setGoals({ ...goals, fasting_enabled: !goals.fasting_enabled })} className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors ${goals.fasting_enabled ? 'bg-black' : 'bg-zinc-200'}`}>
                         <div className={`w-4 h-4 rounded-full bg-white border-2 border-black absolute top-0.5 transition-all ${goals.fasting_enabled ? 'left-6' : 'left-0.5'}`} />
                       </button>
                     </div>
@@ -566,12 +663,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <div className="flex items-center justify-center gap-3 bg-white border-2 border-dashed border-black/10 p-4 rounded-2xl">
                         <div className="flex-1 max-w-[120px] space-y-1">
                           <label className="text-[9px] font-black uppercase text-zinc-400 block text-center">{t('fasting_start')}</label>
-                          <input type="time" value={goals.fasting_start} onChange={e => setGoals({...goals, fasting_start: e.target.value})} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-xs bg-zinc-50 text-center" />
+                          <input type="time" value={goals.fasting_start} onChange={e => setGoals({ ...goals, fasting_start: e.target.value })} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-xs bg-zinc-50 text-center" />
                         </div>
                         <div className="text-black font-black mt-4">~</div>
                         <div className="flex-1 max-w-[120px] space-y-1">
                           <label className="text-[9px] font-black uppercase text-zinc-400 block text-center">{t('fasting_end')}</label>
-                          <input type="time" value={goals.fasting_end} onChange={e => setGoals({...goals, fasting_end: e.target.value})} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-xs bg-zinc-50 text-center" />
+                          <input type="time" value={goals.fasting_end} onChange={e => setGoals({ ...goals, fasting_end: e.target.value })} className="w-full border-2 border-black p-1.5 rounded-xl font-bold text-xs bg-zinc-50 text-center" />
                         </div>
                       </div>
                     )}
@@ -580,50 +677,50 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                 )}
 
                 {activeTab === 'shop' && (
-                  <div className="space-y-6 text-left">
+                  <div className="space-y-6 text-left animate-fade-in">
                     {/* Header Intro Card - Elegant Warm Sunset Clay Style */}
                     <div className="p-6 border-4 border-black rounded-[2.5rem] bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-100 shadow-neo relative overflow-hidden group">
                       {/* 3D coin background decoration */}
                       <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-300/20 border-4 border-dashed border-amber-500/30 rounded-full flex items-center justify-center font-black text-2xl text-amber-500/40 select-none transform rotate-12 transition-transform duration-700 group-hover:rotate-45" />
-                      
+
                       <div className="flex items-center gap-4 mb-4 relative z-10">
                         <div className="w-14 h-14 bg-black border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-sm transform -rotate-3 hover:rotate-3 transition-transform duration-300">
                           <span className="text-3xl animate-bounce">🪙</span>
                         </div>
                         <div>
-                          <h3 className="font-black italic text-2xl tracking-tight leading-none uppercase text-black">誠實良心小舖</h3>
-                          <span className="text-[9px] font-black tracking-widest uppercase text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full border border-amber-300 mt-1 inline-block">HONESTY SYSTEM</span>
+                          <h3 className="font-black italic text-2xl tracking-tight leading-none uppercase text-black">{shopText.title}</h3>
+                          <span className="text-[9px] font-black tracking-widest uppercase text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full border border-amber-300 mt-1 inline-block">{shopText.subtitle}</span>
                         </div>
                       </div>
                       <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed relative z-10">
-                        Daily Diet 是一款堅持<strong>無廣告、無強制付費</strong>的獨立 App。
+                        {shopText.desc1}
                       </p>
                       <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed mt-2.5 relative z-10">
-                        我們非常珍視與每位使用者之間的「誠實與信任」。若這個 App 確實為您的健康飲控帶來了幫助，歡迎依照您的心意，自由投幣支持它的日常運作與維護。
+                        {shopText.desc2}
                       </p>
                     </div>
 
                     {/* Pricing Cards Grid - 3D Punched Ticket Style */}
                     <div className="grid grid-cols-3 gap-3">
                       {[
-                        { title: '一日良心價', price: '2', unit: '元', desc: '每天只要 2 元，小資無負擔', color: 'from-emerald-50 to-teal-100/50', accent: 'bg-emerald-400' },
-                        { title: '單月溫馨價', price: '50', unit: '元', desc: '省下一杯手搖，支持一整月', color: 'from-rose-50 to-pink-100/50', accent: 'bg-rose-400' },
-                        { title: '全年優惠價', price: '150', unit: '元', desc: '不到一份便當，健康一整年', color: 'from-amber-50 to-yellow-100/50', accent: 'bg-amber-400', popular: true }
+                        { title: shopText.card1Title, price: '30', unit: shopText.card1Unit, desc: shopText.card1Desc, color: 'from-emerald-50 to-teal-100/50', accent: 'bg-emerald-400' },
+                        { title: shopText.card2Title, price: '50', unit: shopText.card2Unit, desc: shopText.card2Desc, color: 'from-rose-50 to-pink-100/50', accent: 'bg-rose-400' },
+                        { title: shopText.card3Title, price: '150', unit: shopText.card3Unit, desc: shopText.card3Desc, color: 'from-amber-50 to-yellow-100/50', accent: 'bg-amber-400', popular: true }
                       ].map((item, idx) => (
-                        <div 
-                          key={idx} 
+                        <div
+                          key={idx}
                           className={`relative p-3.5 border-4 border-black rounded-[1.8rem] bg-gradient-to-br ${item.color} shadow-neo flex flex-col justify-between text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden group`}
                         >
                           {item.popular && (
                             <div className="absolute top-0 right-0 bg-black text-white text-[7px] font-black uppercase tracking-widest px-2.5 py-1 rounded-bl-xl border-l-2 border-b-2 border-black z-10 flex items-center gap-0.5">
-                              熱門 🌟
+                              {shopText.popular}
                             </div>
                           )}
                           <div className="space-y-1 relative z-10">
                             {/* Ticket punched notches on left and right */}
                             <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
                             <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
-                            
+
                             <div className="font-black text-[9px] uppercase tracking-widest text-zinc-500">{item.title}</div>
                             <div className="flex items-baseline justify-center gap-0.5">
                               <span className="font-black text-3xl italic tracking-tight text-black">{item.price}</span>
@@ -639,11 +736,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                     {/* Payment Sections */}
                     <div className="space-y-4">
+                      {/* Section Title */}
+                      <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">
+                        {shopText.channels}
+                      </div>
+
                       {/* Bank Transfer Box - Luxury Black Card Style */}
                       <div className="p-1 border-4 border-black rounded-[2rem] bg-black shadow-neo relative overflow-hidden group">
-                        {/* Background light reflections */}
                         <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none transition-transform duration-1000 group-hover:translate-x-full" />
-                        
+
                         <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 p-5 rounded-[1.8rem] space-y-4 relative z-10">
                           <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
@@ -651,11 +752,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 <span className="text-sm">💳</span>
                               </div>
                               <div className="text-left">
-                                <div className="text-[10px] font-black uppercase text-amber-400 tracking-wider">PREMIUM BANK TRANSFER</div>
-                                <div className="text-[8px] font-bold text-zinc-500">方式一：銀行帳戶轉帳支持</div>
+                                <div className="text-[10px] font-black uppercase text-amber-400 tracking-wider">{shopText.linebank}</div>
+                                <div className="text-[8px] font-bold text-zinc-500">{shopText.linebankCode}</div>
                               </div>
                             </div>
-                            {/* Metallic Bank Chip Illustration */}
                             <div className="w-9 h-7 rounded-md bg-gradient-to-br from-zinc-300 via-zinc-400 to-zinc-500 border border-zinc-600 relative overflow-hidden shadow-inner flex flex-col justify-around p-1 opacity-80">
                               <div className="h-[1px] bg-zinc-800/40 w-full" />
                               <div className="h-[1px] bg-zinc-800/40 w-full" />
@@ -663,103 +763,262 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             </div>
                           </div>
 
-                          {/* Account Number Area */}
-                          <div className="flex items-center justify-between gap-4 py-2 border-y border-zinc-800/60">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 border-y border-zinc-800/60">
                             <div className="space-y-1 text-left">
                               <div className="text-xs font-black text-zinc-300 tracking-wider flex items-center gap-1.5">
-                                {BANK_INFO.bankName} 
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold border border-zinc-700">{BANK_INFO.bankCode}</span>
+                                LINE Bank
+                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold border border-zinc-700">824</span>
                               </div>
                               <div className="text-xl font-black italic tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] font-mono selection:bg-amber-400 selection:text-black">
-                                {BANK_INFO.accountNumber}
-                              </div>
-                              <div className="text-[10px] font-black text-zinc-400 flex items-center gap-1">
-                                <span>戶名：</span>
-                                <span className="text-zinc-200">{BANK_INFO.accountHolder}</span>
+                                111000977323
                               </div>
                             </div>
-                            
-                            <button 
+
+                            <button
                               onClick={() => {
-                                navigator.clipboard.writeText(BANK_INFO.rawAccount);
-                                alert('帳號已複製！可以開啟網銀轉帳囉 🐼💳');
+                                navigator.clipboard.writeText("111000977323");
+                                alert(shopText.copiedAlert);
                               }}
-                              className="bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase px-4 py-3 rounded-2xl flex items-center gap-1.5 active:scale-95 transition-all shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] border-2 border-black shrink-0"
+                              className="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase px-4 py-3 rounded-2xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] border-2 border-black shrink-0 mt-1 sm:mt-0"
                             >
-                              <Copy size={12} strokeWidth={3} /> 複製帳號
+                              <Copy size={12} strokeWidth={3} /> {isEn ? "Copy" : "複製帳號"}
                             </button>
                           </div>
-                          
-                          <p className="text-[8px] font-bold text-zinc-500 text-left">
-                            ※ 帳號已進行防呆處理，點擊「複製帳號」按鈕後即可直接在網銀貼上轉帳。
-                          </p>
                         </div>
                       </div>
 
-                      {/* LINE Pay / Jkos Grid - Polaroid Card Style */}
+                      {/* CTBC / Jkopay Grid - Polaroid Card Style */}
                       <div className="grid grid-cols-2 gap-4">
-                        {/* LINE Pay Polaroid */}
-                        <div className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform -rotate-1 hover:rotate-0 transition-all duration-300 relative group/line">
+                        {/* CTBC Pay Polaroid */}
+                        <div
+                          onClick={() => setSelectedQr({ title: shopText.ctbcPay, src: import.meta.env.BASE_URL + 'ctbc_qr.png' })}
+                          className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform -rotate-1 hover:rotate-0 hover:-translate-y-1 transition-all duration-300 relative group/line cursor-pointer"
+                        >
                           <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
                           <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
-                          
-                          <div className="flex items-center gap-1.5 mb-3 bg-emerald-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                            <h4 className="font-black text-[9px] text-emerald-800 tracking-wider">LINE Pay 轉帳</h4>
+
+                          <div className="flex items-center gap-1.5 mb-3 bg-teal-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
+                            <span className="w-1.5 h-1.5 rounded-full bg-[#008687] animate-pulse" />
+                            <h4 className="font-black text-[9px] text-[#008687] tracking-wider">{shopText.ctbcPay}</h4>
                           </div>
-                          
+
                           <div className="w-28 h-28 bg-zinc-50 border-4 border-black rounded-2xl p-2 flex items-center justify-center relative overflow-hidden shadow-inner group-hover/line:scale-[1.03] transition-transform">
-                            {/* Glass sheen overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover/line:opacity-100 transition-opacity" />
-                            <img 
-                              src="/linepay_qr.png" 
+                            <img
+                              src={import.meta.env.BASE_URL + 'ctbc_qr.png'}
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                               }}
                               className="w-full h-full object-contain filter contrast-125"
-                              alt="LINE Pay QR" 
+                              alt="CTBC Pay QR"
                             />
                             <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
                               <span className="text-xl mb-1">📲</span>
-                              <span className="text-[7px] font-black leading-tight text-zinc-500">放於 public/<br/>linepay_qr.png</span>
+                              <span className="text-[7px] font-black leading-tight text-zinc-500">CTBC QR</span>
                             </div>
                           </div>
-                          <p className="text-[8px] font-bold text-zinc-400 mt-3 leading-relaxed">
-                            開啟 LINE 掃描器<br/>即可一鍵投幣支持
+                          <p className="text-[8px] font-black text-zinc-500 mt-3 leading-relaxed">
+                            {shopText.ctbcPayDesc}
                           </p>
                         </div>
 
                         {/* Jkos Polaroid */}
-                        <div className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform rotate-1 hover:rotate-0 transition-all duration-300 relative group/jkos">
+                        <div
+                          onClick={() => setSelectedQr({ title: shopText.jkopay, src: import.meta.env.BASE_URL + 'jkopay_qr.jpg' })}
+                          className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform rotate-1 hover:rotate-0 hover:-translate-y-1 transition-all duration-300 relative group/jkos cursor-pointer"
+                        >
                           <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
                           <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
-                          
+
                           <div className="flex items-center gap-1.5 mb-3 bg-rose-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
                             <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                            <h4 className="font-black text-[9px] text-rose-800 tracking-wider">街口支付 轉帳</h4>
+                            <h4 className="font-black text-[9px] text-rose-800 tracking-wider">{shopText.jkopay}</h4>
                           </div>
-                          
+
                           <div className="w-28 h-28 bg-zinc-50 border-4 border-black rounded-2xl p-2 flex items-center justify-center relative overflow-hidden shadow-inner group-hover/jkos:scale-[1.03] transition-transform">
-                            {/* Glass sheen overlay */}
-                            <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent opacity-0 group-hover/jkos:opacity-100 transition-opacity" />
-                            <img 
-                              src="/jkos_qr.png" 
+                            <img
+                              src={import.meta.env.BASE_URL + 'jkopay_qr.jpg'}
                               onError={(e) => {
                                 e.target.style.display = 'none';
                                 e.target.nextSibling.style.display = 'flex';
                               }}
                               className="w-full h-full object-contain filter contrast-125"
-                              alt="街口支付 QR" 
+                              alt="街口支付 QR"
                             />
                             <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
                               <span className="text-xl mb-1">📲</span>
-                              <span className="text-[7px] font-black leading-tight text-zinc-500">放於 public/<br/>jkos_qr.png</span>
+                              <span className="text-[7px] font-black leading-tight text-zinc-500">JKOPAY QR</span>
                             </div>
                           </div>
-                          <p className="text-[8px] font-bold text-zinc-400 mt-3 leading-relaxed">
-                            開啟街口 App 掃描<br/>即可快速完成付款
+                          <p className="text-[8px] font-black text-zinc-500 mt-3 leading-relaxed">
+                            {isEn ? "Tap JKOPAY QR" : "點選放大街口二維碼"}
                           </p>
+                        </div>
+                      </div>
+
+                      {/* Sponsor Crown Honesty Unlock Panel */}
+                      <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-4 border-black rounded-2xl shadow-neo-xs space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-amber-400 rounded-xl border-2 border-black flex items-center justify-center text-xl shadow-neo-xs-black">
+                            👑
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-black text-xs">{shopText.crownTitle}</div>
+                            <div className="text-[9px] font-bold text-amber-700">{shopText.crownSubtitle}</div>
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] text-zinc-600 font-bold leading-relaxed text-left">
+                          {shopText.crownDesc}
+                        </p>
+
+                        <div className="flex gap-2">
+                          {hasCrown ? (
+                            <button
+                              onClick={() => {
+                                localStorage.removeItem('panda_sponsor_crown');
+                                setHasCrown(false);
+                                window.dispatchEvent(new CustomEvent('panda-crown-updated'));
+                                alert(shopText.crownToastRemove);
+                              }}
+                              className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform animate-fade-in"
+                            >
+                              {shopText.crownActive}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const confirmUnlock = window.confirm(shopText.crownOath);
+                                if (confirmUnlock) {
+                                  localStorage.setItem('panda_sponsor_crown', 'true');
+                                  setHasCrown(true);
+                                  window.dispatchEvent(new CustomEvent('panda-crown-updated'));
+                                  alert(shopText.crownToastUnlock);
+                                }
+                              }}
+                              className="w-full bg-amber-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs-black transition-transform flex items-center justify-center gap-1.5"
+                            >
+                              {shopText.crownInactive}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Limited Edition stickers & Emojis Unlock Panel */}
+                      <div className="p-4 bg-gradient-to-r from-teal-50 to-emerald-50 border-4 border-black rounded-2xl shadow-neo-xs space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-emerald-400 rounded-xl border-2 border-black flex items-center justify-center text-xl shadow-neo-xs-black">
+                            🎁
+                          </div>
+                          <div className="flex-1 text-left">
+                            <div className="font-black text-xs">{shopText.stickerTitle}</div>
+                            <div className="text-[9px] font-bold text-emerald-700">{shopText.stickerSubtitle}</div>
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] text-zinc-600 font-bold leading-relaxed text-left">
+                          {shopText.stickerDesc}
+                        </p>
+
+                        {/* Stickers Grid */}
+                        <div className="grid grid-cols-5 gap-1.5 py-1">
+                          {[
+                            { id: 'crown', emoji: '🐼👑', label: shopText.sticker1Label, text: shopText.sticker1Text },
+                            { id: 'bamboo', emoji: '🐼🎋', label: shopText.sticker2Label, text: shopText.sticker2Text },
+                            { id: 'coffee', emoji: '🐼☕', label: shopText.sticker3Label, text: shopText.sticker3Text },
+                            { id: 'muscles', emoji: '🐼💪', label: shopText.sticker4Label, text: shopText.sticker4Text },
+                            { id: 'pizza', emoji: '🐼🍕', label: shopText.sticker5Label, text: shopText.sticker5Text }
+                          ].map((sticker, idx) => {
+                            const isActive = activeSticker === sticker.emoji;
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => {
+                                  if (!hasStickers) {
+                                    alert(shopText.stickerLockTip);
+                                    return;
+                                  }
+                                  const currentActive = localStorage.getItem('panda_active_sticker');
+                                  if (currentActive === sticker.emoji) {
+                                    localStorage.removeItem('panda_active_sticker');
+                                    setActiveSticker('');
+                                    alert(isEn ? "Sticker removed 🎋" : "已將貼紙收起囉 🎋");
+                                  } else {
+                                    localStorage.setItem('panda_active_sticker', sticker.emoji);
+                                    setActiveSticker(sticker.emoji);
+                                    alert(isEn 
+                                      ? "🎉 Sticker pasted onto Coach Panda! Go back to the main screen to check it out! 🐼✨"
+                                      : "🎉 已將紀念貼紙貼在熊貓教練身上囉！快回到主畫面看看吧 🐼✨"
+                                    );
+                                  }
+                                  window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
+                                }}
+                                className={`relative p-2.5 rounded-2xl border-2 border-black flex flex-col items-center justify-center transition-all duration-300 ${
+                                  hasStickers
+                                    ? isActive
+                                      ? 'bg-amber-100 ring-2 ring-amber-400 scale-105 shadow-neo-sm rotate-3 cursor-pointer'
+                                      : 'bg-white hover:-translate-y-1 hover:rotate-2 shadow-neo-xs cursor-pointer active:scale-95'
+                                    : 'bg-zinc-100 filter grayscale opacity-60 border-dashed cursor-not-allowed'
+                                }`}
+                              >
+                                <div className="w-10 h-10 mb-1 select-none flex items-center justify-center">
+                                  {hasStickers ? (
+                                    <PandaSticker id={sticker.id} className="w-full h-full" />
+                                  ) : (
+                                    <span className="text-2xl filter grayscale opacity-45">{sticker.emoji}</span>
+                                  )}
+                                </div>
+                                <span className="text-[7px] font-black text-zinc-500 whitespace-nowrap">{sticker.label}</span>
+                                
+                                {/* Lock Overlay */}
+                                {!hasStickers && (
+                                  <div className="absolute inset-0 bg-black/5 rounded-xl flex items-center justify-center text-[10px]">
+                                    🔒
+                                  </div>
+                                )}
+
+                                {/* Bouncing Active Star Sparkle */}
+                                {hasStickers && isActive && (
+                                  <div className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-emerald-400 border border-black rounded-full flex items-center justify-center text-[8px] font-black shadow-neo-xs-black animate-bounce z-10">
+                                    ✨
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        <div className="flex gap-2">
+                          {hasStickers ? (
+                            <button
+                              onClick={() => {
+                                localStorage.removeItem('panda_stickers_unlocked');
+                                localStorage.removeItem('panda_active_sticker');
+                                setHasStickers(false);
+                                setActiveSticker('');
+                                window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
+                                alert(shopText.stickerToastRemove);
+                              }}
+                              className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform"
+                            >
+                              {shopText.stickerActive}
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => {
+                                const confirmUnlock = window.confirm(shopText.stickerDesc);
+                                if (confirmUnlock) {
+                                  localStorage.setItem('panda_stickers_unlocked', 'true');
+                                  setHasStickers(true);
+                                  window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
+                                  alert(shopText.stickerToastUnlock);
+                                }
+                              }}
+                              className="w-full bg-emerald-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs-black transition-transform flex items-center justify-center gap-1.5"
+                            >
+                              {shopText.stickerInactive}
+                            </button>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -779,7 +1038,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <Database size={18} className="text-black" />
                         <h4 className="font-black italic text-sm uppercase tracking-tighter">{t('data_stats_header')}</h4>
                       </div>
-                      
+
                       <div className="grid grid-cols-2 gap-4 mb-4">
                         <div className="bg-white border-2 border-black p-3 rounded-2xl">
                           <div className="text-[8px] font-black text-zinc-400 uppercase mb-1">{t('data_usage_local')}</div>
@@ -805,17 +1064,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     </div>
 
                     <div className="grid grid-cols-2 gap-4">
-                      <button 
-                        onClick={handleCloudBackup} 
-                        disabled={syncStatus === 'syncing'} 
+                      <button
+                        onClick={handleCloudBackup}
+                        disabled={syncStatus === 'syncing'}
                         className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-emerald-50 hover:bg-emerald-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
                       >
                         {syncStatus === 'syncing' ? <Loader2 size={24} className="text-emerald-600 animate-spin" /> : <Upload size={24} className="text-emerald-600" />}
                         <span className="text-[10px] font-black uppercase">{t('backup_to_gist') || "Backup to Gist"}</span>
                       </button>
-                      <button 
-                        onClick={handleCloudRestore} 
-                        disabled={syncStatus === 'syncing'} 
+                      <button
+                        onClick={handleCloudRestore}
+                        disabled={syncStatus === 'syncing'}
                         className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-amber-50 hover:bg-amber-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
                       >
                         {syncStatus === 'syncing' ? <Loader2 size={24} className="text-amber-600 animate-spin" /> : <RotateCcw size={24} className="text-amber-600" />}
@@ -828,12 +1087,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         {t('gist_id_label') || "GITHUB GIST ID"}
                       </label>
                       <div className="flex gap-2">
-                        <input 
-                          type="text" 
-                          value={gistIdInput} 
-                          onChange={e => setGistIdInput(e.target.value)} 
+                        <input
+                          type="text"
+                          value={gistIdInput}
+                          onChange={e => setGistIdInput(e.target.value)}
                           placeholder="e.g. 1a2b3c4d5e6f..."
-                          className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none" 
+                          className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none"
                         />
                         {getCurrentGistId() && (
                           <button
@@ -842,15 +1101,14 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               setCopiedGistId(true);
                               setTimeout(() => setCopiedGistId(false), 2000);
                             }}
-                            className={`px-3 rounded-xl border-4 border-black font-black italic text-xs active:scale-95 transition-colors ${
-                              copiedGistId ? 'bg-emerald-400 text-black' : 'bg-white text-black'
-                            }`}
+                            className={`px-3 rounded-xl border-4 border-black font-black italic text-xs active:scale-95 transition-colors ${copiedGistId ? 'bg-emerald-400 text-black' : 'bg-white text-black'
+                              }`}
                             title="Copy Gist ID"
                           >
                             {copiedGistId ? <Check size={16} strokeWidth={3} /> : <Copy size={16} strokeWidth={3} />}
                           </button>
                         )}
-                        <button 
+                        <button
                           onClick={handleManualGistIdSave}
                           className="bg-black text-white px-4 rounded-xl font-black italic text-xs active:scale-95"
                         >
@@ -870,12 +1128,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           </label>
                           <div className="flex gap-2 w-full">
                             <div className="flex-1 relative">
-                              <input 
-                                type="text" 
-                                value={apiKey} 
-                                onChange={e => setApiKey(e.target.value)} 
+                              <input
+                                type="text"
+                                value={apiKey}
+                                onChange={e => setApiKey(e.target.value)}
                                 style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' }}
-                                className="w-full bg-white border-4 border-black p-3 pr-10 rounded-xl font-bold text-xs shadow-neo-xs outline-none" 
+                                className="w-full bg-white border-4 border-black p-3 pr-10 rounded-xl font-bold text-xs shadow-neo-xs outline-none"
                                 autoComplete="off"
                               />
                               <button
@@ -886,7 +1144,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 {showApiKey ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
                             </div>
-                            <button 
+                            <button
                               onClick={async () => {
                                 await db.settings.put({ key: 'user_api_key', value: apiKey });
                                 alert('API Key Saved');
@@ -904,12 +1162,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           </label>
                           <div className="flex gap-2 w-full">
                             <div className="flex-1 relative">
-                              <input 
-                                type="text" 
-                                value={githubPat} 
-                                onChange={e => setGithubPat(e.target.value)} 
+                              <input
+                                type="text"
+                                value={githubPat}
+                                onChange={e => setGithubPat(e.target.value)}
                                 style={{ WebkitTextSecurity: showGithubPat ? 'none' : 'disc' }}
-                                className="w-full bg-white border-4 border-black p-3 pr-10 rounded-xl font-bold text-xs shadow-neo-xs outline-none" 
+                                className="w-full bg-white border-4 border-black p-3 pr-10 rounded-xl font-bold text-xs shadow-neo-xs outline-none"
                                 autoComplete="off"
                               />
                               <button
@@ -920,7 +1178,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 {showGithubPat ? <EyeOff size={16} /> : <Eye size={16} />}
                               </button>
                             </div>
-                            <button 
+                            <button
                               onClick={() => {
                                 localStorage.setItem('github_pat', githubPat);
                                 alert('GitHub PAT Saved');
@@ -932,7 +1190,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           </div>
                         </div>
                       </>
-                     )}
+                    )}
                   </div>
                 )}
 
@@ -946,33 +1204,33 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <h4 className="font-black italic text-xl tracking-tighter uppercase leading-none">
                           {t('v201_feedback_title')}
                         </h4>
-                        
+
                         <div className="space-y-3">
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{t('contact_subject')}</label>
-                            <input 
-                              type="text" 
-                              value={contactForm.subject} 
-                              onChange={e => setContactForm({...contactForm, subject: e.target.value})}
+                            <input
+                              type="text"
+                              value={contactForm.subject}
+                              onChange={e => setContactForm({ ...contactForm, subject: e.target.value })}
                               className="w-full bg-white border-4 border-black p-3 rounded-xl font-black italic text-sm shadow-neo-xs outline-none focus:bg-amber-100 transition-colors"
                             />
                           </div>
                           <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{t('contact_message')}</label>
-                            <textarea 
+                            <textarea
                               rows={4}
-                              value={contactForm.message} 
-                              onChange={e => setContactForm({...contactForm, message: e.target.value})}
+                              value={contactForm.message}
+                              onChange={e => setContactForm({ ...contactForm, message: e.target.value })}
                               className="w-full bg-white border-4 border-black p-3 rounded-xl font-black italic text-sm shadow-neo-xs outline-none focus:bg-amber-100 transition-colors resize-none"
                               placeholder="..."
                             />
                           </div>
                         </div>
 
-                        <button 
+                        <button
                           onClick={async () => {
                             if (!contactForm.message.trim()) return;
-                            
+
                             // 🚀 WEB3FORMS SUBMISSION (Restored from user snippet)
                             try {
                               setSyncStatus('syncing');
@@ -1077,6 +1335,94 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* QR Code Lightbox Modal */}
+      {selectedQr && (
+        <div
+          className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md cursor-zoom-out animate-fade-in"
+          onClick={() => setSelectedQr(null)}
+        >
+          <div
+            className="relative bg-white border-4 border-black p-5 rounded-[2.5rem] max-w-sm w-full shadow-neo text-center flex flex-col items-center pointer-events-auto"
+            onClick={e => e.stopPropagation()}
+          >
+            <h4 className="font-black italic text-base mb-3 uppercase tracking-tight text-black">{selectedQr.title}</h4>
+            <div className="relative w-full border-4 border-black rounded-[1.5rem] mb-3 bg-white shadow-neo-xs overflow-hidden">
+              <img src={selectedQr.src} alt={selectedQr.title} className="w-full h-auto" />
+
+              {/* LINE Pay: Censor Name "林詩婷" at bottom white card */}
+              {selectedQr.src.includes('linepay') && (
+                <div
+                  className="absolute left-[20%] right-[20%] bottom-[31.5%] bg-white border-2 border-black rounded-xl py-1 px-2 font-black text-[10px] text-black shadow-sm select-none leading-none pointer-events-none"
+                >
+                  {shopText.verifiedAccountBadge}
+                </div>
+              )}
+            </div>
+
+            {/* JKO Pay Direct App Redirection Button */}
+            {selectedQr.src.includes('jkopay') && (
+              <div className="w-full space-y-2 mb-4">
+                <div className="text-[10px] font-bold text-zinc-500 text-left bg-zinc-100 p-2.5 rounded-xl border border-zinc-200 leading-normal">
+                  💡 街口帳號：<span className="font-mono font-black text-rose-600 select-all">904720058</span> (機構代碼: 396)<br />
+                  已驗證專案支持帳戶。點選下方按鈕即可一鍵複製帳號，並自動為您跳轉啟動街口支付 APP 進行轉帳！
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText("904720058");
+                    alert("📋 街口帳號 904720058 已成功複製到剪貼簿！\n正在為您跳轉啟動街口支付 APP... 🐷✨");
+                    
+                    // Direct Deep Link
+                    window.location.href = "jkos://transfer?to=904720058";
+                    
+                    // Fallback to JKO Web Page Launcher
+                    setTimeout(() => {
+                      window.open("https://www.jkopay.com/transfer?to=904720058", "_blank");
+                    }, 500);
+                  }}
+                  className="w-full bg-[#D8232A] hover:bg-[#b81d22] text-white font-black text-xs py-3 rounded-2xl border-2 border-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
+                >
+                  📲 複製帳號並一鍵跳轉啟動街口
+                </button>
+              </div>
+            )}
+
+            {/* CTBC Bank Direct App Redirection Button */}
+            {selectedQr.src.includes('ctbc') && (
+              <div className="w-full space-y-2 mb-4">
+                <div className="text-[10px] font-bold text-zinc-500 text-left bg-zinc-100 p-2.5 rounded-xl border border-zinc-200 leading-normal">
+                  💡 中信帳號：<span className="font-mono font-black text-teal-700 select-all">174533815287</span> (銀行代碼: 822)<br />
+                  已驗證專案支持帳戶。點選下方按鈕即可一鍵複製帳號，並自動為您啟動中國信託網銀 APP！
+                </div>
+                <button
+                  onClick={() => {
+                    navigator.clipboard.writeText("174533815287");
+                    alert("📋 中信帳號 174533815287 已成功複製到剪貼簿！\n正在為您跳轉啟動中國信託網銀 APP... 📱✨");
+                    
+                    // Direct Deep Link for CTBC App
+                    window.location.href = "ctbcmobile://";
+                    
+                    // Fallback to CTBC Home Web
+                    setTimeout(() => {
+                      window.open("https://www.ctbcbank.com/", "_blank");
+                    }, 600);
+                  }}
+                  className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-xs py-3 rounded-2xl border-2 border-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
+                >
+                  📲 複製帳號並一鍵啟動中信網銀
+                </button>
+              </div>
+            )}
+
+            <button
+              onClick={() => setSelectedQr(null)}
+              className="bg-black text-white px-6 py-2.5 rounded-2xl font-black italic text-xs active:scale-95 shadow-neo-xs transition-transform"
+            >
+              {shopText.closeWindow}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
