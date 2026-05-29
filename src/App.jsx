@@ -195,7 +195,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
             type="text" 
             value={editValues.dish_name}
             onChange={(e) => setEditValues({ ...editValues, dish_name: e.target.value })}
-            className="w-full border-4 border-black p-2 rounded-xl font-bold bg-white"
+            onFocus={(e) => e.target.select()}
+            className="w-full border-4 border-black p-2 rounded-xl font-bold bg-white outline-none"
           />
         </div>
 
@@ -207,7 +208,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                 type="number" 
                 value={editValues.calories}
                 onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
-                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                onFocus={(e) => e.target.select()}
+                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
               />
             </div>
             <div className="flex-1">
@@ -216,7 +218,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                 type="number" 
                 value={editValues.protein}
                 onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
-                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                onFocus={(e) => e.target.select()}
+                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
               />
             </div>
             <div className="flex-1">
@@ -225,7 +228,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                 type="number" 
                 value={editValues.water}
                 onChange={(e) => setEditValues({ ...editValues, water: e.target.value })}
-                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                onFocus={(e) => e.target.select()}
+                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
               />
             </div>
           </div>
@@ -238,7 +242,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                   type="number" 
                   value={editValues.calories}
                   onChange={(e) => setEditValues({ ...editValues, calories: e.target.value })}
-                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                  onFocus={(e) => e.target.select()}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
                 />
               </div>
               <div>
@@ -247,7 +252,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                   type="number" 
                   value={editValues.water}
                   onChange={(e) => setEditValues({ ...editValues, water: e.target.value })}
-                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                  onFocus={(e) => e.target.select()}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
                 />
               </div>
             </div>
@@ -258,7 +264,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                   type="number" 
                   value={editValues.protein}
                   onChange={(e) => setEditValues({ ...editValues, protein: e.target.value })}
-                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                  onFocus={(e) => e.target.select()}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
                 />
               </div>
               <div>
@@ -267,7 +274,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                   type="number" 
                   value={editValues.carbs}
                   onChange={(e) => setEditValues({ ...editValues, carbs: e.target.value })}
-                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                  onFocus={(e) => e.target.select()}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
                 />
               </div>
               <div>
@@ -276,7 +284,8 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
                   type="number" 
                   value={editValues.fat}
                   onChange={(e) => setEditValues({ ...editValues, fat: e.target.value })}
-                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white"
+                  onFocus={(e) => e.target.select()}
+                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
                 />
               </div>
             </div>
@@ -341,36 +350,33 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
       onContextMenu={(e) => { e.preventDefault(); }}
       className={`relative overflow-hidden flex flex-col p-2.5 border-4 border-black rounded-2xl bg-white hover:bg-zinc-50 transition-colors group cursor-pointer ${!isRecent ? 'opacity-80 grayscale-[0.5] hover:opacity-100 hover:grayscale-0' : ''}`}
     >
-      <div className={`flex flex-col gap-1.5 w-full transition-all duration-300 ${showActions ? 'pr-[145px] opacity-40 blur-[1px]' : ''}`}>
-        {/* Top Row: Time + Dish Name + Calories */}
-        <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2 min-w-0">
-            <span className="text-[10px] font-black font-mono text-zinc-400 shrink-0">
-              {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
-            </span>
-            <div className="font-black text-sm leading-tight truncate">{log.dish_name}</div>
-          </div>
-          <div className="flex items-center gap-1 shrink-0">
-            {log.calories > 0 && (
-              <span className="text-[10px] font-black bg-accent px-1.5 py-0.5 rounded border border-black/10 shadow-neo-sm whitespace-nowrap">🔥{log.calories}</span>
-            )}
-            {log.protein > 0 && (
-              <span className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍖{log.protein}</span>
-            )}
-            {log.water > 0 && (
-              <span className="text-[10px] font-black text-black border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}</span>
-            )}
-            {goals?.show_carbs_fat && log.carbs > 0 && (
-              <span className="text-[10px] font-black bg-white text-[#d97706] border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🍞{log.carbs}</span>
-            )}
-            {goals?.show_carbs_fat && log.fat > 0 && (
-              <span className="text-[10px] font-black bg-white text-[#e11d48] border-2 border-black px-1 px-0.5 rounded shadow-neo-sm whitespace-nowrap">🥑{log.fat}</span>
-            )}
-          </div>
+      <div className={`flex flex-col gap-1 w-full transition-all duration-300 ${showActions ? 'pr-[145px] opacity-40 blur-[1px]' : ''}`}>
+        {/* Top Row: Time + Dish Name */}
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="text-[10px] font-black font-mono text-zinc-400 shrink-0">
+            {new Date(log.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false })}
+          </span>
+          <div className="font-black text-sm leading-tight truncate flex-1">{log.dish_name}</div>
         </div>
 
-        {/* Bottom Row: Metadata (Tags + Location) */}
-        <div className="flex items-center gap-2 overflow-hidden">
+        {/* Bottom Row: Nutrients and Badges (Flex-wrap prevents cramping) */}
+        <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
+          {log.calories > 0 && (
+            <span className="text-[10px] font-black bg-accent px-1.5 py-0.5 rounded border border-black/10 shadow-neo-sm whitespace-nowrap">🔥{log.calories}</span>
+          )}
+          {log.protein > 0 && (
+            <span className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍖{log.protein}</span>
+          )}
+          {goals?.show_carbs_fat && log.carbs > 0 && (
+            <span className="text-[10px] font-black bg-white text-[#d97706] border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍞{log.carbs}</span>
+          )}
+          {goals?.show_carbs_fat && log.fat > 0 && (
+            <span className="text-[10px] font-black bg-white text-[#e11d48] border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🥑{log.fat}</span>
+          )}
+          {log.water > 0 && (
+            <span className="text-[10px] font-black text-black border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}</span>
+          )}
+
           {log.category && log.dish_name && !log.dish_name.startsWith(t(log.category)) && (
             <span className="text-[8px] font-black uppercase tracking-tighter px-1.5 py-0.5 rounded-md bg-black text-white italic border border-black shrink-0">
               {t(log.category)}

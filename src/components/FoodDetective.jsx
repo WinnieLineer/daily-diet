@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap, Pencil } from 'lucide-react';
 import { analyzeFoodImage, analyzeFoodText } from '../lib/siliconflow';
 import { db } from '../db';
 import exifr from 'exifr';
@@ -115,6 +115,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [favorites, setFavorites] = useState([]);
   const [favToast, setFavToast] = useState(null);
   const [aiError, setAiError] = useState(null);
+  const [editingFavId, setEditingFavId] = useState(null);
+  const [editFavValues, setEditFavValues] = useState({ dish_name: '', calories: '', protein: '', water: '', carbs: '', fat: '', description: '' });
   const [nutritionFacts, setNutritionFacts] = useState([]);
   const [currentFactIndex, setCurrentFactIndex] = useState(0);
   const [isResuming, setIsResuming] = useState(false);
@@ -836,6 +838,37 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               {!aiLoading && <button onClick={cancelAnalysis} className="absolute top-4 right-4 bg-black/50 text-white p-2 rounded-full backdrop-blur-md border border-white/20"><X size={20} /></button>}
             </div>
 
+            {preview && !result && (
+              <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
+                <div className="bg-rose-50 border-4 border-black p-5 rounded-[2.2rem] shadow-neo-sm relative overflow-hidden text-center">
+                  <div className="w-12 h-12 bg-rose-500 border-4 border-black rounded-xl flex items-center justify-center mx-auto mb-3 shadow-neo-sm">
+                    <AlertCircle size={24} className="text-white" strokeWidth={3} />
+                  </div>
+                  <h4 className="font-black text-sm uppercase tracking-tight leading-none mb-1 text-black">
+                    {t('ai_fail_title') || "辨識失敗"}
+                  </h4>
+                  <p className="text-[11px] font-bold text-zinc-500 mb-4 max-w-[250px] mx-auto leading-tight">
+                    {aiError || t('ai_error') || "分析中斷或伺服器無回應，請點擊重試。"}
+                  </p>
+                  <div className="flex gap-3 justify-center">
+                    <NeoButton
+                      variant="black"
+                      className="px-5 py-2.5 rounded-xl font-black italic text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-neo-sm"
+                      onClick={() => handleAnalysis(preview, null)}
+                    >
+                      <RefreshCw size={14} /> {t('retry') || "重試"}
+                    </NeoButton>
+                    <button
+                      onClick={() => { setPreview(null); setAiError(null); }}
+                      className="px-4 py-2.5 rounded-xl font-black italic text-xs border-4 border-black bg-white text-black shadow-neo-sm active:scale-95 transition-all"
+                    >
+                      {t('cancel') || "取消"}
+                    </button>
+                  </div>
+                </div>
+              </motion.div>
+            )}
+
             {result && (
               <motion.div initial={{ opacity: 0, scale: 0.95 }} animate={{ opacity: 1, scale: 1 }} className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
@@ -958,45 +991,224 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             {favToast && <div className="bg-black text-white text-[10px] font-black px-3 py-2 rounded-xl text-center animate-bounce">{favToast}</div>}
             {favorites.length > 0 ? (
               <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {favorites.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={async () => {
-                      setManualSaving(true);
-                      const logDateObj = new Date(logTime);
-                      if (goals.fasting_enabled) {
-                        const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
-                        if (outside) {
-                          if (!window.confirm(t('fasting_break_confirm'))) {
-                            setManualSaving(false);
-                            return;
+                {favorites.map((item) => {
+                  if (editingFavId === item.id) {
+                    return (
+                      <div
+                        key={item.id}
+                        onClick={(e) => e.stopPropagation()}
+                        className="p-4 border-4 border-black rounded-2xl bg-accent/10 space-y-3"
+                      >
+                        <div>
+                          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('food_name')}</label>
+                          <input 
+                            type="text" 
+                            value={editFavValues.dish_name}
+                            onChange={(e) => setEditFavValues({ ...editFavValues, dish_name: e.target.value })}
+                            onFocus={(e) => e.target.select()}
+                            className="w-full border-4 border-black p-2 rounded-xl font-bold bg-white outline-none"
+                          />
+                        </div>
+
+                        {!goals?.show_carbs_fat ? (
+                          <div className="flex gap-3">
+                            <div className="flex-1">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('calories')} (kcal)</label>
+                              <input 
+                                type="number" 
+                                value={editFavValues.calories}
+                                onChange={(e) => setEditFavValues({ ...editFavValues, calories: e.target.value })}
+                                onFocus={(e) => e.target.select()}
+                                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('protein')} (g)</label>
+                              <input 
+                                type="number" 
+                                value={editFavValues.protein}
+                                onChange={(e) => setEditFavValues({ ...editFavValues, protein: e.target.value })}
+                                onFocus={(e) => e.target.select()}
+                                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                              />
+                            </div>
+                            <div className="flex-1">
+                              <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('water_unit')} (ml)</label>
+                              <input 
+                                type="number" 
+                                value={editFavValues.water}
+                                onChange={(e) => setEditFavValues({ ...editFavValues, water: e.target.value })}
+                                onFocus={(e) => e.target.select()}
+                                className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                              />
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="space-y-3">
+                            <div className="grid grid-cols-2 gap-3">
+                              <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('calories')} (kcal)</label>
+                                <input 
+                                  type="number" 
+                                  value={editFavValues.calories}
+                                  onChange={(e) => setEditFavValues({ ...editFavValues, calories: e.target.value })}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('water_unit')} (ml)</label>
+                                <input 
+                                  type="number" 
+                                  value={editFavValues.water}
+                                  onChange={(e) => setEditFavValues({ ...editFavValues, water: e.target.value })}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                                />
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-3 gap-3">
+                              <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('protein')} (g)</label>
+                                <input 
+                                  type="number" 
+                                  value={editFavValues.protein}
+                                  onChange={(e) => setEditFavValues({ ...editFavValues, protein: e.target.value })}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('carbs')} (g)</label>
+                                <input 
+                                  type="number" 
+                                  value={editFavValues.carbs}
+                                  onChange={(e) => setEditFavValues({ ...editFavValues, carbs: e.target.value })}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('fat')} (g)</label>
+                                <input 
+                                  type="number" 
+                                  value={editFavValues.fat}
+                                  onChange={(e) => setEditFavValues({ ...editFavValues, fat: e.target.value })}
+                                  onFocus={(e) => e.target.select()}
+                                  className="w-full border-4 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none"
+                                />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+
+                        <div className="flex gap-2 pt-1">
+                          <button 
+                            onClick={() => setEditingFavId(null)}
+                            className="flex-1 bg-white border-4 border-black font-black py-2 rounded-xl hover:bg-gray-100 flex items-center justify-center gap-1 text-xs"
+                          >
+                            <X size={14} /> {t('cancel')}
+                          </button>
+                          <button 
+                            onClick={async () => {
+                              await db.favorites.update(item.id, {
+                                dish_name: editFavValues.dish_name,
+                                calories: Number(editFavValues.calories) || 0,
+                                protein: Number(editFavValues.protein) || 0,
+                                water: Number(editFavValues.water) || 0,
+                                carbs: Number(editFavValues.carbs) || 0,
+                                fat: Number(editFavValues.fat) || 0,
+                                description: editFavValues.description || ''
+                              });
+                              setEditingFavId(null);
+                              loadFavorites();
+                            }}
+                            className="flex-1 bg-black text-white border-4 border-black font-black py-2 rounded-xl hover:bg-black/90 flex items-center justify-center gap-1 text-xs"
+                          >
+                            <Check size={14} /> {t('save')}
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  }
+
+                  return (
+                    <div
+                      key={item.id}
+                      onClick={async () => {
+                        setManualSaving(true);
+                        const logDateObj = new Date(logTime);
+                        if (goals.fasting_enabled) {
+                          const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
+                          if (outside) {
+                            if (!window.confirm(t('fasting_break_confirm'))) {
+                              setManualSaving(false);
+                              return;
+                            }
                           }
                         }
-                      }
-                      const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
-                      await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory });
-                      setFavToast(t('added_to_today'));
-                      setTimeout(() => setFavToast(null), 1500);
-                      onLogAdded('fetch');
-                      setManualSaving(false);
-                    }}
-                    className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group cursor-pointer"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="font-black text-sm truncate">{item.dish_name}</div>
-                      <div className="flex gap-2 text-[10px] font-bold font-mono text-zinc-400"><span>🔥 {item.calories}</span><span>🍖 {item.protein}</span>{item.water > 0 && <span>🚰 {item.water}</span>}</div>
+                        const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+                        const carbsVal = goals.show_carbs_fat ? (Number(item.carbs) || 0) : 0;
+                        const fatVal = goals.show_carbs_fat ? (Number(item.fat) || 0) : 0;
+                        await db.dietLogs.add({
+                          dish_name: item.dish_name,
+                          calories: item.calories,
+                          protein: item.protein,
+                          water: item.water || 0,
+                          carbs: carbsVal,
+                          fat: fatVal,
+                          description: item.description,
+                          date: localDate,
+                          timestamp: logDateObj.getTime(),
+                          category: selectedCategory
+                        });
+                        setFavToast(t('added_to_today'));
+                        setTimeout(() => setFavToast(null), 1500);
+                        onLogAdded('fetch');
+                        setManualSaving(false);
+                      }}
+                      className="flex items-center justify-between p-3 bg-white border-4 border-black rounded-2xl hover:bg-zinc-50 active:scale-[0.98] transition-all text-left group cursor-pointer"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="font-black text-sm truncate">{item.dish_name}</div>
+                        <div className="flex flex-wrap gap-2 text-[10px] font-bold font-mono text-zinc-400 mt-1">
+                          <span>🔥 {item.calories}</span>
+                          <span>🍖 {item.protein}</span>
+                          {item.water > 0 && <span>🚰 {item.water}</span>}
+                          {goals?.show_carbs_fat && item.carbs > 0 && <span>🍞 {item.carbs}</span>}
+                          {goals?.show_carbs_fat && item.fat > 0 && <span>🥑 {item.fat}</span>}
+                        </div>
+                      </div>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingFavId(item.id);
+                            setEditFavValues({
+                              dish_name: item.dish_name,
+                              calories: item.calories || 0,
+                              protein: item.protein || 0,
+                              water: item.water || 0,
+                              carbs: item.carbs || 0,
+                              fat: item.fat || 0,
+                              description: item.description || ''
+                            });
+                          }}
+                          className="p-1 hover:text-black"
+                        >
+                          <Pencil size={14} />
+                        </button>
+                        <button
+                          onClick={(e) => { e.stopPropagation(); db.favorites.delete(item.id); loadFavorites(); }}
+                          className="p-1 hover:text-rose-500"
+                        >
+                          <Trash2 size={14} />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
-                      <button
-                        onClick={(e) => { e.stopPropagation(); db.favorites.delete(item.id); loadFavorites(); }}
-                        className="p-1 hover:text-rose-500"
-                      >
-                        <Trash2 size={14} />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             ) : (
               <div className="text-center py-10 border-4 border-dashed border-zinc-200 rounded-3xl">
@@ -1028,7 +1240,20 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         }
                       }
                       const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
-                      await db.dietLogs.add({ dish_name: item.dish_name, calories: item.calories, protein: item.protein, water: item.water || 0, description: item.description, date: localDate, timestamp: logDateObj.getTime(), category: selectedCategory });
+                      const carbsVal = goals.show_carbs_fat ? (Number(item.carbs) || 0) : 0;
+                      const fatVal = goals.show_carbs_fat ? (Number(item.fat) || 0) : 0;
+                      await db.dietLogs.add({
+                        dish_name: item.dish_name,
+                        calories: item.calories,
+                        protein: item.protein,
+                        water: item.water || 0,
+                        carbs: carbsVal,
+                        fat: fatVal,
+                        description: item.description,
+                        date: localDate,
+                        timestamp: logDateObj.getTime(),
+                        category: selectedCategory
+                      });
                       setFavToast(t('added_to_today'));
                       setTimeout(() => setFavToast(null), 1500);
                       onLogAdded('fetch');
@@ -1044,10 +1269,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         {item.category && item.dish_name && !item.dish_name.startsWith(t(item.category)) && (
                           <span className="text-[7px] font-black uppercase tracking-tighter px-1 py-0.5 rounded bg-zinc-100 text-zinc-400 border border-zinc-200 shrink-0">{t(item.category)}</span>
                         )}
-                        <span>🔥 {item.calories}</span><span>🍖 {item.protein}</span>
+                        <span>🔥 {item.calories}</span>
+                        <span>🍖 {item.protein}</span>
+                        {item.water > 0 && <span>🚰 {item.water}</span>}
+                        {goals?.show_carbs_fat && item.carbs > 0 && <span>🍞 {item.carbs}</span>}
+                        {goals?.show_carbs_fat && item.fat > 0 && <span>🥑 {item.fat}</span>}
                       </div>
                     </div>
-                    <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
+                    <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors shrink-0" />
                   </div>
                 ))
               ) : searchQuery.trim() !== '' ? (
