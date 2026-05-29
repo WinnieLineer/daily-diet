@@ -944,39 +944,39 @@ function App() {
           </h1>
           <span className="text-[8px] font-bold text-zinc-400 mt-1">v{APP_VERSION}</span>
         </div>
-        <div className="flex gap-2">
-          <div className="bg-white border-[3px] sm:border-4 border-black px-2 sm:px-3 py-1 sm:py-1.5 rounded-xl sm:rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center">
-            <div className="text-[10px] sm:text-xs">
+        <div className="flex flex-row items-center gap-1.5 sm:gap-2 shrink-0">
+          <div className="bg-white border-[3px] sm:border-4 border-black px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center shrink-0">
+            <div className="text-[9px] sm:text-xs text-black whitespace-nowrap">
               {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
             </div>
             {lastLocation && (
-              <div className="text-[7px] sm:text-[9px] text-gray-400 italic">
+              <div className="text-[7px] sm:text-[9px] text-gray-400 italic truncate max-w-[70px] sm:max-w-[120px] whitespace-nowrap">
                 📍 {lastLocation}
               </div>
             )}
           </div>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-1 sm:gap-2">
             <NeoButton 
               variant="black" 
-              className="w-10 h-10 p-0 flex items-center justify-center text-rose-500 hover:text-rose-600 active:scale-95"
+              className="w-9 h-9 sm:w-10 sm:h-10 p-0 flex items-center justify-center text-rose-500 hover:text-rose-600 active:scale-95 shrink-0"
               onClick={() => {
                 window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'shop' } }));
               }}
               title="Support Us"
             >
-              <Heart size={18} className="fill-rose-500" />
+              <Heart className="fill-rose-500 w-4 h-4 sm:w-4.5 sm:h-4.5" />
             </NeoButton>
             <NeoButton 
               variant={new Date().getDay() === 0 ? "accent" : "black"} 
-              className={`w-10 h-10 p-0 flex items-center justify-center relative ${new Date().getDay() === 0 ? 'bg-accent text-black border-black animate-pulse' : ''}`}
+              className={`w-9 h-9 sm:w-10 sm:h-10 p-0 flex items-center justify-center relative shrink-0 ${new Date().getDay() === 0 ? 'bg-accent text-black border-black animate-pulse' : ''}`}
               onClick={() => setShowWeeklyReport(true)}
               title="週結算報告"
             >
-              <BarChart2 size={18} className={new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'} />
+              <BarChart2 className={`w-4 h-4 sm:w-4.5 sm:h-4.5 ${new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'}`} />
               {new Date().getDay() === 0 && (
-                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                <span className="absolute -top-1 -right-1 flex h-3 w-3 sm:h-3.5 sm:w-3.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-accent border border-black flex items-center justify-center text-[7px] font-black text-black">週</span>
+                  <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-accent border border-black flex items-center justify-center text-[6px] sm:text-[7px] font-black text-black">週</span>
                 </span>
               )}
             </NeoButton>

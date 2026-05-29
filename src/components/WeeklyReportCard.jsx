@@ -174,6 +174,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
         startWeight,
         endWeight,
         weightDiff,
+        hasWeight: weights.length > 0,
         score,
         rankTitle
       });
@@ -299,23 +300,29 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
           onClick={onClose}
         />
 
-        <div key="weekly-sharing-content-container" className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none overflow-y-auto custom-scrollbar">
+        <div
+          key="weekly-sharing-content-container"
+          className="fixed inset-0 flex flex-col items-center justify-start sm:justify-center p-4 overflow-y-auto custom-scrollbar z-[601] pointer-events-auto"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+        >
           <motion.div
             key="weekly-sharing-card-modal"
             initial={{ opacity: 0, scale: 0.9, y: 20 }}
             animate={{ opacity: 1, scale: 1, y: 0 }}
             exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="relative w-full max-w-sm flex flex-col gap-4 pointer-events-auto my-auto"
+            className="relative w-full max-w-sm flex flex-col gap-4 pointer-events-auto my-auto py-6"
           >
             {/* Capture Wrapper (IG Story 9:16 Vertical Card with Shadows) */}
-            <div ref={cardRef} className="p-4 pr-6 pb-6 select-none">
+            <div ref={cardRef} className="p-3 pr-5 pb-5 select-none">
               <div
-                className={`bg-[#F8FAFC] border-8 ${hasCrown ? 'border-amber-400 shadow-[12px_12px_0px_0px_rgba(251,191,36,1)]' : 'border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]'} p-6 rounded-[2.5rem] relative overflow-hidden flex flex-col min-h-[660px] justify-between`}
-                style={{ backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px)', backgroundSize: '16px 16px', backgroundColor: '#F8FAFC' }}
+                className={`border-8 ${hasCrown ? 'border-amber-400 shadow-[12px_12px_0px_0px_rgba(251,191,36,1)]' : 'border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]'} p-5 sm:p-6 rounded-[2.2rem] sm:rounded-[2.5rem] relative overflow-hidden flex flex-col min-h-[580px] sm:min-h-[660px] justify-between transition-all`}
+                style={{ backgroundImage: 'radial-gradient(#cbd5e1 1.5px, transparent 1.5px), linear-gradient(135deg, #FCFAF6 0%, #E6EEF8 100%)', backgroundSize: '16px 16px, 100% 100%' }}
               >
                 {/* Visual Neobrutalist Clay Accents */}
-                <div className="absolute top-[-5%] right-[-10%] w-40 h-40 bg-accent/30 rounded-full blur-3xl" />
-                <div className="absolute bottom-[20%] left-[-15%] w-36 h-36 bg-amber-400/20 rounded-full blur-2xl" />
+                <div className="absolute top-[-5%] right-[-10%] w-40 h-40 bg-accent/20 rounded-full blur-3xl" />
+                <div className="absolute bottom-[20%] left-[-15%] w-36 h-36 bg-amber-400/15 rounded-full blur-2xl" />
 
                 {/* Card Title Header */}
                 <div className="flex justify-between items-start z-10">
@@ -323,12 +330,12 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                     <h1 className="text-3xl font-black italic tracking-tighter leading-[0.85] mb-2 text-black">
                       DAILY<br />DIET
                     </h1>
-                    <div className="flex flex-wrap items-center gap-1.5 mt-2">
-                      <span className="bg-black text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wider">
+                    <div className="flex flex-wrap items-center gap-1 mt-1">
+                      <span className="bg-black text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wide">
                         {userName || '無名吃貨'}
                       </span>
                       {hasCrown && (
-                        <span className="bg-amber-400 text-black border-2 border-black px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-wider flex items-center gap-0.5 shadow-neo-xs scale-90 origin-left transform">
+                        <span className="bg-amber-400 text-black border-2 border-black px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-wide flex items-center gap-0.5 shadow-neo-xs scale-90 origin-left transform">
                           👑 榮譽金主
                         </span>
                       )}
@@ -340,10 +347,10 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                     </div>
                   </div>
                   <div className="text-right">
-                    <span className="bg-black text-accent px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-widest leading-none block mb-1">
+                    <span className="bg-black text-accent px-2 py-1 rounded-lg text-[8px] font-black uppercase tracking-wider leading-none block mb-1">
                       WEEKLY REPORT
                     </span>
-                    <span className="text-[8px] font-bold text-zinc-400 block tracking-tight">
+                    <span className="text-[8px] font-bold text-zinc-400 block tracking-tight whitespace-nowrap">
                       {reportData?.dateRange}
                     </span>
                   </div>
@@ -352,23 +359,23 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                 {loading ? (
                   <div className="flex-1 flex flex-col items-center justify-center gap-2 py-20 z-10">
                     <Loader2 size={36} className="animate-spin text-black" />
-                    <span className="font-black italic text-xs">正在 analysis 本週數據...</span>
+                    <span className="font-black italic text-xs">正在分析本週數據...</span>
                   </div>
                 ) : (
-                  <div className="my-5 space-y-4.5 z-10 flex-1 flex flex-col justify-between">
+                  <div className="my-4 space-y-4 z-10 flex-1 flex flex-col justify-between">
                     {/* Score Badge Clay Panel */}
-                    <div className="border-4 border-black bg-accent p-3.5 rounded-[2.2rem] shadow-neo-sm relative overflow-hidden flex items-center gap-3.5">
-                      <div className="w-11 h-11 bg-white border-4 border-black rounded-2xl flex items-center justify-center shrink-0 shadow-neo-xs transform -rotate-6">
+                    <div className="border-4 border-black bg-gradient-to-r from-accent via-amber-300 to-accent p-3.5 rounded-[1.8rem] sm:rounded-[2.2rem] shadow-neo-sm relative overflow-hidden flex items-center gap-3.5 transition-transform hover:-translate-y-0.5">
+                      <div className="w-11 h-11 bg-white border-4 border-black rounded-2xl flex items-center justify-center shrink-0 shadow-neo-xs transform -rotate-6 animate-pulse">
                         <Trophy size={20} className="text-black" />
                       </div>
                       <div className="flex-1 text-left">
-                        <span className="text-[8px] font-black uppercase tracking-wider text-zinc-600 block mb-0.5">
+                        <span className="text-[8px] font-black text-zinc-800 block mb-0.5">
                           本週自律指數
                         </span>
                         <div className="text-xl font-black italic text-black leading-none flex items-baseline gap-1.5">
                           {reportData?.score} <span className="text-xs">分</span>
                         </div>
-                        <div className="text-[9px] font-black bg-white border-2 border-black text-black px-1.5 py-0.5 rounded-md inline-block mt-1 transform rotate-1">
+                        <div className="text-[9px] font-black bg-white border-2 border-black text-black px-1.5 py-0.5 rounded-md inline-block mt-1 transform rotate-1 shadow-neo-xs">
                           {reportData?.rankTitle}
                         </div>
                       </div>
@@ -380,73 +387,97 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                     {/* Stats details grid */}
                     <div className={`grid ${goals.show_carbs_fat ? 'grid-cols-2 gap-2' : 'grid-cols-2 gap-3'}`}>
                       {/* Calories */}
-                      <div className="bg-white border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left">
-                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">每日均熱量</span>
-                        <div className="text-xs font-black italic leading-none my-0.5">{reportData?.avgCalories} kcal</div>
-                        <div className="text-[8px] text-zinc-400">目標: {goals.calories} kcal</div>
+                      <div className="bg-white/75 backdrop-blur-md border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-neo-sm transition-all duration-200">
+                        <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均熱量</span>
+                        <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgCalories} kcal</div>
+                        <div className="text-[8px] font-bold text-zinc-400">目標: {goals.calories} kcal</div>
                       </div>
 
                       {/* Protein */}
-                      <div className="bg-white border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left">
-                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">每日均蛋白</span>
-                        <div className="text-xs font-black italic leading-none my-0.5">{reportData?.avgProtein} g</div>
-                        <div className="text-[8px] text-zinc-400">目標: {goals.protein} g</div>
+                      <div className="bg-white/75 backdrop-blur-md border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left hover:-translate-y-0.5 hover:rotate-1 hover:shadow-neo-sm transition-all duration-200">
+                        <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均蛋白</span>
+                        <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgProtein} g</div>
+                        <div className="text-[8px] font-bold text-zinc-400">目標: {goals.protein} g</div>
                       </div>
 
                       {/* Carbs (Optional) */}
                       {goals.show_carbs_fat && (
-                        <div className="bg-white border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left">
-                          <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">每日均碳水</span>
-                          <div className="text-xs font-black italic leading-none my-0.5">{reportData?.avgCarbs} g</div>
-                          <div className="text-[8px] text-zinc-400">目標: {goals.carbs_goal || 200} g</div>
+                        <div className="bg-white/75 backdrop-blur-md border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-neo-sm transition-all duration-200">
+                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均碳水</span>
+                          <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgCarbs} g</div>
+                          <div className="text-[8px] font-bold text-zinc-400">目標: {goals.carbs || 200} g</div>
                         </div>
                       )}
 
                       {/* Fat (Optional) */}
                       {goals.show_carbs_fat && (
-                        <div className="bg-white border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left">
-                          <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">每日均脂肪</span>
-                          <div className="text-xs font-black italic leading-none my-0.5">{reportData?.avgFat} g</div>
-                          <div className="text-[8px] text-zinc-400">目標: {goals.fat_goal || 60} g</div>
+                        <div className="bg-white/75 backdrop-blur-md border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left hover:-translate-y-0.5 hover:rotate-1 hover:shadow-neo-sm transition-all duration-200">
+                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均脂肪</span>
+                          <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgFat} g</div>
+                          <div className="text-[8px] font-bold text-zinc-400">目標: {goals.fat || 60} g</div>
                         </div>
                       )}
 
                       {/* Water */}
-                      <div className="bg-white border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left">
-                        <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">每日均飲水</span>
-                        <div className="text-xs font-black italic leading-none my-0.5">{reportData?.avgWater} ml</div>
-                        <div className="text-[8px] text-zinc-400">目標: {goals.water} ml</div>
+                      <div className="bg-white/75 backdrop-blur-md border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left hover:-translate-y-0.5 hover:-rotate-1 hover:shadow-neo-sm transition-all duration-200">
+                        <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均飲水</span>
+                        <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgWater} ml</div>
+                        <div className="text-[8px] font-bold text-zinc-400">目標: {goals.water} ml</div>
                       </div>
 
                       {/* Weight Change */}
-                      <div className="bg-white border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left flex flex-col justify-between">
+                      <div className="bg-white/75 backdrop-blur-md border-4 border-black p-2.5 rounded-[1.5rem] shadow-neo-xs text-left flex flex-col justify-between hover:-translate-y-0.5 hover:rotate-1 hover:shadow-neo-sm transition-all duration-200">
                         <div>
-                          <span className="text-[8px] font-black text-zinc-400 uppercase tracking-widest block mb-0.5">體重變化</span>
-                          <div className="text-xs font-black italic flex items-center gap-1 leading-none my-0.5">
-                            {reportData?.weightDiff > 0 ? (
+                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">體重變化</span>
+                          <div className="text-xs sm:text-sm font-black italic flex items-center gap-1 leading-none my-0.5 text-black">
+                            {!reportData?.hasWeight ? (
+                              <span className="text-zinc-400 font-bold not-italic">無紀錄</span>
+                            ) : reportData?.weightDiff > 0 ? (
                               <><TrendingUp size={12} className="text-rose-500 shrink-0" /> +{reportData?.weightDiff} kg</>
                             ) : reportData?.weightDiff < 0 ? (
                               <><TrendingDown size={12} className="text-emerald-500 shrink-0" /> {reportData?.weightDiff} kg</>
                             ) : (
-                              "維持不變"
+                              <span className="text-black font-black italic">維持不變</span>
                             )}
                           </div>
                         </div>
-                        <div className="text-[8px] text-zinc-400 mt-0.5">
+                        <div className="text-[8px] font-bold text-zinc-400 mt-0.5">
                           打卡累計: {reportData?.loggedDays} / 7 天
                         </div>
                       </div>
                     </div>
 
                     {/* AI Roast / Review Block */}
-                    <div className="bg-black text-white p-4 rounded-[2rem] relative overflow-hidden text-left flex-1 min-h-[140px] flex flex-col justify-center">
-                      <div className="absolute top-[-10px] left-4 bg-accent text-black border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm">
-                        <Zap size={10} className="fill-black text-black" />
-                        <span className="text-[8px] font-black uppercase tracking-widest">熊貓教練週終結銳評 🐼</span>
+                    <div className="bg-black text-white p-4 rounded-[1.8rem] sm:rounded-[2rem] relative overflow-hidden text-left flex-1 min-h-[140px] flex flex-col justify-between shadow-neo-sm hover:shadow-neo transition-all duration-200">
+                      <div className="absolute top-2.5 left-4 bg-accent text-black border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1 shadow-sm z-20">
+                        <Zap size={10} className="fill-black text-black animate-pulse" />
+                        <span className="text-[8px] font-black uppercase">熊貓教練週終結銳評 🐼</span>
                       </div>
-                      <p className="font-black italic text-xs leading-relaxed tracking-tight mt-3 mb-1 pr-4 whitespace-normal break-words z-10">
-                        {aiRoast || (isRoasting ? '教練正在整理毒舌吐槽本...' : '點擊右上方火花，產出教練的毒舌週總結 ⚡')}
-                      </p>
+
+                      <div className="mt-6 flex flex-col items-center justify-center text-center flex-1 z-10">
+                        {aiRoast ? (
+                          <p className="font-black italic text-xs leading-relaxed tracking-tight text-white text-left w-full pr-2 whitespace-normal break-words">
+                            {aiRoast}
+                          </p>
+                        ) : isRoasting ? (
+                          <div className="flex flex-col items-center gap-2 py-4">
+                            <Loader2 size={24} className="animate-spin text-accent" />
+                            <p className="font-black italic text-[10px] text-zinc-400">教練正在整理毒舌吐槽本...</p>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col items-center gap-3 py-2">
+                            <p className="font-black italic text-[10px] text-zinc-400">這週過得怎麼樣？想聽聽教練的毒舌點評嗎？</p>
+                            <button
+                              onClick={handleGetWeeklyRoast}
+                              className="bg-accent border-4 border-black px-6 py-2.5 rounded-2xl font-black italic text-xs flex items-center gap-1.5 shadow-neo-sm hover:-translate-y-0.5 hover:-rotate-1 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none transition-all text-black animate-pulse"
+                            >
+                              <Sparkles size={14} fill="currentColor" />
+                              召喚教練週銳評 🐼✨
+                            </button>
+                          </div>
+                        )}
+                      </div>
+
                       <div className="absolute -right-3 -bottom-3 opacity-15 rotate-12 z-0">
                         <Sparkles size={54} className="text-accent" />
                       </div>
@@ -454,25 +485,12 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                   </div>
                 )}
 
-                {/* Sparkle trigger button floated over card */}
-                {!loading && !aiRoast && !isRoasting && (
-                  <div className="flex justify-center z-20 -my-2">
-                    <button
-                      onClick={handleGetWeeklyRoast}
-                      className="bg-accent border-4 border-black px-6 py-2 rounded-2xl font-black italic text-xs flex items-center gap-1.5 shadow-neo-sm hover:-rotate-2 transition-all active:scale-95 animate-bounce"
-                    >
-                      <Sparkles size={14} fill="currentColor" />
-                      召喚教練週銳評 🐼✨
-                    </button>
-                  </div>
-                )}
-
                 {/* Footer Brand */}
                 <div className="flex justify-between items-center pt-3 border-t-2 border-black/5 z-10">
-                  <div className="text-[8px] font-black text-zinc-300 uppercase tracking-[0.2em]">
+                  <div className="text-[8px] font-black text-zinc-400 uppercase tracking-widest whitespace-nowrap">
                     winnie-lin.space/daily-diet
                   </div>
-                  <div className="text-[8px] font-black text-zinc-300">
+                  <div className="text-[8px] font-black text-zinc-400 whitespace-nowrap">
                     打卡是態度，減脂是生活
                   </div>
                 </div>
@@ -480,21 +498,21 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
             </div>
 
             {/* Modal actions */}
-            <div className="flex gap-2.5 px-1.5">
+            <div className="flex gap-2.5 px-1.5 shrink-0">
               <button
                 onClick={onClose}
                 disabled={!!exportState}
-                className="px-4 bg-white border-4 border-black p-3 rounded-2xl font-black italic transition-all active:scale-95 shadow-neo-sm flex items-center justify-center disabled:opacity-50 text-sm"
+                className="px-4 bg-white border-4 border-black p-3 rounded-2xl font-black italic transition-all hover:bg-rose-100 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none shadow-neo-sm flex items-center justify-center disabled:opacity-50 text-sm text-black"
               >
                 <X size={20} />
               </button>
               <button
                 onClick={handleDownload}
                 disabled={!!exportState || loading}
-                className="flex-1 bg-white border-4 border-black p-3 rounded-2xl font-black italic flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-neo-sm disabled:opacity-50 text-xs"
+                className="flex-1 bg-white border-4 border-black p-3 rounded-2xl font-black italic flex items-center justify-center gap-1.5 transition-all hover:bg-zinc-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none shadow-neo-sm disabled:opacity-50 text-xs text-black"
               >
                 {exportState === 'download' ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin text-black" />
                 ) : (
                   <><Download size={16} /> 下載 IG 卡片</>
                 )}
@@ -502,10 +520,10 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
               <button
                 onClick={handleShare}
                 disabled={!!exportState || loading}
-                className="flex-[1.2] bg-accent border-4 border-black p-3 rounded-2xl font-black italic flex items-center justify-center gap-1.5 transition-all active:scale-95 shadow-neo-sm disabled:opacity-50 text-xs"
+                className="flex-[1.2] bg-accent border-4 border-black p-3 rounded-2xl font-black italic flex items-center justify-center gap-1.5 transition-all hover:bg-amber-300 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none shadow-neo-sm disabled:opacity-50 text-xs text-black"
               >
                 {exportState === 'share' ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin text-black" />
                 ) : (
                   <><Share2 size={16} /> 分享自律週報</>
                 )}
