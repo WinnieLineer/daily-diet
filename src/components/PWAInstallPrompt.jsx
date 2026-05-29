@@ -7,6 +7,7 @@ import NeoButton from './NeoButton';
 const PWAInstallPrompt = ({ active = true, deferredPrompt, onPromptUsed }) => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
+  const [isBrave, setIsBrave] = useState(false);
   const [isStandalone, setIsStandalone] = useState(false);
 
   useEffect(() => {
@@ -22,6 +23,26 @@ const PWAInstallPrompt = ({ active = true, deferredPrompt, onPromptUsed }) => {
     // 2. Check if iOS
     const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
     setIsIOS(ios);
+
+    // Check if Brave browser
+    const checkBrave = async () => {
+      const isBraveUA = /Brave/i.test(navigator.userAgent);
+      if (isBraveUA) {
+        setIsBrave(true);
+        return;
+      }
+      if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
+        try {
+          const res = await navigator.brave.isBrave();
+          if (res) {
+            setIsBrave(true);
+          }
+        } catch (e) {
+          // ignore
+        }
+      }
+    };
+    checkBrave();
 
     // 3. For iOS/Other, show prompt after a short delay if not standalone
     const timer = setTimeout(() => {
@@ -84,15 +105,23 @@ const PWAInstallPrompt = ({ active = true, deferredPrompt, onPromptUsed }) => {
           </div>
 
           {isIOS ? (
-            <div className="bg-accent/10 border-2 border-black border-dashed p-3 rounded-xl flex items-center gap-2">
-              <p className="text-[10px] font-black leading-relaxed italic">
-                {t('pwa_ios_hint').split('{icon}')[0]}
-                <span className="inline-flex items-center justify-center bg-white border border-black p-1 rounded-md mx-1 translate-y-0.5">
-                  <Share size={12} />
-                </span>
-                {t('pwa_ios_hint').split('{icon}')[1]}
-              </p>
-            </div>
+            isBrave ? (
+              <div className="bg-rose-50 border-2 border-rose-500 border-dashed p-3 rounded-xl flex items-center gap-2">
+                <p className="text-[10px] font-black leading-relaxed text-rose-600 italic">
+                  ⚠️ {t('pwa_ios_brave_hint')}
+                </p>
+              </div>
+            ) : (
+              <div className="bg-accent/10 border-2 border-black border-dashed p-3 rounded-xl flex items-center gap-2">
+                <p className="text-[10px] font-black leading-relaxed italic">
+                  {t('pwa_ios_hint').split('{icon}')[0]}
+                  <span className="inline-flex items-center justify-center bg-white border border-black p-1 rounded-md mx-1 translate-y-0.5">
+                    <Share size={12} />
+                  </span>
+                  {t('pwa_ios_hint').split('{icon}')[1]}
+                </p>
+              </div>
+            )
           ) : (
             <NeoButton 
               variant="black" 
