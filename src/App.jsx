@@ -965,7 +965,7 @@ function App() {
               variant="black" 
               className="w-10 h-10 p-0 flex items-center justify-center text-rose-500 hover:text-rose-600 active:scale-95"
               onClick={() => {
-                kofiRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'shop' } }));
               }}
               title="Support Us"
             >
@@ -1240,22 +1240,7 @@ function App() {
         })}
       </Reorder.Group>
 
-      {/* Scheme C: Honesty Shop Bottom Banner */}
-      {!isEditingLayout && (
-        <div 
-          onClick={() => window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'shop' } }))}
-          className="cursor-pointer border-4 border-black p-4 rounded-3xl bg-amber-100 hover:bg-amber-200 transition-colors shadow-neo-sm flex items-center justify-between gap-4 mt-2"
-        >
-          <div className="flex items-center gap-3">
-            <span className="text-2xl animate-bounce">🐼</span>
-            <div className="text-left">
-              <h4 className="font-black italic text-sm text-black">Daily Diet 誠實良心小舖 開張囉！</h4>
-              <p className="text-[10px] font-bold text-zinc-600 leading-tight">無強制的付費牆與廣告，我們相信使用者的誠實。點擊查看如何投幣支持 🎋💰</p>
-            </div>
-          </div>
-          <ChevronRight size={20} className="text-black shrink-0" strokeWidth={3} />
-        </div>
-      )}
+
       
       {/* Layout Editing Overlay Button */}
       <AnimatePresence>
@@ -1332,63 +1317,6 @@ function App() {
           <Star size={120} className="text-white rotate-12" />
         </div>
       </motion.div>
-
-      {/* ☕ Ko-fi Support Card */}
-      <a
-        ref={kofiRef}
-        href="https://ko-fi.com/winnielinspace"
-        target="_blank"
-        rel="noopener noreferrer"
-        className="block group mx-1"
-      >
-        <div className="relative p-5 bg-[#FF5E5B] border-4 border-black rounded-[2rem] shadow-neo overflow-hidden transition-transform active:scale-95 group-hover:-translate-y-1">
-          <div className="absolute -top-6 -right-6 text-[80px] opacity-10 rotate-12 pointer-events-none select-none">☕</div>
-          <div className="relative z-10 flex flex-col gap-3">
-            <div className="flex items-center gap-4">
-              <div className="shrink-0 w-14 h-14 bg-white border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-xs text-2xl">
-                ☕
-              </div>
-              <div className="flex-1">
-                <p className="font-black italic text-white text-base uppercase tracking-tight leading-snug drop-shadow">
-                  {t('kofi_title') || '請我喝杯咖啡！'}
-                </p>
-              </div>
-            </div>
-            <p className="text-white/95 text-[12px] font-bold leading-relaxed whitespace-pre-wrap">
-              {t('kofi_desc') || 'App 完全免費，你的支持讓開發者能繼續更新新功能 🐼'}
-            </p>
-            <div className="w-full bg-white border-4 border-black rounded-xl px-3 py-2.5 shadow-neo-xs text-center mt-1 active:scale-95 transition-transform">
-              <span className="font-black italic text-sm text-black uppercase">認養伺服器與開發者 ☕</span>
-            </div>
-          </div>
-        </div>
-      </a>
-
-      {/* Sponsor Wall */}
-      <div className="mx-1 p-5 bg-white border-4 border-black rounded-[2rem] shadow-neo-sm relative overflow-hidden">
-        <div className="flex items-center gap-2 mb-4 relative z-10">
-          <div className="bg-amber-100 p-1.5 rounded-xl border-2 border-black">
-            <Star size={16} className="text-amber-500 fill-amber-500" />
-          </div>
-          <h3 className="font-black italic text-lg uppercase tracking-tight">特別感謝清單</h3>
-        </div>
-        <div className="relative z-10 space-y-3">
-          <div className="p-4 bg-zinc-50 border-2 border-black border-dashed rounded-xl">
-            <div className="flex justify-between items-center flex-wrap gap-2 mb-2">
-              <span className="font-black text-sm italic">匿名贊助者</span>
-              <div className="flex items-center gap-1.5 flex-wrap">
-                <span className="text-[9px] font-black italic bg-emerald-400 text-black px-1.5 py-0.5 rounded-md border-2 border-black shadow-sm transform -rotate-1">
-                  讓網站多存活了 17 天 ⏳
-                </span>
-                <span className="text-[10px] font-black italic text-zinc-400 bg-zinc-200/50 px-2 py-0.5 rounded-md border-2 border-zinc-200">NT$ 150</span>
-              </div>
-            </div>
-            <p className="text-[11px] font-bold text-zinc-600 leading-relaxed italic">
-              「剛剛用linebank贊助一小杯咖啡錢，轉帳備注不能打太長，只好來這裡寫了，雖然只是一點點心意，但真的感謝你開發這麼好用的飲食記錄工具，而且還一直在進化，真的超厲害的，對於我減重的飲食控制幫助非常大👍🏻。」
-            </p>
-          </div>
-        </div>
-      </div>
 
       {/* Navigation Footer Spacer */}
       <div className="h-20" />
