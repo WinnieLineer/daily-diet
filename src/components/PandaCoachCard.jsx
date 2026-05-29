@@ -680,12 +680,13 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
           <div className="flex-1 min-w-0 space-y-1 relative z-10">
             <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
               <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
-                  {t('panda_coach_name')}
-                </span>
-                {activeTitle && (
+                {activeTitle ? (
                   <span className="text-[9px] font-black bg-accent border-2 border-black text-black px-1.5 py-0.5 rounded-lg rotate-1 scale-95 shadow-neo-sm transform">
                     {activeTitle}
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
+                    {t('panda_coach_name')}
                   </span>
                 )}
               </div>
