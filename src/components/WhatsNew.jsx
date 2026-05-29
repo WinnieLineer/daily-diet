@@ -31,7 +31,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
-  const show227 = isNewer('2.2.7', lastSeenVersion);
+  const show230 = isNewer('2.3.0', lastSeenVersion);
   const show220 = isNewer('2.2.0', lastSeenVersion);
   const show212 = isNewer('2.1.2', lastSeenVersion);
   const show211 = isNewer('2.1.1', lastSeenVersion);
@@ -42,7 +42,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
   // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
-  const isBugFixOnly = !show227 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -84,26 +84,26 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
-              {show227 && (
+              {show230 && (
                 <div className="space-y-2">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v227_header') || 'v2.2.7 Update'}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v230_header') || 'v2.3.0 Update'}</div>
                   <FeatureItem 
                     icon={Wrench}
                     color="bg-emerald-300"
-                    title={t('whatsnew_v227_edit_fav_title')}
-                    description={t('whatsnew_v227_edit_fav_desc')}
+                    title={t('whatsnew_v230_edit_fav_title')}
+                    description={t('whatsnew_v230_edit_fav_desc')}
                   />
                   <FeatureItem 
                     icon={Target}
                     color="bg-amber-300"
-                    title={t('whatsnew_v227_carbs_sync_title')}
-                    description={t('whatsnew_v227_carbs_sync_desc')}
+                    title={t('whatsnew_v230_carbs_sync_title')}
+                    description={t('whatsnew_v230_carbs_sync_desc')}
                   />
                   <FeatureItem 
                     icon={RefreshCw}
                     color="bg-rose-300"
-                    title={t('whatsnew_v227_ai_retry_title')}
-                    description={t('whatsnew_v227_ai_retry_desc')}
+                    title={t('whatsnew_v230_ai_retry_title')}
+                    description={t('whatsnew_v230_ai_retry_desc')}
                   />
                 </div>
               )}

@@ -828,6 +828,8 @@ function App() {
       calories: log.calories || 0,
       protein: log.protein || 0,
       water: log.water || 0,
+      carbs: log.carbs || 0,
+      fat: log.fat || 0,
       description: log.description || ''
     });
     setFavoriteUpdateTrigger(prev => prev + 1);

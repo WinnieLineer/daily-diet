@@ -271,7 +271,7 @@ const translations = {
     eating_window: "進食時段",
     fasting_window: "斷食時段",
     ai_instruction_label: "AI 智慧輸入 / 補充說明",
-    ai_instruction_placeholder: "可直接輸入食物文字進行估算（如：便當、茶葉蛋），或上傳圖片並在此輸入補充說明（如：去皮雞胸肉）。",
+    ai_instruction_placeholder: "直接輸入食物（如：香蕉、茶葉蛋）或搭配圖片補充說明 ⚡",
     data_stats_title: "數據儲存概況",
     local_usage: "地端佔用",
     cloud_backup_size: "雲端備份",
@@ -391,14 +391,14 @@ const translations = {
     v220_f1: "新增碳水與脂肪目標制定與估算（請至設定啟用） 🥑",
     v220_f2: "支援 AI 辨識背景運作，補水與手動紀錄不中斷 ⚡",
     v220_f3: "支援 AI 指令免圖快速計算，輸入特定產品精準查值 🧠",
-    // v2.2.7 Editing, focus, retry updates
-    whatsnew_v227_header: "v2.2.7 體驗全面進化 🚀",
-    whatsnew_v227_edit_fav_title: "常用清單支援 inline 編輯 ✏️",
-    whatsnew_v227_edit_fav_desc: "現在常用清單可以直接編輯品項名稱與各項營養含量，且在編輯輸入時，點擊欄位會自動選取原有內容，修改極速便利！",
-    whatsnew_v227_carbs_sync_title: "常用/搜尋完美支援脂肪碳水 🥑",
-    whatsnew_v227_carbs_sync_desc: "透過常用清單與搜尋紀錄新增餐點時，系統會自動判斷您是否有開啟脂肪碳水功能，並自動一併帶入完整的營養素！",
-    whatsnew_v227_ai_retry_title: "AI 辨識防卡死與一鍵重試 🔄",
-    whatsnew_v227_ai_retry_desc: "辨識失敗或網路中斷時，不再卡在圖片畫面，而是直接顯示詳細的錯誤原因，並新增「重試」與「取消」按鈕，體驗更順暢！"
+    // v2.3.0 Editing, focus, retry updates
+    whatsnew_v230_header: "v2.3 體驗全面進化 🚀",
+    whatsnew_v230_edit_fav_title: "常用清單支援 inline 編輯 ✏️",
+    whatsnew_v230_edit_fav_desc: "現在常用清單可以直接編輯品項名稱與各項營養含量，且在編輯輸入時，點擊欄位會自動選取原有內容，修改極速便利！",
+    whatsnew_v230_carbs_sync_title: "常用/搜尋完美支援脂肪碳水 🥑",
+    whatsnew_v230_carbs_sync_desc: "透過常用清單與搜尋紀錄新增餐點時，系統會自動判斷您是否有開啟脂肪碳水功能，並自動一併帶入完整的營養素！",
+    whatsnew_v230_ai_retry_title: "AI 辨識防卡死與一鍵重試 🔄",
+    whatsnew_v230_ai_retry_desc: "辨識失敗或網路中斷時，不再卡在圖片畫面，而是直接顯示詳細的錯誤原因，並新增「重試」與「取消」按鈕，體驗更順暢！"
   },
   en: {
     app_title: "DAILY DIET",
@@ -672,7 +672,7 @@ const translations = {
     eating_window: "Eating Window",
     fasting_window: "Fasting Window",
     ai_instruction_label: "AI Smart Input / Instructions",
-    ai_instruction_placeholder: "Directly enter food name for text estimation (e.g. 1 apple), or upload an image and add description/notes here.",
+    ai_instruction_placeholder: "Type food name (e.g. 1 banana) or add notes for image uploads ⚡",
     data_stats_title: "Data Storage Overview",
     local_usage: "Local Usage",
     cloud_backup_size: "Cloud Backup",
@@ -791,14 +791,14 @@ const translations = {
     v220_f1: "Added Carb & Fat target setting and calculation (Enable in Settings) 🥑",
     v220_f2: "Support background AI execution without interrupting water & manual logs ⚡",
     v220_f3: "Support text-based AI estimation without images for precise product lookup 🧠",
-    // v2.2.7 Editing, focus, retry updates
-    whatsnew_v227_header: "v2.2.7 Experience Upgrades 🚀",
-    whatsnew_v227_edit_fav_title: "Inline Favorite Editing ✏️",
-    whatsnew_v227_edit_fav_desc: "You can now edit favorite item names and nutritional content directly inline. Numerical fields automatically select text on focus for rapid entry!",
-    whatsnew_v227_carbs_sync_title: "Carbs & Fat Synchronized Logging 🥑",
-    whatsnew_v227_carbs_sync_desc: "When logging via favorites or search, the app automatically checks your Carbs & Fat tracking toggle and populates all active macros seamlessly!",
-    whatsnew_v227_ai_retry_title: "AI Failure Rescue & One-Tap Retry 🔄",
-    whatsnew_v227_ai_retry_desc: "If analysis fails or network cuts out, the app no longer freezes on the image. It displays the error detail with one-tap Retry and Cancel actions!"
+    // v2.3.0 Editing, focus, retry updates
+    whatsnew_v230_header: "v2.3 Experience Upgrades 🚀",
+    whatsnew_v230_edit_fav_title: "Inline Favorite Editing ✏️",
+    whatsnew_v230_edit_fav_desc: "You can now edit favorite item names and nutritional content directly inline. Numerical fields automatically select text on focus for rapid entry!",
+    whatsnew_v230_carbs_sync_title: "Carbs & Fat Synchronized Logging 🥑",
+    whatsnew_v230_carbs_sync_desc: "When logging via favorites or search, the app automatically checks your Carbs & Fat tracking toggle and populates all active macros seamlessly!",
+    whatsnew_v230_ai_retry_title: "AI Failure Rescue & One-Tap Retry 🔄",
+    whatsnew_v230_ai_retry_desc: "If analysis fails or network cuts out, the app no longer freezes on the image. It displays the error detail with one-tap Retry and Cancel actions!"
   }
 };
 

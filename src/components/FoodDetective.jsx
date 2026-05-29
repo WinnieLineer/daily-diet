@@ -723,11 +723,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             className="relative w-full aspect-[16/10] bg-black/95 backdrop-blur-xl flex flex-col items-center justify-center p-6 text-center rounded-[2.5rem] overflow-hidden border-4 border-black shadow-neo z-[60]"
           >
             <div className="flex flex-col items-center gap-2 mb-3">
-              <div className="relative">
-                <Loader2 size={40} className="text-accent animate-spin" strokeWidth={4} />
-                <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-[9px] -mr-0.5">{loadTime}s</span></div>
+              <div className="relative w-16 h-16 flex items-center justify-center bg-white/5 rounded-full border-2 border-white/10 p-2 overflow-visible">
+                <Loader2 size={42} className="text-accent animate-spin overflow-visible shrink-0" strokeWidth={4} />
+                <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-xs">{loadTime}s</span></div>
               </div>
-              <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none">{t('analyzing')}</span>
+              <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none mt-1">{t('analyzing')}</span>
             </div>
 
             <AnimatePresence mode="wait">
