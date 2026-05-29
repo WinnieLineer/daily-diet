@@ -398,6 +398,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
   const [isDragging, setIsDragging] = useState(false);
   const [hasCrown, setHasCrown]     = useState(() => localStorage.getItem('panda_sponsor_crown') === 'true');
   const [activeSticker, setActiveSticker] = useState(() => localStorage.getItem('panda_active_sticker') || '');
+  const [activeTitle, setActiveTitle] = useState(() => localStorage.getItem('panda_active_title') || '');
   const [initialPos, setInitialPos] = useState(() => {
     try {
       const saved = localStorage.getItem('panda_position');
@@ -408,7 +409,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     }
   });
 
-  // Listen for crown & sticker updates from 良心商店
+  // Listen for crown, sticker & title updates
   useEffect(() => {
     const handleCrownChange = () => {
       setHasCrown(localStorage.getItem('panda_sponsor_crown') === 'true');
@@ -416,11 +417,16 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     const handleStickersChange = () => {
       setActiveSticker(localStorage.getItem('panda_active_sticker') || '');
     };
+    const handleTitleChange = () => {
+      setActiveTitle(localStorage.getItem('panda_active_title') || '');
+    };
     window.addEventListener('panda-crown-updated', handleCrownChange);
     window.addEventListener('panda-stickers-updated', handleStickersChange);
+    window.addEventListener('panda-title-updated', handleTitleChange);
     return () => {
       window.removeEventListener('panda-crown-updated', handleCrownChange);
       window.removeEventListener('panda-stickers-updated', handleStickersChange);
+      window.removeEventListener('panda-title-updated', handleTitleChange);
     };
   }, []);
 
@@ -672,10 +678,17 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
 
           {/* Text content */}
           <div className="flex-1 min-w-0 space-y-1 relative z-10">
-            <div className="flex items-center justify-between gap-2 mb-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
-                {t('panda_coach_name')}
-              </span>
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
+              <div className="flex flex-wrap items-center gap-1.5">
+                <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
+                  {t('panda_coach_name')}
+                </span>
+                {activeTitle && (
+                  <span className="text-[9px] font-black bg-accent border-2 border-black text-black px-1.5 py-0.5 rounded-lg rotate-1 scale-95 shadow-neo-sm transform">
+                    {activeTitle}
+                  </span>
+                )}
+              </div>
               {streak > 0 && (
                 <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200 shadow-sm">
                   <Flame size={10} className="fill-orange-500" />

@@ -12,9 +12,9 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
-import SharingCard from './components/SharingCard';
+import WeeklyReportCard from './components/WeeklyReportCard';
 import { getPandaAdvice } from './lib/siliconflow';
-import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
@@ -543,14 +543,7 @@ function App() {
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
             console.log("[VersionCheck] Needs update modal. isFrom16:", isFrom16);
 
-            const hasNewContent = !lastSeenVersion || 
-                                  isNewer('2.2.0', lastSeenVersion) || 
-                                  isNewer('2.1.2', lastSeenVersion) || 
-                                  isNewer('2.1.1', lastSeenVersion) ||
-                                  isNewer('2.1.0', lastSeenVersion) || 
-                                  isNewer('2.0.6', lastSeenVersion) || 
-                                  isNewer('2.0.1', lastSeenVersion) || 
-                                  isNewer('2.0.0', lastSeenVersion);
+            const hasNewContent = !lastSeenVersion || isNewer(APP_VERSION, lastSeenVersion);
 
             if (!isFrom16 && hasNewContent) {
               console.log("[VersionCheck] Triggering WhatsNew modal!");
@@ -591,7 +584,7 @@ function App() {
   const [lastLocation, setLastLocation] = useState(null);
   const [streak, setStreak] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
-  const [showShare, setShowShare] = useState(false);
+  const [showWeeklyReport, setShowWeeklyReport] = useState(false);
   const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
   const [settingsTab, setSettingsTab] = useState('profile');
   
@@ -974,12 +967,18 @@ function App() {
               <Heart size={18} className="fill-rose-500" />
             </NeoButton>
             <NeoButton 
-              variant="black" 
-              className="w-10 h-10 p-0 flex items-center justify-center"
-              onClick={() => setShowShare(true)}
-              title="Share Card"
+              variant={new Date().getDay() === 0 ? "accent" : "black"} 
+              className={`w-10 h-10 p-0 flex items-center justify-center relative ${new Date().getDay() === 0 ? 'bg-accent text-black border-black animate-pulse' : ''}`}
+              onClick={() => setShowWeeklyReport(true)}
+              title="週結算報告"
             >
-              <Share2 size={18} />
+              <BarChart2 size={18} className={new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'} />
+              {new Date().getDay() === 0 && (
+                <span className="absolute -top-1 -right-1 flex h-3.5 w-3.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-3.5 w-3.5 bg-accent border border-black flex items-center justify-center text-[7px] font-black text-black">週</span>
+                </span>
+              )}
             </NeoButton>
             <GoalSettings 
             initialTab={settingsTab} 
@@ -1267,13 +1266,11 @@ function App() {
         )}
       </AnimatePresence>
 
-      <SharingCard 
-        isOpen={showShare}
-        onClose={() => setShowShare(false)}
-        summary={summary}
+      <WeeklyReportCard 
+        isOpen={showWeeklyReport}
+        onClose={() => setShowWeeklyReport(false)}
         goals={goals}
         streak={streak}
-        advice={advice}
         userName={userName}
       />
 

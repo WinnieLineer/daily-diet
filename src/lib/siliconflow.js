@@ -1,5 +1,18 @@
 import { db } from "../db";
 
+function getPersonaInstruction() {
+  const activePersona = typeof localStorage !== 'undefined' ? localStorage.getItem('panda_active_persona') || 'tsundere' : 'tsundere';
+  
+  if (activePersona === 'gentle') {
+    return `Persona style: Sweet, gentle, incredibly supportive, and healing partner (無比溫柔、體貼、溫馨且鼓勵感滿滿的療癒小幫手). Praise the user for recording, show empathy, and encourage them with a warm, caring tone. NEVER use harsh or mean words, and write your roast/comment in a supportive, comforting way.`;
+  }
+  if (activePersona === 'hardcore') {
+    return `Persona style: Fiery, energetic, hardcore gym personal trainer (熱血、鐵血健身教練). Shout at them (use exclamation marks like '動起來！', '再一下！', '給我加油！'), use fitness/gym slang, and push them aggressively to hit their protein, carb, fat, and water targets. Roast them strictly like a drill sergeant.`;
+  }
+  // Default is 'tsundere'
+  return `Persona style: Tsundere Elite Registered Dietitian. Witty, professional, highly sarcastic and tsundere (毒舌且傲嬌，口嫌體正直，雖然犀利吐槽但給予專家建議與貼心叮嚀).`;
+}
+
 // Fallback values
 const DEFAULT_API_KEY = import.meta.env.VITE_SILICONFLOW_API_KEY;
 const API_BASE = "https://api.siliconflow.com/v1/chat/completions";
@@ -133,7 +146,7 @@ export async function analyzeFoodImage(base64Image, context = {}, language = 'zh
 
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
     const customPrompt = `STRICT: DIRECT JSON ONLY. NO PREAMBLE. 
-Persona: Elite Registered Dietitian.
+${getPersonaInstruction()}
 Priority: Read packaging text, labels, or menu signs for accuracy.
 USER SPECIFIC INSTRUCTION (IMPORTANT): ${userInstructions || "None - Use standard visual analysis"}
 If NO FOOD is detected: Still return a JSON object with dish_name indicating no food was detected, 0 for all numbers, and a sarcastic roast about missing food.
@@ -213,7 +226,7 @@ export async function analyzeFoodText(textInstruction, context = {}, language = 
 
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
     const customPrompt = `STRICT: DIRECT JSON ONLY. NO PREAMBLE. NO FENCED CODEBLOCKS.
-Persona: Elite Registered Dietitian.
+${getPersonaInstruction()}
 Task: The user has typed a meal description or product name. Analyze it and estimate its calories, protein, water, carbs, and fat content.
 USER INPUT: "${textInstruction}"
 
@@ -296,9 +309,9 @@ export async function suggestGoals(weight) {
 export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal, water, waterGoal, foodLogs = [], language = 'zh', userName = '') {
   // Overload: If the first argument is a string, treat it as a raw prompt
   if (typeof calories === 'string') {
-    // Increase to 1024 to accommodate reasoning chain-of-thought tokens + final output
-    // Lower temperature to 0.3 for instruct models to ensure clean and correct Traditional Chinese outputs
-    return await completeText(calories, { temperature: 0.3, maxTokens: 1024 });
+    // Prepend active persona style to color custom prompt tasks
+    const customPrompt = `${getPersonaInstruction()}\n\nTask: ${calories}`;
+    return await completeText(customPrompt, { temperature: 0.3, maxTokens: 1024 });
   }
 
   try {
@@ -306,10 +319,10 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
     const foodStrip = foodLogs.map(l => l.dish_name).join(', ');
     const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
 
-    const prompt = `Persona: Elite Dietitian RD. Witty, professional, science-based.
+    const prompt = `${getPersonaInstruction()}
     Status: Cal:${calories}/${calorieGoal}(${calStatus.toFixed(0)}%), Pro:${protein}/${proteinGoal}g, Water:${water}/${waterGoal}ml. User: ${userName || 'User'}.
     History: ${foodStrip || 'None'}
-    Task: Expert evaluation + 1 specific tip. Tone: Evidence-based, expert, witty. Max 35 words.
+    Task: Expert evaluation + 1 specific tip. Tone: Evidence-based, expert, matching the selected persona style. Max 45 words.
     STRICT: Output ONLY the evaluation sentence in ${langDisplay}. NO JSON.`;
 
     return await completeText(prompt, {

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
-import { db } from '../db';
+import { db, calculateStreak } from '../db';
 import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
@@ -60,6 +60,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [hasStickers, setHasStickers] = useState(localStorage.getItem('panda_stickers_unlocked') === 'true');
   const [activeSticker, setActiveSticker] = useState(() => localStorage.getItem('panda_active_sticker') || '');
   const [selectedQr, setSelectedQr] = useState(null);
+
+  // 飲控里程碑與頭銜貼紙狀態
+  const [currentStreak, setCurrentStreak] = useState(0);
+  const [activeTitle, setActiveTitle] = useState(() => localStorage.getItem('panda_active_title') || '');
+  const [hasPersonas, setHasPersonas] = useState(localStorage.getItem('panda_persona_unlocked') === 'true');
+  const [activePersona, setActivePersona] = useState(() => localStorage.getItem('panda_active_persona') || 'tsundere');
+
+  const handleSelectTitle = (title) => {
+    if (activeTitle === title) {
+      localStorage.removeItem('panda_active_title');
+      setActiveTitle('');
+      window.dispatchEvent(new CustomEvent('panda-title-updated'));
+    } else {
+      localStorage.setItem('panda_active_title', title);
+      setActiveTitle(title);
+      window.dispatchEvent(new CustomEvent('panda-title-updated'));
+    }
+  };
 
   const isEn = getLanguage() === 'en';
 
@@ -156,6 +174,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     fetchGoals();
     checkLocationPermission();
     refreshStats();
+    calculateStreak().then(s => setCurrentStreak(s)).catch(() => {});
+  }, []);
+
+  useEffect(() => {
+    const handleTitleChange = () => {
+      setActiveTitle(localStorage.getItem('panda_active_title') || '');
+    };
+    window.addEventListener('panda-title-updated', handleTitleChange);
+    return () => window.removeEventListener('panda-title-updated', handleTitleChange);
   }, []);
 
   useEffect(() => {
@@ -450,6 +477,60 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             {lang.name}
                           </button>
                         ))}
+                      </div>
+                    </div>
+                    {/* 飲控里程碑貼紙 */}
+                    <div className="space-y-3 border-4 border-black p-4 rounded-[2rem] bg-zinc-50 shadow-neo-sm">
+                      <div className="flex items-center justify-between">
+                        <h4 className="font-black italic text-sm">🏆 飲控里程碑與頭銜貼紙</h4>
+                        <span className="bg-orange-50 text-orange-600 px-2.5 py-0.5 rounded-full border border-orange-200 text-[10px] font-black italic">
+                          連續記錄 {currentStreak} 天 🔥
+                        </span>
+                      </div>
+                      <p className="text-[10px] font-bold text-zinc-400 leading-tight">
+                        達標即可解鎖專屬頭銜貼紙，佩戴於熊貓教練名牌旁，快去打卡吧！
+                      </p>
+                      <div className="space-y-2.5 mt-2">
+                        {[
+                          { days: 3, title: "自律小萌新 🥗", desc: "連續打卡 3 天" },
+                          { days: 7, title: "爆卡剋星 ⚔️", desc: "連續打卡 7 天" },
+                          { days: 30, title: "飲控得道仙人 👑", desc: "連續打卡 30 天" }
+                        ].map(item => {
+                          const isUnlocked = currentStreak >= item.days;
+                          const isWorn = activeTitle === item.title;
+                          return (
+                            <div 
+                              key={item.days} 
+                              className={`flex items-center justify-between p-3 border-2 border-black rounded-2xl transition-all ${
+                                isWorn ? 'bg-accent/15 border-2 border-black' : isUnlocked ? 'bg-white' : 'bg-zinc-100/50 opacity-60'
+                              }`}
+                            >
+                              <div className="flex flex-col text-left">
+                                <span className={`font-black text-xs ${isUnlocked ? 'text-black' : 'text-zinc-400'}`}>
+                                  {item.title}
+                                </span>
+                                <span className="text-[9px] font-bold text-zinc-400 mt-0.5">
+                                  {item.desc} {isUnlocked ? '🔓 已解鎖' : `🔒 差 ${item.days - currentStreak} 天`}
+                                </span>
+                              </div>
+                              {isUnlocked ? (
+                                <button
+                                  type="button"
+                                  onClick={() => handleSelectTitle(item.title)}
+                                  className={`px-3 py-1.5 rounded-xl border-2 border-black font-black text-[9px] italic transition-all active:scale-95 shadow-neo-sm-flat ${
+                                    isWorn 
+                                      ? 'bg-black text-accent shadow-none border-black' 
+                                      : 'bg-white text-black hover:bg-zinc-50'
+                                  }`}
+                                >
+                                  {isWorn ? '卸下頭銜' : '佩戴頭銜'}
+                                </button>
+                              ) : (
+                                <span className="text-[9px] font-black text-zinc-400 italic">未解鎖</span>
+                              )}
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                     <button onClick={() => { onToggleLayoutEdit(); setIsOpen(false); }} className={`w-full flex items-center gap-4 p-4 border-4 border-black rounded-2xl shadow-neo-sm transition-all ${isEditingLayout ? 'bg-black text-white' : 'bg-white'}`}>
@@ -1017,6 +1098,108 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               className="w-full bg-emerald-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs-black transition-transform flex items-center justify-center gap-1.5"
                             >
                               {shopText.stickerInactive}
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 熊貓多重性格切換 */}
+                    <div className="p-5 border-4 border-black rounded-[2.2rem] bg-white shadow-neo relative overflow-hidden text-left">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">🎭</span>
+                          <div>
+                            <h4 className="font-black italic text-sm text-black">熊貓教練多重性格切換 (付費解鎖)</h4>
+                            <span className="text-[8px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full inline-block mt-0.5 uppercase">
+                              SUPPORT SPONSORS ONLY
+                            </span>
+                          </div>
+                        </div>
+                        <p className="text-[10px] font-bold text-zinc-500 leading-relaxed">
+                          支持良心燃料商店的贊助者專屬！解鎖三款完全不同的 AI 性格，教練在進行食物辨識或日常評語時的口氣將天差地遠！採自助解鎖 🎋
+                        </p>
+
+                        {/* Character Grid */}
+                        <div className="grid grid-cols-3 gap-2 py-1">
+                          {[
+                            { id: 'tsundere', emoji: '😡', title: '毒舌傲嬌', desc: '口嫌體正直，專挑毛病吐槽' },
+                            { id: 'gentle', emoji: '😇', title: '溫柔甜心', desc: '貼心小天使，用愛包容你的胃' },
+                            { id: 'hardcore', emoji: '💪', title: '鐵血教練', desc: '健身硬漢，咆哮督促絕不妥協' }
+                          ].map(char => {
+                            const isActive = activePersona === char.id;
+                            return (
+                              <button
+                                key={char.id}
+                                type="button"
+                                onClick={() => {
+                                  if (!hasPersonas) {
+                                    alert("🔒 此多重性格切換尚未解鎖！請點選下方「自助解鎖限定性格」進行支持 🎋");
+                                    return;
+                                  }
+                                  localStorage.setItem('panda_active_persona', char.id);
+                                  setActivePersona(char.id);
+                                  window.dispatchEvent(new CustomEvent('panda-persona-updated'));
+                                  alert(`已切換為專屬性格：${char.emoji} ${char.title}！`);
+                                }}
+                                className={`relative p-2 border-2 border-black rounded-2xl text-center flex flex-col items-center justify-between min-h-[95px] transition-all hover:bg-zinc-50 ${
+                                  isActive && hasPersonas ? 'bg-indigo-50/70 border-2 border-black ring-2 ring-indigo-500/20' : 'bg-white'
+                                }`}
+                              >
+                                <span className="text-xl">{char.emoji}</span>
+                                <span className="font-black text-[10px] text-black mt-1 leading-none">{char.title}</span>
+                                <span className="text-[7px] font-extrabold text-zinc-400 leading-tight mt-1.5">{char.desc}</span>
+                                
+                                {/* Lock overlay */}
+                                {!hasPersonas && (
+                                  <div className="absolute inset-0 bg-black/5 rounded-xl flex items-center justify-center text-[10px]">
+                                    🔒
+                                  </div>
+                                )}
+
+                                {/* Active Star Sparkle */}
+                                {hasPersonas && isActive && (
+                                  <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-400 border border-black rounded-full flex items-center justify-center text-[7px] font-black shadow-neo-xs animate-bounce z-10">
+                                    ✨
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Action Unlock Button */}
+                        <div className="flex gap-2">
+                          {hasPersonas ? (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                localStorage.removeItem('panda_persona_unlocked');
+                                localStorage.setItem('panda_active_persona', 'tsundere');
+                                setHasPersonas(false);
+                                setActivePersona('tsundere');
+                                window.dispatchEvent(new CustomEvent('panda-persona-updated'));
+                                alert("已封存多重性格切換，教練恢復為預設傲嬌性格 🎋");
+                              }}
+                              className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform"
+                            >
+                              🎁 性格切換已開啟 (點擊封存)
+                            </button>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                const confirmUnlock = window.confirm("🎋 熊貓教練多重性格自助解鎖小卡\n\n「感謝你支持開發者的真實 API 燃料開銷！解鎖後即可任意切換 3 款完全不同的 AI 對話性格！」\n\n準備好開啟多重性格了嗎？");
+                                if (confirmUnlock) {
+                                   localStorage.setItem('panda_persona_unlocked', 'true');
+                                   setHasPersonas(true);
+                                   window.dispatchEvent(new CustomEvent('panda-persona-updated'));
+                                   alert("🎉 恭喜！「多重性格切換」已自助解鎖成功！快點選上方頭像性格，體驗不同性格教練的精彩對話吧 🐼⚡");
+                                }
+                              }}
+                              className="w-full bg-indigo-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs transition-transform flex items-center justify-center gap-1.5"
+                            >
+                              ✨ 自助解鎖限定性格 🎁
                             </button>
                           )}
                         </div>

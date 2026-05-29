@@ -13,6 +13,9 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
   const [exportState, setExportState] = useState(null); // 'download' | 'share' | null
   const [aiRoast, setAiRoast] = useState('');
   const [isRoasting, setIsRoasting] = useState(false);
+  
+  const hasCrown = typeof localStorage !== 'undefined' ? localStorage.getItem('panda_sponsor_crown') === 'true' : false;
+  const currentTitle = typeof localStorage !== 'undefined' ? localStorage.getItem('panda_active_title') : null;
 
   const handleGetRoast = async () => {
     if (isRoasting) return;
@@ -34,7 +37,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
       }
       
       const result = await getPandaAdvice(prompt);
-      setAiRoast(result.replace(/[#*]/g, '').replace(/["「」]/g, '').trim().slice(0, 50));
+      setAiRoast(result.replace(/[#*]/g, '').replace(/["「」]/g, '').trim().slice(0, 150));
     } catch (err) {
       console.error("Roast error:", err);
       const rawMsg = err.message || '';
@@ -130,7 +133,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
             {/* Capture Wrapper to preserve shadow box */}
             <div ref={cardRef} className="p-4 pr-6 pb-6">
               <div 
-                className="bg-[#F8FAFC] border-8 border-black p-6 rounded-[2.5rem] shadow-[12px_12px_0px_0px_rgba(0,0,0,1)] relative overflow-hidden"
+                className={`bg-[#F8FAFC] border-8 ${hasCrown ? 'border-amber-400 shadow-[12px_12px_0px_0px_rgba(251,191,36,1)]' : 'border-black shadow-[12px_12px_0px_0px_rgba(0,0,0,1)]'} p-6 rounded-[2.5rem] relative overflow-hidden`}
               >
               {/* Background Decor */}
               <div className="absolute top-[-10%] right-[-10%] w-40 h-40 bg-accent/20 rounded-full blur-3xl" />
@@ -141,10 +144,20 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
                 <div>
                   <h1 className="text-3xl font-black italic tracking-tighter leading-[0.85] mb-2">DAILY<br/>DIET</h1>
                   {userName && (
-                    <div className="mb-2">
+                    <div className="mb-2 flex flex-wrap items-center gap-1.5">
                       <span className="bg-black text-accent px-2 py-0.5 rounded-lg text-[10px] font-black italic uppercase tracking-wider">
                         {userName}
                       </span>
+                      {hasCrown && (
+                        <span className="bg-amber-400 text-black border-2 border-black px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-wider flex items-center gap-0.5 shadow-neo-xs scale-90 origin-left transform">
+                          👑 榮譽金主
+                        </span>
+                      )}
+                      {currentTitle && (
+                        <span className="bg-accent border-2 border-black text-black px-1.5 py-0.5 rounded-md text-[8px] font-black italic scale-90 origin-left transform">
+                          {currentTitle}
+                        </span>
+                      )}
                     </div>
                   )}
                   <div className="flex items-center gap-1 text-[10px] font-bold text-zinc-400 uppercase tracking-widest pl-0.5">

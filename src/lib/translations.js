@@ -399,7 +399,17 @@ const translations = {
     whatsnew_v230_carbs_sync_title: "常用/搜尋完美支援脂肪碳水 🥑",
     whatsnew_v230_carbs_sync_desc: "透過常用清單與搜尋紀錄新增餐點時，系統會自動判斷您是否有開啟脂肪碳水功能，並自動一併帶入完整的營養素！",
     whatsnew_v230_ai_retry_title: "AI 辨識防卡死與一鍵重試 🔄",
-    whatsnew_v230_ai_retry_desc: "辨識失敗或網路中斷時，不再卡在圖片畫面，而是直接顯示詳細的錯誤原因，並新增「重試」與「取消」按鈕，體驗更順暢！"
+    whatsnew_v230_ai_retry_desc: "辨識失敗或網路中斷時，不再卡在圖片畫面，而是直接顯示詳細的錯誤原因，並新增「重試」與「取消」按鈕，體驗更順暢！",
+    // v2.3.1 Gamification, Weekly Settle & Personalities
+    whatsnew_v231_header: "v2.3.1 自律＆性格全新進化 🐼✨",
+    whatsnew_v231_report_title: "週日自律週報與 IG 分享卡片 📊",
+    whatsnew_v231_report_desc: "每週日解鎖本週飲食與打卡大盤點，包含自律分數、體重起伏與平均攝取，一鍵導出精美 9:16 IG 限動卡片！",
+    whatsnew_v231_milestones_title: "飲控里程碑與專屬頭銜貼紙 🏆",
+    whatsnew_v231_milestones_desc: "連續記錄 3 / 7 / 30 天飲控解鎖專屬酷炫稱號（如「爆卡剋星」），直接佩戴顯示在首頁熊貓名牌旁，成就感拉滿！",
+    whatsnew_v231_persona_title: "熊貓多重性格切換（良心自助解鎖）🎭",
+    whatsnew_v231_persona_desc: "良心小鋪自助開啟！自由切換「毒舌傲嬌教練 😡」、「溫柔療癒甜心 😇」、「熱血鐵血教練 💪」，AI 全面配合性格說話！",
+    whatsnew_v231_reset_panda_title: "熊貓被你拖不見了嗎？🐼📍",
+    whatsnew_v231_reset_panda_desc: "如果不小心把教練拖出螢幕外找不到了，免緊張！現在設定中新增了「熊貓位置歸位」按鈕，點擊即可讓教練一鍵重回中央安全區！"
   },
   en: {
     app_title: "DAILY DIET",
@@ -800,7 +810,17 @@ const translations = {
     whatsnew_v230_carbs_sync_title: "Carbs & Fat Synchronized Logging 🥑",
     whatsnew_v230_carbs_sync_desc: "When logging via favorites or search, the app automatically checks your Carbs & Fat tracking toggle and populates all active macros seamlessly!",
     whatsnew_v230_ai_retry_title: "AI Failure Rescue & One-Tap Retry 🔄",
-    whatsnew_v230_ai_retry_desc: "If analysis fails or network cuts out, the app no longer freezes on the image. It displays the error detail with one-tap Retry and Cancel actions!"
+    whatsnew_v230_ai_retry_desc: "If analysis fails or network cuts out, the app no longer freezes on the image. It displays the error detail with one-tap Retry and Cancel actions!",
+    // v2.3.1 Gamification, Weekly Settle & Personalities
+    whatsnew_v231_header: "v2.3.1 Self-discipline & Persona Upgrades 🐼✨",
+    whatsnew_v231_report_title: "Sunday Report & IG Share Cards 📊",
+    whatsnew_v231_report_desc: "Unlock a weekly summary with self-discipline scores, weight trends, and average intakes every Sunday. Export beautiful 9:16 vertical cards directly for IG Stories!",
+    whatsnew_v231_milestones_title: "Diet Milestones & Wearable Title Stickers 🏆",
+    whatsnew_v231_milestones_desc: "Track your diet for 3, 7, or 30 days to unlock exclusive titles (like 'Cheat-Meal Buster'). Wear them next to your Panda coach name tag on the home screen!",
+    whatsnew_v231_persona_title: "Panda Multi-Personas (Self-Service Unlock) 🎭",
+    whatsnew_v231_persona_desc: "Unlock in the Honor Shop! Toggle between Tsundere Coach, Healing Sweetheart, or Hardcore Trainer. The AI dietitian dynamically speaks in your chosen persona!",
+    whatsnew_v231_reset_panda_title: "Lost Coach Panda? 🐼📍",
+    whatsnew_v231_reset_panda_desc: "If you accidentally drag Coach Panda off-screen and lose him, don't panic! We added a 'Reset Panda Position' button in Settings to bring him right back instantly!"
   }
 };
 
