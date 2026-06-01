@@ -270,18 +270,35 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   };
 
   const saveGoals = async () => {
-    await db.settings.put({ key: 'calorie_goal', value: Number(goals.calories) });
-    await db.settings.put({ key: 'protein_goal', value: Number(goals.protein) });
-    await db.settings.put({ key: 'water_goal', value: Number(goals.water) });
-    await db.settings.put({ key: 'fasting_enabled', value: goals.fasting_enabled });
-    await db.settings.put({ key: 'fasting_start', value: goals.fasting_start });
-    await db.settings.put({ key: 'fasting_end', value: goals.fasting_end });
-    await db.settings.put({ key: 'show_carbs_fat', value: goals.show_carbs_fat });
-    await db.settings.put({ key: 'carbs_goal', value: Number(goals.carbs) });
-    await db.settings.put({ key: 'fat_goal', value: Number(goals.fat) });
-    if (isLocal) await db.settings.put({ key: 'user_api_key', value: apiKey });
-    setIsOpen(false);
-    onGoalsUpdated();
+    try {
+      const parsedCal = Number(goals.calories);
+      const parsedPro = Number(goals.protein);
+      const parsedWat = Number(goals.water);
+      const parsedCarb = Number(goals.carbs);
+      const parsedFat = Number(goals.fat);
+
+      await db.settings.put({ key: 'calorie_goal', value: isNaN(parsedCal) ? 2000 : parsedCal });
+      await db.settings.put({ key: 'protein_goal', value: isNaN(parsedPro) ? 100 : parsedPro });
+      await db.settings.put({ key: 'water_goal', value: isNaN(parsedWat) ? 2500 : parsedWat });
+      await db.settings.put({ key: 'fasting_enabled', value: !!goals.fasting_enabled });
+      await db.settings.put({ key: 'fasting_start', value: goals.fasting_start || '12:00' });
+      await db.settings.put({ key: 'fasting_end', value: goals.fasting_end || '20:00' });
+      await db.settings.put({ key: 'show_carbs_fat', value: !!goals.show_carbs_fat });
+      await db.settings.put({ key: 'carbs_goal', value: isNaN(parsedCarb) ? 200 : parsedCarb });
+      await db.settings.put({ key: 'fat_goal', value: isNaN(parsedFat) ? 60 : parsedFat });
+      
+      if (isLocal) {
+        await db.settings.put({ key: 'user_api_key', value: apiKey || '' });
+      }
+      
+      setIsOpen(false);
+      if (onGoalsUpdated) {
+        onGoalsUpdated();
+      }
+    } catch (error) {
+      console.error("Failed to save goals:", error);
+      alert("儲存目標時發生錯誤，請重試！\n錯誤原因: " + error.message);
+    }
   };
 
   const calculateSuggestion = () => {
