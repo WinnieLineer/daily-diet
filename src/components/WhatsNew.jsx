@@ -31,6 +31,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show235 = isNewer('2.3.5', lastSeenVersion);
   const show231 = isNewer('2.3.1', lastSeenVersion);
   const show230 = isNewer('2.3.0', lastSeenVersion);
   const show220 = isNewer('2.2.0', lastSeenVersion);
@@ -43,7 +44,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
   // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
-  const isBugFixOnly = !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -85,6 +86,18 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show235 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v235_header') || 'v2.3.5 Update'}</div>
+                  <FeatureItem 
+                    icon={Wrench}
+                    color="bg-emerald-300"
+                    title={t('whatsnew_v235_water_title')}
+                    description={t('whatsnew_v235_water_desc')}
+                  />
+                </div>
+              )}
+
               {show231 && (
                 <div className="space-y-2">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v231_header') || 'v2.3.1 Update'}</div>

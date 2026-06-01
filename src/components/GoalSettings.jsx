@@ -650,6 +650,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label>
                         <input type="number" value={goals.protein} onChange={e => setGoals({ ...goals, protein: e.target.value })} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_goal')} (ml)</label>
+                        <input type="number" value={goals.water} onChange={e => setGoals({ ...goals, water: e.target.value })} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
+                      </div>
 
                       {/* Carb & Fat Toggle Switch */}
                       <div className="flex items-center justify-between p-4 bg-zinc-50 border-4 border-black rounded-2xl shadow-neo-sm mt-2">

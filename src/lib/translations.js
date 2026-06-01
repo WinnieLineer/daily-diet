@@ -409,7 +409,11 @@ const translations = {
     whatsnew_v231_persona_title: "熊貓多重性格切換（良心自助解鎖）🎭",
     whatsnew_v231_persona_desc: "良心小鋪自助開啟！自由切換「毒舌傲嬌教練 😡」、「溫柔療癒甜心 😇」、「熱血鐵血教練 💪」，AI 全面配合性格說話！",
     whatsnew_v231_reset_panda_title: "熊貓被你拖不見了嗎？🐼📍",
-    whatsnew_v231_reset_panda_desc: "如果不小心把教練拖出螢幕外找不到了，免緊張！現在設定中新增了「熊貓位置歸位」按鈕，點擊即可讓教練一鍵重回中央安全區！"
+    whatsnew_v231_reset_panda_desc: "如果不小心把教練拖出螢幕外找不到了，免緊張！現在設定中新增了「熊貓位置歸位」按鈕，點擊即可讓教練一鍵重回中央安全區！",
+    // v2.3.5 Water goal fix
+    whatsnew_v235_header: "v2.3.5 飲水目標修復 🚰✨",
+    whatsnew_v235_water_title: "飲水目標自訂功能修復 💧",
+    whatsnew_v235_water_desc: "修復了先前目標設定中遺漏飲水目標輸入框的問題，現在您可以自由調整每日飲水目標囉！"
   },
   en: {
     app_title: "DAILY DIET",
@@ -820,7 +824,11 @@ const translations = {
     whatsnew_v231_persona_title: "Panda Multi-Personas (Self-Service Unlock) 🎭",
     whatsnew_v231_persona_desc: "Unlock in the Honor Shop! Toggle between Tsundere Coach, Healing Sweetheart, or Hardcore Trainer. The AI dietitian dynamically speaks in your chosen persona!",
     whatsnew_v231_reset_panda_title: "Lost Coach Panda? 🐼📍",
-    whatsnew_v231_reset_panda_desc: "If you accidentally drag Coach Panda off-screen and lose him, don't panic! We added a 'Reset Panda Position' button in Settings to bring him right back instantly!"
+    whatsnew_v231_reset_panda_desc: "If you accidentally drag Coach Panda off-screen and lose him, don't panic! We added a 'Reset Panda Position' button in Settings to bring him right back instantly!",
+    // v2.3.5 Water goal fix
+    whatsnew_v235_header: "v2.3.5 Water Goal Fix 🚰✨",
+    whatsnew_v235_water_title: "Water Intake Goal Customization Fixed 💧",
+    whatsnew_v235_water_desc: "Fixed the missing water intake goal input field in Settings. You can now customize your daily water intake goal freely!"
   }
 };
 
