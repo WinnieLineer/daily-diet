@@ -420,7 +420,27 @@ const translations = {
     whatsnew_v242_ai_desc: "極速分析與穩定度優化！徹底修復之前上個模型常常失敗的問題，現在改用全新模型與架構，運作更穩定快速，請多包涵！",
     v242_f1: "全新 AI 圖片與文本模型全面升級，支援更極速的辨識與分析 🧠",
     v242_f2: "修復了前代模型不穩定的問題，提供更優異的使用體驗 ⚡",
-    v245_f1: "優化正式環境 API 金鑰載入機制，確保穩定度並自動隱藏本地金鑰設定 🔒"
+    v245_f1: "優化正式環境 API 金鑰載入機制，確保穩定度並自動隱藏本地金鑰設定 🔒",
+    // Fasting & Hydration additions
+    hydration_reminder: "飲水提醒",
+    hydration_reminder_hint: "定時提醒補水，保持健康代謝",
+    hydration_notif_title: "該喝水囉！🚰",
+    hydration_notif_body: "熊貓教練提醒您：已經有一段時間沒有喝水囉，快來喝一杯水並打卡記錄吧！🐼💧",
+    reminder_off: "關閉",
+    reminder_1h: "每 1 小時",
+    reminder_2h: "每 2 小時",
+    reminder_3h: "每 3 小時",
+    reminder_4h: "每 4 小時",
+    fasting_timer_title: "斷食計時器",
+    fasting_remaining: "斷食倒數",
+    eating_window_remaining: "進食倒數",
+    whatsnew_v250_header: "專屬於您的貼心升級 ✨",
+    whatsnew_v250_vip_title: "您的專屬體驗與意見回饋管道 💌",
+    whatsnew_v250_vip_desc: "親愛的飲控夥伴，您記錄下的每一小步都非常珍貴！我們十分在乎您的真實體驗，歡迎點擊設定中的「意見回饋」與教練對話，我們隨時為您傾聽並優化功能！",
+    whatsnew_v250_timers_title: "三大貼心追蹤卡片與搜尋效能飛躍 🏆",
+    whatsnew_v250_timers_desc: "為您特別呈獻：斷食即時倒數計時卡 🕒、排便與體重關聯圖表 💩/⚖️、以及今日營養素比例圖 🥑！同時大幅優化搜尋效能，打字即可瞬間搜出您的過往美食紀錄！",
+    v250_vip_title: "您的專屬體驗與意見回饋管道 💌",
+    v250_timers_title: "三大貼心追蹤卡片與搜尋效能飛躍 🏆"
   },
   en: {
     app_title: "DAILY DIET",
@@ -842,7 +862,27 @@ const translations = {
     whatsnew_v242_ai_desc: "Newly upgraded ultra-fast AI recognition! Thoroughly fixed the issue where the previous model failed frequently. We now support this new model and architecture for better speed and stability!",
     v242_f1: "Upgraded to new AI vision and text models for faster recognition and analysis 🧠",
     v242_f2: "Fixed the instability issues of the previous model to provide a better user experience ⚡",
-    v245_f1: "Optimized production API key loading mechanism for stability and auto-hiding local settings 🔒"
+    v245_f1: "Optimized production API key loading mechanism for stability and auto-hiding local settings 🔒",
+    // Fasting & Hydration additions
+    hydration_reminder: "Water Reminder",
+    hydration_reminder_hint: "Get reminded to drink water periodically",
+    hydration_notif_title: "Time to drink water! 🚰",
+    hydration_notif_body: "Panda Coach says: It's been a while since your last glass of water. Grab some water and log it now! 🐼💧",
+    reminder_off: "Off",
+    reminder_1h: "Every 1 Hour",
+    reminder_2h: "Every 2 Hours",
+    reminder_3h: "Every 3 Hours",
+    reminder_4h: "Every 4 Hours",
+    fasting_timer_title: "Fasting Timer",
+    fasting_remaining: "Fasting Countdown",
+    eating_window_remaining: "Eating Window Remaining",
+    whatsnew_v250_header: "Exclusive VIP Guest Update ✨",
+    whatsnew_v250_vip_title: "Dedicated VIP Feedback Channel 💌",
+    whatsnew_v250_vip_desc: "Dear Honored Guest, your feedback is our highest motivation. Tap 'Feedback' in Settings to share your thoughts, and we will continuously tailor the experience for you!",
+    whatsnew_v250_timers_title: "Macronutrient Pie, Fasting Countdowns & Search Boost 🏆",
+    whatsnew_v250_timers_desc: "Exclusively for you: Real-time Fasting Countdown, Bowel Movement & Weight Correlation, and Macronutrient ratio pie chart! Plus a massive search performance boost for instant lookups!",
+    v250_vip_title: "Dedicated VIP Feedback Channel 💌",
+    v250_timers_title: "Macronutrient Pie, Fasting Countdowns & Search Boost 🏆"
   }
 };
 

@@ -1,6 +1,7 @@
 import React from 'react';
 import NeoCard from './NeoCard';
 import { t } from '../lib/translations';
+import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const ProgressRing = ({ value, max, label }) => {
   const percentage = Math.round((value / max) * 100);
@@ -61,6 +62,25 @@ const Dashboard = ({ summary, goals }) => {
   const CARBS_GOAL   = goals.carbs   || 200;
   const FAT_GOAL     = goals.fat     || 60;
 
+  // Calculate Macronutrient Calories
+  const carbKcal = (summary.carbs || 0) * 4;
+  const proteinKcal = (summary.protein || 0) * 4;
+  const fatKcal = (summary.fat || 0) * 9;
+  const totalMacroKcal = carbKcal + proteinKcal + fatKcal;
+
+  const data = [
+    { name: t('dashboard_carbs') || 'Carbs', value: carbKcal, color: '#FDE047', rawGrams: summary.carbs || 0 },
+    { name: t('dashboard_protein') || 'Protein', value: proteinKcal, color: '#000000', rawGrams: summary.protein || 0 },
+    { name: t('dashboard_fat') || 'Fat', value: fatKcal, color: '#e11d48', rawGrams: summary.fat || 0 },
+  ];
+
+  const hasMacroData = totalMacroKcal > 0;
+  const chartData = hasMacroData 
+    ? data 
+    : [
+        { name: t('no_logs_today'), value: 1, color: '#e4e4e7', rawGrams: 0 }
+      ];
+
   return (
     <NeoCard className="bg-white">
       <div className="flex items-center justify-between mb-6">
@@ -79,6 +99,56 @@ const Dashboard = ({ summary, goals }) => {
             <ProgressRing value={summary.protein} max={PROTEIN_GOAL} label={`🍖${t('dashboard_protein')}`} />
             <ProgressRing value={summary.carbs || 0} max={CARBS_GOAL} label={`🍞${t('dashboard_carbs')}`} />
             <ProgressRing value={summary.fat || 0} max={FAT_GOAL} label={`🥑${t('dashboard_fat')}`} />
+          </div>
+          
+          {/* Row 3: Macronutrient Calorie Distribution Donut Chart */}
+          <div className="pt-4 border-t-2 border-dashed border-black/5 flex items-center justify-between gap-4">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 relative flex items-center justify-center bg-zinc-50 border-2 border-black rounded-full shadow-neo-sm-flat">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie
+                    data={chartData}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={22}
+                    outerRadius={38}
+                    paddingAngle={hasMacroData ? 4 : 0}
+                    dataKey="value"
+                    stroke="#000000"
+                    strokeWidth={2}
+                  >
+                    {chartData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                </PieChart>
+              </ResponsiveContainer>
+              <div className="absolute flex flex-col items-center">
+                <span className="text-[10px] font-black italic">{hasMacroData ? Math.round(totalMacroKcal) : 0}</span>
+                <span className="text-[8px] font-bold opacity-45 uppercase">kcal</span>
+              </div>
+            </div>
+
+            <div className="flex-1 space-y-2">
+              <div className="text-[10px] font-black uppercase tracking-wider text-zinc-500 mb-1">
+                ⚖️ {t('composition') || 'Macro Ratio'} (kcal %)
+              </div>
+              <div className="grid grid-cols-1 gap-1.5 text-[10px]">
+                {data.map(item => {
+                  const pct = totalMacroKcal > 0 ? Math.round((item.value / totalMacroKcal) * 100) : 0;
+                  return (
+                    <div key={item.name} className="flex items-center justify-between font-bold">
+                      <div className="flex items-center gap-1.5">
+                        <span className="w-2.5 h-2.5 rounded border border-black shrink-0" style={{ backgroundColor: item.color }} />
+                        <span className="font-black">{item.name}</span>
+                        <span className="text-zinc-400 font-normal">({item.rawGrams}g)</span>
+                      </div>
+                      <span className="font-mono font-black">{pct}%</span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
           </div>
         </div>
       ) : (

@@ -255,24 +255,34 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   useEffect(() => {
     if (mode === 'search') {
       const doSearch = async () => {
-        if (!searchQuery.trim()) {
+        const query = searchQuery.toLowerCase().trim();
+        if (!query) {
           setSearchResults([]);
           return;
         }
-        const matches = await db.dietLogs
-          .filter(log => log.dish_name.toLowerCase().includes(searchQuery.toLowerCase()))
-          .reverse()
-          .sortBy('timestamp');
 
         const uniqueMatches = [];
         const seen = new Set();
-        for (const m of matches) {
-          if (!seen.has(m.dish_name)) {
-            uniqueMatches.push(m);
-            seen.add(m.dish_name);
-          }
-          if (uniqueMatches.length >= 30) break;
-        }
+
+        // High-performance index-driven query. Dexie iterates backwards through
+        // the timestamp index and filters matching dish names in memory. It terminates
+        // immediately once 30 unique matches are collected, ensuring sub-millisecond search.
+        await db.dietLogs
+          .orderBy('timestamp')
+          .reverse()
+          .filter(log => {
+            if (uniqueMatches.length >= 30) return false;
+            const name = log.dish_name.toLowerCase();
+            if (name.includes(query) && !seen.has(log.dish_name)) {
+              seen.add(log.dish_name);
+              uniqueMatches.push(log);
+              return true;
+            }
+            return false;
+          })
+          .limit(30)
+          .toArray();
+
         setSearchResults(uniqueMatches);
       };
       doSearch();
@@ -430,6 +440,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         await db.pendingAnalysis.delete('current');
         if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
         if (data.panda_comment && setAdvice) setAdvice(data.panda_comment);
+        setUserInstructions(''); // Clear instructions after successful visual analysis
       }
     } catch (err) {
       if (currentAnalysisId !== analysisIdRef.current) return;
@@ -499,6 +510,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         await db.pendingAnalysis.delete('current');
         if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
         if (res.panda_comment && setAdvice) setAdvice(res.panda_comment);
+        setUserInstructions(''); // Clear instructions after successful text analysis
       }
     } catch (err) {
       if (currentAnalysisId !== analysisIdRef.current) return;

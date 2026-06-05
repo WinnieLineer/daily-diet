@@ -11,6 +11,7 @@ import { PandaSticker } from './PandaStickers';
 
 
 const VERSION_HISTORY = [
+  { version: '2.5.0', date: '2026-06-05', features: [t('v250_vip_title'), t('v250_timers_title')] },
   { version: '2.4.5', date: '2026-06-05', features: [t('v242_f1'), t('v242_f2'), t('v245_f1')] },
   { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
   { version: '2.1.2', date: '2026-05-19', features: [t('v212_f1')] },
@@ -39,7 +40,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     accountHolder: "林XX"
   };
 
-  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00', show_carbs_fat: false, carbs: 200, fat: 60 });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00', show_carbs_fat: false, carbs: 200, fat: 60, water_reminder_interval: 0 });
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab);
   const [contactForm, setContactForm] = useState({ subject: t('feedback_subject'), message: '' });
@@ -261,6 +262,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     const showCarbs = await db.settings.get('show_carbs_fat');
     const carbsGoal = await db.settings.get('carbs_goal');
     const fatGoal = await db.settings.get('fat_goal');
+    const watRem = await db.settings.get('water_reminder_interval');
 
     setGoals({
       calories: cal ? cal.value : 2000,
@@ -271,7 +273,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       fasting_end: fEnTime ? fEnTime.value : '20:00',
       show_carbs_fat: showCarbs ? showCarbs.value : false,
       carbs: carbsGoal ? carbsGoal.value : 200,
-      fat: fatGoal ? fatGoal.value : 60
+      fat: fatGoal ? fatGoal.value : 60,
+      water_reminder_interval: watRem ? watRem.value : 0
     });
     const ak = await db.settings.get('user_api_key');
     if (ak) setApiKey(ak.value);
@@ -284,6 +287,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       const parsedWat = Number(goals.water);
       const parsedCarb = Number(goals.carbs);
       const parsedFat = Number(goals.fat);
+      const parsedWatRem = Number(goals.water_reminder_interval) || 0;
 
       await db.settings.put({ key: 'calorie_goal', value: isNaN(parsedCal) ? 2000 : parsedCal });
       await db.settings.put({ key: 'protein_goal', value: isNaN(parsedPro) ? 100 : parsedPro });
@@ -294,6 +298,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       await db.settings.put({ key: 'show_carbs_fat', value: !!goals.show_carbs_fat });
       await db.settings.put({ key: 'carbs_goal', value: isNaN(parsedCarb) ? 200 : parsedCarb });
       await db.settings.put({ key: 'fat_goal', value: isNaN(parsedFat) ? 60 : parsedFat });
+      await db.settings.put({ key: 'water_reminder_interval', value: parsedWatRem });
+
+      if (parsedWatRem > 0 && typeof Notification !== 'undefined') {
+        if (Notification.permission === 'default') {
+          await Notification.requestPermission();
+        }
+      }
       
       if (isLocal) {
         const cleanedKey = (apiKey || '').trim().replace(/^bearer\s+/i, '').trim();
@@ -680,6 +691,26 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <div>
                         <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('water_goal')} (ml)</label>
                         <input type="number" value={goals.water} onChange={e => setGoals({ ...goals, water: e.target.value })} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
+                      </div>
+                      <div>
+                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('hydration_reminder')}</label>
+                        <select
+                          value={goals.water_reminder_interval}
+                          onChange={e => {
+                            const val = Number(e.target.value);
+                            setGoals({ ...goals, water_reminder_interval: val });
+                            if (val > 0 && typeof Notification !== 'undefined' && Notification.permission === 'default') {
+                              Notification.requestPermission();
+                            }
+                          }}
+                          className="w-full border-2 border-black p-3 rounded-xl font-black text-sm bg-white appearance-none bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2020%2020%22%20fill%3D%22none%22%3E%3Cpath%20d%3D%22M7%209l3%203%203-3%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%2F%3E%3C%2Fsvg%3E')] bg-[length:1.25rem] bg-[right_0.5rem_center] bg-no-repeat pr-8"
+                        >
+                          <option value="0">{t('reminder_off')}</option>
+                          <option value="1">{t('reminder_1h')}</option>
+                          <option value="2">{t('reminder_2h')}</option>
+                          <option value="3">{t('reminder_3h')}</option>
+                          <option value="4">{t('reminder_4h')}</option>
+                        </select>
                       </div>
 
                       {/* Carb & Fat Toggle Switch */}

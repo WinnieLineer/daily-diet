@@ -38,7 +38,19 @@ const WeightTracker = ({ pointerEventsNone }) => {
     
     setHistory(combined.slice(0, 50));
     
-    const cData = wLogs.slice(-30).map(l => ({ ...l, dateFormatted: l.date.split('-').slice(1).join('/') }));
+    // Create a Set of YYYY-MM-DD dates where poop logs exist
+    const poopDates = new Set(
+      pLogs.map(p => {
+        const d = new Date(p.timestamp);
+        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+      })
+    );
+    
+    const cData = wLogs.slice(-30).map(l => ({ 
+      ...l, 
+      dateFormatted: l.date.split('-').slice(1).join('/'),
+      hasPoop: poopDates.has(l.date)
+    }));
     setChartData(cData);
 
     const lastP = pLogs.length > 0 ? pLogs[pLogs.length - 1].timestamp : null;
@@ -162,7 +174,26 @@ const WeightTracker = ({ pointerEventsNone }) => {
               <XAxis dataKey="dateFormatted" axisLine={{ stroke: '#000', strokeWidth: 2 }} tickLine={false} tick={{ fontSize: 10, fontWeight: 'bold' }} />
               <YAxis hide domain={['dataMin - 2', 'dataMax + 2']} />
               <Tooltip contentStyle={{ borderRadius: '1rem', border: '4px solid #000', boxShadow: '4px 4px 0px 0px rgba(0,0,0,1)' }} />
-              <Line type="monotone" dataKey="weight" stroke="#000" strokeWidth={4} dot={{ r: 4, stroke: '#000', strokeWidth: 2, fill: '#FDE047' }} activeDot={{ r: 6, stroke: '#000', strokeWidth: 2, fill: '#000' }} />
+              <Line 
+                type="monotone" 
+                dataKey="weight" 
+                stroke="#000" 
+                strokeWidth={4} 
+                dot={(props) => {
+                  const { cx, cy, payload } = props;
+                  if (!cx || !cy) return null;
+                  if (payload.hasPoop) {
+                    return (
+                      <g key={props.key || `dot-${payload.id}`}>
+                        <circle cx={cx} cy={cy} r={4} stroke="#000" strokeWidth={2} fill="#FDE047" />
+                        <text x={cx} y={cy - 12} textAnchor="middle" fontSize="14" className="select-none">💩</text>
+                      </g>
+                    );
+                  }
+                  return <circle key={props.key || `dot-${payload.id}`} cx={cx} cy={cy} r={4} stroke="#000" strokeWidth={2} fill="#FDE047" />;
+                }}
+                activeDot={{ r: 6, stroke: '#000', strokeWidth: 2, fill: '#000' }} 
+              />
             </LineChart>
           </ResponsiveContainer>
         </div>

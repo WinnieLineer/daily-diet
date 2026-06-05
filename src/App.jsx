@@ -9,6 +9,7 @@ import GoalSettings from './components/GoalSettings';
 import WhatsNew, { isNewer } from './components/WhatsNew';
 import Onboarding from './components/Onboarding';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
+import FastingTimer from './components/FastingTimer';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
@@ -628,6 +629,54 @@ function App() {
     }, 1000);
     return () => clearInterval(timer);
   }, []);
+
+  // Hydration Reminder Local Notifications
+  useEffect(() => {
+    const intervalVal = Number(goals?.water_reminder_interval) || 0;
+    if (intervalVal <= 0) return;
+
+    const checkHydration = async () => {
+      const today = getLocalDateString();
+      const todayLogs = await db.dietLogs.where('date').equals(today).toArray();
+      const waterLogs = todayLogs.filter(log => Number(log.water) > 0);
+      
+      let lastWaterTimestamp = 0;
+      if (waterLogs.length > 0) {
+        lastWaterTimestamp = Math.max(...waterLogs.map(log => log.timestamp));
+      } else {
+        const todayStart = new Date();
+        todayStart.setHours(0, 0, 0, 0);
+        lastWaterTimestamp = todayStart.getTime();
+      }
+
+      const nowMs = Date.now();
+      const diffHrs = (nowMs - lastWaterTimestamp) / (3600 * 1000);
+
+      if (diffHrs >= intervalVal) {
+        const lastNotifiedStr = localStorage.getItem('last_hydration_notified') || '0';
+        const lastNotified = parseInt(lastNotifiedStr, 10);
+        
+        if (lastNotified < lastWaterTimestamp || (nowMs - lastNotified) >= (intervalVal * 3600 * 1000)) {
+          if (typeof Notification !== 'undefined') {
+            if (Notification.permission === 'granted') {
+              new Notification(t('hydration_notif_title'), {
+                body: t('hydration_notif_body'),
+                icon: `${import.meta.env.BASE_URL || '/'}water.png`,
+                tag: 'hydration-reminder'
+              });
+              localStorage.setItem('last_hydration_notified', nowMs.toString());
+            } else if (Notification.permission === 'default') {
+              Notification.requestPermission();
+            }
+          }
+        }
+      }
+    };
+
+    checkHydration();
+    const timer = setInterval(checkHydration, 2 * 60 * 1000); // Check every 2 minutes
+    return () => clearInterval(timer);
+  }, [goals?.water_reminder_interval, recentLogs]);
   
   // Editing state
   const [editingId, setEditingId] = useState(null);
@@ -1009,7 +1058,12 @@ function App() {
               />
             );
           } else if (item === 'dashboard') {
-            blockContent = <Dashboard summary={summary} goals={goals} />;
+            blockContent = (
+              <div className="space-y-6">
+                <Dashboard summary={summary} goals={goals} />
+                {goals.fasting_enabled && <FastingTimer goals={goals} />}
+              </div>
+            );
           } else if (item === 'detective') {
             blockContent = (
               <FoodDetective 

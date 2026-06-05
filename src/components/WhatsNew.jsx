@@ -31,6 +31,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show250 = isNewer('2.5.0', lastSeenVersion);
   const show242 = isNewer('2.4.2', lastSeenVersion);
   const show235 = isNewer('2.3.5', lastSeenVersion);
   const show231 = isNewer('2.3.1', lastSeenVersion);
@@ -45,7 +46,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
   // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
-  const isBugFixOnly = !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -87,6 +88,24 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show250 && (
+                <div className="space-y-2">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v250_header')}</div>
+                  <FeatureItem 
+                    icon={Heart}
+                    color="bg-rose-300"
+                    title={t('whatsnew_v250_vip_title')}
+                    description={t('whatsnew_v250_vip_desc')}
+                  />
+                  <FeatureItem 
+                    icon={Activity}
+                    color="bg-emerald-300"
+                    title={t('whatsnew_v250_timers_title')}
+                    description={t('whatsnew_v250_timers_desc')}
+                  />
+                </div>
+              )}
+
               {show242 && (
                 <div className="space-y-2">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' ' + t('whatsnew_v242_header')}</div>
