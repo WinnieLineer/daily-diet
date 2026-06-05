@@ -419,7 +419,8 @@ const translations = {
     whatsnew_v242_ai_title: "全新 Meta AI 視覺模型 🧠",
     whatsnew_v242_ai_desc: "極速分析與穩定度優化！徹底修復之前上個模型常常失敗的問題，現在改用全新模型與架構，運作更穩定快速，請多包涵！",
     v242_f1: "全新 AI 圖片與文本模型全面升級，支援更極速的辨識與分析 🧠",
-    v242_f2: "修復了前代模型不穩定的問題，提供更優異的使用體驗 ⚡"
+    v242_f2: "修復了前代模型不穩定的問題，提供更優異的使用體驗 ⚡",
+    v245_f1: "優化正式環境 API 金鑰載入機制，確保穩定度並自動隱藏本地金鑰設定 🔒"
   },
   en: {
     app_title: "DAILY DIET",
@@ -840,7 +841,8 @@ const translations = {
     whatsnew_v242_ai_title: "New Meta AI Vision Model 🧠",
     whatsnew_v242_ai_desc: "Newly upgraded ultra-fast AI recognition! Thoroughly fixed the issue where the previous model failed frequently. We now support this new model and architecture for better speed and stability!",
     v242_f1: "Upgraded to new AI vision and text models for faster recognition and analysis 🧠",
-    v242_f2: "Fixed the instability issues of the previous model to provide a better user experience ⚡"
+    v242_f2: "Fixed the instability issues of the previous model to provide a better user experience ⚡",
+    v245_f1: "Optimized production API key loading mechanism for stability and auto-hiding local settings 🔒"
   }
 };
 

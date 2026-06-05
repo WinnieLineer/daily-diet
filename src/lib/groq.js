@@ -14,6 +14,14 @@ function getPersonaInstruction() {
   return `Persona style: Tsundere Elite Registered Dietitian. Witty, professional, highly sarcastic and tsundere (毒舌且傲嬌，口嫌體正直，雖然犀利吐槽但給予專家建議與貼心叮嚀).`;
 }
 
+function sanitizeKey(key) {
+  if (!key) return null;
+  let clean = key.trim();
+  // Remove "Bearer" prefix (case-insensitive) followed by any whitespace
+  clean = clean.replace(/^bearer\s+/i, '').trim();
+  return clean;
+}
+
 // Fallback / default values
 const DEFAULT_API_KEY = import.meta.env.VITE_GROK_KEY;
 
@@ -25,15 +33,35 @@ const TEXT_MODEL = "qwen/qwen3-32b";
  * Get the API key (user-provided in IndexedDB or from env)
  */
 async function getApiKey() {
-  const userKeyEntry = await db.settings.get('user_api_key');
-  let userKey = userKeyEntry ? userKeyEntry.value : null;
-  
-  // If the key doesn't start with 'gsk_', it's a legacy key (like SiliconFlow). We ignore it to fallback to VITE_GROK_KEY.
-  if (userKey && !userKey.trim().startsWith('gsk_')) {
-    userKey = null;
-  }
+  const isLocal =
+    typeof window !== 'undefined' && (
+      window.location.hostname === 'localhost' ||
+      window.location.hostname === '127.0.0.1' ||
+      window.location.hostname.endsWith('.local') ||
+      window.location.hostname.startsWith('192.168.') ||
+      window.location.hostname.startsWith('10.') ||
+      window.location.hostname.startsWith('172.') ||
+      import.meta.env.DEV
+    );
 
-  const apiKey = (userKey && userKey.trim()) || DEFAULT_API_KEY;
+  let apiKey = sanitizeKey(DEFAULT_API_KEY);
+
+  // In local environments, allow overriding with a custom key from IndexedDB settings
+  if (isLocal) {
+    const userKeyEntry = await db.settings.get('user_api_key');
+    let userKey = userKeyEntry ? userKeyEntry.value : null;
+    
+    userKey = sanitizeKey(userKey);
+    
+    // Ignore legacy or invalid keys that do not start with 'gsk_'
+    if (userKey && !userKey.startsWith('gsk_')) {
+      userKey = null;
+    }
+
+    if (userKey) {
+      apiKey = userKey;
+    }
+  }
 
   if (!apiKey) {
     throw new Error("Missing Groq API Key. Please provide it in settings or environment.");

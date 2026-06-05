@@ -11,7 +11,7 @@ import { PandaSticker } from './PandaStickers';
 
 
 const VERSION_HISTORY = [
-  { version: '2.4.3', date: '2026-06-05', features: [t('v242_f1'), t('v242_f2')] },
+  { version: '2.4.5', date: '2026-06-05', features: [t('v242_f1'), t('v242_f2'), t('v245_f1')] },
   { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
   { version: '2.1.2', date: '2026-05-19', features: [t('v212_f1')] },
   { version: '2.1.1', date: '2026-05-18', features: [t('v211_f1')] },
@@ -176,8 +176,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     window.location.hostname.startsWith('192.168.') ||
     window.location.hostname.startsWith('10.') ||
     window.location.hostname.startsWith('172.') ||
-    import.meta.env.DEV ||
-    !import.meta.env.VITE_GROK_KEY;
+    import.meta.env.DEV;
 
   useEffect(() => {
     fetchGoals();
@@ -297,7 +296,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       await db.settings.put({ key: 'fat_goal', value: isNaN(parsedFat) ? 60 : parsedFat });
       
       if (isLocal) {
-        await db.settings.put({ key: 'user_api_key', value: apiKey || '' });
+        const cleanedKey = (apiKey || '').trim().replace(/^bearer\s+/i, '').trim();
+        setApiKey(cleanedKey);
+        await db.settings.put({ key: 'user_api_key', value: cleanedKey });
       }
       
       setIsOpen(false);
@@ -1359,7 +1360,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             </div>
                             <button
                               onClick={async () => {
-                                await db.settings.put({ key: 'user_api_key', value: apiKey });
+                                const cleanedKey = (apiKey || '').trim().replace(/^bearer\s+/i, '').trim();
+                                setApiKey(cleanedKey);
+                                await db.settings.put({ key: 'user_api_key', value: cleanedKey });
                                 alert('API Key Saved');
                               }}
                               className="bg-black text-white px-4 rounded-xl font-black italic text-xs active:scale-95"
