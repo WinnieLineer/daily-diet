@@ -113,12 +113,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     ctbcCode: isEn ? "Code: 822 · Account: 174533815287" : "中信代碼: 822 · 帳號: 174-53381528-7",
     ctbcPay: isEn ? "CTBC Pay" : "中信付款 (CTBC Pay)",
     ctbcPayDesc: isEn ? "Tap to Copy & Open APP 📱" : "點選複製並啟動網銀 APP 📱",
-    jkopay: isEn ? "JKOPAY" : "街口支付 (JKOPAY)",
-    jkopayCode: isEn ? "Code: 396 · Account: 904720058" : "街口代碼: 396 · 帳號: 904720058",
     verified: isEn ? "Verified 🐼" : "已驗證 🐼",
     copyAccount: isEn ? "📋 Copy Account" : "📋 複製帳號",
     openLine: isEn ? "💬 Open LINE" : "💬 開啟 LINE",
-    openJko: isEn ? "🐷 Open JKO" : "🐷 開啟街口",
     copiedAlert: isEn
       ? "📋 Account copied to clipboard! Panda Coach thanks you for your support 🐼✨"
       : "📋 帳號已複製！熊貓教練非常感謝您的溫馨支持 🐼✨",
@@ -930,12 +927,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         </div>
                       </div>
 
-                      {/* CTBC / Jkopay Grid - Polaroid Card Style */}
-                      <div className="grid grid-cols-2 gap-4">
-                        {/* CTBC Pay Polaroid */}
+                      {/* CTBC Pay Card - Polaroid Card Style (Centered) */}
+                      <div className="flex justify-center w-full">
                         <div
                           onClick={() => setSelectedQr({ title: shopText.ctbcPay, src: import.meta.env.BASE_URL + 'ctbc_qr.png' })}
-                          className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform -rotate-1 hover:rotate-0 hover:-translate-y-1 transition-all duration-300 relative group/line cursor-pointer"
+                          className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform -rotate-1 hover:rotate-0 hover:-translate-y-1 transition-all duration-300 relative group/line cursor-pointer w-full max-w-[200px]"
                         >
                           <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
                           <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
@@ -962,39 +958,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           </div>
                           <p className="text-[8px] font-black text-zinc-500 mt-3 leading-relaxed">
                             {shopText.ctbcPayDesc}
-                          </p>
-                        </div>
-
-                        {/* Jkos Polaroid */}
-                        <div
-                          onClick={() => setSelectedQr({ title: shopText.jkopay, src: import.meta.env.BASE_URL + 'jkopay_qr.jpg' })}
-                          className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform rotate-1 hover:rotate-0 hover:-translate-y-1 transition-all duration-300 relative group/jkos cursor-pointer"
-                        >
-                          <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
-                          <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
-
-                          <div className="flex items-center gap-1.5 mb-3 bg-rose-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />
-                            <h4 className="font-black text-[9px] text-rose-800 tracking-wider">{shopText.jkopay}</h4>
-                          </div>
-
-                          <div className="w-28 h-28 bg-zinc-50 border-4 border-black rounded-2xl p-2 flex items-center justify-center relative overflow-hidden shadow-inner group-hover/jkos:scale-[1.03] transition-transform">
-                            <img
-                              src={import.meta.env.BASE_URL + 'jkopay_qr.jpg'}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                              className="w-full h-full object-contain filter contrast-125"
-                              alt="街口支付 QR"
-                            />
-                            <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
-                              <span className="text-xl mb-1">📲</span>
-                              <span className="text-[7px] font-black leading-tight text-zinc-500">JKOPAY QR</span>
-                            </div>
-                          </div>
-                          <p className="text-[8px] font-black text-zinc-500 mt-3 leading-relaxed">
-                            {isEn ? "Tap JKOPAY QR" : "點選放大街口二維碼"}
                           </p>
                         </div>
                       </div>
@@ -1607,32 +1570,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
               )}
             </div>
 
-            {/* JKO Pay Direct App Redirection Button */}
-            {selectedQr.src.includes('jkopay') && (
-              <div className="w-full space-y-2 mb-4">
-                <div className="text-[10px] font-bold text-zinc-500 text-left bg-zinc-100 p-2.5 rounded-xl border border-zinc-200 leading-normal">
-                  💡 街口帳號：<span className="font-mono font-black text-rose-600 select-all">904720058</span> (機構代碼: 396)<br />
-                  已驗證專案支持帳戶。點選下方按鈕即可一鍵複製帳號，並自動為您跳轉啟動街口支付 APP 進行轉帳！
-                </div>
-                <button
-                  onClick={() => {
-                    navigator.clipboard.writeText("904720058");
-                    alert("📋 街口帳號 904720058 已成功複製到剪貼簿！\n正在為您跳轉啟動街口支付 APP... 🐷✨");
-                    
-                    // Direct Deep Link
-                    window.location.href = "jkos://transfer?to=904720058";
-                    
-                    // Fallback to JKO Web Page Launcher
-                    setTimeout(() => {
-                      window.open("https://www.jkopay.com/transfer?to=904720058", "_blank");
-                    }, 500);
-                  }}
-                  className="w-full bg-[#D8232A] hover:bg-[#b81d22] text-white font-black text-xs py-3 rounded-2xl border-2 border-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
-                >
-                  📲 複製帳號並一鍵跳轉啟動街口
-                </button>
-              </div>
-            )}
+            {/* Lightbox placeholder padding if needed */}
 
             {/* CTBC Bank Direct App Redirection Button */}
             {selectedQr.src.includes('ctbc') && (
