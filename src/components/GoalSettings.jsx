@@ -11,6 +11,7 @@ import { PandaSticker } from './PandaStickers';
 
 
 const VERSION_HISTORY = [
+  { version: '2.4.0', date: '2026-06-05', features: [t('v240_f1'), t('v240_f2')] },
   { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
   { version: '2.1.2', date: '2026-05-19', features: [t('v212_f1')] },
   { version: '2.1.1', date: '2026-05-18', features: [t('v211_f1')] },
@@ -728,7 +729,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               onChange={e => setApiKey(e.target.value)}
                               style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' }}
                               className="w-full border-2 border-black p-3 pr-12 rounded-xl font-bold text-sm bg-zinc-50 focus:bg-white transition-all"
-                              placeholder="AI_..."
+                              placeholder="gsk_..."
                               autoComplete="off"
                             />
                             <button

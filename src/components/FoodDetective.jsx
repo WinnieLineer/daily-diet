@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap, Pencil } from 'lucide-react';
-import { analyzeFoodImage, analyzeFoodText } from '../lib/siliconflow';
+import { analyzeFoodImage, analyzeFoodText } from '../lib/groq';
 import { db } from '../db';
 import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';

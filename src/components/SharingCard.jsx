@@ -3,7 +3,7 @@ import html2canvas from 'html2canvas';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { X, Download, Share2, Sparkles, Flame, MapPin, Calendar, Loader2, Zap } from 'lucide-react';
-import { getPandaAdvice } from '../lib/siliconflow';
+import { getPandaAdvice } from '../lib/groq';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { t, getLanguage } from '../lib/translations';

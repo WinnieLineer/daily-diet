@@ -96,7 +96,7 @@ const translations = {
     favorite_added_toast: "已新增至今日紀錄",
     retry_button: "重試",
     ai_error: "AI 辨識失敗，請檢查網路或再試一次",
-    settings_api_key: "SiliconFlow API 金鑰",
+    settings_api_key: "Grok API 金鑰",
     api_key_hint: "僅在本地端運行時可自定義",
     ai_analyzing_status: "AI 辨識分析中...",
     ai_error_title: "辨識失敗 🐼",
@@ -413,7 +413,13 @@ const translations = {
     // v2.3.5 Water goal fix
     whatsnew_v235_header: "v2.3.5 飲水目標修復 🚰✨",
     whatsnew_v235_water_title: "飲水目標自訂功能修復 💧",
-    whatsnew_v235_water_desc: "修復了先前目標設定中遺漏飲水目標輸入框的問題，現在您可以自由調整每日飲水目標囉！"
+    whatsnew_v235_water_desc: "修復了先前目標設定中遺漏飲水目標輸入框的問題，現在您可以自由調整每日飲水目標囉！",
+    // v2.4.0
+    whatsnew_v240_header: "v2.4.0 核心更新：Groq AI 登場 🚀",
+    whatsnew_v240_ai_title: "全新 AI 圖片辨識模型 meta-llama/llama-4-scout-17b-16e-instruct 🧠",
+    whatsnew_v240_ai_desc: "極速分析與穩定度優化！徹底修復之前上個模型常常失敗的問題，現在改用全新模型與架構，運作更穩定快速，請多包涵！",
+    v240_f1: "Groq AI 圖片與文本模型全面升級，支援更極速的辨識與分析 🧠",
+    v240_f2: "修復了前代模型不穩定的問題，提供更優異的使用體驗 ⚡"
   },
   en: {
     app_title: "DAILY DIET",
@@ -512,7 +518,7 @@ const translations = {
     favorite_added_toast: "Added to today's log",
     retry_button: "Retry",
     ai_error: "AI recognition failed, please check your network or try again",
-    settings_api_key: "SiliconFlow API Key",
+    settings_api_key: "Grok API Key",
     api_key_hint: "Customizable only on local domain",
     ai_analyzing_status: "AI Analyzing Status",
     ai_error_title: "Recognition Failed 🐼",
@@ -828,7 +834,13 @@ const translations = {
     // v2.3.5 Water goal fix
     whatsnew_v235_header: "v2.3.5 Water Goal Fix 🚰✨",
     whatsnew_v235_water_title: "Water Intake Goal Customization Fixed 💧",
-    whatsnew_v235_water_desc: "Fixed the missing water intake goal input field in Settings. You can now customize your daily water intake goal freely!"
+    whatsnew_v235_water_desc: "Fixed the missing water intake goal input field in Settings. You can now customize your daily water intake goal freely!",
+    // v2.4.0
+    whatsnew_v240_header: "v2.4.0 Core Update: Groq AI Integration 🚀",
+    whatsnew_v240_ai_title: "New AI Vision Model meta-llama/llama-4-scout-17b-16e-instruct 🧠",
+    whatsnew_v240_ai_desc: "Newly upgraded ultra-fast AI recognition! Thoroughly fixed the issue where the previous model failed frequently. We now support this new model and architecture for better speed and stability!",
+    v240_f1: "Upgraded to Groq AI vision and text models for faster recognition and analysis 🧠",
+    v240_f2: "Fixed the instability issues of the previous model to provide a better user experience ⚡"
   }
 };
 

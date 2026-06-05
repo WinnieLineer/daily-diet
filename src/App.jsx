@@ -13,7 +13,7 @@ import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
 import WeeklyReportCard from './components/WeeklyReportCard';
-import { getPandaAdvice } from './lib/siliconflow';
+import { getPandaAdvice } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
