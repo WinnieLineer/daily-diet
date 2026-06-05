@@ -29,7 +29,7 @@ jobs:
       - name: Build
         run: npm run build
         env:
-          VITE_SILICONFLOW_API_KEY: ${{ secrets.VITE_SILICONFLOW_API_KEY }}
+          VITE_GROK_KEY: ${{ secrets.VITE_GROK_KEY }}
           VITE_GITHUB_PAT: ${{ secrets.VITE_GITHUB_PAT }}
 
       - name: Setup Pages

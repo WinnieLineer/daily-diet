@@ -169,7 +169,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     closeWindow: isEn ? "Close 🐼" : "關閉視窗 🐼"
   };
 
-  const isLocal = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1' || import.meta.env.DEV;
+  const isLocal =
+    window.location.hostname === 'localhost' ||
+    window.location.hostname === '127.0.0.1' ||
+    window.location.hostname.endsWith('.local') ||
+    window.location.hostname.startsWith('192.168.') ||
+    window.location.hostname.startsWith('10.') ||
+    window.location.hostname.startsWith('172.') ||
+    import.meta.env.DEV ||
+    !import.meta.env.VITE_GROK_KEY;
 
   useEffect(() => {
     fetchGoals();
@@ -1329,7 +1337,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <>
                         <div className="space-y-2 pt-4 border-t-4 border-black border-dotted">
                           <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
-                            SiliconFlow API Key (Local)
+                            Grok API Key (Local)
                           </label>
                           <div className="flex gap-2 w-full">
                             <div className="flex-1 relative">
