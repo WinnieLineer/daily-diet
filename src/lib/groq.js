@@ -26,7 +26,13 @@ const TEXT_MODEL = "qwen/qwen3-32b";
  */
 async function getApiKey() {
   const userKeyEntry = await db.settings.get('user_api_key');
-  const userKey = userKeyEntry ? userKeyEntry.value : null;
+  let userKey = userKeyEntry ? userKeyEntry.value : null;
+  
+  // If the key doesn't start with 'gsk_', it's a legacy key (like SiliconFlow). We ignore it to fallback to VITE_GROK_KEY.
+  if (userKey && !userKey.trim().startsWith('gsk_')) {
+    userKey = null;
+  }
+
   const apiKey = (userKey && userKey.trim()) || DEFAULT_API_KEY;
 
   if (!apiKey) {
