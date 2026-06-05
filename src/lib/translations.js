@@ -415,7 +415,7 @@ const translations = {
     whatsnew_v235_water_title: "飲水目標自訂功能修復 💧",
     whatsnew_v235_water_desc: "修復了先前目標設定中遺漏飲水目標輸入框的問題，現在您可以自由調整每日飲水目標囉！",
     // v2.4.2
-    whatsnew_v242_header: "v2.4.2 核心更新：Groq AI 登場 🚀",
+    whatsnew_v242_header: "核心更新：Groq AI 登場 🚀",
     whatsnew_v242_ai_title: "全新 AI 圖片辨識模型 meta-llama/llama-4-scout-17b-16e-instruct 🧠",
     whatsnew_v242_ai_desc: "極速分析與穩定度優化！徹底修復之前上個模型常常失敗的問題，現在改用全新模型與架構，運作更穩定快速，請多包涵！",
     v242_f1: "Groq AI 圖片與文本模型全面升級，支援更極速的辨識與分析 🧠",
@@ -836,7 +836,7 @@ const translations = {
     whatsnew_v235_water_title: "Water Intake Goal Customization Fixed 💧",
     whatsnew_v235_water_desc: "Fixed the missing water intake goal input field in Settings. You can now customize your daily water intake goal freely!",
     // v2.4.2
-    whatsnew_v242_header: "v2.4.2 Core Update: Groq AI Integration 🚀",
+    whatsnew_v242_header: "Core Update: Groq AI Integration 🚀",
     whatsnew_v242_ai_title: "New AI Vision Model meta-llama/llama-4-scout-17b-16e-instruct 🧠",
     whatsnew_v242_ai_desc: "Newly upgraded ultra-fast AI recognition! Thoroughly fixed the issue where the previous model failed frequently. We now support this new model and architecture for better speed and stability!",
     v242_f1: "Upgraded to Groq AI vision and text models for faster recognition and analysis 🧠",

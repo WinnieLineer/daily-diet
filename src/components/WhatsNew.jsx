@@ -89,7 +89,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             <div className="space-y-5">
               {show242 && (
                 <div className="space-y-2">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v242_header') || 'v2.4.2 Update'}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' ' + t('whatsnew_v242_header')}</div>
                   <FeatureItem 
                     icon={Sparkles}
                     color="bg-emerald-300"

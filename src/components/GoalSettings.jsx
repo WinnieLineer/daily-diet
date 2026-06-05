@@ -11,7 +11,7 @@ import { PandaSticker } from './PandaStickers';
 
 
 const VERSION_HISTORY = [
-  { version: '2.4.2', date: '2026-06-05', features: [t('v242_f1'), t('v242_f2')] },
+  { version: '2.4.3', date: '2026-06-05', features: [t('v242_f1'), t('v242_f2')] },
   { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
   { version: '2.1.2', date: '2026-05-19', features: [t('v212_f1')] },
   { version: '2.1.1', date: '2026-05-18', features: [t('v211_f1')] },
