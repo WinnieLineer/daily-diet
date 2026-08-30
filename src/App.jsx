@@ -712,26 +712,109 @@ function App() {
         setUserName(query.user);
       }
 
+      // 2. Initialize LINE LIFF
+      let profile = null;
+      try {
+        profile = await liffService.init();
+        if (profile) {
+          if (!localStorage.getItem('user_name')) {
+            localStorage.setItem('user_name', profile.displayName);
+            setUserName(profile.displayName);
+            setShowNamePrompt(false);
+          }
+          if (profile.userId) {
+            localStorage.setItem('line_user_id', profile.userId);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to initialize LIFF in App startup:", err);
+      }
+
+      // 3. Realtime Synchronize with Google Apps Script Backend (LINE Bot sync)
+      const effectiveUserId = query.userId || query.user || profile?.userId || localStorage.getItem('line_user_id');
+      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+
+      if (effectiveUserId) {
+        try {
+          const res = await fetch(`${GAS_URL}?action=getLogs&userId=${encodeURIComponent(effectiveUserId)}`);
+          if (res.ok) {
+            const gasData = await res.json();
+            if (gasData.gistId) {
+              localStorage.setItem('gist_backup_id', gasData.gistId);
+            }
+            if (gasData.goals) {
+              setGoals(prev => ({
+                ...prev,
+                calories: gasData.goals.calories || prev.calories,
+                protein: gasData.goals.protein || prev.protein,
+                water: gasData.goals.water || prev.water
+              }));
+            }
+            if (gasData.todayLogs && gasData.todayLogs.length > 0) {
+              const localLogs = await db.dietLogs.toArray();
+              let hasChanges = false;
+
+              for (const lineLog of gasData.todayLogs) {
+                const existing = localLogs.find(l => 
+                  l.date === lineLog.date && 
+                  (l.dish_name === lineLog.dish_name || (l.time && lineLog.time && l.time === lineLog.time))
+                );
+
+                if (existing) {
+                  if (existing.calories !== lineLog.calories || existing.protein !== lineLog.protein || existing.water !== lineLog.water) {
+                    await db.dietLogs.update(existing.id, {
+                      calories: Number(lineLog.calories) || 0,
+                      protein: Number(lineLog.protein) || 0,
+                      water: Number(lineLog.water) || 0,
+                      comment: lineLog.comment || existing.comment
+                    });
+                    hasChanges = true;
+                  }
+                } else {
+                  await db.dietLogs.add({
+                    date: lineLog.date,
+                    time: lineLog.time || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                    dish_name: lineLog.dish_name,
+                    calories: Number(lineLog.calories) || 0,
+                    protein: Number(lineLog.protein) || 0,
+                    water: Number(lineLog.water) || 0,
+                    comment: lineLog.comment || '',
+                    timestamp: lineLog.id || Date.now(),
+                    source: 'LINE_BOT'
+                  });
+                  hasChanges = true;
+                }
+              }
+
+              if (hasChanges) {
+                console.log("📥 [GAS Sync] Synchronized latest meals from LINE into Web App.");
+                await refreshData('none');
+              }
+            }
+          }
+        } catch (gasErr) {
+          console.log("[GAS Sync] Skipped:", gasErr.message);
+        }
+      }
+
+      // 4. Historical Gist Sync (if Gist ID is available)
       const effectiveGistId = query.gistId || localStorage.getItem('gist_backup_id');
       if (effectiveGistId) {
         if (query.gistId) {
           localStorage.setItem('gist_backup_id', query.gistId);
-          console.log(`📥 Set Gist ID from URL query: ${query.gistId}`);
         }
-        // Silent sync from cloud (Smart merge: pulls any records saved in LINE Bot into Web App)
         try {
           const cloudData = await downloadFromGist(effectiveGistId);
           if (cloudData && cloudData.dietLogs && cloudData.dietLogs.length > 0) {
             const localLogs = await db.dietLogs.toArray();
-            const localKeySet = new Set(localLogs.map(l => `${l.date}_${l.dish_name}_${l.calories}_${l.timestamp || ''}`));
+            const localKeySet = new Set(localLogs.map(l => `${l.date}_${l.dish_name}_${l.calories}`));
 
             const newLogs = cloudData.dietLogs
-              .filter(cl => !localKeySet.has(`${cl.date}_${cl.dish_name}_${cl.calories}_${cl.timestamp || ''}`))
+              .filter(cl => !localKeySet.has(`${cl.date}_${cl.dish_name}_${cl.calories}`))
               .map(({ id, ...rest }) => rest);
 
             if (newLogs.length > 0) {
               await db.dietLogs.bulkAdd(newLogs);
-              console.log(`📥 [Gist Sync] Synchronized ${newLogs.length} new meal logs from LINE/Gist into Web.`);
               await refreshData('none');
             }
           }
@@ -744,20 +827,6 @@ function App() {
       if (window.location.search || (window.location.hash && window.location.hash.includes('?'))) {
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
-      }
-
-      // 2. Initialize LINE LIFF
-      try {
-        const profile = await liffService.init();
-        if (profile) {
-          if (!localStorage.getItem('user_name')) {
-            localStorage.setItem('user_name', profile.displayName);
-            setUserName(profile.displayName);
-            setShowNamePrompt(false);
-          }
-        }
-      } catch (err) {
-        console.error("Failed to initialize LIFF in App startup:", err);
       }
     };
 

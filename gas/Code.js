@@ -11,13 +11,37 @@ function doGet(e) {
   const action = e?.parameter?.action;
   const userId = e?.parameter?.userId;
 
-  // 支援 Web App 透過 userId 查詢個人 Gist ID
+  const props = PropertiesService.getScriptProperties();
+  const pat = props.getProperty('GITHUB_PAT');
+
+  // 1. 查詢個人 Gist ID
   if (action === 'getGistId' && userId) {
-    const props = PropertiesService.getScriptProperties();
-    const pat = props.getProperty('GITHUB_PAT');
     const gistId = getOrCreateUserGist(userId, pat, props);
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', userId, gistId }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
+  if (action === 'getLogs' && userId) {
+    const todayStr = getTodayDateString();
+    const todayLogs = getTodayLogs(userId, todayStr, props);
+    const gistId = getOrCreateUserGist(userId, pat, props);
+
+    const calGoal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || Number(props.getProperty('CALORIE_GOAL')) || DEFAULT_CALORIE_GOAL;
+    const proGoal = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || Number(props.getProperty('PROTEIN_GOAL')) || DEFAULT_PROTEIN_GOAL;
+    const watGoal = Number(props.getProperty(`WATER_GOAL_${userId}`)) || Number(props.getProperty('WATER_GOAL')) || DEFAULT_WATER_GOAL;
+
+    return ContentService.createTextOutput(JSON.stringify({
+      status: 'ok',
+      userId,
+      gistId,
+      todayLogs,
+      goals: {
+        calories: calGoal,
+        protein: proGoal,
+        water: watGoal
+      }
+    })).setMimeType(ContentService.MimeType.JSON);
   }
 
   return ContentService.createTextOutput("Daily Diet LINE Bot is running! 🐼");
@@ -112,7 +136,7 @@ function doPost(e) {
           const base64Image = Utilities.base64Encode(imageBlob.getBytes());
 
           const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY);
-          replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN);
+          replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
 
         } 
         // 💬 文字訊息
@@ -128,7 +152,7 @@ function doPost(e) {
 
           // 開啟選單 (帶個人專屬 Gist ID 自動綁定)
           if (userText === '選單' || userText === 'App' || userText === '主選單' || userText === '日記') {
-            const appUrl = userGistId ? `https://liff.line.me/${LIFF_ID}?gistId=${userGistId}` : `https://liff.line.me/${LIFF_ID}`;
+            const appUrl = `https://liff.line.me/${LIFF_ID}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
             replyTextMessage(replyToken, `🐼 點擊開啟您的個人飲食日記（已自動連動個人雲端）：\n${appUrl}`, CHANNEL_ACCESS_TOKEN);
             continue;
           }
@@ -214,7 +238,7 @@ function doPost(e) {
           if (analysis.is_food === false) {
             replyTextMessage(replyToken, analysis.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來幫您計算熱量與記錄！", CHANNEL_ACCESS_TOKEN);
           } else {
-            replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN);
+            replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
           }
         }
       }
@@ -287,7 +311,7 @@ function getOrCreateUserGist(userId, pat, props) {
 // 🍱 1. 辨識確認卡片 (附帶個人 Gist 專屬網址)
 // ========================================================
 
-function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessToken) {
+function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessToken, userId) {
   const postbackSaveData = JSON.stringify({
     action: 'save',
     name: (analysis.dish_name || '餐點').slice(0, 30),
@@ -300,7 +324,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
   const postbackCancelData = JSON.stringify({ action: 'cancel' });
   const encodedName = encodeURIComponent(analysis.dish_name || '餐點');
   const encodedCmt = encodeURIComponent(analysis.panda_comment || '');
-  const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userGistId ? `&gistId=${userGistId}` : ''}`;
+  const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userId ? `&userId=${userId}` : ''}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
   const flexMessage = {
     type: "flex",
