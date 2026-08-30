@@ -656,15 +656,26 @@ function doPost(e) {
             continue;
           }
 
-          // 🎯 設定/修改體態目標與客製化建議 (例如: "改目標 175cm 70kg 男 減脂", "設定目標 女 160 55 增肌", "我的目標")
-          const isGoalQuery = userText.startsWith('改目標') ||
+          // 🎯 1. 查看目前飲食目標 (例如: "目標", "我的目標", "查看目標", "目前目標")
+          if (userText === '目標' || userText === '我的目標' || userText === '查看目標' || userText === '目前目標' || userText === '每日目標') {
+            const cal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || 2000;
+            const pro = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || 100;
+            const wat = Number(props.getProperty(`WATER_GOAL_${userId}`)) || 2500;
+            recordSystemLog('查看目標', userId, userText, `${cal}卡 / ${pro}g蛋 / ${wat}ml水`, '發送目前目標卡片');
+            const goalFlex = generateCurrentGoalFlex(userId, { calories: cal, protein: pro, water: wat }, LIFF_ID, userGistId);
+            replyFlexMessage(replyToken, goalFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 🎯 2. 設定/修改體態目標與客製化建議 (例如: "改目標 165cm 55kg 女 減脂", "設定目標 1800卡 120蛋 2500水")
+          const isGoalUpdate = userText.startsWith('改目標') ||
             userText.startsWith('設定目標') ||
-            userText === '目標' ||
-            userText === '我的目標' ||
+            userText.startsWith('修改目標') ||
+            userText.startsWith('調整目標') ||
             (userText.includes('目標') && (userText.includes('減脂') || userText.includes('增肌') || userText.includes('減重') || userText.includes('維持') || userText.includes('卡') || userText.includes('kcal'))) ||
             ((userText.includes('身高') || userText.includes('體重')) && (userText.includes('減脂') || userText.includes('增肌') || userText.includes('減重') || userText.includes('維持') || userText.includes('建議')));
 
-          if (isGoalQuery) {
+          if (isGoalUpdate) {
             recordSystemLog('體態目標', userId, userText, '計算BMR/TDEE', '發送目標卡片');
             handleGoalSettingWithAI(replyToken, userId, userText, userGistId, GITHUB_PAT, props, LIFF_ID, CHANNEL_ACCESS_TOKEN, GEMINI_API_KEY);
             continue;
@@ -1926,6 +1937,151 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId) {
             action: {
               type: "postback",
               label: "✏️ 填入輸入框自訂調整",
+              data: JSON.stringify({ action: 'fillGoal' }),
+              inputOption: "openKeyboard",
+              fillInText: `改目標 ${cal}卡 ${pro}蛋 ${wat}水`
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+function generateCurrentGoalFlex(userId, goals, liffId, userGistId) {
+  const cal = goals.calories || 2000;
+  const pro = goals.protein || 100;
+  const wat = goals.water || 2500;
+  const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?gistId=${userGistId}` : `https://liff.line.me/${liffId}`;
+
+  return {
+    type: "flex",
+    altText: `🎯 目前每日飲食目標：${cal} kcal / 蛋白質 ${pro}g / 水分 ${wat}ml`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: "🎯 目前設定目標", color: "#A1A1AA", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "🎯 您的每日營養目標進度",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "kcal / 天", size: "xxs", color: "#881337", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "ml / 天", size: "xxs", color: "#164E63", weight: "bold" }
+                ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F4F4F5",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            contents: [
+              {
+                type: "text",
+                text: "💡 如何修改目標？\n直接輸入「改目標 165cm 55kg 女 減脂」\n或「改目標 1800卡 120蛋 2500水」即可自動更新！",
+                size: "xxs",
+                color: "#52525B",
+                wrap: true
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#FDE047",
+            action: {
+              type: "uri",
+              label: "⚙️ 開啟 App 完整目標設定",
+              uri: appTargetUrl
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "postback",
+              label: "✏️ 填入修改範例",
               data: JSON.stringify({ action: 'fillGoal' }),
               inputOption: "openKeyboard",
               fillInText: `改目標 ${cal}卡 ${pro}蛋 ${wat}水`
