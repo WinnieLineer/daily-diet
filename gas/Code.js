@@ -59,7 +59,7 @@ function doPost(e) {
   try {
     const data = JSON.parse(e.postData.contents);
     const events = data.events || [];
-    
+
     if (events.length === 0) {
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -204,7 +204,7 @@ function doPost(e) {
           const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY);
           replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
 
-        } 
+        }
         // 💬 文字訊息
         else if (event.message.type === 'text') {
           const userText = event.message.text.trim();
@@ -326,10 +326,10 @@ function doPost(e) {
           }
 
           // 🎯 設定/修改體態目標與客製化建議 (例如: "改目標 175cm 70kg 男 減脂", "設定目標 女 160 55 增肌", "我的目標")
-          const isGoalQuery = userText.startsWith('改目標') || 
-            userText.startsWith('設定目標') || 
-            userText === '目標' || 
-            userText === '我的目標' || 
+          const isGoalQuery = userText.startsWith('改目標') ||
+            userText.startsWith('設定目標') ||
+            userText === '目標' ||
+            userText === '我的目標' ||
             (userText.includes('目標') && (userText.includes('減脂') || userText.includes('增肌') || userText.includes('減重') || userText.includes('維持') || userText.includes('卡') || userText.includes('kcal'))) ||
             ((userText.includes('身高') || userText.includes('體重')) && (userText.includes('減脂') || userText.includes('增肌') || userText.includes('減重') || userText.includes('維持') || userText.includes('建議')));
 
@@ -381,7 +381,7 @@ function doPost(e) {
     if (currentReplyToken && currentToken) {
       try {
         replyTextMessage(currentReplyToken, `⚠️ 熊貓教練提示：\n\n${err.message || err.toString()}`, currentToken);
-      } catch (replyErr) {}
+      } catch (replyErr) { }
     }
   }
 
@@ -674,7 +674,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
 function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, props) {
   const todayStr = getTodayDateString();
   const allLogs = getTodayLogs(userId, todayStr, props);
-  
+
   let totalCal = 0;
   let totalPro = 0;
   let totalWater = 0;
@@ -893,10 +893,10 @@ function syncLogToUserGist(meal, gistId, pat) {
     let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
     const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
     if (content) {
-      try { backupData = JSON.parse(content); } catch (e) {}
+      try { backupData = JSON.parse(content); } catch (e) { }
     }
     if (!backupData.dietLogs) backupData.dietLogs = [];
-    
+
     // 插入新紀錄 (相容 Dexie 格式)
     backupData.dietLogs.unshift({
       date: meal.date,
@@ -996,7 +996,7 @@ function updateMealInUserGist(updatedMeal, gistId, pat) {
     let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
     const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
     if (content) {
-      try { backupData = JSON.parse(content); } catch (e) {}
+      try { backupData = JSON.parse(content); } catch (e) { }
     }
     if (backupData.dietLogs && backupData.dietLogs.length > 0) {
       let found = false;
@@ -1121,7 +1121,7 @@ Return ONLY raw JSON:
   "reply": "親切、幽默又帶點熊貓教練個性的繁體中文回覆，並溫馨提醒可以傳送照片或輸入吃了什麼來記錄飲食 🐼"
 }
 Do NOT wrap in markdown backticks.`;
-  
+
   for (let i = 0; i < models.length; i++) {
     try {
       const url = `https://generativelanguage.googleapis.com/v1beta/models/${models[i]}:generateContent?key=${apiKey}`;
@@ -1151,11 +1151,11 @@ Do NOT wrap in markdown backticks.`;
           panda_comment: parsed.panda_comment || "已辨識您的文字飲食！"
         };
       }
-    } catch (e) {}
+    } catch (e) { }
   }
-  return { 
-    is_food: false, 
-    reply: "收到！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來為您記錄熱量！" 
+  return {
+    is_food: false,
+    reply: "收到！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來為您記錄熱量！"
   };
 }
 
@@ -1462,7 +1462,7 @@ function syncGoalsToUserGist(goals, gistId, pat) {
     let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
     const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
     if (content) {
-      try { backupData = JSON.parse(content); } catch (e) {}
+      try { backupData = JSON.parse(content); } catch (e) { }
     }
     if (!backupData.settings) backupData.settings = [];
 
@@ -2070,7 +2070,7 @@ function getUserFavorites(userId, props) {
 function saveUserFavorite(userId, favItem, userGistId, pat, props) {
   const favKey = `FAVORITES_${userId}`;
   let favorites = getUserFavorites(userId, props);
-  
+
   // 檢查是否已存在同名餐點
   const existingIdx = favorites.findIndex(f => f.dish_name === favItem.dish_name);
   if (existingIdx !== -1) {
@@ -2118,7 +2118,7 @@ function syncFavoritesToUserGist(favorites, gistId, pat) {
     let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
     const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
     if (content) {
-      try { backupData = JSON.parse(content); } catch (e) {}
+      try { backupData = JSON.parse(content); } catch (e) { }
     }
     backupData.favorites = favorites;
 
@@ -2188,7 +2188,7 @@ function clearTodayLogs(userId, userGistId, pat, props) {
         let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
         const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
         if (content) {
-          try { backupData = JSON.parse(content); } catch (e) {}
+          try { backupData = JSON.parse(content); } catch (e) { }
         }
         if (backupData.dietLogs) {
           backupData.dietLogs = backupData.dietLogs.filter(l => l.date !== todayStr);
@@ -2202,7 +2202,7 @@ function clearTodayLogs(userId, userGistId, pat, props) {
           muteHttpExceptions: true
         });
       }
-    } catch (e) {}
+    } catch (e) { }
   }
 }
 
@@ -2217,10 +2217,10 @@ function deleteMealFromUserGist(targetMeal, gistId, pat) {
     let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
     const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
     if (content) {
-      try { backupData = JSON.parse(content); } catch (e) {}
+      try { backupData = JSON.parse(content); } catch (e) { }
     }
     if (backupData.dietLogs && backupData.dietLogs.length > 0) {
-      const idx = backupData.dietLogs.findIndex(l => 
+      const idx = backupData.dietLogs.findIndex(l =>
         (targetMeal.id && l.id === targetMeal.id) ||
         (l.date === targetMeal.date && l.dish_name === targetMeal.dish_name && l.calories === targetMeal.calories)
       );
