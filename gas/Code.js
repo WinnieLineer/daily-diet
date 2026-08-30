@@ -167,6 +167,35 @@ function doPost(e) {
             continue;
           }
 
+          // ✏️ 直接在 LINE 文字修改餐點數值 (例如: "改 600卡 30蛋 500水" 或 "改 排骨便當 650卡 35蛋")
+          if (userText.startsWith('改') || userText.startsWith('修改') || userText.startsWith('改成')) {
+            const calMatch = userText.match(/(\d+)\s*(?:kcal|卡|大卡)/i) || (userText.includes('熱量') ? userText.match(/熱量\s*(\d+)/i) : null);
+            const proMatch = userText.match(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質)/i) || (userText.includes('蛋白質') ? userText.match(/蛋白質\s*(\d+(?:\.\d+)?)/i) : null);
+            const watMatch = userText.match(/(\d+)\s*(?:ml|cc|水|水分)/i) || (userText.includes('水分') ? userText.match(/水分\s*(\d+)/i) : null);
+
+            let cleanName = userText.replace(/^(?:改|修改|改成)\s*/, '')
+              .replace(/(\d+)\s*(?:kcal|卡|大卡)/gi, '')
+              .replace(/(?:熱量)?\s*(\d+)\s*(?:kcal|卡|大卡)?/gi, '')
+              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質)/gi, '')
+              .replace(/(\d+)\s*(?:ml|cc|水|水分)/gi, '')
+              .trim();
+
+            const updateFields = {};
+            if (cleanName && cleanName !== '熱量' && cleanName !== '蛋白質' && cleanName !== '水分') {
+              updateFields.dish_name = cleanName;
+            }
+            if (calMatch) updateFields.calories = Number(calMatch[1]);
+            if (proMatch) updateFields.protein = Number(proMatch[1]);
+            if (watMatch) updateFields.water = Number(watMatch[1]);
+
+            if (Object.keys(updateFields).length > 0) {
+              const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
+              const summaryFlex = generateDailySummaryFlex(userId, updatedMeal, LIFF_ID, userGistId, props);
+              replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+              continue;
+            }
+          }
+
           // 飲食文字辨識 / 日常對話
           const analysis = parseTextWithGemini(userText, GEMINI_API_KEY);
           if (analysis.is_food === false) {
@@ -401,8 +430,20 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           {
             type: "box",
             layout: "horizontal",
-            spacing: "sm",
+            spacing: "xs",
             contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                color: "#F4F4F5",
+                action: {
+                  type: "message",
+                  label: "💬 LINE修改",
+                  text: `改 ${analysis.dish_name || '餐點'} ${Number(analysis.calories) || 0}卡 ${Number(analysis.protein) || 0}蛋 ${Number(analysis.water) || 0}水`
+                }
+              },
               {
                 type: "button",
                 style: "secondary",
@@ -707,6 +748,99 @@ function getLineImageBlob(messageId, accessToken) {
   return res.getBlob();
 }
 
+function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
+  const todayStr = getTodayDateString();
+  const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
+  let logs = getTodayLogs(userId, todayStr, props);
+
+  let targetMeal = null;
+  if (logs.length > 0) {
+    let targetIndex = logs.length - 1;
+    if (updateFields.dish_name) {
+      const foundIdx = logs.findIndex(l => l.dish_name && (l.dish_name.includes(updateFields.dish_name) || updateFields.dish_name.includes(l.dish_name)));
+      if (foundIdx !== -1) targetIndex = foundIdx;
+    }
+
+    targetMeal = logs[targetIndex];
+    if (updateFields.dish_name && updateFields.dish_name !== targetMeal.dish_name) {
+      targetMeal.dish_name = updateFields.dish_name;
+    }
+    if (updateFields.calories !== undefined) targetMeal.calories = Number(updateFields.calories);
+    if (updateFields.protein !== undefined) targetMeal.protein = Number(updateFields.protein);
+    if (updateFields.water !== undefined) targetMeal.water = Number(updateFields.water);
+    if (updateFields.comment !== undefined) targetMeal.comment = updateFields.comment;
+
+    logs[targetIndex] = targetMeal;
+    props.setProperty(todayKey, JSON.stringify(logs));
+
+    if (pat && userGistId) {
+      try {
+        updateMealInUserGist(targetMeal, userGistId, pat);
+      } catch (e) {
+        console.error("更新 Gist 失敗:", e);
+      }
+    }
+  } else {
+    targetMeal = {
+      id: Date.now(),
+      date: todayStr,
+      time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+      dish_name: updateFields.dish_name || '餐點',
+      calories: Number(updateFields.calories) || 0,
+      protein: Number(updateFields.protein) || 0,
+      water: Number(updateFields.water) || 0,
+      comment: updateFields.comment || ''
+    };
+    saveMealLog(userId, targetMeal, userGistId, pat, props);
+  }
+
+  return targetMeal;
+}
+
+function updateMealInUserGist(updatedMeal, gistId, pat) {
+  const gistUrl = `https://api.github.com/gists/${gistId}`;
+  const getRes = UrlFetchApp.fetch(gistUrl, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+    muteHttpExceptions: true
+  });
+
+  if (getRes.getResponseCode() === 200) {
+    let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
+    const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+    if (content) {
+      try { backupData = JSON.parse(content); } catch (e) {}
+    }
+    if (backupData.dietLogs && backupData.dietLogs.length > 0) {
+      let found = false;
+      for (let i = 0; i < backupData.dietLogs.length; i++) {
+        if (backupData.dietLogs[i].id && updatedMeal.id && backupData.dietLogs[i].id === updatedMeal.id) {
+          backupData.dietLogs[i].calories = Number(updatedMeal.calories) || 0;
+          backupData.dietLogs[i].protein = Number(updatedMeal.protein) || 0;
+          backupData.dietLogs[i].water = Number(updatedMeal.water) || 0;
+          if (updatedMeal.dish_name) backupData.dietLogs[i].dish_name = updatedMeal.dish_name;
+          found = true;
+          break;
+        }
+      }
+      if (!found && backupData.dietLogs.length > 0) {
+        backupData.dietLogs[0].calories = Number(updatedMeal.calories) || 0;
+        backupData.dietLogs[0].protein = Number(updatedMeal.protein) || 0;
+        backupData.dietLogs[0].water = Number(updatedMeal.water) || 0;
+        if (updatedMeal.dish_name) backupData.dietLogs[0].dish_name = updatedMeal.dish_name;
+      }
+    }
+
+    UrlFetchApp.fetch(gistUrl, {
+      method: 'patch',
+      headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+      payload: JSON.stringify({
+        files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+      }),
+      muteHttpExceptions: true
+    });
+  }
+}
+
 function analyzeMealWithGemini(base64Image, apiKey) {
   const models = [
     'gemini-3.5-flash-lite',
@@ -720,8 +854,8 @@ function analyzeMealWithGemini(base64Image, apiKey) {
   ];
   const prompt = `Analyze this food image. Return ONLY a raw JSON object with keys:
 "dish_name" (Traditional Chinese string),
-"calories" (integer calories in kcal),
-"protein" (integer protein in grams),
+"calories" (integer calories in kcal, 0 if unknown),
+"protein" (integer protein in grams, 0 if unknown),
 "water" (integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food),
 "panda_comment" (Traditional Chinese witty comment). No markdown.`;
 
@@ -755,8 +889,8 @@ function analyzeMealWithGemini(base64Image, apiKey) {
 
       return {
         dish_name: parsed.dish_name || "美味餐點",
-        calories: Number(parsed.calories) || 450,
-        protein: Number(parsed.protein) || 20,
+        calories: Number(parsed.calories) || 0,
+        protein: Number(parsed.protein) || 0,
         water: Number(parsed.water) || 0,
         panda_comment: parsed.panda_comment || "看起來營養很豐富喔！🐼"
       };
@@ -786,8 +920,8 @@ Return ONLY raw JSON:
 {
   "is_food": true,
   "dish_name": "餐點名稱 (Traditional Chinese)",
-  "calories": <integer estimated calories in kcal>,
-  "protein": <integer estimated protein in grams>,
+  "calories": <integer estimated calories in kcal, 0 if unknown>,
+  "protein": <integer estimated protein in grams, 0 if unknown>,
   "water": <integer estimated liquid/water intake in ml, e.g. 500 for coffee/tea/water/soup, or 0 if dry food>,
   "panda_comment": "幽默的熊貓飲食短評 (Traditional Chinese)"
 }
@@ -823,8 +957,8 @@ Do NOT wrap in markdown backticks.`;
         return {
           is_food: true,
           dish_name: parsed.dish_name || text,
-          calories: Number(parsed.calories) || 350,
-          protein: Number(parsed.protein) || 15,
+          calories: Number(parsed.calories) || 0,
+          protein: Number(parsed.protein) || 0,
           water: Number(parsed.water) || 0,
           panda_comment: parsed.panda_comment || "已辨識您的文字飲食！"
         };
