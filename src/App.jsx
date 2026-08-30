@@ -1,28 +1,43 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
 import { createPortal } from 'react-dom';
 import PandaCoachCard from './components/PandaCoachCard';
 import Dashboard from './components/Dashboard';
-import HistoryTrends from './components/HistoryTrends';
 import FoodDetective from './components/FoodDetective';
-import WeightTracker from './components/WeightTracker';
-import GoalSettings from './components/GoalSettings';
-import WhatsNew, { isNewer } from './components/WhatsNew';
-import Onboarding from './components/Onboarding';
-import PWAInstallPrompt from './components/PWAInstallPrompt';
 import FastingTimer from './components/FastingTimer';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
+import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { db, getDailySummary, calculateStreak } from './db';
 import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
-import WeeklyReportCard from './components/WeeklyReportCard';
 import { getPandaAdvice } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
-import Theme520 from './components/Theme520';
 import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
+
+// 🚀 Dynamic Lazy-Loaded Modals & Components (Code Splitting)
+const HistoryTrends = lazy(() => import('./components/HistoryTrends'));
+const GoalSettings = lazy(() => import('./components/GoalSettings'));
+const WhatsNew = lazy(() => import('./components/WhatsNew'));
+const Onboarding = lazy(() => import('./components/Onboarding'));
+const WeeklyReportCard = lazy(() => import('./components/WeeklyReportCard'));
+const Theme520 = lazy(() => import('./components/Theme520'));
+
+export const isNewer = (newVer, oldVer) => {
+  if (!oldVer) return true;
+  if (newVer === oldVer) return false;
+  const n = String(newVer).split('.').map(Number);
+  const o = String(oldVer).split('.').map(Number);
+  for (let i = 0; i < Math.max(n.length, o.length); i++) {
+    const nVal = n[i] || 0;
+    const oVal = o[i] || 0;
+    if (nVal > oVal) return true;
+    if (nVal < oVal) return false;
+  }
+  return false;
+};
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -1454,21 +1469,23 @@ function App() {
   const fasting = getFastingStatus();
   return (
     <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
-      {ENABLE_520_THEME && <Theme520 />}
-      <AnimatePresence>
-        {showOnboarding && <Onboarding key="onboarding" onComplete={handleOnboardingComplete} />}
-        {showWhatsNew && (
-          <WhatsNew 
-            version={APP_VERSION}
-            lastSeenVersion={lastSeenVersionState}
-            onClose={() => {
-              setShowWhatsNew(false);
-              localStorage.setItem('last_seen_version', APP_VERSION);
-            }}
-          />
-        )}
-        {showNamePrompt && <NamePromptModal key="name-prompt-modal" onSave={handleNameSave} isUpdate={true} />}
-      </AnimatePresence>
+      <Suspense fallback={null}>
+        {ENABLE_520_THEME && <Theme520 />}
+        <AnimatePresence>
+          {showOnboarding && <Onboarding key="onboarding" onComplete={handleOnboardingComplete} />}
+          {showWhatsNew && (
+            <WhatsNew 
+              version={APP_VERSION}
+              lastSeenVersion={lastSeenVersionState}
+              onClose={() => {
+                setShowWhatsNew(false);
+                localStorage.setItem('last_seen_version', APP_VERSION);
+              }}
+            />
+          )}
+          {showNamePrompt && <NamePromptModal key="name-prompt-modal" onSave={handleNameSave} isUpdate={true} />}
+        </AnimatePresence>
+      </Suspense>
       <PWAInstallPrompt 
         active={!showOnboarding && !showWhatsNew && !showNamePrompt} 
         deferredPrompt={pwaPrompt}
@@ -1579,18 +1596,20 @@ function App() {
                 </span>
               )}
             </NeoButton>
-            <GoalSettings 
-            initialTab={settingsTab} 
-              onGoalsUpdated={refreshData} 
-              onWatchTutorial={() => setShowOnboarding(true)}
-              onLanguageChanged={() => setAdvice('')}
-              userName={userName}
-              onSetUserName={handleNameSave}
-              onToggleLayoutEdit={() => setIsEditingLayout(!isEditingLayout)}
-              isEditingLayout={isEditingLayout}
-              pwaPrompt={pwaPrompt}
-              onPwaPromptUsed={() => setPwaPrompt(null)}
-            />
+            <Suspense fallback={<div className="w-9 h-9 sm:w-10 sm:h-10 bg-zinc-100 rounded-2xl animate-pulse" />}>
+              <GoalSettings 
+                initialTab={settingsTab} 
+                onGoalsUpdated={refreshData} 
+                onWatchTutorial={() => setShowOnboarding(true)}
+                onLanguageChanged={() => setAdvice('')}
+                userName={userName}
+                onSetUserName={handleNameSave}
+                onToggleLayoutEdit={() => setIsEditingLayout(!isEditingLayout)}
+                isEditingLayout={isEditingLayout}
+                pwaPrompt={pwaPrompt}
+                onPwaPromptUsed={() => setPwaPrompt(null)}
+              />
+            </Suspense>
           </div>
         </div>
       </header>
@@ -1715,7 +1734,9 @@ function App() {
                       className="overflow-hidden"
                     >
                       <div className={`space-y-4 pt-4 ${isEditingLayout ? 'pointer-events-none' : ''}`}>
-                        <HistoryTrends goals={goals} summary={summary} />
+                        <Suspense fallback={<div className="h-40 bg-zinc-50 border-4 border-dashed border-zinc-200 rounded-3xl animate-pulse" />}>
+                          <HistoryTrends goals={goals} summary={summary} />
+                        </Suspense>
                         
                         {historyGroups.map((group) => {
                           const isExpanded = !!expandedGroups[group.date];
@@ -1870,13 +1891,15 @@ function App() {
         )}
       </AnimatePresence>
 
-      <WeeklyReportCard 
-        isOpen={showWeeklyReport}
-        onClose={() => setShowWeeklyReport(false)}
-        goals={goals}
-        streak={streak}
-        userName={userName}
-      />
+      <Suspense fallback={null}>
+        <WeeklyReportCard 
+          isOpen={showWeeklyReport}
+          onClose={() => setShowWeeklyReport(false)}
+          goals={goals}
+          streak={streak}
+          userName={userName}
+        />
+      </Suspense>
 
       {/* Detail Modal */}
       <AnimatePresence>

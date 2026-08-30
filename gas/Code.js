@@ -242,10 +242,38 @@ function getRecentLogsData() {
   return raw ? JSON.parse(raw) : [];
 }
 
+function verifyLineSignature(rawBody, signature, channelSecret) {
+  if (!rawBody || !signature || !channelSecret) return false;
+  try {
+    const byteSignature = Utilities.computeHmacSha256Signature(rawBody, channelSecret);
+    const calculatedSignature = Utilities.base64Encode(byteSignature);
+    return calculatedSignature === signature;
+  } catch (err) {
+    console.error("🚨 [簽章校驗例外]:", err);
+    return false;
+  }
+}
+
 function doPost(e) {
   if (!e || !e.postData || !e.postData.contents) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  const props = PropertiesService.getScriptProperties();
+  const CHANNEL_SECRET = props.getProperty('LINE_CHANNEL_SECRET');
+
+  // 🛡️ 企業級安全性：校驗 LINE 官方 x-line-signature 數位簽章 (防止偽造與 Token 盜刷)
+  if (CHANNEL_SECRET) {
+    const signature = e.postData?.headers?.['x-line-signature'] ||
+                      e.postData?.headers?.['X-Line-Signature'] ||
+                      (e.headers && (e.headers['x-line-signature'] || e.headers['X-Line-Signature']));
+    if (!verifyLineSignature(e.postData.contents, signature, CHANNEL_SECRET)) {
+      console.warn("🚨 [安全攔截] 收到未經授權或偽造的 Webhook 請求！Signature 不符。");
+      recordSystemLog('安全攔截', 'unknown', '偽造Webhook簽章', 'HTTP 403', '已拒絕處理');
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden: Invalid signature' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
   }
 
   let currentReplyToken = null;
@@ -260,7 +288,6 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    const props = PropertiesService.getScriptProperties();
     const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
     const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
     const GITHUB_PAT = props.getProperty('GITHUB_PAT');
@@ -1164,24 +1191,35 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
 // ========================================================
 
 function saveMealLog(userId, meal, userGistId, pat, props) {
-  const todayKey = `DIET_LOGS_${userId}_${meal.date}`;
-  let logs = [];
+  const lock = LockService.getScriptLock();
   try {
-    const raw = props.getProperty(todayKey);
-    if (raw) logs = JSON.parse(raw);
+    lock.waitLock(30000);
   } catch (e) {
-    logs = [];
+    console.warn("⚠️ 獲取 LockService 鎖超時，直接寫入");
   }
-  logs.push(meal);
-  props.setProperty(todayKey, JSON.stringify(logs));
 
-  // 同步寫入該用戶專屬的 Gist
-  if (pat && userGistId) {
+  try {
+    const todayKey = `DIET_LOGS_${userId}_${meal.date}`;
+    let logs = [];
     try {
-      syncLogToUserGist(meal, userGistId, pat);
+      const raw = props.getProperty(todayKey);
+      if (raw) logs = JSON.parse(raw);
     } catch (e) {
-      console.error("同步個人 Gist 失敗:", e);
+      logs = [];
     }
+    logs.push(meal);
+    props.setProperty(todayKey, JSON.stringify(logs));
+
+    // 同步寫入該用戶專屬的 Gist
+    if (pat && userGistId) {
+      try {
+        syncLogToUserGist(meal, userGistId, pat);
+      } catch (e) {
+        console.error("同步個人 Gist 失敗:", e);
+      }
+    }
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
 }
 
@@ -2625,43 +2663,55 @@ function getUserFavorites(userId, props) {
 }
 
 function saveUserFavorite(userId, favItem, userGistId, pat, props) {
-  const favKey = `FAVORITES_${userId}`;
-  let favorites = getUserFavorites(userId, props);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) {}
+  try {
+    const favKey = `FAVORITES_${userId}`;
+    let favorites = getUserFavorites(userId, props);
 
-  // 檢查是否已存在同名餐點
-  const existingIdx = favorites.findIndex(f => f.dish_name === favItem.dish_name);
-  if (existingIdx !== -1) {
-    favorites[existingIdx] = favItem;
-  } else {
-    favorites.unshift(favItem);
-  }
-
-  props.setProperty(favKey, JSON.stringify(favorites));
-
-  if (pat && userGistId) {
-    try {
-      syncFavoritesToUserGist(favorites, userGistId, pat);
-    } catch (e) {
-      console.error("同步常用餐點至 Gist 失敗:", e);
+    // 檢查是否已存在同名餐點
+    const existingIdx = favorites.findIndex(f => f.dish_name === favItem.dish_name);
+    if (existingIdx !== -1) {
+      favorites[existingIdx] = favItem;
+    } else {
+      favorites.unshift(favItem);
     }
+
+    props.setProperty(favKey, JSON.stringify(favorites));
+
+    if (pat && userGistId) {
+      try {
+        syncFavoritesToUserGist(favorites, userGistId, pat);
+      } catch (e) {
+        console.error("同步常用餐點至 Gist 失敗:", e);
+      }
+    }
+    return favorites;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
-  return favorites;
 }
 
 function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
-  const favKey = `FAVORITES_${userId}`;
-  let favorites = getUserFavorites(userId, props);
-  favorites = favorites.filter(f => f.id != favIdentifier && f.dish_name !== favIdentifier);
-  props.setProperty(favKey, JSON.stringify(favorites));
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) {}
+  try {
+    const favKey = `FAVORITES_${userId}`;
+    let favorites = getUserFavorites(userId, props);
+    favorites = favorites.filter(f => f.id != favIdentifier && f.dish_name !== favIdentifier);
+    props.setProperty(favKey, JSON.stringify(favorites));
 
-  if (pat && userGistId) {
-    try {
-      syncFavoritesToUserGist(favorites, userGistId, pat);
-    } catch (e) {
-      console.error("同步刪除常用餐點至 Gist 失敗:", e);
+    if (pat && userGistId) {
+      try {
+        syncFavoritesToUserGist(favorites, userGistId, pat);
+      } catch (e) {
+        console.error("同步刪除常用餐點至 Gist 失敗:", e);
+      }
     }
+    return favorites;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
-  return favorites;
 }
 
 function syncFavoritesToUserGist(favorites, gistId, pat) {
@@ -2691,42 +2741,48 @@ function syncFavoritesToUserGist(favorites, gistId, pat) {
 }
 
 function deleteMealLog(userId, mealIdOrName, userGistId, pat, props) {
-  const todayStr = getTodayDateString();
-  const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
-  let logs = getTodayLogs(userId, todayStr, props);
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) {}
+  try {
+    const todayStr = getTodayDateString();
+    const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
+    let logs = getTodayLogs(userId, todayStr, props);
 
-  if (logs.length === 0) return false;
+    if (logs.length === 0) return false;
 
-  let removedMeal = null;
-  if (mealIdOrName === 'last') {
-    removedMeal = logs.pop();
-  } else if (typeof mealIdOrName === 'number' || !isNaN(Number(mealIdOrName))) {
-    const targetId = Number(mealIdOrName);
-    const idx = logs.findIndex(l => l.id === targetId);
-    if (idx !== -1) {
-      removedMeal = logs.splice(idx, 1)[0];
-    } else if (targetId < logs.length) {
-      removedMeal = logs.splice(targetId, 1)[0];
-    }
-  } else {
-    const idx = logs.findIndex(l => l.dish_name && l.dish_name.includes(mealIdOrName));
-    if (idx !== -1) {
-      removedMeal = logs.splice(idx, 1)[0];
-    }
-  }
-
-  if (removedMeal) {
-    props.setProperty(todayKey, JSON.stringify(logs));
-    if (pat && userGistId) {
-      try {
-        deleteMealFromUserGist(removedMeal, userGistId, pat);
-      } catch (e) {
-        console.error("同步刪除 Gist 紀錄失敗:", e);
+    let removedMeal = null;
+    if (mealIdOrName === 'last') {
+      removedMeal = logs.pop();
+    } else if (typeof mealIdOrName === 'number' || !isNaN(Number(mealIdOrName))) {
+      const targetId = Number(mealIdOrName);
+      const idx = logs.findIndex(l => l.id === targetId);
+      if (idx !== -1) {
+        removedMeal = logs.splice(idx, 1)[0];
+      } else if (targetId < logs.length) {
+        removedMeal = logs.splice(targetId, 1)[0];
+      }
+    } else {
+      const idx = logs.findIndex(l => l.dish_name && l.dish_name.includes(mealIdOrName));
+      if (idx !== -1) {
+        removedMeal = logs.splice(idx, 1)[0];
       }
     }
-    return true;
+
+    if (removedMeal) {
+      props.setProperty(todayKey, JSON.stringify(logs));
+      if (pat && userGistId) {
+        try {
+          deleteMealFromUserGist(removedMeal, userGistId, pat);
+        } catch (e) {
+          console.error("同步刪除 Gist 紀錄失敗:", e);
+        }
+      }
+      return true;
+    }
+    return false;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
   }
-  return false;
 }
 
 function clearTodayLogs(userId, userGistId, pat, props) {

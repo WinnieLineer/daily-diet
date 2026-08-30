@@ -48,5 +48,19 @@ export default defineConfig(({ command }) => ({
   server: {
     allowedHosts: true,
   },
+  build: {
+    chunkSizeWarningLimit: 800,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor-react': ['react', 'react-dom'],
+          'vendor-charts': ['recharts'],
+          'vendor-motion': ['framer-motion'],
+          'vendor-icons': ['lucide-react'],
+          'vendor-db': ['dexie']
+        }
+      }
+    }
+  },
   base: command === 'build' ? '/daily-diet/' : '/',
 }))
