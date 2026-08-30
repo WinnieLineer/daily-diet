@@ -8,6 +8,7 @@ import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
+import { liffService } from '../lib/liffService';
 
 
 const VERSION_HISTORY = [
@@ -68,6 +69,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [activeTitle, setActiveTitle] = useState(() => localStorage.getItem('panda_active_title') || '');
   const [hasPersonas, setHasPersonas] = useState(localStorage.getItem('panda_persona_unlocked') === 'true');
   const [activePersona, setActivePersona] = useState(() => localStorage.getItem('panda_active_persona') || 'tsundere');
+  const [lineProfile, setLineProfile] = useState(null);
 
   const handleSelectTitle = (title) => {
     if (activeTitle === title) {
@@ -181,6 +183,18 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     checkLocationPermission();
     refreshStats();
     calculateStreak().then(s => setCurrentStreak(s)).catch(() => {});
+
+    const checkLine = async () => {
+      try {
+        const profile = await liffService.getProfile();
+        if (profile) {
+          setLineProfile(profile);
+        }
+      } catch (e) {
+        console.warn("LIFF profile fetch error in settings mount:", e);
+      }
+    };
+    checkLine();
   }, []);
 
   useEffect(() => {
@@ -514,6 +528,91 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         ))}
                       </div>
                     </div>
+                    {/* LINE & WhatsApp Integration Status */}
+                    <div className="space-y-3 border-4 border-black p-4 rounded-[2rem] bg-accent/10 shadow-neo-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">🔌</span>
+                        <h4 className="font-black italic text-sm">LINE & WhatsApp 平台串接</h4>
+                      </div>
+                      <p className="text-[10px] font-bold text-zinc-500 leading-tight">
+                        這款應用程式已完整支援 LINE LIFF 與 WhatsApp 整合，讓您在常用的聊天軟體中快速使用！
+                      </p>
+
+                      <div className="space-y-2 mt-2 pt-2 border-t-2 border-dashed border-black/10">
+                        {/* LINE Integration */}
+                        <div className="flex flex-col gap-1.5 p-2 bg-white rounded-xl border-2 border-black">
+                          <div className="flex items-center justify-between">
+                            <span className="font-black text-xs flex items-center gap-1.5">
+                              💬 LINE App 整合
+                            </span>
+                            {liffService.isInClient() ? (
+                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
+                                LINE 內建開啟 🟢
+                              </span>
+                            ) : lineProfile ? (
+                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
+                                LINE 已登入 🟢
+                              </span>
+                            ) : (
+                              <span className="bg-zinc-100 text-zinc-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
+                                獨立瀏覽器 ⚪
+                              </span>
+                            )}
+                          </div>
+                          
+                          {lineProfile ? (
+                            <div className="flex items-center justify-between text-[10px] font-bold mt-1">
+                              <div className="flex items-center gap-2">
+                                {lineProfile.pictureUrl && (
+                                  <img src={lineProfile.pictureUrl} className="w-5 h-5 rounded-full border border-black" alt="avatar" />
+                                )}
+                                <span>暱稱: <span className="font-black">{lineProfile.displayName}</span></span>
+                              </div>
+                              {!liffService.isInClient() && (
+                                <button
+                                  type="button"
+                                  onClick={() => liffService.logout()}
+                                  className="px-2 py-1 rounded bg-rose-500 text-white font-black text-[9px] active:scale-95"
+                                >
+                                  登出 LINE
+                                </button>
+                              )}
+                            </div>
+                          ) : (
+                            <div className="flex flex-col gap-2 mt-1">
+                              <p className="text-[9px] text-zinc-400 font-bold">
+                                在 LINE 內點擊官方帳號的圖文選單，或使用 LINE 掃碼即可無縫免登入開啟！
+                              </p>
+                              {!liffService.isInClient() && (
+                                <button
+                                  type="button"
+                                  onClick={() => liffService.login()}
+                                  className="w-full bg-emerald-500 text-white font-black py-1.5 rounded-xl border-2 border-black shadow-neo-sm-flat text-[10px] hover:bg-emerald-600 active:scale-95 transition-all"
+                                >
+                                  使用 LINE 帳號登入
+                                </button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+
+                        {/* WhatsApp Integration */}
+                        <div className="flex flex-col gap-1.5 p-2 bg-white rounded-xl border-2 border-black">
+                          <div className="flex items-center justify-between">
+                            <span className="font-black text-xs flex items-center gap-1.5">
+                              📞 WhatsApp 整合
+                            </span>
+                            <span className="bg-zinc-100 text-zinc-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
+                              自動同步連結 🔗
+                            </span>
+                          </div>
+                          <p className="text-[9px] text-zinc-400 font-bold">
+                            在 WhatsApp 中與機器人對話時，點擊對話中發送的連結開啟，即可自動同步您的個人資料。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
                     {/* 飲控里程碑貼紙 */}
                     <div className="space-y-3 border-4 border-black p-4 rounded-[2rem] bg-zinc-50 shadow-neo-sm">
                       <div className="flex items-center justify-between">

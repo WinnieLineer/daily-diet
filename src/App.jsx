@@ -21,6 +21,7 @@ import { t, getLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
 import Theme520 from './components/Theme520';
 import versionData from '../public/version.json';
+import { liffService } from './lib/liffService';
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -457,6 +458,47 @@ function App() {
   const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);
+
+  useEffect(() => {
+    const initLiffAndQueryParams = async () => {
+      // 1. Check URL parameters first (WhatsApp or general query login)
+      const params = new URLSearchParams(window.location.search);
+      const urlName = params.get('name');
+      const urlGistId = params.get('gistId');
+
+      if (urlName) {
+        localStorage.setItem('user_name', urlName);
+        setUserName(urlName);
+        console.log(`📥 Set username from URL query: ${urlName}`);
+      }
+      if (urlGistId) {
+        localStorage.setItem('gist_backup_id', urlGistId);
+        console.log(`📥 Set Gist ID from URL query: ${urlGistId}`);
+      }
+
+      // Clean up URL parameters so they don't stay in the address bar
+      if (urlName || urlGistId) {
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, document.title, cleanUrl);
+      }
+
+      // 2. Initialize LINE LIFF
+      try {
+        const profile = await liffService.init();
+        if (profile) {
+          if (!localStorage.getItem('user_name')) {
+            localStorage.setItem('user_name', profile.displayName);
+            setUserName(profile.displayName);
+            setShowNamePrompt(false);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to initialize LIFF in App startup:", err);
+      }
+    };
+
+    initLiffAndQueryParams();
+  }, []);
 
   useEffect(() => {
     // If onboarding is seen but no name is set, it's an existing user who needs a name update prompt

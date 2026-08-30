@@ -16,6 +16,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "@line/liff": "^2.29.2",
     "@vitejs/plugin-react": "^4.3.4",
     "autoprefixer": "^10.4.18",
     "clsx": "^2.1.1",

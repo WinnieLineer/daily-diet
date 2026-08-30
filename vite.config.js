@@ -3,7 +3,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vitejs.dev/config/
-export default defineConfig({
+export default defineConfig(({ command }) => ({
   plugins: [
     react(),
     VitePWA({
@@ -45,5 +45,8 @@ export default defineConfig({
       }
     })
   ],
-  base: '/daily-diet/',
-})
+  server: {
+    allowedHosts: true,
+  },
+  base: command === 'build' ? '/daily-diet/' : '/',
+}))
