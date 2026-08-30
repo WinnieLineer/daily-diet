@@ -162,9 +162,13 @@ function doPost(e) {
             continue;
           }
 
-          // 飲食文字辨識
+          // 飲食文字辨識 / 日常對話
           const analysis = parseTextWithGemini(userText, GEMINI_API_KEY);
-          replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN);
+          if (analysis.is_food === false) {
+            replyTextMessage(replyToken, analysis.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來幫您計算熱量與記錄！", CHANNEL_ACCESS_TOKEN);
+          } else {
+            replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN);
+          }
         }
       }
     }
@@ -735,7 +739,26 @@ function parseTextWithGemini(text, apiKey) {
     'gemini-3-flash',
     'gemini-2.5-flash'
   ];
-  const prompt = `Parse this food text: "${text}". Return ONLY a raw JSON with keys: "dish_name", "calories", "protein", "panda_comment" (in Traditional Chinese).`;
+  const prompt = `You are an AI panda nutrition coach for a diet tracking app. Analyze this user message: "${text}".
+Determine if the user is describing food, a drink, or a meal they ate/drank.
+
+If it IS food/meal:
+Return ONLY raw JSON:
+{
+  "is_food": true,
+  "dish_name": "餐點名稱 (Traditional Chinese)",
+  "calories": <integer estimated calories>,
+  "protein": <integer estimated protein in grams>,
+  "panda_comment": "幽默的熊貓飲食短評 (Traditional Chinese)"
+}
+
+If it is NOT food (e.g. "XD", laughter, greetings "你好", questions, casual chat):
+Return ONLY raw JSON:
+{
+  "is_food": false,
+  "reply": "親切、幽默又帶點熊貓教練個性的繁體中文回覆，並溫馨提醒可以傳送照片或輸入吃了什麼來記錄飲食 🐼"
+}
+Do NOT wrap in markdown backticks.`;
   
   for (let i = 0; i < models.length; i++) {
     try {
@@ -751,7 +774,14 @@ function parseTextWithGemini(text, apiKey) {
         const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
         const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
+        if (parsed.is_food === false) {
+          return {
+            is_food: false,
+            reply: parsed.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或打字告訴我吃了什麼，我幫您計算熱量與記錄！"
+          };
+        }
         return {
+          is_food: true,
           dish_name: parsed.dish_name || text,
           calories: Number(parsed.calories) || 350,
           protein: Number(parsed.protein) || 15,
@@ -760,7 +790,10 @@ function parseTextWithGemini(text, apiKey) {
       }
     } catch (e) {}
   }
-  return { dish_name: text, calories: 350, protein: 15, panda_comment: "已記下您的文字紀錄！" };
+  return { 
+    is_food: false, 
+    reply: "收到！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來為您記錄熱量！" 
+  };
 }
 
 function replyFlexMessage(replyToken, flexMessage, accessToken) {
