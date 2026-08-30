@@ -102,6 +102,21 @@ function doGet(e) {
               <button class="btn-refresh" onclick="refreshLogs()">🔄 手動整理</button>
             </div>
           </div>
+
+          <!-- 🛡️ 隱私權與數據保護聲明卡片 (Neo-Brutalist) -->
+          <div style="margin-top: 16px; background: #FFFBEB; border: 2px solid #000000; border-radius: 12px; padding: 14px 18px; box-shadow: 2px 2px 0px #000000;">
+            <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 6px;">
+              <span style="font-size: 16px;">🛡️</span>
+              <strong style="font-size: 13px; color: #78350F; text-transform: uppercase; letter-spacing: 0.5px;">用戶隱私保護與數據安全聲明 (Privacy & Data Protection Notice)</strong>
+            </div>
+            <ul style="margin: 0; padding-left: 20px; font-size: 11px; color: #92400E; line-height: 1.6; font-weight: 500;">
+              <li><strong>去識別化脫敏保護：</strong> 用戶識別碼（User ID）一律進行匿名去識別化遮蔽，僅保留末尾 6 碼（如 <code>...497c66</code>），絕不記錄真實姓名、電話或帳號個人敏感資訊。</li>
+              <li><strong>個人專屬雲端隔離：</strong> 所有餐點與體態紀錄均寫入用戶個人專屬之 GitHub Gist 私有空間，完全獨立隔離儲存，不與任何第三方共享。</li>
+              <li><strong>即時日誌動態輪替：</strong> 本儀表板日誌僅供系統維護與 AI 辨識品質調試，動態保留最新 60 筆事件，超出自動銷毀覆蓋，不作永久對話快取。</li>
+              <li><strong>端到端安全傳輸：</strong> 全程透過 HTTPS / TLS 企業級加密通道與 LINE Official Account 安全連線。</li>
+            </ul>
+          </div>
+
           <table>
             <thead>
               <tr>
