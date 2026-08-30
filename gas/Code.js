@@ -44,14 +44,34 @@ function doGet(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 3. 實時運作日誌 API (提供 JSON)
+  // 3. Web App 觸發刪除指定餐點
+  if (action === 'deleteMeal' && userId) {
+    const dishName = e?.parameter?.dishName;
+    const targetId = e?.parameter?.id;
+    const userGistId = getOrCreateUserGist(userId, pat, props);
+    deleteMealLog(userId, targetId || dishName, userGistId, pat, props);
+    recordSystemLog('Web刪除餐點', userId, dishName || targetId, '', '已自雲端刪除');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 4. Web App 觸發清空今日紀錄
+  if (action === 'clearToday' && userId) {
+    const userGistId = getOrCreateUserGist(userId, pat, props);
+    clearTodayLogs(userId, userGistId, pat, props);
+    recordSystemLog('Web清空今日', userId, '清空今日餐點', '', '已清空今日');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 5. 實時運作日誌 API (提供 JSON)
   if (action === 'getRecentLogs') {
     const logs = getRecentLogsData();
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 4. 實時運作日誌儀表板 (直接在瀏覽器查看所有用戶傳入的訊息與 AI 回應)
+  // 6. 實時運作日誌儀表板 (直接在瀏覽器查看所有用戶傳入的訊息與 AI 回應)
   if (action === 'logs' || action === 'viewLogs' || action === 'log') {
     const initialLogs = getRecentLogsData();
 

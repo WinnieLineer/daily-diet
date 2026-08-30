@@ -750,12 +750,31 @@ function App() {
                 water: gasData.goals.water || prev.water
               }));
             }
-            if (gasData.todayLogs && gasData.todayLogs.length > 0) {
+
+            if (gasData.status === 'ok' && Array.isArray(gasData.todayLogs)) {
+              const lineTodayLogs = gasData.todayLogs;
+              const todayStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Taipei' }).replace(/\//g, '-');
               const localLogs = await db.dietLogs.toArray();
+              const localTodayLogs = localLogs.filter(l => l.date === todayStr);
               let hasChanges = false;
 
-              for (const lineLog of gasData.todayLogs) {
-                const existing = localLogs.find(l => 
+              // 🗑️ 刪除同步：如果今天某筆 LINE 紀錄在遠端被刪除，本機也自動移除
+              for (const localLog of localTodayLogs) {
+                if (localLog.source === 'LINE_BOT') {
+                  const existsInRemote = lineTodayLogs.some(rl => 
+                    rl.dish_name === localLog.dish_name && (Number(rl.calories) === Number(localLog.calories) || rl.time === localLog.time)
+                  );
+                  if (!existsInRemote) {
+                    await db.dietLogs.delete(localLog.id);
+                    hasChanges = true;
+                    console.log(`🗑️ [Sync Delete] 移除已在 LINE 刪除的餐點: ${localLog.dish_name}`);
+                  }
+                }
+              }
+
+              // 📥 新增/更新同步：將 LINE 端的最新紀錄寫入本機
+              for (const lineLog of lineTodayLogs) {
+                const existing = localTodayLogs.find(l => 
                   l.date === lineLog.date && 
                   (l.dish_name === lineLog.dish_name || (l.time && lineLog.time && l.time === lineLog.time))
                 );
@@ -763,6 +782,7 @@ function App() {
                 if (existing) {
                   if (existing.calories !== lineLog.calories || existing.protein !== lineLog.protein || existing.water !== lineLog.water) {
                     await db.dietLogs.update(existing.id, {
+                      dish_name: lineLog.dish_name,
                       calories: Number(lineLog.calories) || 0,
                       protein: Number(lineLog.protein) || 0,
                       water: Number(lineLog.water) || 0,
@@ -773,7 +793,7 @@ function App() {
                 } else {
                   await db.dietLogs.add({
                     date: lineLog.date,
-                    time: lineLog.time || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+                    time: lineLog.time || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
                     dish_name: lineLog.dish_name,
                     calories: Number(lineLog.calories) || 0,
                     protein: Number(lineLog.protein) || 0,
@@ -787,7 +807,7 @@ function App() {
               }
 
               if (hasChanges) {
-                console.log("📥 [GAS Sync] Synchronized latest meals from LINE into Web App.");
+                console.log("📥 [GAS Sync] 雙向同步最新紀錄（包含增刪改）完成。");
                 await refreshData('none');
               }
             }
@@ -1240,8 +1260,19 @@ function App() {
   }, []);
 
   const deleteLog = async (id) => {
+    const target = await db.dietLogs.get(id);
     await db.dietLogs.delete(id);
     refreshData();
+
+    // 同步通知 GAS 刪除 LINE 端紀錄與 Gist
+    const effectiveUserId = localStorage.getItem('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
+    if (effectiveUserId && target) {
+      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+      try {
+        fetch(`${GAS_URL}?action=deleteMeal&userId=${encodeURIComponent(effectiveUserId)}&dishName=${encodeURIComponent(target.dish_name)}&id=${target.timestamp || target.id || ''}`, { mode: 'no-cors' });
+        console.log(`📤 [Web Delete Sync] Sent delete request to GAS for: ${target.dish_name}`);
+      } catch (e) {}
+    }
   };
 
   const startEditing = (log) => {
