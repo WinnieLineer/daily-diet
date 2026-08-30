@@ -296,7 +296,7 @@ function doPost(e) {
       if (event.type === 'follow') {
         recordSystemLog('新用戶加入', userId, '加入好友', '', '發送歡迎詞與免責聲明');
         const welcomeText = `🐼 歡迎使用 Daily Diet 飲食管理助手！\n\n我是您的專屬 AI 熊貓教練，隨時傳送【餐點照片】或【文字】（例如：「午餐 雞胸肉便當 600卡 35蛋」），我會自動為您計算熱量與營養素！\n\n💡 免責聲明：\n「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」`;
-        replyTextMessage(replyToken, welcomeText, CHANNEL_ACCESS_TOKEN);
+        replyTextMessage(replyToken, welcomeText, CHANNEL_ACCESS_TOKEN, userId, props);
         continue;
       }
 
@@ -321,6 +321,27 @@ function doPost(e) {
           continue;
         }
 
+        // 💧 按下【快速補水】
+        if (payload.action === 'quickWater') {
+          const amount = Number(payload.amount) || 500;
+          const meal = {
+            id: Date.now(),
+            date: getTodayDateString(),
+            time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+            dish_name: `💧 喝水 ${amount}ml`,
+            calories: 0,
+            protein: 0,
+            water: amount,
+            comment: '💧 快速補水打卡'
+          };
+          console.log(`💧 [快速補水] +${amount}ml 用戶: ${userId}`);
+          recordSystemLog('快速喝水', userId, `喝水 ${amount}ml`, `+${amount}ml`, '已即時記錄至資料庫');
+          saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+          const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // ⭐ 按下【加入常用】
         if (payload.action === 'saveFavorite') {
           const favItem = {
@@ -334,7 +355,7 @@ function doPost(e) {
           recordSystemLog('加入常用', userId, favItem.dish_name, `${favItem.calories}卡 / ${favItem.protein}g蛋`, '已收藏至常用庫');
           saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
           const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId);
-          replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN);
+          replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -354,7 +375,7 @@ function doPost(e) {
           recordSystemLog('快捷記錄', userId, meal.dish_name, `${meal.calories}卡 / ${meal.protein}g蛋 / ${meal.water}ml水`, '已快捷記錄並回傳總結');
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
-          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -364,7 +385,7 @@ function doPost(e) {
           recordSystemLog('刪除餐點', userId, `餐點標識: ${payload.id || payload.index}`, '', '已刪除單筆紀錄');
           deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
-          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -373,8 +394,8 @@ function doPost(e) {
           console.log(`🗑️ [移除常用] 標識: ${payload.favId || payload.name}`);
           recordSystemLog('移除常用', userId, `標識: ${payload.favId || payload.name}`, '', '已自常用庫移除');
           deleteUserFavorite(userId, payload.favId || payload.name, userGistId, GITHUB_PAT, props);
-          const favListFlex = generateFavoritesListFlex(userId, LIFF_ID, userGistId, props);
-          replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN);
+          const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -409,9 +430,9 @@ function doPost(e) {
           if (payload.id || payload.name) {
             deleteMealLog(userId, payload.id || payload.name, userGistId, GITHUB_PAT, props);
             recordSystemLog('取消紀錄', userId, payload.name || payload.id, '', '已自資料庫刪除此筆餐點');
-            replyTextMessage(replyToken, "👌 已取消並自資料庫刪除此筆餐點。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
+            replyTextMessage(replyToken, "👌 已取消並自資料庫刪除此筆餐點。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
-            replyTextMessage(replyToken, "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
+            replyTextMessage(replyToken, "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN, userId, props);
           }
           continue;
         }
@@ -443,7 +464,7 @@ function doPost(e) {
           // ⚡ 即時秒寫入資料庫（無時間差 GAP）
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
           recordSystemLog('照片辨識', userId, `傳送照片 (ID: ${messageId})`, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已即時寫入資料庫並發送卡片');
-          replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
+          replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
         // 💬 文字訊息
@@ -455,7 +476,7 @@ function doPost(e) {
           if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明') {
             recordSystemLog('使用說明', userId, userText, '', '發送使用說明與免責聲明');
             const helpText = `🐼 Daily Diet 使用教學：\n\n1. 📸 拍照記錄：直接傳送餐點照片，AI 自動辨識營養熱量。\n2. ✍️ 打字記錄：直接傳送「雞胸肉沙拉 350卡 30蛋 500水」。\n3. 📊 今日總結：輸入「今日」或「總結」查看進度。\n4. 🎯 目標設定：輸入「改目標 175cm 70kg 男 減脂」。\n5. 🗑️ 刪除紀錄：輸入「刪除最後一筆」或「管理」。\n\n💡 免責聲明：\n「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」`;
-            replyTextMessage(replyToken, helpText, CHANNEL_ACCESS_TOKEN);
+            replyTextMessage(replyToken, helpText, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
@@ -463,7 +484,28 @@ function doPost(e) {
           if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結') {
             recordSystemLog('查詢總結', userId, userText, '', '已發送今日總結');
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
-            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 💧 快速喝水打卡 (例如: "喝水 500", "喝水 250ml", "+500水", "喝水")
+          const waterMatch = userText.match(/^(?:喝水|補水|\+)\s*(\d+)?\s*(?:ml|cc|水)?$/i) || userText.match(/^(\d+)\s*(?:ml|cc)\s*(?:水)?$/i);
+          if (waterMatch || userText === '喝水' || userText === '補水') {
+            const amount = (waterMatch && waterMatch[1]) ? Number(waterMatch[1]) : 500;
+            const meal = {
+              id: Date.now(),
+              date: getTodayDateString(),
+              time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+              dish_name: `💧 喝水 ${amount}ml`,
+              calories: 0,
+              protein: 0,
+              water: amount,
+              comment: '💧 快速補水打卡'
+            };
+            recordSystemLog('文字喝水', userId, userText, `+${amount}ml 水分`, '已即時記錄至資料庫');
+            saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+            const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
@@ -471,7 +513,7 @@ function doPost(e) {
           if (userText === '選單' || userText === 'App' || userText === '主選單' || userText === '日記') {
             const appUrl = `https://liff.line.me/${LIFF_ID}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
             recordSystemLog('開啟App', userId, userText, '', '已發送 App 連結');
-            replyTextMessage(replyToken, `🐼 點擊開啟您的個人飲食日記（已自動連動個人雲端）：\n${appUrl}`, CHANNEL_ACCESS_TOKEN);
+            replyTextMessage(replyToken, `🐼 點擊開啟您的個人飲食日記（已自動連動個人雲端）：\n${appUrl}`, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
@@ -479,15 +521,15 @@ function doPost(e) {
           if (userText === '管理' || userText === '管理紀錄' || userText === '紀錄管理' || userText === '清單' || userText === '今日清單' || userText === '紀錄') {
             recordSystemLog('管理清單', userId, userText, '', '已發送管理面板');
             const mgmtFlex = generateMealManagementFlex(userId, LIFF_ID, userGistId, props);
-            replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN);
+            replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
-          // ⭐ 常用餐點庫
-          if (userText === '常用' || userText === '快捷' || userText === '收藏' || userText === '常用清單' || userText === '我的常用' || userText === '常用餐點') {
-            recordSystemLog('常用庫', userId, userText, '', '已發送常用清單');
-            const favFlex = generateFavoritesListFlex(userId, LIFF_ID, userGistId, props);
-            replyFlexMessage(replyToken, favFlex, CHANNEL_ACCESS_TOKEN);
+          // ⭐ 常用餐點與補水輪播庫 (左右滑動 Carousel)
+          if (userText === '常用' || userText === '快捷' || userText === '收藏' || userText === '常用清單' || userText === '我的常用' || userText === '常用餐點' || userText === '快捷輪播') {
+            recordSystemLog('常用輪播', userId, userText, '', '已發送左右滑動常用輪播');
+            const favCarousel = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, favCarousel, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
@@ -533,9 +575,9 @@ function doPost(e) {
             recordSystemLog('文字刪除', userId, userText, '', deleted ? '已刪除最後一筆' : '無紀錄可刪');
             if (deleted) {
               const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
-              replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+              replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             } else {
-              replyTextMessage(replyToken, "🐼 今天目前沒有任何飲食紀錄可以刪除喔！", CHANNEL_ACCESS_TOKEN);
+              replyTextMessage(replyToken, "🐼 今天目前沒有任何飲食紀錄可以刪除喔！", CHANNEL_ACCESS_TOKEN, userId, props);
             }
             continue;
           }
@@ -547,9 +589,9 @@ function doPost(e) {
               recordSystemLog('文字刪除', userId, userText, `目標: ${targetName}`, deleted ? '已成功刪除' : '找不到餐點');
               if (deleted) {
                 const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
-                replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+                replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
               } else {
-                replyTextMessage(replyToken, `🐼 找不到今日名稱為「${targetName}」的餐點紀錄。`, CHANNEL_ACCESS_TOKEN);
+                replyTextMessage(replyToken, `🐼 找不到今日名稱為「${targetName}」的餐點紀錄。`, CHANNEL_ACCESS_TOKEN, userId, props);
               }
               continue;
             }
@@ -635,7 +677,7 @@ function doPost(e) {
           const analysis = parseTextWithGemini(userText, GEMINI_API_KEY);
           if (analysis.is_food === false) {
             recordSystemLog('日常對話', userId, userText, '非食物訊息', analysis.reply || '已回覆');
-            replyTextMessage(replyToken, analysis.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來幫您計算熱量與記錄！", CHANNEL_ACCESS_TOKEN);
+            replyTextMessage(replyToken, analysis.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來幫您計算熱量與記錄！", CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             const meal = {
               id: Date.now(),
@@ -651,7 +693,7 @@ function doPost(e) {
             // ⚡ 即時秒寫入資料庫（無時間差 GAP）
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
             recordSystemLog('文字辨識', userId, userText, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已即時寫入資料庫並發送卡片');
-            replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
+            replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           }
         }
       }
@@ -726,7 +768,7 @@ function getOrCreateUserGist(userId, pat, props) {
 // 🍱 1. 辨識確認卡片 (附帶個人 Gist 專屬網址與常用按鈕)
 // ========================================================
 
-function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessToken, userId) {
+function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessToken, userId, props) {
   const postbackSaveData = JSON.stringify({
     action: 'save',
     id: analysis.id,
@@ -939,7 +981,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     }
   };
 
-  replyFlexMessage(replyToken, flexMessage, accessToken);
+  replyFlexMessage(replyToken, flexMessage, accessToken, userId, props);
 }
 
 // ========================================================
@@ -1434,8 +1476,81 @@ Do NOT wrap in markdown backticks.`;
   };
 }
 
-function replyFlexMessage(replyToken, flexMessage, accessToken) {
+function attachQuickReply(message, userId, props) {
+  if (!userId || !props) return message;
   try {
+    const favorites = getUserFavorites(userId, props);
+    const items = [
+      {
+        type: "action",
+        action: {
+          type: "postback",
+          label: "💧 喝水 500ml",
+          data: JSON.stringify({ action: 'quickWater', amount: 500 }),
+          displayText: "💧 喝水 500ml"
+        }
+      },
+      {
+        type: "action",
+        action: {
+          type: "postback",
+          label: "💧 喝水 250ml",
+          data: JSON.stringify({ action: 'quickWater', amount: 250 }),
+          displayText: "💧 喝水 250ml"
+        }
+      }
+    ];
+
+    if (favorites && favorites.length > 0) {
+      favorites.slice(0, 6).forEach(fav => {
+        items.push({
+          type: "action",
+          action: {
+            type: "postback",
+            label: `⭐ ${(fav.dish_name || '常用').slice(0, 12)}`,
+            data: JSON.stringify({
+              action: 'quickLogFavorite',
+              name: encodeURIComponent(fav.dish_name),
+              cal: fav.calories,
+              pro: fav.protein,
+              wat: fav.water || 0
+            }),
+            displayText: `⚡ 快捷記錄：${fav.dish_name}`
+          }
+        });
+      });
+    }
+
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "⭐ 常用輪播",
+        text: "常用"
+      }
+    });
+
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "📊 今日進度",
+        text: "今日"
+      }
+    });
+
+    message.quickReply = { items: items.slice(0, 13) };
+  } catch (e) {
+    console.error("attachQuickReply error:", e);
+  }
+  return message;
+}
+
+function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
+  try {
+    if (userId && props) {
+      attachQuickReply(flexMessage, userId, props);
+    }
     const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
       method: "post",
       headers: {
@@ -1460,8 +1575,12 @@ function replyFlexMessage(replyToken, flexMessage, accessToken) {
   }
 }
 
-function replyTextMessage(replyToken, text, accessToken) {
+function replyTextMessage(replyToken, text, accessToken, userId, props) {
   try {
+    const textMsg = { type: "text", text: text };
+    if (userId && props) {
+      attachQuickReply(textMsg, userId, props);
+    }
     const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
       method: "post",
       headers: {
@@ -1470,7 +1589,7 @@ function replyTextMessage(replyToken, text, accessToken) {
       },
       payload: JSON.stringify({
         replyToken: replyToken,
-        messages: [{ type: "text", text: text }]
+        messages: [textMsg]
       }),
       muteHttpExceptions: true
     });
@@ -2024,169 +2143,98 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
 // ⭐ 7. 常用餐點清單與一鍵快捷記錄 (Neo-Brutalist 視覺設計)
 // ========================================================
 
-function generateFavoritesListFlex(userId, liffId, userGistId, props) {
+function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
   const favorites = getUserFavorites(userId, props);
   const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
-  const favBoxes = [];
+  const bubbles = [];
 
-  if (favorites.length === 0) {
-    favBoxes.push({
+  // 💧 Bubble 1: 快速補水卡
+  bubbles.push({
+    type: "bubble",
+    size: "kilo",
+    header: {
       type: "box",
       layout: "vertical",
-      backgroundColor: "#FEF9C3",
-      cornerRadius: "12px",
-      paddingAll: "16px",
+      backgroundColor: "#06B6D4",
+      paddingAll: "14px",
       contents: [
-        { type: "text", text: "⭐ 尚未建立常用餐點！", size: "sm", color: "#713F12", weight: "bold" },
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF" },
+            { type: "text", text: "一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
+          ]
+        },
         {
           type: "text",
-          text: "💡 如何建立常用餐點？\n1. 直接打字「加常用 拿鐵 150卡 8蛋 350水」\n2. 每次飲食辨識後，點擊「⭐ 加常用」即可儲存！",
-          size: "xs",
-          color: "#A16207",
-          wrap: true,
+          text: "點擊下方快速記錄水分",
+          size: "xxs",
+          color: "#E0F2FE",
           margin: "xs"
         }
       ]
-    });
-  } else {
-    favorites.slice(0, 8).forEach((fav, index) => {
-      favBoxes.push({
-        type: "box",
-        layout: "vertical",
-        backgroundColor: "#FFFFFF",
-        cornerRadius: "12px",
-        borderColor: "#E4E4E7",
-        borderWidth: "1px",
-        paddingAll: "12px",
-        spacing: "sm",
-        contents: [
-          {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: `⭐ ${fav.dish_name}`, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true }
-            ]
-          },
-          {
-            type: "box",
-            layout: "horizontal",
-            spacing: "xs",
-            contents: [
-              {
-                type: "box",
-                layout: "horizontal",
-                backgroundColor: "#FFF1F2",
-                cornerRadius: "6px",
-                paddingStart: "6px",
-                paddingEnd: "6px",
-                paddingTop: "2px",
-                paddingBottom: "2px",
-                contents: [{ type: "text", text: `🔥 ${fav.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                backgroundColor: "#EFF6FF",
-                cornerRadius: "6px",
-                paddingStart: "6px",
-                paddingEnd: "6px",
-                paddingTop: "2px",
-                paddingBottom: "2px",
-                contents: [{ type: "text", text: `🥩 ${fav.protein}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                backgroundColor: "#ECFEFF",
-                cornerRadius: "6px",
-                paddingStart: "6px",
-                paddingEnd: "6px",
-                paddingTop: "2px",
-                paddingBottom: "2px",
-                contents: [{ type: "text", text: `💧 ${fav.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
-              }
-            ]
-          },
-          {
-            type: "box",
-            layout: "horizontal",
-            spacing: "sm",
-            margin: "xs",
-            contents: [
-              {
-                type: "button",
-                style: "primary",
-                height: "sm",
-                color: "#000000",
-                flex: 3,
-                action: {
-                  type: "postback",
-                  label: "⚡ 一鍵記錄這餐",
-                  data: JSON.stringify({
-                    action: 'quickLogFavorite',
-                    name: encodeURIComponent(fav.dish_name),
-                    cal: fav.calories,
-                    pro: fav.protein,
-                    wat: fav.water || 0
-                  }),
-                  displayText: `⚡ 快捷記錄：${fav.dish_name}`
-                }
-              },
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#F4F4F5",
-                flex: 1,
-                action: {
-                  type: "postback",
-                  label: "🗑️",
-                  data: JSON.stringify({ action: 'deleteFavorite', favId: fav.id, name: fav.dish_name }),
-                  displayText: `🗑️ 移除常用：${fav.dish_name}`
-                }
-              }
-            ]
+    },
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "sm",
+      paddingAll: "14px",
+      backgroundColor: "#F0FDFA",
+      contents: [
+        {
+          type: "button",
+          style: "primary",
+          height: "sm",
+          color: "#0891B2",
+          action: {
+            type: "postback",
+            label: "💧 喝水 +500ml",
+            data: JSON.stringify({ action: 'quickWater', amount: 500 }),
+            displayText: "💧 喝水 +500ml"
           }
-        ]
-      });
-    });
-  }
+        },
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          color: "#CCFBF1",
+          action: {
+            type: "postback",
+            label: "💧 喝水 +250ml",
+            data: JSON.stringify({ action: 'quickWater', amount: 250 }),
+            displayText: "💧 喝水 +250ml"
+          }
+        },
+        {
+          type: "button",
+          style: "secondary",
+          height: "sm",
+          color: "#CCFBF1",
+          action: {
+            type: "postback",
+            label: "💧 喝水 +1000ml",
+            data: JSON.stringify({ action: 'quickWater', amount: 1000 }),
+            displayText: "💧 喝水 +1000ml"
+          }
+        }
+      ]
+    }
+  });
 
-  return {
-    type: "flex",
-    altText: `⭐ 我的常用餐點快捷庫（共 ${favorites.length} 項）`,
-    contents: {
+  // ⭐ Bubbles 2..N: 各常用餐點
+  if (favorites.length === 0) {
+    bubbles.push({
       type: "bubble",
-      size: "mega",
+      size: "kilo",
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#FDE047",
+        backgroundColor: "#FEF9C3",
         paddingAll: "14px",
         contents: [
-          {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#000000", weight: "bold", size: "sm" },
-              { type: "text", text: "⭐ 快捷飲食庫", color: "#713F12", weight: "bold", size: "xs", align: "end" }
-            ]
-          },
-          {
-            type: "text",
-            text: "⭐ 常用餐點一鍵記錄",
-            color: "#000000",
-            weight: "bold",
-            size: "md",
-            margin: "xs"
-          },
-          {
-            type: "text",
-            text: `已建立 ${favorites.length} 道常用餐點 ｜ 點擊「一鍵記錄」即可儲存`,
-            color: "#713F12",
-            size: "xxs",
-            margin: "xs"
-          }
+          { type: "text", text: "⭐ 尚未建立常用餐點", weight: "bold", size: "sm", color: "#713F12" },
+          { type: "text", text: "隨時建立您的專屬美食庫", size: "xxs", color: "#A16207", margin: "xs" }
         ]
       },
       body: {
@@ -2194,26 +2242,194 @@ function generateFavoritesListFlex(userId, liffId, userGistId, props) {
         layout: "vertical",
         spacing: "sm",
         paddingAll: "14px",
-        backgroundColor: "#FAFAFA",
-        contents: favBoxes
+        contents: [
+          {
+            type: "text",
+            text: "💡 提示：拍照辨識後點擊「⭐ 加常用」，或點擊下方直接填入自訂指令！",
+            size: "xs",
+            color: "#71717A",
+            wrap: true
+          }
+        ]
       },
       footer: {
         type: "box",
         layout: "vertical",
-        spacing: "sm",
-        paddingAll: "14px",
+        paddingAll: "10px",
         contents: [
           {
             type: "button",
-            style: "secondary",
+            style: "primary",
             height: "sm",
-            color: "#FEF9C3",
+            color: "#000000",
             action: {
               type: "postback",
-              label: "➕ 填入新增範例指令",
+              label: "➕ 填入新增指令",
               data: JSON.stringify({ action: 'fillFav' }),
               inputOption: "openKeyboard",
               fillInText: "加常用 美式咖啡+茶葉蛋 160卡 14蛋 450水"
+            }
+          }
+        ]
+      }
+    });
+  } else {
+    favorites.slice(0, 10).forEach(fav => {
+      bubbles.push({
+        type: "bubble",
+        size: "kilo",
+        header: {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#FDE047",
+          paddingAll: "12px",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                { type: "text", text: "⭐ 常用餐點", weight: "bold", size: "xs", color: "#000000" },
+                { type: "text", text: "左右滑動", size: "xxs", color: "#713F12", align: "end" }
+              ]
+            },
+            {
+              type: "text",
+              text: fav.dish_name,
+              weight: "bold",
+              size: "md",
+              color: "#000000",
+              wrap: true,
+              margin: "xs"
+            }
+          ]
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          paddingAll: "12px",
+          backgroundColor: "#FFFFFF",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              spacing: "xs",
+              contents: [
+                {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#FFF1F2",
+                  cornerRadius: "6px",
+                  paddingAll: "6px",
+                  flex: 1,
+                  alignItems: "center",
+                  contents: [
+                    { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                    { type: "text", text: `${fav.calories}`, size: "xs", color: "#000000", weight: "bold" }
+                  ]
+                },
+                {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#EFF6FF",
+                  cornerRadius: "6px",
+                  paddingAll: "6px",
+                  flex: 1,
+                  alignItems: "center",
+                  contents: [
+                    { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                    { type: "text", text: `${fav.protein}g`, size: "xs", color: "#000000", weight: "bold" }
+                  ]
+                },
+                {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#ECFEFF",
+                  cornerRadius: "6px",
+                  paddingAll: "6px",
+                  flex: 1,
+                  alignItems: "center",
+                  contents: [
+                    { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                    { type: "text", text: `${fav.water || 0}ml`, size: "xs", color: "#000000", weight: "bold" }
+                  ]
+                }
+              ]
+            }
+          ]
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          paddingAll: "10px",
+          contents: [
+            {
+              type: "button",
+              style: "primary",
+              height: "sm",
+              color: "#000000",
+              action: {
+                type: "postback",
+                label: "⚡ 一鍵記錄這餐",
+                data: JSON.stringify({
+                  action: 'quickLogFavorite',
+                  name: encodeURIComponent(fav.dish_name),
+                  cal: fav.calories,
+                  pro: fav.protein,
+                  wat: fav.water || 0
+                }),
+                displayText: `⚡ 快捷記錄：${fav.dish_name}`
+              }
+            },
+            {
+              type: "button",
+              style: "secondary",
+              height: "sm",
+              color: "#FFF1F2",
+              action: {
+                type: "postback",
+                label: "🗑️ 移除常用",
+                data: JSON.stringify({ action: 'deleteFavorite', favId: fav.id, name: fav.dish_name }),
+                displayText: `🗑️ 移除常用：${fav.dish_name}`
+              }
+            }
+          ]
+        }
+      });
+    });
+
+    // ➕ Bubble Last: 新增常用
+    bubbles.push({
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#18181B",
+        paddingAll: "12px",
+        contents: [
+          { type: "text", text: "➕ 新增常用餐點", weight: "bold", size: "sm", color: "#FDE047" },
+          { type: "text", text: "自訂常用餐點指令", size: "xxs", color: "#A1A1AA", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#FDE047",
+            action: {
+              type: "postback",
+              label: "✏️ 填入新增指令",
+              data: JSON.stringify({ action: 'fillFav' }),
+              inputOption: "openKeyboard",
+              fillInText: "加常用 燕麥奶拿鐵 180卡 6蛋 350水"
             }
           },
           {
@@ -2223,14 +2439,27 @@ function generateFavoritesListFlex(userId, liffId, userGistId, props) {
             color: "#F4F4F5",
             action: {
               type: "uri",
-              label: "📱 開啟 App 查看完整清單",
+              label: "📱 開啟 App 管理",
               uri: appTargetUrl
             }
           }
         ]
       }
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: `⭐ 常用餐點與補水站（左右滑動選擇）`,
+    contents: {
+      type: "carousel",
+      contents: bubbles
     }
   };
+}
+
+function generateFavoritesListFlex(userId, liffId, userGistId, props) {
+  return generateFavoritesCarouselFlex(userId, liffId, userGistId, props);
 }
 
 function generateFavoriteAddedFlex(favItem, liffId, userGistId) {
