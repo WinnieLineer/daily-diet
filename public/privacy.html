@@ -4,116 +4,198 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="favicon.png" />
-    <title>隱私權政策 - Daily Diet</title>
+    <title>隱私權保護與數據安全政策 - Daily Diet 🐼</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,700;0,800;1,800;1,900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        * { box-sizing: border-box; }
         body { 
-            font-family: 'Inter', sans-serif; 
-            line-height: 1.6; 
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif; 
+            line-height: 1.7; 
             padding: 20px; 
-            max-width: 800px; 
+            max-width: 860px; 
             margin: 0 auto; 
-            background: #fafafa; 
-            color: #000;
+            background: #FDFBF7; 
+            color: #18181B;
         }
         .container {
-            padding-top: 40px;
+            padding-top: 30px;
             padding-bottom: 80px;
         }
         .card { 
             background: white; 
             padding: 40px; 
-            border-radius: 40px; 
+            border-radius: 36px; 
             border: 4px solid #000; 
-            box-shadow: 8px 8px 0 #000; 
+            box-shadow: 8px 8px 0px #000; 
             position: relative;
         }
+        @media (max-width: 640px) {
+            .card { padding: 24px; border-radius: 24px; }
+            h1 { font-size: 32px !important; }
+        }
         h1 { 
-            font-size: 42px;
+            font-size: 38px;
             font-style: italic; 
             font-weight: 900; 
-            border-bottom: 8px solid #000; 
-            padding-bottom: 10px; 
+            border-bottom: 6px solid #000; 
+            padding-bottom: 12px; 
             margin-top: 0;
-            text-transform: uppercase;
-            letter-spacing: -2px;
+            letter-spacing: -1px;
+            color: #000;
         }
         h2 { 
             font-weight: 900; 
-            margin-top: 40px; 
+            margin-top: 36px; 
             font-style: italic;
-            text-transform: uppercase;
-            background: #FFD600; /* App Accent Color */
+            background: #FDE047;
             display: inline-block;
-            padding: 2px 10px;
+            padding: 4px 12px;
             border: 3px solid #000;
-            transform: rotate(-1deg);
+            border-radius: 8px;
+            box-shadow: 2px 2px 0px #000;
+            transform: rotate(-0.5deg);
+            color: #000;
+            font-size: 18px;
         }
         p, li {
             font-weight: 500;
-            color: #333;
+            color: #3F3F46;
+            font-size: 14.5px;
+        }
+        li { margin-bottom: 8px; }
+        .alert-box {
+            background: #FFF1F2;
+            border: 3px solid #E11D48;
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin: 20px 0;
+            box-shadow: 4px 4px 0px #E11D48;
+        }
+        .alert-title {
+            font-weight: 900;
+            color: #9F1239;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .alert-desc {
+            font-size: 13px;
+            color: #881337;
+            font-weight: 600;
+            line-height: 1.6;
+            margin: 0;
         }
         .back-btn { 
             display: inline-flex; 
             align-items: center;
             gap: 8px;
-            margin-bottom: 30px; 
-            padding: 12px 24px; 
+            margin-bottom: 24px; 
+            padding: 12px 22px; 
             background: #000; 
             color: #fff; 
             text-decoration: none; 
             border-radius: 16px; 
             font-weight: 900; 
             font-style: italic;
-            transition: all 0.2s;
-            border: 4px solid #000;
+            transition: all 0.15s;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #FDE047;
         }
         .back-btn:hover { 
-            transform: translate(-4px, -4px); 
-            box-shadow: 8px 8px 0 #FFD600; 
-            background: #000;
+            transform: translate(-2px, -2px); 
+            box-shadow: 6px 6px 0px #FDE047; 
         }
         .logo-tag {
             background: #000;
-            color: #fff;
+            color: #FDE047;
             padding: 4px 12px;
             border-radius: 8px;
             font-weight: 900;
             font-size: 12px;
             display: inline-block;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        .badge {
+            background: #EFF6FF;
+            color: #1D4ED8;
+            padding: 2px 8px;
+            border-radius: 6px;
+            font-weight: 800;
+            font-size: 11px;
+            border: 1px solid #BFDBFE;
+        }
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px dashed #E4E4E7;
+            text-align: center;
+            font-size: 12px;
+            color: #A1A1AA;
+            font-weight: 700;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="./" class="back-btn">← BACK TO APP</a>
+        <a href="./" class="back-btn">← 返回應用程式 (APP)</a>
         <div class="card">
-            <div class="logo-tag">DAILY DIET 🐼</div>
-    <h1>隱私權政策</h1>
-    <p>最後更新日期：2026年5月17日</p>
-    <p>歡迎使用 Daily Diet。我們非常重視您的隱私，本應用程式採用無帳號設計，讓您掌控自己的資料。</p>
+            <div class="logo-tag">DAILY DIET · PRIVACY 🐼</div>
+            <h1>用戶隱私保護與數據安全政策</h1>
+            <p>最後修訂日期：2026年8月30日</p>
+            <p>歡迎使用 <strong>Daily Diet 飲食控制助手（包含 Web App 與 LINE 官方帳號機器人）</strong>。我們深知飲食紀錄與體態數據屬於高度私密的個人健康資訊，因此本應用程式全面貫徹<strong>「隱私設計（Privacy by Design）」與「去中心化儲存」</strong>架構，讓您擁有 100% 的個人數據掌控權。</p>
 
-    <h2>1. 資料收集</h2>
-    <p>本應用程式<strong>不收集任何個人身分資訊</strong>，不需要登入帳號。所有飲食紀錄、目標設定及個人資料均儲存在您裝置的本地瀏覽器（IndexedDB）中。</p>
+            <div class="alert-box">
+                <div class="alert-title">🩺 重要健康與非醫療用途免責聲明</div>
+                <p class="alert-desc">
+                    Daily Diet 與「熊貓教練」所提供之所有熱量（kcal）、蛋白質（g）、水分（ml）、BMR/TDEE 建議及飲食估算，<strong>均僅供個人日常自我健康管理與體重控制參考，非屬任何形式之醫療診斷、疾病治療或專業臨床處方</strong>。<br>
+                    若您患有慢性疾病（如糖尿病、腎臟病、心血管疾病）、處於孕期或哺乳期，在進行任何激進的飲食或熱量限制前，請務必諮詢合格執業醫師或註冊營養師。
+                </p>
+            </div>
 
-    <h2>2. 雲端備份（可選）</h2>
-    <p>若您選擇啟用雲端備份功能，您的飲食紀錄將以 JSON 格式儲存至 <strong>GitHub Gist（私密模式）</strong>。私密 Gist 不會出現在任何搜尋結果中，僅能透過您的專屬 Gist ID 存取。我們不會存取、讀取或共享您的備份內容。</p>
-    <p>您隨時可以在設定介面刪除 Gist ID 或停止備份。</p>
+            <h2>1. 資料收集與極小化原則</h2>
+            <p>本服務致力於將資料收集降至最低，採用無需註冊密碼的無感連動設計：</p>
+            <ul>
+                <li><strong>本地瀏覽器儲存（IndexedDB）：</strong> 您的餐點日誌、自訂目標、歷史體重皆優先儲存於您本地裝置之瀏覽器中，離線亦可正常運作。</li>
+                <li><strong>LINE 平台連動（LIFF / Bot）：</strong> 當您透過 LINE 發送飲食訊息或照片時，系統僅接收 LINE 平台分配之用戶虛擬識別碼（LINE User ID），以利為您綁定個人專屬雲端空間。<strong>我們絕不主動收集您的真實姓名、電話號碼、通訊錄或信用卡號碼。</strong></li>
+            </ul>
 
-    <h2>3. AI 辨識服務</h2>
-    <p>當您使用 AI 食物辨識功能時，您拍攝的食物圖片（以 Base64 格式）將傳輸至 <strong>SiliconFlow API</strong> 進行分析。我們不會儲存您傳輸的任何圖片或分析結果。</p>
+            <h2>2. 雲端隔離儲存（GitHub Gist 私有空間）</h2>
+            <p>為達成跨裝置（電腦、手機、LINE）即時同步，系統採用專屬的私有雲端儲存：</p>
+            <ul>
+                <li>每位用戶的飲食與體態資料均被獨立寫入至 <strong>私有（Secret）GitHub Gist</strong> 空間。</li>
+                <li>私有 Gist 具備存取權限隔離機制，不會被公開搜尋引擎索引，亦不會與其他用戶資料混合儲存。</li>
+                <li>我們絕不將您的個人飲食資料用於廣告行銷推播或出售給第三方資料庫。</li>
+            </ul>
 
-    <h2>4. 第三方服務</h2>
-    <ul>
-        <li><strong>SiliconFlow</strong>：AI 食物辨識（圖片在分析後即捨棄）</li>
-        <li><strong>GitHub Gist</strong>：可選的私密雲端備份儲存</li>
-        <li><strong>Nominatim / OpenStreetMap</strong>：可選的用餐地點自動填入</li>
-    </ul>
-    <p>本應用程式不使用 Google 帳號、Google Drive 或任何廣告追蹤服務。</p>
+            <h2>3. AI 影像與語意辨識服務（Google Gemini）</h2>
+            <p>當您在 LINE 或 Web 介面上傳餐點照片或輸入食物文字時：</p>
+            <ul>
+                <li>系統透過安全加密連線將圖片與文字傳送至 <strong>Google Gemini AI 模型 API</strong> 進行影像特徵提取與營養素預估。</li>
+                <li>AI 僅於請求期間進行即時推論，分析完成後即完成交付，Google 不會將您的照片用於公開發佈。</li>
+            </ul>
 
-    <h2>5. 聯絡我們</h2>
-    <p>如果您有任何問題，請透過應用程式內的「意見回饋」功能與我們聯繫。</p>
+            <h2>4. 實時日誌脫敏與自動銷毀機制</h2>
+            <ul>
+                <li><strong>去識別化遮蔽：</strong> 為保障用戶隱私，系統運作診斷日誌中一律將用戶 ID 進行脫敏遮蔽（僅顯示末尾 6 碼，如 <code>...497c66</code>）。</li>
+                <li><strong>動態輪替銷毀：</strong> 運作伺服器（Google Apps Script）僅採先進先出（FIFO）暫存最近 60 筆執行事件用於連線調試，超出即自動永久覆蓋銷毀，不建立永久對話快取。</li>
+            </ul>
+
+            <h2>5. 資料自主權與被遺忘權（刪除資料）</h2>
+            <p>依據個人資料保護規範，您隨時享有完整的資料控制權：</p>
+            <ul>
+                <li><strong>單筆與今日刪除：</strong> 您可隨時在 LINE 輸入「<code>刪除最後一筆</code>」或在管理清單點擊「<code>🗑️ 清空今日所有紀錄</code>」。</li>
+                <li><strong>完全銷毀權（被遺忘權）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中一鍵「清除本機資料」或重置 Gist ID，徹底抹除所有儲存數據。</li>
+                <li><strong>資料匯出：</strong> 您可在 Web 端隨時一鍵匯出完整 JSON 備份檔，實現資料無障礙遷移。</li>
+            </ul>
+
+            <h2>6. 條款變更與聯繫管道</h2>
+            <p>若本隱私政策有任何重大修訂，我們將於應用程式內公告。若您對個人隱私保護有任何疑慮，歡迎透過 Web App「設定 ➔ 意見回饋」與開發團隊聯繫。</p>
+
+            <footer>
+                Daily Diet © 2026 Winnie Lin Space · All Rights Reserved.
+            </footer>
         </div>
     </div>
 </body>
