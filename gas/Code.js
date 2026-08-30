@@ -263,13 +263,13 @@ function doPost(e) {
   const props = PropertiesService.getScriptProperties();
   const CHANNEL_SECRET = props.getProperty('LINE_CHANNEL_SECRET');
 
-  // 🛡️ Google Apps Script 平台原生限制：GAS Web App 不傳遞 HTTP Headers (x-line-signature)
-  // 若設定了 CHANNEL_SECRET 且 Webhook 網址帶有 ?secret= 參數時進行比對防護
-  if (CHANNEL_SECRET && e.parameter && e.parameter.secret) {
-    if (e.parameter.secret !== CHANNEL_SECRET) {
-      console.warn("🚨 [安全攔截] 收到未經授權的 Webhook 請求！Secret 不符。");
+  // 🛡️ 企業級安全性：URL Secret Token 防偽防盜刷防護
+  if (CHANNEL_SECRET) {
+    const incomingSecret = e.parameter?.secret || e.parameter?.token;
+    if (incomingSecret !== CHANNEL_SECRET) {
+      console.warn("🚨 [安全攔截] 收到未經授權的 Webhook 請求！URL Secret 不符或缺失。");
       recordSystemLog('安全攔截', 'unknown', '偽造Webhook請求', 'HTTP 403', '已拒絕處理');
-      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden' }))
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden: Invalid or missing secret' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
   }
