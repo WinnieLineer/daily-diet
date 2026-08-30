@@ -1390,27 +1390,41 @@ function replyFlexMessage(replyToken, flexMessage, accessToken) {
       }),
       muteHttpExceptions: true
     });
-    if (res.getResponseCode() !== 200) {
-      console.error(`🚨 [LINE Flex 錯誤] Status: ${res.getResponseCode()}, Body:`, res.getContentText());
+    const code = res.getResponseCode();
+    if (code !== 200) {
+      const errBody = res.getContentText();
+      console.error(`🚨 [LINE Flex 錯誤] Status: ${code}, Body:`, errBody);
+      recordSystemLog('LINE發送失敗', 'line_api', flexMessage.altText || 'Flex卡片', `HTTP ${code}`, errBody);
     }
   } catch (err) {
     console.error("🚨 [LINE Flex 發送失敗]:", err);
+    recordSystemLog('LINE連線異常', 'line_api', '網路例外', '', err.message);
   }
 }
 
 function replyTextMessage(replyToken, text, accessToken) {
-  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
-    method: "post",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`
-    },
-    payload: JSON.stringify({
-      replyToken: replyToken,
-      messages: [{ type: "text", text: text }]
-    }),
-    muteHttpExceptions: true
-  });
+  try {
+    const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      payload: JSON.stringify({
+        replyToken: replyToken,
+        messages: [{ type: "text", text: text }]
+      }),
+      muteHttpExceptions: true
+    });
+    const code = res.getResponseCode();
+    if (code !== 200) {
+      const errBody = res.getContentText();
+      console.error(`🚨 [LINE 文字錯誤] Status: ${code}, Body:`, errBody);
+      recordSystemLog('LINE發送失敗', 'line_api', text.slice(0, 30), `HTTP ${code}`, errBody);
+    }
+  } catch (err) {
+    console.error("🚨 [LINE 文字發送失敗]:", err);
+  }
 }
 
 // ========================================================
