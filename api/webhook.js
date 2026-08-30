@@ -188,15 +188,24 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
       header: {
         type: 'box',
         layout: 'vertical',
-        backgroundColor: '#10b981',
-        paddingAll: '15px',
+        backgroundColor: '#FDE047', // Daily Diet 招牌鮮黃色
+        paddingAll: '16px',
         contents: [
           {
+            type: 'box',
+            layout: 'horizontal',
+            contents: [
+              { type: 'text', text: '🐼 DAILY DIET', weight: 'bold', size: 'sm', color: '#000000' },
+              { type: 'text', text: 'AI 食物偵探', weight: 'bold', size: 'xs', color: '#713F12', align: 'end' }
+            ]
+          },
+          {
             type: 'text',
-            text: '🐼 AI 飲食辨識完成',
-            color: '#ffffff',
+            text: '飲食辨識完成！',
             weight: 'bold',
-            size: 'md'
+            size: 'lg',
+            color: '#000000',
+            margin: 'xs'
           }
         ]
       },
@@ -204,44 +213,47 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
         type: 'box',
         layout: 'vertical',
         spacing: 'md',
+        paddingAll: '18px',
         contents: [
           {
             type: 'text',
             text: analysis.dish_name || '美味餐點',
             weight: 'bold',
             size: 'xl',
-            color: '#1f2937',
+            color: '#000000',
             wrap: true
           },
           {
             type: 'box',
             layout: 'horizontal',
-            spacing: 'sm',
+            spacing: 'md',
             contents: [
               {
                 type: 'box',
                 layout: 'vertical',
-                backgroundColor: '#fef2f2',
-                cornerRadius: '8px',
-                paddingAll: '8px',
+                backgroundColor: '#FFF1F2',
+                cornerRadius: '12px',
+                paddingAll: '12px',
                 flex: 1,
                 alignItems: 'center',
                 contents: [
-                  { type: 'text', text: '🔥 熱量', size: 'xs', color: '#ef4444', weight: 'bold' },
-                  { type: 'text', text: `${analysis.calories} kcal`, size: 'sm', weight: 'bold', color: '#991b1b', margin: 'xs' }
+                  { type: 'text', text: '🔥 熱量預估', size: 'xs', color: '#E11D48', weight: 'bold' },
+                  { type: 'text', text: `${analysis.calories}`, size: 'xl', weight: 'bold', color: '#000000', margin: 'xs' },
+                  { type: 'text', text: 'kcal', size: 'xxs', color: '#881337', weight: 'bold' }
                 ]
               },
               {
                 type: 'box',
                 layout: 'vertical',
-                backgroundColor: '#eff6ff',
-                cornerRadius: '8px',
-                paddingAll: '8px',
+                backgroundColor: '#EFF6FF',
+                cornerRadius: '12px',
+                paddingAll: '12px',
                 flex: 1,
                 alignItems: 'center',
                 contents: [
-                  { type: 'text', text: '🥩 蛋白質', size: 'xs', color: '#3b82f6', weight: 'bold' },
-                  { type: 'text', text: `${analysis.protein} g`, size: 'sm', weight: 'bold', color: '#1e40af', margin: 'xs' }
+                  { type: 'text', text: '🥩 蛋白質', size: 'xs', color: '#2563EB', weight: 'bold' },
+                  { type: 'text', text: `${analysis.protein}`, size: 'xl', weight: 'bold', color: '#000000', margin: 'xs' },
+                  { type: 'text', text: 'grams', size: 'xxs', color: '#1E3A8A', weight: 'bold' }
                 ]
               }
             ]
@@ -249,55 +261,58 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
           {
             type: 'box',
             layout: 'vertical',
-            backgroundColor: '#f9fafb',
-            cornerRadius: '8px',
-            paddingAll: '10px',
+            backgroundColor: '#FEF9C3',
+            cornerRadius: '12px',
+            paddingAll: '12px',
             contents: [
               {
                 type: 'text',
-                text: `💬 熊貓評語：${analysis.panda_comment || '看起來很美味！'}`,
+                text: `💬 熊貓教練短評：\n${analysis.panda_comment || '這餐看起來營養很均衡喔！'}`,
                 size: 'xs',
-                color: '#4b5563',
+                color: '#713F12',
+                weight: 'bold',
                 wrap: true
               }
             ]
           },
           {
             type: 'text',
-            text: '請問是否要將這餐記錄到您的飲食日記中？',
-            size: 'xs',
-            color: '#6b7280',
+            text: '請確認營養數值，點擊儲存或直接開啟 App 微調：',
+            size: 'xxs',
+            color: '#71717A',
             align: 'center',
-            margin: 'sm'
+            margin: 'xs'
           }
         ]
       },
       footer: {
         type: 'box',
-        layout: 'horizontal',
+        layout: 'vertical',
         spacing: 'sm',
+        paddingAll: '16px',
         contents: [
           {
             type: 'button',
             style: 'primary',
             height: 'sm',
-            color: '#10b981',
+            color: '#000000',
             action: {
               type: 'postback',
-              label: '✅ 確認記錄',
+              label: '💾 確認儲存並看今日總結',
               data: postbackData,
-              displayText: `✅ 確認記錄：${analysis.dish_name}`
+              displayText: `💾 確認儲存餐點：${analysis.dish_name}`
             }
           },
           {
             type: 'button',
             style: 'secondary',
             height: 'sm',
+            color: '#F4F4F5',
             action: {
               type: 'postback',
               label: '❌ 取消',
               data: cancelData,
-              displayText: '❌ 取消記錄'
+              displayText: '❌ 取消紀錄'
             }
           }
         ]
