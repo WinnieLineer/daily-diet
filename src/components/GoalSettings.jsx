@@ -1356,61 +1356,26 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     </div>
 
-                    <div className="grid grid-cols-2 gap-4">
-                      <button
-                        onClick={handleCloudBackup}
-                        disabled={syncStatus === 'syncing'}
-                        className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-emerald-50 hover:bg-emerald-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
-                      >
-                        {syncStatus === 'syncing' ? <Loader2 size={24} className="text-emerald-600 animate-spin" /> : <Upload size={24} className="text-emerald-600" />}
-                        <span className="text-[10px] font-black uppercase">{t('backup_to_gist') || "Backup to Gist"}</span>
-                      </button>
-                      <button
-                        onClick={handleCloudRestore}
-                        disabled={syncStatus === 'syncing'}
-                        className="flex flex-col items-center gap-2 p-4 border-4 border-black rounded-2xl bg-amber-50 hover:bg-amber-100 shadow-neo-sm transition-all active:translate-y-0.5 disabled:opacity-50"
-                      >
-                        {syncStatus === 'syncing' ? <Loader2 size={24} className="text-amber-600 animate-spin" /> : <RotateCcw size={24} className="text-amber-600" />}
-                        <span className="text-[10px] font-black uppercase">{t('restore_from_gist') || "Restore from Gist"}</span>
-                      </button>
-                    </div>
-
-                    <div className="space-y-2 p-4 bg-zinc-50 border-4 border-black rounded-3xl">
-                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">
-                        {t('gist_id_label') || "GITHUB GIST ID"}
-                      </label>
-                      <div className="flex gap-2">
-                        <input
-                          type="text"
-                          value={gistIdInput}
-                          onChange={e => setGistIdInput(e.target.value)}
-                          placeholder="e.g. 1a2b3c4d5e6f..."
-                          className="flex-1 bg-white border-4 border-black p-3 rounded-xl font-black italic text-xs shadow-neo-xs outline-none"
-                        />
-                        {getCurrentGistId() && (
-                          <button
-                            onClick={() => {
-                              navigator.clipboard.writeText(getCurrentGistId());
-                              setCopiedGistId(true);
-                              setTimeout(() => setCopiedGistId(false), 2000);
-                            }}
-                            className={`px-3 rounded-xl border-4 border-black font-black italic text-xs active:scale-95 transition-colors ${copiedGistId ? 'bg-emerald-400 text-black' : 'bg-white text-black'
-                              }`}
-                            title="Copy Gist ID"
-                          >
-                            {copiedGistId ? <Check size={16} strokeWidth={3} /> : <Copy size={16} strokeWidth={3} />}
-                          </button>
-                        )}
+                    {/* Cloud Status Banner */}
+                    <div className="bg-emerald-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm">
+                      <div className="flex items-center gap-2 mb-2">
+                        <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
+                        <h4 className="font-black italic text-sm uppercase tracking-tighter text-emerald-950">雲端即時同步已啟用</h4>
+                      </div>
+                      <p className="text-xs font-bold text-emerald-800 leading-relaxed">
+                        您的飲食紀錄、體重趨勢與熱量目標已透過雲端即時雙向同步。無論在 LINE 還是 Web App 記錄，資料皆會自動安全備份。
+                      </p>
+                      <div className="mt-4 pt-3 border-t-2 border-dashed border-emerald-300 flex items-center justify-between">
+                        <span className="text-[10px] font-black uppercase text-emerald-700">狀態：即時連線中 ⚡</span>
                         <button
-                          onClick={handleManualGistIdSave}
-                          className="bg-black text-white px-4 rounded-xl font-black italic text-xs active:scale-95"
+                          onClick={handleCloudBackup}
+                          disabled={syncStatus === 'syncing'}
+                          className="bg-black text-white px-3 py-1.5 rounded-xl text-xs font-black italic active:scale-95 flex items-center gap-1.5"
                         >
-                          {t('save')}
+                          <RotateCcw size={12} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
+                          {syncStatus === 'syncing' ? '同步中...' : '手動同步'}
                         </button>
                       </div>
-                      <p className="text-[8px] font-bold text-zinc-400 mt-1 ml-1 leading-tight">
-                        {t('gist_id_hint') || "Backup creates this automatically. Manually paste here to sync on other devices."}
-                      </p>
                     </div>
 
                     {isLocal && (
