@@ -484,6 +484,8 @@ function doPost(e) {
             dish_name: analysis.dish_name || '美味餐點',
             calories: Number(analysis.calories) || 0,
             protein: Number(analysis.protein) || 0,
+            carbs: Number(analysis.carbs) || 0,
+            fat: Number(analysis.fat) || 0,
             water: Number(analysis.water) || 0,
             comment: analysis.panda_comment || ''
           };
@@ -713,6 +715,8 @@ function doPost(e) {
               dish_name: analysis.dish_name || '美味餐點',
               calories: Number(analysis.calories) || 0,
               protein: Number(analysis.protein) || 0,
+              carbs: Number(analysis.carbs) || 0,
+              fat: Number(analysis.fat) || 0,
               water: Number(analysis.water) || 0,
               comment: analysis.panda_comment || ''
             };
@@ -1258,6 +1262,8 @@ function syncLogToUserGist(meal, gistId, pat) {
       dish_name: meal.dish_name,
       calories: Number(meal.calories) || 0,
       protein: Number(meal.protein) || 0,
+      carbs: Number(meal.carbs) || 0,
+      fat: Number(meal.fat) || 0,
       water: Number(meal.water) || 0,
       timestamp: Date.now(),
       comment: meal.comment || '',
@@ -1399,6 +1405,8 @@ function analyzeMealWithGemini(base64Image, apiKey) {
 "dish_name" (Traditional Chinese string),
 "calories" (integer calories in kcal, 0 if unknown),
 "protein" (integer protein in grams, 0 if unknown),
+"carbs" (integer estimated carbohydrates in grams, 0 if unknown),
+"fat" (integer estimated total fat in grams, 0 if unknown),
 "water" (integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food),
 "panda_comment" (Traditional Chinese witty comment). No markdown.`;
 
@@ -1434,6 +1442,8 @@ function analyzeMealWithGemini(base64Image, apiKey) {
         dish_name: parsed.dish_name || "美味餐點",
         calories: Number(parsed.calories) || 0,
         protein: Number(parsed.protein) || 0,
+        carbs: Number(parsed.carbs) || 0,
+        fat: Number(parsed.fat) || 0,
         water: Number(parsed.water) || 0,
         panda_comment: parsed.panda_comment || "看起來營養很豐富喔！🐼"
       };
@@ -1465,6 +1475,8 @@ Return ONLY raw JSON:
   "dish_name": "餐點名稱 (Traditional Chinese)",
   "calories": <integer estimated calories in kcal, 0 if unknown>,
   "protein": <integer estimated protein in grams, 0 if unknown>,
+  "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
+  "fat": <integer estimated total fat in grams, 0 if unknown>,
   "water": <integer estimated liquid/water intake in ml, e.g. 500 for coffee/tea/water/soup, or 0 if dry food>,
   "panda_comment": "幽默的熊貓飲食短評 (Traditional Chinese)"
 }
@@ -1502,6 +1514,8 @@ Do NOT wrap in markdown backticks.`;
           dish_name: parsed.dish_name || text,
           calories: Number(parsed.calories) || 0,
           protein: Number(parsed.protein) || 0,
+          carbs: Number(parsed.carbs) || 0,
+          fat: Number(parsed.fat) || 0,
           water: Number(parsed.water) || 0,
           panda_comment: parsed.panda_comment || "已辨識您的文字飲食！"
         };

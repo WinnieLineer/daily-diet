@@ -823,11 +823,13 @@ function App() {
                 );
 
                 if (existing) {
-                  if (existing.calories !== lineLog.calories || existing.protein !== lineLog.protein || existing.water !== lineLog.water) {
+                  if (existing.calories !== lineLog.calories || existing.protein !== lineLog.protein || existing.water !== lineLog.water || existing.carbs !== lineLog.carbs || existing.fat !== lineLog.fat) {
                     await db.dietLogs.update(existing.id, {
                       dish_name: lineLog.dish_name,
                       calories: Number(lineLog.calories) || 0,
                       protein: Number(lineLog.protein) || 0,
+                      carbs: Number(lineLog.carbs) || 0,
+                      fat: Number(lineLog.fat) || 0,
                       water: Number(lineLog.water) || 0,
                       comment: lineLog.comment || existing.comment
                     });
@@ -840,6 +842,8 @@ function App() {
                     dish_name: lineLog.dish_name,
                     calories: Number(lineLog.calories) || 0,
                     protein: Number(lineLog.protein) || 0,
+                    carbs: Number(lineLog.carbs) || 0,
+                    fat: Number(lineLog.fat) || 0,
                     water: Number(lineLog.water) || 0,
                     comment: lineLog.comment || '',
                     timestamp: lineLog.id || Date.now(),
