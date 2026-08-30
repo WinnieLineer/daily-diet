@@ -119,11 +119,77 @@ function doPost(e) {
           // 計算今日總結並回覆 (附帶個人 Gist ID 連結)
           const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
 
-        } 
+        // ⭐ 按下【加入常用】
+        if (payload.action === 'saveFavorite') {
+          const favItem = {
+            id: Date.now(),
+            dish_name: payload.name || '常用餐點',
+            calories: Number(payload.cal) || 0,
+            protein: Number(payload.pro) || 0,
+            water: Number(payload.wat) || 0
+          };
+          saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
+          const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId);
+          replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
+
+        // ⚡ 按下【一鍵記錄常用餐點】
+        if (payload.action === 'quickLogFavorite') {
+          const meal = {
+            id: Date.now(),
+            date: getTodayDateString(),
+            time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+            dish_name: payload.name ? decodeURIComponent(payload.name) : '常用餐點',
+            calories: Number(payload.cal) || 0,
+            protein: Number(payload.pro) || 0,
+            water: Number(payload.wat) || 0,
+            comment: '⭐ 常用快捷記錄'
+          };
+          saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+          const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
+
+        // 🗑️ 按下【刪除單筆餐點】
+        if (payload.action === 'deleteMeal') {
+          deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props);
+          const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
+
+        // 🗑️ 按下【移除常用餐點】
+        if (payload.action === 'deleteFavorite') {
+          deleteUserFavorite(userId, payload.favId || payload.name, userGistId, GITHUB_PAT, props);
+          const favListFlex = generateFavoritesListFlex(userId, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
+
+        // 🗑️ 按下【清空今日確認】
+        if (payload.action === 'clearTodayConfirm') {
+          const confirmFlex = generateClearConfirmFlex(LIFF_ID, userGistId);
+          replyFlexMessage(replyToken, confirmFlex, CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
+
+        // 🗑️ 按下【確定清空今日】
+        if (payload.action === 'clearToday') {
+          clearTodayLogs(userId, userGistId, GITHUB_PAT, props);
+          const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
+
         // ❌ 按下【取消】
         else if (payload.action === 'cancel') {
-          replyTextMessage(replyToken, "👌 已取消記錄此餐點。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
+          replyTextMessage(replyToken, "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
+          continue;
         }
       }
 
@@ -155,6 +221,74 @@ function doPost(e) {
             const appUrl = `https://liff.line.me/${LIFF_ID}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
             replyTextMessage(replyToken, `🐼 點擊開啟您的個人飲食日記（已自動連動個人雲端）：\n${appUrl}`, CHANNEL_ACCESS_TOKEN);
             continue;
+          }
+
+          // 📋 管理今日紀錄
+          if (userText === '管理' || userText === '管理紀錄' || userText === '紀錄管理' || userText === '清單' || userText === '今日清單' || userText === '紀錄') {
+            const mgmtFlex = generateMealManagementFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN);
+            continue;
+          }
+
+          // ⭐ 常用餐點庫
+          if (userText === '常用' || userText === '快捷' || userText === '收藏' || userText === '常用清單' || userText === '我的常用' || userText === '常用餐點') {
+            const favFlex = generateFavoritesListFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, favFlex, CHANNEL_ACCESS_TOKEN);
+            continue;
+          }
+
+          // ⭐ 新增常用餐點 (例如: "加常用 拿鐵 150卡 8蛋 350水" 或 "新增常用 雞胸肉 200卡 40蛋")
+          if (userText.startsWith('加常用') || userText.startsWith('新增常用') || userText.startsWith('加入常用') || userText.startsWith('收藏常用')) {
+            const cleanStr = userText.replace(/^(?:加常用|新增常用|加入常用|收藏常用)\s*/, '');
+            const calMatch = cleanStr.match(/(\d+)\s*(?:kcal|卡|大卡)/i) || (cleanStr.includes('熱量') ? cleanStr.match(/熱量\s*(\d+)/i) : null);
+            const proMatch = cleanStr.match(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質)/i) || (cleanStr.includes('蛋白質') ? cleanStr.match(/蛋白質\s*(\d+(?:\.\d+)?)/i) : null);
+            const watMatch = cleanStr.match(/(\d+)\s*(?:ml|cc|水|水分)/i) || (cleanStr.includes('水分') ? cleanStr.match(/水分\s*(\d+)/i) : null);
+
+            let dishName = cleanStr
+              .replace(/(\d+)\s*(?:kcal|卡|大卡)/gi, '')
+              .replace(/(?:熱量)?\s*(\d+)\s*(?:kcal|卡|大卡)?/gi, '')
+              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質)/gi, '')
+              .replace(/(\d+)\s*(?:ml|cc|水|水分)/gi, '')
+              .trim() || '常用餐點';
+
+            const favItem = {
+              id: Date.now(),
+              dish_name: dishName,
+              calories: calMatch ? Number(calMatch[1]) : 0,
+              protein: proMatch ? Number(proMatch[1]) : 0,
+              water: watMatch ? Number(watMatch[1]) : 0
+            };
+
+            saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
+            const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId);
+            replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN);
+            continue;
+          }
+
+          // 🗑️ 刪除最後一筆 / 刪除指定餐點
+          if (userText === '刪除最後一筆' || userText === '刪除上一筆' || userText === '刪除最後' || userText === '復原' || userText === '撤銷' || userText === '刪除') {
+            const deleted = deleteMealLog(userId, 'last', userGistId, GITHUB_PAT, props);
+            if (deleted) {
+              const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+              replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+            } else {
+              replyTextMessage(replyToken, "🐼 今天目前沒有任何飲食紀錄可以刪除喔！", CHANNEL_ACCESS_TOKEN);
+            }
+            continue;
+          }
+
+          if (userText.startsWith('刪除') || userText.startsWith('移除')) {
+            const targetName = userText.replace(/^(?:刪除|移除)\s*/, '').trim();
+            if (targetName) {
+              const deleted = deleteMealLog(userId, targetName, userGistId, GITHUB_PAT, props);
+              if (deleted) {
+                const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+                replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+              } else {
+                replyTextMessage(replyToken, `🐼 找不到今日名稱為「${targetName}」的餐點紀錄。`, CHANNEL_ACCESS_TOKEN);
+              }
+              continue;
+            }
           }
 
           // 🍱 來自 App / LIFF 微調儲存的餐點同步
@@ -308,7 +442,7 @@ function getOrCreateUserGist(userId, pat, props) {
 }
 
 // ========================================================
-// 🍱 1. 辨識確認卡片 (附帶個人 Gist 專屬網址)
+// 🍱 1. 辨識確認卡片 (附帶個人 Gist 專屬網址與常用按鈕)
 // ========================================================
 
 function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessToken, userId) {
@@ -319,6 +453,14 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     pro: Number(analysis.protein) || 0,
     wat: Number(analysis.water) || 0,
     cmt: (analysis.panda_comment || '').slice(0, 40)
+  });
+
+  const postbackFavData = JSON.stringify({
+    action: 'saveFavorite',
+    name: (analysis.dish_name || '餐點').slice(0, 30),
+    cal: Number(analysis.calories) || 0,
+    pro: Number(analysis.protein) || 0,
+    wat: Number(analysis.water) || 0
   });
 
   const postbackCancelData = JSON.stringify({ action: 'cancel' });
@@ -399,8 +541,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 alignItems: "center",
                 contents: [
                   { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
-                  { type: "text", text: `${analysis.protein}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: "g", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                  { type: "text", text: `${analysis.protein}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "克", size: "xxs", color: "#1E3A8A", weight: "bold" }
                 ]
               },
               {
@@ -467,7 +609,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           {
             type: "box",
             layout: "horizontal",
-            spacing: "sm",
+            spacing: "xs",
             contents: [
               {
                 type: "button",
@@ -477,8 +619,21 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 color: "#F4F4F5",
                 action: {
                   type: "uri",
-                  label: "✏️ App微調",
+                  label: "✏️ 微調",
                   uri: appTargetUrl
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                flex: 1,
+                color: "#FEF9C3",
+                action: {
+                  type: "postback",
+                  label: "⭐ 加常用",
+                  data: postbackFavData,
+                  displayText: `⭐ 收藏至常用：${analysis.dish_name}`
                 }
               },
               {
@@ -498,7 +653,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           },
           {
             type: "text",
-            text: "💡 或直接打字「改 600卡 30蛋」快速修改",
+            text: "💡 可打字「改 600卡」修改，或「管理」查看清單",
             size: "xxs",
             color: "#71717A",
             align: "center",
@@ -1329,5 +1484,757 @@ function syncGoalsToUserGist(goals, gistId, pat) {
       }),
       muteHttpExceptions: true
     });
+  }
+}
+
+// ========================================================
+// 📋 6. 今日餐點管理面板 (Neo-Brutalist 視覺設計)
+// ========================================================
+
+function generateMealManagementFlex(userId, liffId, userGistId, props) {
+  const todayStr = getTodayDateString();
+  const allLogs = getTodayLogs(userId, todayStr, props);
+  const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
+
+  let totalCal = 0;
+  const mealBoxes = [];
+
+  if (allLogs.length === 0) {
+    mealBoxes.push({
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FEF9C3",
+      cornerRadius: "12px",
+      paddingAll: "16px",
+      alignItems: "center",
+      contents: [
+        { type: "text", text: "🍱 今日尚未記錄任何餐點喔！", size: "sm", color: "#713F12", weight: "bold" },
+        { type: "text", text: "傳送照片或輸入菜名，熊貓教練幫您記錄！🐼", size: "xs", color: "#A16207", margin: "xs" }
+      ]
+    });
+  } else {
+    allLogs.forEach((log, index) => {
+      totalCal += Number(log.calories) || 0;
+      const encodedName = encodeURIComponent(log.dish_name || '餐點');
+      const editAppUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${log.calories}&pro=${log.protein}&wat=${log.water || 0}&userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
+
+      mealBoxes.push({
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FFFFFF",
+        cornerRadius: "12px",
+        borderColor: "#E4E4E7",
+        borderWidth: "1px",
+        paddingAll: "12px",
+        spacing: "sm",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: `${index + 1}. ${log.dish_name}`, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true },
+              { type: "text", text: log.time || '', size: "xxs", color: "#A1A1AA", flex: 1, align: "end" }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🔥 ${log.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🥩 ${log.protein}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `💧 ${log.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            margin: "xs",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#F4F4F5",
+                flex: 1,
+                action: {
+                  type: "uri",
+                  label: "✏️ App修改",
+                  uri: editAppUrl
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FFF1F2",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "🗑️ 刪除",
+                  data: JSON.stringify({ action: 'deleteMeal', id: log.id, index: index }),
+                  displayText: `🗑️ 刪除餐點：${log.dish_name}`
+                }
+              }
+            ]
+          }
+        ]
+      });
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: `📋 今日餐點管理清單（共 ${allLogs.length} 餐，累計 ${totalCal} kcal）`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: `📅 ${todayStr}`, color: "#A1A1AA", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "📋 今日餐點管理清單",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: `今日已記錄 ${allLogs.length} 餐 ｜ 累計攝取 ${totalCal} kcal`,
+            color: "#FDE047",
+            size: "xxs",
+            margin: "xxs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        backgroundColor: "#FAFAFA",
+        contents: mealBoxes
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "uri",
+              label: "📱 開啟 App 完整圖表",
+              uri: appTargetUrl
+            }
+          },
+          ...(allLogs.length > 0 ? [{
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FFF1F2",
+            action: {
+              type: "postback",
+              label: "🗑️ 清空今日所有紀錄",
+              data: JSON.stringify({ action: 'clearTodayConfirm' }),
+              displayText: "🗑️ 清空今日紀錄"
+            }
+          }] : [])
+        ]
+      }
+    }
+  };
+}
+
+// ========================================================
+// ⭐ 7. 常用餐點清單與一鍵快捷記錄 (Neo-Brutalist 視覺設計)
+// ========================================================
+
+function generateFavoritesListFlex(userId, liffId, userGistId, props) {
+  const favorites = getUserFavorites(userId, props);
+  const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
+  const favBoxes = [];
+
+  if (favorites.length === 0) {
+    favBoxes.push({
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FEF9C3",
+      cornerRadius: "12px",
+      paddingAll: "16px",
+      contents: [
+        { type: "text", text: "⭐ 尚未建立常用餐點！", size: "sm", color: "#713F12", weight: "bold" },
+        {
+          type: "text",
+          text: "💡 如何建立常用餐點？\n1. 直接打字「加常用 拿鐵 150卡 8蛋 350水」\n2. 每次飲食辨識後，點擊「⭐ 加常用」即可儲存！",
+          size: "xs",
+          color: "#A16207",
+          wrap: true,
+          margin: "xs"
+        }
+      ]
+    });
+  } else {
+    favorites.slice(0, 8).forEach((fav, index) => {
+      favBoxes.push({
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FFFFFF",
+        cornerRadius: "12px",
+        borderColor: "#E4E4E7",
+        borderWidth: "1px",
+        paddingAll: "12px",
+        spacing: "sm",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: `⭐ ${fav.dish_name}`, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🔥 ${fav.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🥩 ${fav.protein}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `💧 ${fav.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            margin: "xs",
+            contents: [
+              {
+                type: "button",
+                style: "primary",
+                height: "sm",
+                color: "#000000",
+                flex: 3,
+                action: {
+                  type: "postback",
+                  label: "⚡ 一鍵記錄這餐",
+                  data: JSON.stringify({
+                    action: 'quickLogFavorite',
+                    name: encodeURIComponent(fav.dish_name),
+                    cal: fav.calories,
+                    pro: fav.protein,
+                    wat: fav.water || 0
+                  }),
+                  displayText: `⚡ 快捷記錄：${fav.dish_name}`
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#F4F4F5",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "🗑️",
+                  data: JSON.stringify({ action: 'deleteFavorite', favId: fav.id, name: fav.dish_name }),
+                  displayText: `🗑️ 移除常用：${fav.dish_name}`
+                }
+              }
+            ]
+          }
+        ]
+      });
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: `⭐ 我的常用餐點快捷庫（共 ${favorites.length} 項）`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FDE047",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#000000", weight: "bold", size: "sm" },
+              { type: "text", text: "⭐ 快捷飲食庫", color: "#713F12", weight: "bold", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "⭐ 常用餐點一鍵記錄",
+            color: "#000000",
+            weight: "bold",
+            size: "md",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: `已建立 ${favorites.length} 道常用餐點 ｜ 點擊「一鍵記錄」即可儲存`,
+            color: "#713F12",
+            size: "xxs",
+            margin: "xxs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        backgroundColor: "#FAFAFA",
+        contents: favBoxes
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FEF9C3",
+            action: {
+              type: "message",
+              label: "➕ 新增常用範例指令",
+              text: "加常用 美式咖啡+茶葉蛋 160卡 14蛋 450水"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "uri",
+              label: "📱 開啟 App 查看完整清單",
+              uri: appTargetUrl
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+function generateFavoriteAddedFlex(favItem, liffId, userGistId) {
+  const appTargetUrl = `https://liff.line.me/${liffId}?userId=${favItem.userId || ''}${userGistId ? `&gistId=${userGistId}` : ''}`;
+  return {
+    type: "flex",
+    altText: `⭐ 已成功收藏為常用餐點：${favItem.dish_name}`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "16px",
+        contents: [
+          { type: "text", text: "⭐ 已成功收藏至常用餐點！", weight: "bold", size: "sm", color: "#15803D" },
+          { type: "text", text: favItem.dish_name, weight: "bold", size: "md", color: "#000000" },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            margin: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🔥 ${favItem.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🥩 ${favItem.protein}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `💧 ${favItem.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: "隨時在對話框輸入「常用」即可一鍵快捷記錄！🐼",
+            size: "xxs",
+            color: "#71717A",
+            margin: "sm"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        paddingAll: "10px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "message",
+              label: "⭐ 查看常用庫",
+              text: "常用"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+function generateClearConfirmFlex(liffId, userGistId) {
+  return {
+    type: "flex",
+    altText: "⚠️ 確定要清空今日所有紀錄嗎？",
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "18px",
+        contents: [
+          { type: "text", text: "⚠️ 清空今日飲食紀錄確認", weight: "bold", size: "md", color: "#E11D48" },
+          {
+            type: "text",
+            text: "確定要清除今天的所有餐點紀錄嗎？此動作無法復原喔！",
+            size: "xs",
+            color: "#52525B",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#E11D48",
+            action: {
+              type: "postback",
+              label: "🗑️ 確定清空",
+              data: JSON.stringify({ action: 'clearToday' }),
+              displayText: "🗑️ 確定清空今日所有紀錄"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "postback",
+              label: "❌ 取消",
+              data: JSON.stringify({ action: 'cancel' }),
+              displayText: "❌ 取消"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+// ========================================================
+// 💾 8. 常用餐點與紀錄管理資料處理核心 (Properties + Gist)
+// ========================================================
+
+function getUserFavorites(userId, props) {
+  const favKey = `FAVORITES_${userId}`;
+  try {
+    const raw = props.getProperty(favKey);
+    return raw ? JSON.parse(raw) : [];
+  } catch (e) {
+    return [];
+  }
+}
+
+function saveUserFavorite(userId, favItem, userGistId, pat, props) {
+  const favKey = `FAVORITES_${userId}`;
+  let favorites = getUserFavorites(userId, props);
+  
+  // 檢查是否已存在同名餐點
+  const existingIdx = favorites.findIndex(f => f.dish_name === favItem.dish_name);
+  if (existingIdx !== -1) {
+    favorites[existingIdx] = favItem;
+  } else {
+    favorites.unshift(favItem);
+  }
+
+  props.setProperty(favKey, JSON.stringify(favorites));
+
+  if (pat && userGistId) {
+    try {
+      syncFavoritesToUserGist(favorites, userGistId, pat);
+    } catch (e) {
+      console.error("同步常用餐點至 Gist 失敗:", e);
+    }
+  }
+  return favorites;
+}
+
+function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
+  const favKey = `FAVORITES_${userId}`;
+  let favorites = getUserFavorites(userId, props);
+  favorites = favorites.filter(f => f.id != favIdentifier && f.dish_name !== favIdentifier);
+  props.setProperty(favKey, JSON.stringify(favorites));
+
+  if (pat && userGistId) {
+    try {
+      syncFavoritesToUserGist(favorites, userGistId, pat);
+    } catch (e) {
+      console.error("同步刪除常用餐點至 Gist 失敗:", e);
+    }
+  }
+  return favorites;
+}
+
+function syncFavoritesToUserGist(favorites, gistId, pat) {
+  const gistUrl = `https://api.github.com/gists/${gistId}`;
+  const getRes = UrlFetchApp.fetch(gistUrl, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+    muteHttpExceptions: true
+  });
+
+  if (getRes.getResponseCode() === 200) {
+    let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
+    const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+    if (content) {
+      try { backupData = JSON.parse(content); } catch (e) {}
+    }
+    backupData.favorites = favorites;
+
+    UrlFetchApp.fetch(gistUrl, {
+      method: 'patch',
+      headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+      payload: JSON.stringify({
+        files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+      }),
+      muteHttpExceptions: true
+    });
+  }
+}
+
+function deleteMealLog(userId, mealIdOrName, userGistId, pat, props) {
+  const todayStr = getTodayDateString();
+  const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
+  let logs = getTodayLogs(userId, todayStr, props);
+
+  if (logs.length === 0) return false;
+
+  let removedMeal = null;
+  if (mealIdOrName === 'last') {
+    removedMeal = logs.pop();
+  } else if (typeof mealIdOrName === 'number' || !isNaN(Number(mealIdOrName))) {
+    const targetId = Number(mealIdOrName);
+    const idx = logs.findIndex(l => l.id === targetId);
+    if (idx !== -1) {
+      removedMeal = logs.splice(idx, 1)[0];
+    } else if (targetId < logs.length) {
+      removedMeal = logs.splice(targetId, 1)[0];
+    }
+  } else {
+    const idx = logs.findIndex(l => l.dish_name && l.dish_name.includes(mealIdOrName));
+    if (idx !== -1) {
+      removedMeal = logs.splice(idx, 1)[0];
+    }
+  }
+
+  if (removedMeal) {
+    props.setProperty(todayKey, JSON.stringify(logs));
+    if (pat && userGistId) {
+      try {
+        deleteMealFromUserGist(removedMeal, userGistId, pat);
+      } catch (e) {
+        console.error("同步刪除 Gist 紀錄失敗:", e);
+      }
+    }
+    return true;
+  }
+  return false;
+}
+
+function clearTodayLogs(userId, userGistId, pat, props) {
+  const todayStr = getTodayDateString();
+  const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
+  props.setProperty(todayKey, JSON.stringify([]));
+
+  if (pat && userGistId) {
+    try {
+      const gistUrl = `https://api.github.com/gists/${gistId}`;
+      const getRes = UrlFetchApp.fetch(gistUrl, {
+        headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      if (getRes.getResponseCode() === 200) {
+        let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
+        const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+        if (content) {
+          try { backupData = JSON.parse(content); } catch (e) {}
+        }
+        if (backupData.dietLogs) {
+          backupData.dietLogs = backupData.dietLogs.filter(l => l.date !== todayStr);
+        }
+        UrlFetchApp.fetch(gistUrl, {
+          method: 'patch',
+          headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+          payload: JSON.stringify({
+            files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+          }),
+          muteHttpExceptions: true
+        });
+      }
+    } catch (e) {}
+  }
+}
+
+function deleteMealFromUserGist(targetMeal, gistId, pat) {
+  const gistUrl = `https://api.github.com/gists/${gistId}`;
+  const getRes = UrlFetchApp.fetch(gistUrl, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+    muteHttpExceptions: true
+  });
+
+  if (getRes.getResponseCode() === 200) {
+    let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
+    const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+    if (content) {
+      try { backupData = JSON.parse(content); } catch (e) {}
+    }
+    if (backupData.dietLogs && backupData.dietLogs.length > 0) {
+      const idx = backupData.dietLogs.findIndex(l => 
+        (targetMeal.id && l.id === targetMeal.id) ||
+        (l.date === targetMeal.date && l.dish_name === targetMeal.dish_name && l.calories === targetMeal.calories)
+      );
+      if (idx !== -1) {
+        backupData.dietLogs.splice(idx, 1);
+        UrlFetchApp.fetch(gistUrl, {
+          method: 'patch',
+          headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+          payload: JSON.stringify({
+            files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+          }),
+          muteHttpExceptions: true
+        });
+      }
+    }
   }
 }
