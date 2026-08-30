@@ -1618,9 +1618,25 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         ))}
                       </div>
                     </div>
-                    <div className="flex justify-center gap-4 py-4 opacity-40">
-                      <a href="./privacy.html" target="_blank" className="text-[10px] font-black uppercase underline">Privacy</a>
-                      <a href="./terms.html" target="_blank" className="text-[10px] font-black uppercase underline">Terms</a>
+                    <div className="pt-2 border-t-2 border-black/10">
+                      <div className="flex gap-2">
+                        <a
+                          href="./privacy.html"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 p-2.5 bg-yellow-50 hover:bg-yellow-100 border-2 border-black rounded-xl text-black font-black text-[11px] shadow-neo-sm-flat active:scale-95 transition-all"
+                        >
+                          🛡️ 隱私政策與免責聲明
+                        </a>
+                        <a
+                          href="./terms.html"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="flex-1 flex items-center justify-center gap-1.5 p-2.5 bg-zinc-50 hover:bg-zinc-100 border-2 border-black rounded-xl text-black font-black text-[11px] shadow-neo-sm-flat active:scale-95 transition-all"
+                        >
+                          📜 服務條款
+                        </a>
+                      </div>
                     </div>
                   </div>
                 )}
