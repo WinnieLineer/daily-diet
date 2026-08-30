@@ -886,11 +886,21 @@ const translations = {
     fasting_timer_title: "Fasting Timer",
     fasting_remaining: "Fasting Countdown",
     eating_window_remaining: "Eating Window Remaining",
+    whatsnew_v260_header: "v2.6.0 LINE Official Account Integration & AI Fuel Boost 🐼",
+    whatsnew_v260_apology_title: "Sincere Apology & Full AI Quota Restored! 🙇⚡",
+    whatsnew_v260_apology_desc: "We are deeply sorry for the wait! Due to limited AI quota and time spent building the LINE Bot integration, many users experienced AI recognition failures. We have now purchased ample AI quota! Fast AI recognition is fully operational across both Web and LINE Bot. Please enjoy using it! 🐼💖",
+    whatsnew_v260_line_title: "LINE Official Account Launch (@618iipof) 💬",
+    whatsnew_v260_line_desc: "Add our LINE Official Account 'Daily Diet Panda Coach' to log meals by sending food photos or text. AI calculates calories, protein, carbs, and fat with 100% two-way real-time sync!",
+    whatsnew_v260_water_title: "Quick Water Station & ⭐ Favorites Carousel 💧",
+    whatsnew_v260_water_desc: "Swipe favorite meal cards in LINE chat for 1-tap logging, quick hydration buttons, instant code-splitting speed, and enterprise security concurrency locks!",
+    whatsnew_v260_btn_add_line: "👉 Tap to Add LINE Bot (@618iipof)",
     whatsnew_v250_header: "Exclusive VIP Guest Update ✨",
     whatsnew_v250_vip_title: "Dedicated VIP Feedback Channel 💌",
     whatsnew_v250_vip_desc: "Dear Honored Guest, your feedback is our highest motivation. Tap 'Feedback' in Settings to share your thoughts, and we will continuously tailor the experience for you!",
     whatsnew_v250_timers_title: "Macronutrient Pie, Fasting Countdowns & Search Boost 🏆",
     whatsnew_v250_timers_desc: "Exclusively for you: Real-time Fasting Countdown, Bowel Movement & Weight Correlation, and Macronutrient ratio pie chart! Plus a massive search performance boost for instant lookups!",
+    v260_line_title: "LINE Official Account Launch (@618iipof) 💬",
+    v260_water_title: "Quick Water Station & ⭐ Favorites Carousel 💧",
     v250_vip_title: "Dedicated VIP Feedback Channel 💌",
     v250_timers_title: "Macronutrient Pie, Fasting Countdowns & Search Boost 🏆"
   }
@@ -910,12 +920,12 @@ export const getLanguage = () => {
     currentLang = saved;
     return saved;
   }
-  const lang = navigator.language || navigator.userLanguage;
-  currentLang = lang.startsWith('zh') ? 'zh' : 'en';
+  const lang = navigator.language || navigator.userLanguage || 'zh';
+  currentLang = lang.startsWith('zh') ? 'zh' : 'zh'; // Default to zh for rich TW experience
   return currentLang;
 };
 
 export const t = (key) => {
   const lang = getLanguage();
-  return translations[lang][key] || key;
+  return (translations[lang] && translations[lang][key]) || (translations['zh'] && translations['zh'][key]) || (translations['en'] && translations['en'][key]) || key;
 };
