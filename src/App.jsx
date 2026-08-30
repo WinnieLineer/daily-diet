@@ -760,6 +760,25 @@ function App() {
               console.log(`📥 [Goals Sync] 成功從 LINE/雲端同步體態目標: ${cal}卡 / ${pro}g蛋 / ${wat}ml水`);
             }
 
+            // ⭐ 常用餐點同步
+            if (gasData.favorites && Array.isArray(gasData.favorites) && gasData.favorites.length > 0) {
+              const localFavs = await db.favorites.toArray();
+              const localFavNames = new Set(localFavs.map(f => f.dish_name));
+              for (const fav of gasData.favorites) {
+                if (fav.dish_name && !localFavNames.has(fav.dish_name)) {
+                  await db.favorites.add({
+                    dish_name: fav.dish_name,
+                    calories: Number(fav.calories) || 0,
+                    protein: Number(fav.protein) || 0,
+                    water: Number(fav.water) || 0
+                  });
+                  localFavNames.add(fav.dish_name);
+                }
+              }
+              setFavoriteUpdateTrigger(prev => prev + 1);
+              console.log(`⭐ [Favorites Sync] 成功自 LINE 同步 ${gasData.favorites.length} 筆常用餐點！`);
+            }
+
             if (gasData.status === 'ok' && Array.isArray(gasData.todayLogs)) {
               const lineTodayLogs = gasData.todayLogs;
               const todayStr = new Date().toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit', timeZone: 'Asia/Taipei' }).replace(/\//g, '-');
@@ -853,6 +872,24 @@ function App() {
                   water: wat ? wat.value : prev.water
                 }));
               }
+            }
+
+            // 同步雲端常用庫
+            if (cloudData.favorites && Array.isArray(cloudData.favorites)) {
+              const localFavs = await db.favorites.toArray();
+              const localFavNames = new Set(localFavs.map(f => f.dish_name));
+              for (const fav of cloudData.favorites) {
+                if (fav.dish_name && !localFavNames.has(fav.dish_name)) {
+                  await db.favorites.add({
+                    dish_name: fav.dish_name,
+                    calories: Number(fav.calories) || 0,
+                    protein: Number(fav.protein) || 0,
+                    water: Number(fav.water) || 0
+                  });
+                  localFavNames.add(fav.dish_name);
+                }
+              }
+              setFavoriteUpdateTrigger(prev => prev + 1);
             }
 
             // 同步雲端飲食歷史
@@ -1368,6 +1405,27 @@ function App() {
     });
     setFavoriteUpdateTrigger(prev => prev + 1);
     showToast(t('added_to_favorites'));
+
+    // ☁️ 雙向同步常用餐點至 GAS 與 Gist
+    const effectiveUserId = localStorage.getItem('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
+    const currentGist = getCurrentGistId();
+    if (effectiveUserId || currentGist) {
+      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+      try {
+        fetch(`${GAS_URL}?action=addFavorite&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&name=${encodeURIComponent(log.dish_name)}&cal=${log.calories || 0}&pro=${log.protein || 0}&wat=${log.water || 0}`, { mode: 'no-cors' });
+      } catch (e) {}
+
+      if (currentGist) {
+        try {
+          uploadToGist({
+            dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
+            weightLogs: await db.weightLogs.toArray(),
+            settings: await db.settings.toArray(),
+            favorites: await db.favorites.toArray()
+          }, currentGist);
+        } catch (e) {}
+      }
+    }
   };
 
   const getFastingStatus = () => {

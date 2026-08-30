@@ -40,7 +40,8 @@ function doGet(e) {
         calories: calGoal,
         protein: proGoal,
         water: watGoal
-      }
+      },
+      favorites: getUserFavorites(userId, props)
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -60,6 +61,30 @@ function doGet(e) {
     const userGistId = getOrCreateUserGist(userId, pat, props);
     clearTodayLogs(userId, userGistId, pat, props);
     recordSystemLog('Web清空今日', userId, '清空今日餐點', '', '已清空今日');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 5. Web App 觸發新增常用餐點
+  if (action === 'addFavorite' && userId) {
+    const dishName = e?.parameter?.dishName || e?.parameter?.name || '常用餐點';
+    const calories = Number(e?.parameter?.calories) || Number(e?.parameter?.cal) || 0;
+    const protein = Number(e?.parameter?.protein) || Number(e?.parameter?.pro) || 0;
+    const water = Number(e?.parameter?.water) || Number(e?.parameter?.wat) || 0;
+    const userGistId = getOrCreateUserGist(userId, pat, props);
+    const favItem = { id: Date.now(), dish_name: dishName, calories, protein, water };
+    saveUserFavorite(userId, favItem, userGistId, pat, props);
+    recordSystemLog('Web加常用', userId, dishName, `${calories}卡 / ${protein}g蛋`, '已同步常用庫');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 6. Web App 觸發刪除常用餐點
+  if (action === 'deleteFavorite' && userId) {
+    const favId = e?.parameter?.id || e?.parameter?.favId || e?.parameter?.dishName || e?.parameter?.name;
+    const userGistId = getOrCreateUserGist(userId, pat, props);
+    deleteUserFavorite(userId, favId, userGistId, pat, props);
+    recordSystemLog('Web刪除常用', userId, favId, '', '已自常用庫移除');
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);
   }

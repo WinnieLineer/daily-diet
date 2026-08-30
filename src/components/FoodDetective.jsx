@@ -5,6 +5,7 @@ import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap, Pencil } from 'lucide-react';
 import { analyzeFoodImage, analyzeFoodText } from '../lib/groq';
 import { db } from '../db';
+import { getCurrentGistId, uploadToGist } from '../lib/gistService';
 import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
@@ -1212,7 +1213,32 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                           <Pencil size={14} />
                         </button>
                         <button
-                          onClick={(e) => { e.stopPropagation(); db.favorites.delete(item.id); loadFavorites(); }}
+                          onClick={async (e) => {
+                            e.stopPropagation();
+                            await db.favorites.delete(item.id);
+                            loadFavorites();
+
+                            // ☁️ 雙向同步刪除常用餐點
+                            const effectiveUserId = localStorage.getItem('line_user_id');
+                            const currentGist = getCurrentGistId();
+                            if (effectiveUserId || currentGist) {
+                              const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+                              try {
+                                fetch(`${GAS_URL}?action=deleteFavorite&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&name=${encodeURIComponent(item.dish_name)}`, { mode: 'no-cors' });
+                              } catch (e) {}
+
+                              if (currentGist) {
+                                try {
+                                  uploadToGist({
+                                    dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
+                                    weightLogs: await db.weightLogs.toArray(),
+                                    settings: await db.settings.toArray(),
+                                    favorites: await db.favorites.toArray()
+                                  }, currentGist);
+                                } catch (e) {}
+                              }
+                            }
+                          }}
                           className="p-1 hover:text-rose-500"
                         >
                           <Trash2 size={14} />
