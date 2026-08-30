@@ -1618,7 +1618,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         ))}
                       </div>
                     </div>
-                    <div className="pt-2 border-t-2 border-black/10">
+                    <div className="pt-2 border-t-2 border-black/10 space-y-3">
                       <div className="flex gap-2">
                         <a
                           href="./privacy.html"
@@ -1636,6 +1636,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         >
                           📜 服務條款
                         </a>
+                      </div>
+
+                      {/* 💡 醫療與健康管理免責聲明 */}
+                      <div className="p-3 bg-amber-50/90 border-2 border-amber-300 rounded-xl text-left">
+                        <div className="flex items-center gap-1.5 mb-1 text-amber-900 font-black text-[11px]">
+                          <span>💡</span>
+                          <span>免責聲明</span>
+                        </div>
+                        <p className="text-[10px] font-bold text-amber-900/90 leading-relaxed">
+                          「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」
+                        </p>
                       </div>
                     </div>
                   </div>
