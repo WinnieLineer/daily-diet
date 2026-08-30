@@ -1628,11 +1628,30 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId) {
             type: "box",
             layout: "horizontal",
             backgroundColor: "#F4F4F5",
-            cornerRadius: "8px",
-            paddingAll: "8px",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            spacing: "sm",
             contents: [
-              { type: "text", text: `🧬 基礎代謝 (BMR): ${info.bmr} kcal`, size: "xxs", color: "#52525B", weight: "bold", flex: 1 },
-              { type: "text", text: `⚡ 每日總消耗 (TDEE): ${info.tdee} kcal`, size: "xxs", color: "#52525B", weight: "bold", align: "end", flex: 1 }
+              {
+                type: "box",
+                layout: "vertical",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "🧬 基礎代謝 (BMR)", size: "xxs", color: "#71717A", weight: "bold" },
+                  { type: "text", text: `${info.bmr} kcal`, size: "xs", color: "#18181B", weight: "bold", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "⚡ 每日消耗 (TDEE)", size: "xxs", color: "#71717A", weight: "bold" },
+                  { type: "text", text: `${info.tdee} kcal`, size: "xs", color: "#18181B", weight: "bold", margin: "xs" }
+                ]
+              }
             ]
           }] : []),
           {
