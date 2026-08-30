@@ -679,10 +679,6 @@ function syncLogToUserGist(meal, gistId, pat) {
       comment: meal.comment || '',
       source: 'LINE_BOT'
     });
-      timestamp: Date.now(),
-      comment: meal.comment || '',
-      source: 'LINE_BOT'
-    });
 
     UrlFetchApp.fetch(gistUrl, {
       method: 'patch',
