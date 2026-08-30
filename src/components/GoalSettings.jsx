@@ -490,27 +490,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                 </button>
               </div>
 
-              {/* User Header */}
-              <div className="px-4 py-3 bg-white border-b-4 border-black border-dotted shrink-0">
-                <div className="flex items-center gap-3 p-3 border-4 border-black rounded-2xl bg-zinc-50 shadow-neo-sm">
-                  <div className="bg-black text-white p-2 rounded-xl shrink-0">
-                    <Database size={16} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-black text-[10px] truncate uppercase">{getCurrentGistId() ? "GIST BACKUP ACTIVE" : "NO CLOUD BACKUP"}</div>
-                    <div className="text-[8px] font-bold text-zinc-400 truncate uppercase tracking-widest">{getCurrentGistId() ? `ID: ${getCurrentGistId()}` : t('backup_desc')}</div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <button onClick={handleCloudBackup} disabled={syncStatus === 'syncing'} className="p-2 rounded-lg border-2 border-black bg-white hover:bg-emerald-400 active:scale-90">
-                      <Upload size={14} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
-                    </button>
-                    <button onClick={handleCloudRestore} disabled={syncStatus === 'syncing'} className="p-2 rounded-lg border-2 border-black bg-white hover:bg-amber-400 active:scale-90">
-                      <Download size={14} />
-                    </button>
-                  </div>
-                </div>
-              </div>
-
               {/* Tabs */}
               <div className="flex p-2 gap-1 bg-zinc-100 overflow-x-auto no-scrollbar border-b-4 border-black shrink-0">
                 {[
