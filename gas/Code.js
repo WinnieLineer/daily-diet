@@ -5,6 +5,7 @@
 const PRIMARY_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_CALORIE_GOAL = 2000; // 每日預設熱量目標 (kcal)
 const DEFAULT_PROTEIN_GOAL = 100;  // 每日預設蛋白質目標 (g)
+const DEFAULT_WATER_GOAL = 2000;    // 每日預設水分目標 (ml)
 
 function doGet(e) {
   const action = e?.parameter?.action;
@@ -84,6 +85,7 @@ function doPost(e) {
             dish_name: payload.name || '餐點',
             calories: Number(payload.cal) || 0,
             protein: Number(payload.pro) || 0,
+            water: Number(payload.wat) || 0,
             comment: payload.cmt || ''
           };
 
@@ -136,11 +138,13 @@ function doPost(e) {
             const nameMatch = userText.match(/：(.*?)(?:\s*\(|$)/);
             const calMatch = userText.match(/(\d+)\s*kcal/i);
             const proMatch = userText.match(/蛋白質\s*(\d+(?:\.\d+)?)\s*g/i);
+            const watMatch = userText.match(/水分\s*(\d+)\s*ml/i) || userText.match(/水\s*(\d+)\s*ml/i);
             const cmtMatch = userText.match(/備註:\s*(.*?)(?:\)|$)/);
 
             const dishName = nameMatch ? nameMatch[1].trim() : '餐點';
             const calories = calMatch ? Number(calMatch[1]) : 0;
             const protein = proMatch ? Number(proMatch[1]) : 0;
+            const water = watMatch ? Number(watMatch[1]) : 0;
             const comment = cmtMatch ? cmtMatch[1].trim() : '';
 
             const meal = {
@@ -150,6 +154,7 @@ function doPost(e) {
               dish_name: dishName,
               calories: calories,
               protein: protein,
+              water: water,
               comment: comment
             };
 
@@ -246,13 +251,14 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     name: (analysis.dish_name || '餐點').slice(0, 30),
     cal: Number(analysis.calories) || 0,
     pro: Number(analysis.protein) || 0,
+    wat: Number(analysis.water) || 0,
     cmt: (analysis.panda_comment || '').slice(0, 40)
   });
 
   const postbackCancelData = JSON.stringify({ action: 'cancel' });
   const encodedName = encodeURIComponent(analysis.dish_name || '餐點');
   const encodedCmt = encodeURIComponent(analysis.panda_comment || '');
-  const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&cmt=${encodedCmt}${userGistId ? `&gistId=${userGistId}` : ''}`;
+  const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
   const flexMessage = {
     type: "flex",
@@ -301,19 +307,19 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           {
             type: "box",
             layout: "horizontal",
-            spacing: "sm",
+            spacing: "xs",
             contents: [
               {
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#FFF1F2",
                 cornerRadius: "10px",
-                paddingAll: "10px",
+                paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🔥 熱量預估", size: "xs", color: "#E11D48", weight: "bold" },
-                  { type: "text", text: `${analysis.calories}`, size: "lg", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: `${analysis.calories}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: "kcal", size: "xxs", color: "#881337", weight: "bold" }
                 ]
               },
@@ -322,13 +328,27 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 layout: "vertical",
                 backgroundColor: "#EFF6FF",
                 cornerRadius: "10px",
-                paddingAll: "10px",
+                paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🥩 蛋白質", size: "xs", color: "#2563EB", weight: "bold" },
-                  { type: "text", text: `${analysis.protein}`, size: "lg", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: "grams", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                  { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: `${analysis.protein}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "g", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: `${analysis.water || 0}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
                 ]
               }
             ]
@@ -428,11 +448,13 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   
   let totalCal = 0;
   let totalPro = 0;
+  let totalWater = 0;
   let mealItems = [];
 
   allLogs.forEach((log) => {
     totalCal += Number(log.calories) || 0;
     totalPro += Number(log.protein) || 0;
+    totalWater += Number(log.water) || 0;
     mealItems.push({
       type: "box",
       layout: "horizontal",
@@ -445,6 +467,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
 
   const calGoal = Number(props.getProperty('CALORIE_GOAL')) || DEFAULT_CALORIE_GOAL;
   const proGoal = Number(props.getProperty('PROTEIN_GOAL')) || DEFAULT_PROTEIN_GOAL;
+  const watGoal = Number(props.getProperty('WATER_GOAL')) || DEFAULT_WATER_GOAL;
   const remainingCal = Math.max(0, calGoal - totalCal);
   const calPercent = Math.min(100, Math.round((totalCal / calGoal) * 100));
 
@@ -498,20 +521,20 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
           {
             type: "box",
             layout: "horizontal",
-            spacing: "sm",
+            spacing: "xs",
             contents: [
               {
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#FFF1F2",
                 cornerRadius: "10px",
-                paddingAll: "10px",
+                paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🔥 今日總熱量", size: "xs", color: "#E11D48", weight: "bold" },
-                  { type: "text", text: `${totalCal}`, size: "lg", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: `目標 ${calGoal} (${calPercent}%)`, size: "xxs", color: "#71717A", weight: "bold", wrap: true }
+                  { type: "text", text: "🔥 今日總熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: `${calPercent}%`, size: "xxs", color: "#71717A", weight: "bold" }
                 ]
               },
               {
@@ -519,13 +542,27 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 layout: "vertical",
                 backgroundColor: "#EFF6FF",
                 cornerRadius: "10px",
-                paddingAll: "10px",
+                paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🥩 今日蛋白質", size: "xs", color: "#2563EB", weight: "bold" },
-                  { type: "text", text: `${totalPro} g`, size: "lg", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: `目標 ${proGoal} g`, size: "xxs", color: "#71717A", weight: "bold", wrap: true }
+                  { type: "text", text: "🥩 今日蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "💧 今日水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: `ml`, size: "xxs", color: "#164E63", weight: "bold" }
                 ]
               }
             ]
@@ -637,7 +674,11 @@ function syncLogToUserGist(meal, gistId, pat) {
       dish_name: meal.dish_name,
       calories: Number(meal.calories) || 0,
       protein: Number(meal.protein) || 0,
-      water: 0,
+      water: Number(meal.water) || 0,
+      timestamp: Date.now(),
+      comment: meal.comment || '',
+      source: 'LINE_BOT'
+    });
       timestamp: Date.now(),
       comment: meal.comment || '',
       source: 'LINE_BOT'
@@ -683,8 +724,9 @@ function analyzeMealWithGemini(base64Image, apiKey) {
   ];
   const prompt = `Analyze this food image. Return ONLY a raw JSON object with keys:
 "dish_name" (Traditional Chinese string),
-"calories" (integer),
-"protein" (integer),
+"calories" (integer calories in kcal),
+"protein" (integer protein in grams),
+"water" (integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food),
 "panda_comment" (Traditional Chinese witty comment). No markdown.`;
 
   const payload = {
@@ -719,6 +761,7 @@ function analyzeMealWithGemini(base64Image, apiKey) {
         dish_name: parsed.dish_name || "美味餐點",
         calories: Number(parsed.calories) || 450,
         protein: Number(parsed.protein) || 20,
+        water: Number(parsed.water) || 0,
         panda_comment: parsed.panda_comment || "看起來營養很豐富喔！🐼"
       };
     } catch (err) {
@@ -742,13 +785,14 @@ function parseTextWithGemini(text, apiKey) {
   const prompt = `You are an AI panda nutrition coach for a diet tracking app. Analyze this user message: "${text}".
 Determine if the user is describing food, a drink, or a meal they ate/drank.
 
-If it IS food/meal:
+If it IS food/meal/drink:
 Return ONLY raw JSON:
 {
   "is_food": true,
   "dish_name": "餐點名稱 (Traditional Chinese)",
-  "calories": <integer estimated calories>,
+  "calories": <integer estimated calories in kcal>,
   "protein": <integer estimated protein in grams>,
+  "water": <integer estimated liquid/water intake in ml, e.g. 500 for coffee/tea/water/soup, or 0 if dry food>,
   "panda_comment": "幽默的熊貓飲食短評 (Traditional Chinese)"
 }
 
@@ -785,6 +829,7 @@ Do NOT wrap in markdown backticks.`;
           dish_name: parsed.dish_name || text,
           calories: Number(parsed.calories) || 350,
           protein: Number(parsed.protein) || 15,
+          water: Number(parsed.water) || 0,
           panda_comment: parsed.panda_comment || "已辨識您的文字飲食！"
         };
       }

@@ -75,7 +75,7 @@ export const liffService = {
   async sendMealMessageAndClose(meal) {
     if (this.isInClient()) {
       try {
-        const text = `🍱 已在 App 記錄餐點：${meal.dish_name} (${meal.calories} kcal, 蛋白質 ${meal.protein}g${meal.comment ? `, 備註: ${meal.comment}` : ''})`;
+        const text = `🍱 已在 App 記錄餐點：${meal.dish_name} (${meal.calories} kcal, 蛋白質 ${meal.protein}g${meal.water ? `, 水分 ${meal.water}ml` : ''}${meal.comment ? `, 備註: ${meal.comment}` : ''})`;
         await liff.sendMessages([{ type: 'text', text }]);
         liff.closeWindow();
         return true;

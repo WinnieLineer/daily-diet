@@ -56,6 +56,7 @@ function getAppQueryParams() {
     name: getParam('name'),
     cal: getParam('cal'),
     pro: getParam('pro'),
+    wat: getParam('wat') || getParam('water'),
     carbs: getParam('carbs'),
     fat: getParam('fat'),
     cmt: getParam('cmt') || getParam('comment'),
@@ -135,28 +136,39 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
                 />
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-rose-50/50 border-4 border-black p-3 rounded-2xl">
+              <div className="grid grid-cols-3 gap-2">
+                <div className="bg-rose-50/50 border-4 border-black p-2.5 rounded-2xl">
                   <label className="text-[10px] font-black uppercase tracking-widest text-rose-500 block mb-1">
-                    🔥 {t('calories')} (kcal)
+                    🔥 {t('calories')}
                   </label>
                   <input 
                     type="number" 
                     value={formData.calories}
                     onChange={(e) => setFormData({ ...formData, calories: Number(e.target.value) || 0 })}
-                    className="w-full border-2 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none text-lg"
+                    className="w-full border-2 border-black p-1.5 rounded-xl font-mono font-bold bg-white outline-none text-base"
                   />
                 </div>
-                <div className="bg-blue-50/50 border-4 border-black p-3 rounded-2xl">
+                <div className="bg-blue-50/50 border-4 border-black p-2.5 rounded-2xl">
                   <label className="text-[10px] font-black uppercase tracking-widest text-blue-500 block mb-1">
-                    🥩 {t('protein')} (g)
+                    🥩 {t('protein')}
                   </label>
                   <input 
                     type="number" 
                     step="0.1"
                     value={formData.protein}
                     onChange={(e) => setFormData({ ...formData, protein: Number(e.target.value) || 0 })}
-                    className="w-full border-2 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none text-lg"
+                    className="w-full border-2 border-black p-1.5 rounded-xl font-mono font-bold bg-white outline-none text-base"
+                  />
+                </div>
+                <div className="bg-cyan-50/50 border-4 border-black p-2.5 rounded-2xl">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-cyan-600 block mb-1">
+                    💧 水分 (ml)
+                  </label>
+                  <input 
+                    type="number" 
+                    value={formData.water}
+                    onChange={(e) => setFormData({ ...formData, water: Number(e.target.value) || 0 })}
+                    className="w-full border-2 border-black p-1.5 rounded-xl font-mono font-bold bg-white outline-none text-base"
                   />
                 </div>
               </div>
@@ -678,11 +690,12 @@ function App() {
       const query = getAppQueryParams();
       
       // 1. Handle incoming meal edit from LINE Bot
-      if (query.action === 'editMeal' || query.cal || query.pro) {
+      if (query.action === 'editMeal' || query.cal || query.pro || query.wat) {
         setIncomingMeal({
           dish_name: query.name || '餐點',
           calories: Number(query.cal) || 0,
           protein: Number(query.pro) || 0,
+          water: Number(query.wat) || 0,
           carbs: Number(query.carbs) || 0,
           fat: Number(query.fat) || 0,
           comment: query.cmt || ''
