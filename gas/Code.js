@@ -1361,18 +1361,25 @@ Do NOT wrap in markdown backticks.`;
 }
 
 function replyFlexMessage(replyToken, flexMessage, accessToken) {
-  UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
-    method: "post",
-    headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${accessToken}`
-    },
-    payload: JSON.stringify({
-      replyToken: replyToken,
-      messages: [flexMessage]
-    }),
-    muteHttpExceptions: true
-  });
+  try {
+    const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      payload: JSON.stringify({
+        replyToken: replyToken,
+        messages: [flexMessage]
+      }),
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() !== 200) {
+      console.error(`🚨 [LINE Flex 錯誤] Status: ${res.getResponseCode()}, Body:`, res.getContentText());
+    }
+  } catch (err) {
+    console.error("🚨 [LINE Flex 發送失敗]:", err);
+  }
 }
 
 function replyTextMessage(replyToken, text, accessToken) {
@@ -1528,7 +1535,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId) {
             text: info.summary || "客製化科學營養規劃",
             color: "#A1A1AA",
             size: "xxs",
-            margin: "xxs"
+            margin: "xs"
           }
         ]
       },
@@ -1848,7 +1855,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
             text: `今日已記錄 ${allLogs.length} 餐 ｜ 累計攝取 ${totalCal} kcal`,
             color: "#FDE047",
             size: "xxs",
-            margin: "xxs"
+            margin: "xs"
           }
         ]
       },
@@ -2060,7 +2067,7 @@ function generateFavoritesListFlex(userId, liffId, userGistId, props) {
             text: `已建立 ${favorites.length} 道常用餐點 ｜ 點擊「一鍵記錄」即可儲存`,
             color: "#713F12",
             size: "xxs",
-            margin: "xxs"
+            margin: "xs"
           }
         ]
       },
