@@ -528,14 +528,14 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         ))}
                       </div>
                     </div>
-                    {/* LINE & WhatsApp Integration Status */}
+                    {/* LINE Integration Status */}
                     <div className="space-y-3 border-4 border-black p-4 rounded-[2rem] bg-accent/10 shadow-neo-sm">
                       <div className="flex items-center gap-2">
-                        <span className="text-xl">🔌</span>
-                        <h4 className="font-black italic text-sm">LINE & WhatsApp 平台串接</h4>
+                        <span className="text-xl">💬</span>
+                        <h4 className="font-black italic text-sm">LINE 官方帳號串接</h4>
                       </div>
                       <p className="text-[10px] font-bold text-zinc-500 leading-tight">
-                        這款應用程式已完整支援 LINE LIFF 與 WhatsApp 整合，讓您在常用的聊天軟體中快速使用！
+                        已支援 LINE LIFF 官方帳號無縫整合，在 LINE 聊天室中傳照片或打字即可即時雙向記錄！
                       </p>
 
                       <div className="space-y-2 mt-2 pt-2 border-t-2 border-dashed border-black/10">
@@ -543,7 +543,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="flex flex-col gap-1.5 p-2 bg-white rounded-xl border-2 border-black">
                           <div className="flex items-center justify-between">
                             <span className="font-black text-xs flex items-center gap-1.5">
-                              💬 LINE App 整合
+                              💬 LINE App 連動狀態
                             </span>
                             {liffService.isInClient() ? (
                               <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
@@ -581,7 +581,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           ) : (
                             <div className="flex flex-col gap-2 mt-1">
                               <p className="text-[9px] text-zinc-400 font-bold">
-                                在 LINE 內點擊官方帳號的圖文選單，或使用 LINE 掃碼即可無縫免登入開啟！
+                                在 LINE 內點擊官方帳號圖文選單，或使用 LINE 掃碼即可無縫免登入開啟！
                               </p>
                               {!liffService.isInClient() && (
                                 <button
@@ -594,21 +594,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               )}
                             </div>
                           )}
-                        </div>
-
-                        {/* WhatsApp Integration */}
-                        <div className="flex flex-col gap-1.5 p-2 bg-white rounded-xl border-2 border-black">
-                          <div className="flex items-center justify-between">
-                            <span className="font-black text-xs flex items-center gap-1.5">
-                              📞 WhatsApp 整合
-                            </span>
-                            <span className="bg-zinc-100 text-zinc-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
-                              自動同步連結 🔗
-                            </span>
-                          </div>
-                          <p className="text-[9px] text-zinc-400 font-bold">
-                            在 WhatsApp 中與機器人對話時，點擊對話中發送的連結開啟，即可自動同步您的個人資料。
-                          </p>
                         </div>
                       </div>
                     </div>
