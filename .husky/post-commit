@@ -1,0 +1,9 @@
+#!/bin/sh
+# 偵測最新 Commit 中是否有 gas/ 或相關部署設定變更
+CHANGED_GAS=$(git diff-tree -r --name-only --no-commit-id HEAD | grep -E '^(gas/|scripts/deploy-gas\.js|\.clasp\.json)')
+
+if [ -n "$CHANGED_GAS" ]; then
+  echo ""
+  echo "🚀 [Git Hook: post-commit] 偵測到 GAS 檔案變更，自動部署至 Google Apps Script..."
+  node scripts/deploy-gas.js
+fi
