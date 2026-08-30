@@ -93,6 +93,19 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v260_header')}</div>
                   
+                  {/* Sincere Apology & Gratitude Card */}
+                  <div className="p-4 bg-amber-50 border-4 border-black rounded-2xl shadow-neo-sm space-y-2">
+                    <div className="flex gap-3 items-center">
+                      <div className="w-10 h-10 bg-amber-300 border-2 border-black rounded-xl flex items-center justify-center shadow-neo-sm shrink-0">
+                        <Sparkles size={20} className="text-black" strokeWidth={3} />
+                      </div>
+                      <h3 className="font-black text-sm italic leading-tight text-amber-950">{t('whatsnew_v260_apology_title')}</h3>
+                    </div>
+                    <p className="text-xs text-amber-900 font-bold leading-relaxed">
+                      {t('whatsnew_v260_apology_desc')}
+                    </p>
+                  </div>
+
                   <div className="p-4 bg-emerald-50 border-4 border-black rounded-2xl shadow-neo-sm space-y-3">
                     <div className="flex gap-3 items-center">
                       <div className="w-10 h-10 bg-emerald-400 border-2 border-black rounded-xl flex items-center justify-center">
