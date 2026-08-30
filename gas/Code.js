@@ -215,7 +215,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
   });
 
   const postbackCancelData = JSON.stringify({ action: 'cancel' });
-  const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?gistId=${userGistId}` : `https://liff.line.me/${liffId}`;
+  const encodedName = encodeURIComponent(analysis.dish_name || '餐點');
+  const encodedCmt = encodeURIComponent(analysis.panda_comment || '');
+  const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&cmt=${encodedCmt}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
   const flexMessage = {
     type: "flex",

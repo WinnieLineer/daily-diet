@@ -4,8 +4,10 @@ on:
   push:
     paths:
       - 'gas/**'
+      - 'scripts/deploy-gas.js'
       - '.github/workflows/deploy-gas.yml'
     branches: [ main ]
+  workflow_dispatch:
 
 jobs:
   deploy:
@@ -27,11 +29,20 @@ jobs:
         run: |
           echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
           if [ -n "${{ secrets.GAS_SCRIPT_ID }}" ]; then
-            echo '{"scriptId":"${{ secrets.GAS_SCRIPT_ID }}","rootDir":"./gas"}' > .clasp.json
+            if [ -f .clasp.json ]; then
+              node -e '
+                const fs = require("fs");
+                const cfg = JSON.parse(fs.readFileSync(".clasp.json", "utf8"));
+                cfg.scriptId = "${{ secrets.GAS_SCRIPT_ID }}";
+                if ("${{ secrets.GAS_DEPLOYMENT_ID }}") cfg.deploymentId = "${{ secrets.GAS_DEPLOYMENT_ID }}";
+                fs.writeFileSync(".clasp.json", JSON.stringify(cfg, null, 2));
+              '
+            else
+              echo '{"scriptId":"${{ secrets.GAS_SCRIPT_ID }}","rootDir":"./gas"}' > .clasp.json
+            fi
           fi
 
-      - name: Push to Google Apps Script
+      - name: Deploy to Google Apps Script (Locking Deployment ID)
         if: "${{ secrets.CLASPRC_JSON != '' }}"
         run: |
-          clasp push --force
-          clasp deploy --description "Auto deployed via GitHub Actions $(date +'%Y-%m-%d %H:%M:%S')"
+          node scripts/deploy-gas.js

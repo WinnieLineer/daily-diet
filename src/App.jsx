@@ -13,6 +13,7 @@ import FastingTimer from './components/FastingTimer';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
 import { db, getDailySummary, calculateStreak } from './db';
+import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
 import WeeklyReportCard from './components/WeeklyReportCard';
 import { getPandaAdvice } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
@@ -26,6 +27,218 @@ import { liffService } from './lib/liffService';
 const getLocalDateString = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+};
+
+function getAppQueryParams() {
+  const searchParams = new URLSearchParams(window.location.search);
+  const hash = window.location.hash || '';
+  const hashParams = new URLSearchParams(hash.includes('?') ? hash.split('?')[1] : '');
+
+  // Extract from liff.state if LINE LIFF encoded it
+  let liffStateParams = new URLSearchParams();
+  const liffState = searchParams.get('liff.state') || hashParams.get('liff.state');
+  if (liffState) {
+    try {
+      const decodedState = decodeURIComponent(liffState);
+      const queryString = decodedState.startsWith('?') ? decodedState.slice(1) : decodedState;
+      liffStateParams = new URLSearchParams(queryString);
+    } catch (e) {
+      console.warn("Failed to parse liff.state:", e);
+    }
+  }
+
+  const getParam = (key) => {
+    return searchParams.get(key) || hashParams.get(key) || liffStateParams.get(key);
+  };
+
+  return {
+    action: getParam('action'),
+    name: getParam('name'),
+    cal: getParam('cal'),
+    pro: getParam('pro'),
+    carbs: getParam('carbs'),
+    fat: getParam('fat'),
+    cmt: getParam('cmt') || getParam('comment'),
+    gistId: getParam('gistId'),
+    user: getParam('user') || getParam('userName'),
+  };
+}
+
+const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
+  const [formData, setFormData] = useState({
+    dish_name: initialData.dish_name || '餐點',
+    calories: initialData.calories || 0,
+    protein: initialData.protein || 0,
+    carbs: initialData.carbs || 0,
+    fat: initialData.fat || 0,
+    water: initialData.water || 0,
+    comment: initialData.comment || '',
+    time: (() => {
+      const now = new Date();
+      const tzoffset = now.getTimezoneOffset() * 60000;
+      return new Date(now - tzoffset).toISOString().slice(0, 16);
+    })()
+  });
+
+  const handleFormSubmit = (e) => {
+    e.preventDefault();
+    onSave(formData);
+  };
+
+  return createPortal(
+    <div className="fixed inset-0 z-[600]">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        className="fixed inset-0 bg-black/80 backdrop-blur-md" 
+        onClick={onClose} 
+      />
+      <div className="fixed inset-0 flex items-center justify-center p-4 pointer-events-none">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.9, y: 20 }}
+          className="relative bg-white border-4 border-black rounded-[2.5rem] w-full max-w-lg overflow-hidden shadow-neo flex flex-col max-h-[90vh] pointer-events-auto"
+        >
+          {/* Header */}
+          <div className="p-4 border-b-4 border-black flex items-center justify-between bg-accent/20">
+            <div className="flex items-center gap-3">
+              <div className="bg-black text-white p-2 rounded-xl text-xl">
+                🍱
+              </div>
+              <div>
+                <h3 className="font-black italic text-lg leading-none">LINE 辨識餐點微調</h3>
+                <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
+                  請確認並調整營養數值後儲存
+                </p>
+              </div>
+            </div>
+            <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">
+              <X size={24} />
+            </button>
+          </div>
+
+          {/* Form Content */}
+          <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
+            <div className="overflow-y-auto p-5 space-y-4 flex-1 custom-scrollbar">
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
+                  {t('food_name')}
+                </label>
+                <input 
+                  type="text" 
+                  value={formData.dish_name}
+                  onChange={(e) => setFormData({ ...formData, dish_name: e.target.value })}
+                  className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-zinc-50 focus:bg-white outline-none"
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-rose-50/50 border-4 border-black p-3 rounded-2xl">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-rose-500 block mb-1">
+                    🔥 {t('calories')} (kcal)
+                  </label>
+                  <input 
+                    type="number" 
+                    value={formData.calories}
+                    onChange={(e) => setFormData({ ...formData, calories: Number(e.target.value) || 0 })}
+                    className="w-full border-2 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none text-lg"
+                  />
+                </div>
+                <div className="bg-blue-50/50 border-4 border-black p-3 rounded-2xl">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-blue-500 block mb-1">
+                    🥩 {t('protein')} (g)
+                  </label>
+                  <input 
+                    type="number" 
+                    step="0.1"
+                    value={formData.protein}
+                    onChange={(e) => setFormData({ ...formData, protein: Number(e.target.value) || 0 })}
+                    className="w-full border-2 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none text-lg"
+                  />
+                </div>
+              </div>
+
+              {goals?.show_carbs_fat && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="bg-amber-50/50 border-4 border-black p-3 rounded-2xl">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-amber-600 block mb-1">
+                      🍞 {t('carbs')} (g)
+                    </label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      value={formData.carbs}
+                      onChange={(e) => setFormData({ ...formData, carbs: Number(e.target.value) || 0 })}
+                      className="w-full border-2 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none text-lg"
+                    />
+                  </div>
+                  <div className="bg-emerald-50/50 border-4 border-black p-3 rounded-2xl">
+                    <label className="text-[10px] font-black uppercase tracking-widest text-emerald-600 block mb-1">
+                      🥑 {t('fat')} (g)
+                    </label>
+                    <input 
+                      type="number" 
+                      step="0.1"
+                      value={formData.fat}
+                      onChange={(e) => setFormData({ ...formData, fat: Number(e.target.value) || 0 })}
+                      className="w-full border-2 border-black p-2 rounded-xl font-mono font-bold bg-white outline-none text-lg"
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div>
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
+                  🕒 用餐時間
+                </label>
+                <input 
+                  type="datetime-local" 
+                  value={formData.time}
+                  onChange={(e) => setFormData({ ...formData, time: e.target.value })}
+                  className="w-full border-4 border-black p-3 rounded-2xl font-bold bg-zinc-50 focus:bg-white outline-none"
+                />
+              </div>
+
+              {formData.comment && (
+                <div className="bg-accent border-4 border-black p-4 rounded-2xl relative overflow-hidden">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Zap size={14} className="text-black" />
+                    <span className="text-[10px] font-black uppercase tracking-widest text-black/70">🐼 熊貓評語</span>
+                  </div>
+                  <p className="font-bold text-xs text-black/90 leading-relaxed">
+                    {formData.comment}
+                  </p>
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 border-t-4 border-black flex gap-3 bg-zinc-50">
+              <NeoButton 
+                type="button" 
+                variant="white" 
+                className="flex-1 h-12 text-sm font-bold"
+                onClick={onClose}
+              >
+                {t('cancel') || '取消'}
+              </NeoButton>
+              <NeoButton 
+                type="submit" 
+                variant="black" 
+                className="flex-1 h-12 text-sm font-black italic"
+              >
+                💾 儲存餐點
+              </NeoButton>
+            </div>
+          </form>
+        </motion.div>
+      </div>
+    </div>,
+    document.body
+  );
 };
 
 const NamePromptModal = ({ onSave, isUpdate = false }) => {
@@ -458,26 +671,59 @@ function App() {
   const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);
+  const [incomingMeal, setIncomingMeal] = useState(null);
 
   useEffect(() => {
     const initLiffAndQueryParams = async () => {
-      // 1. Check URL parameters first (WhatsApp or general query login)
-      const params = new URLSearchParams(window.location.search);
-      const urlName = params.get('name');
-      const urlGistId = params.get('gistId');
-
-      if (urlName) {
-        localStorage.setItem('user_name', urlName);
-        setUserName(urlName);
-        console.log(`📥 Set username from URL query: ${urlName}`);
+      const query = getAppQueryParams();
+      
+      // 1. Handle incoming meal edit from LINE Bot
+      if (query.action === 'editMeal' || query.cal || query.pro) {
+        setIncomingMeal({
+          dish_name: query.name || '餐點',
+          calories: Number(query.cal) || 0,
+          protein: Number(query.pro) || 0,
+          carbs: Number(query.carbs) || 0,
+          fat: Number(query.fat) || 0,
+          comment: query.cmt || ''
+        });
+      } else if (query.name && !query.user) {
+        // If not editing a meal, treat query.name as username login
+        localStorage.setItem('user_name', query.name);
+        setUserName(query.name);
+        console.log(`📥 Set username from URL query: ${query.name}`);
       }
-      if (urlGistId) {
-        localStorage.setItem('gist_backup_id', urlGistId);
-        console.log(`📥 Set Gist ID from URL query: ${urlGistId}`);
+
+      if (query.user) {
+        localStorage.setItem('user_name', query.user);
+        setUserName(query.user);
+      }
+
+      if (query.gistId) {
+        localStorage.setItem('gist_backup_id', query.gistId);
+        console.log(`📥 Set Gist ID from URL query: ${query.gistId}`);
+        // Silent sync from cloud if Gist is available
+        try {
+          const cloudData = await downloadFromGist();
+          if (cloudData && cloudData.dietLogs && cloudData.dietLogs.length > 0) {
+            const count = await db.dietLogs.count();
+            if (count === 0) {
+              await db.transaction('rw', db.dietLogs, db.weightLogs, db.settings, db.favorites, async () => {
+                if (cloudData.dietLogs) await db.dietLogs.bulkAdd(cloudData.dietLogs.map(({ id, ...r }) => r));
+                if (cloudData.weightLogs) await db.weightLogs.bulkAdd(cloudData.weightLogs.map(({ id, ...r }) => r));
+                if (cloudData.settings) await db.settings.bulkAdd(cloudData.settings);
+                if (cloudData.favorites) await db.favorites.bulkAdd(cloudData.favorites.map(({ id, ...r }) => r));
+              });
+              refreshData();
+            }
+          }
+        } catch (syncErr) {
+          console.log("[Gist] Auto-sync skipped:", syncErr.message);
+        }
       }
 
       // Clean up URL parameters so they don't stay in the address bar
-      if (urlName || urlGistId) {
+      if (window.location.search || (window.location.hash && window.location.hash.includes('?'))) {
         const cleanUrl = window.location.origin + window.location.pathname;
         window.history.replaceState({}, document.title, cleanUrl);
       }
@@ -499,6 +745,55 @@ function App() {
 
     initLiffAndQueryParams();
   }, []);
+
+  const handleSaveIncomingMeal = async (mealData) => {
+    try {
+      const logDateObj = new Date(mealData.time);
+      const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
+      const timestamp = logDateObj.getTime();
+
+      const newLog = {
+        date: localDate,
+        dish_name: mealData.dish_name,
+        calories: Number(mealData.calories) || 0,
+        protein: Number(mealData.protein) || 0,
+        water: Number(mealData.water) || 0,
+        carbs: Number(mealData.carbs) || 0,
+        fat: Number(mealData.fat) || 0,
+        comment: mealData.comment || '',
+        advice: mealData.comment || '',
+        timestamp: timestamp,
+        source: 'LINE_EDIT'
+      };
+
+      await db.dietLogs.add(newLog);
+      
+      // If Gist is available, trigger backup
+      const gistId = getCurrentGistId();
+      if (gistId) {
+        try {
+          const allDietLogs = await db.dietLogs.toArray();
+          const allWeightLogs = await db.weightLogs.toArray();
+          const allSettings = await db.settings.toArray();
+          const allFavorites = await db.favorites.toArray();
+          await uploadToGist({
+            dietLogs: allDietLogs,
+            weightLogs: allWeightLogs,
+            settings: allSettings,
+            favorites: allFavorites
+          });
+        } catch (e) {
+          console.warn("Auto-upload to Gist on meal save skipped/failed:", e);
+        }
+      }
+
+      setIncomingMeal(null);
+      await refreshData('diet');
+    } catch (err) {
+      console.error("Failed to save incoming meal:", err);
+      alert("儲存失敗: " + err.message);
+    }
+  };
 
   useEffect(() => {
     // If onboarding is seen but no name is set, it's an existing user who needs a name update prompt
@@ -1377,6 +1672,18 @@ function App() {
             log={selectedLogForDetail} 
             goals={goals}
             onClose={() => setSelectedLogForDetail(null)} 
+          />
+        )}
+      </AnimatePresence>
+
+      {/* LINE Bot Incoming Meal Edit Modal */}
+      <AnimatePresence>
+        {incomingMeal && (
+          <IncomingMealModal 
+            initialData={incomingMeal} 
+            goals={goals} 
+            onSave={handleSaveIncomingMeal} 
+            onClose={() => setIncomingMeal(null)} 
           />
         )}
       </AnimatePresence>
