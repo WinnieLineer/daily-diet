@@ -2,7 +2,7 @@
 // 🐼 Daily Diet LINE Bot - Google Apps Script (多用戶自動 Gist 綁定與同步版)
 // ========================================================
 
-const PRIMARY_GEMINI_MODEL = 'gemini-2.5-flash';
+const PRIMARY_GEMINI_MODEL = 'gemini-3.5-flash-lite';
 const DEFAULT_CALORIE_GOAL = 2000; // 每日預設熱量目標 (kcal)
 const DEFAULT_PROTEIN_GOAL = 100;  // 每日預設蛋白質目標 (g)
 
@@ -668,12 +668,14 @@ function getLineImageBlob(messageId, accessToken) {
 
 function analyzeMealWithGemini(base64Image, apiKey) {
   const models = [
-    PRIMARY_GEMINI_MODEL,
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash-latest',
-    'gemini-1.5-pro'
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
   ];
   const prompt = `Analyze this food image. Return ONLY a raw JSON object with keys:
 "dish_name" (Traditional Chinese string),
@@ -724,11 +726,14 @@ function analyzeMealWithGemini(base64Image, apiKey) {
 
 function parseTextWithGemini(text, apiKey) {
   const models = [
-    PRIMARY_GEMINI_MODEL,
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-2.0-flash-lite',
-    'gemini-1.5-flash-latest'
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
   ];
   const prompt = `Parse this food text: "${text}". Return ONLY a raw JSON with keys: "dish_name", "calories", "protein", "panda_comment" (in Traditional Chinese).`;
   

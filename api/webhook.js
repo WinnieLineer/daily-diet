@@ -347,8 +347,17 @@ async function analyzeMealWithGemini(base64Image, apiKey) {
     throw new Error('GEMINI_API_KEY 未設定，請在 Vercel 後台 Environment Variables 設定 GEMINI_API_KEY');
   }
 
-  // 優先使用 gemini-2.0-flash-lite，若失敗自動切換備用模型
-  const models = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  // 依據專案配額最佳化排序（高 RPD 優先）
+  const models = [
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
+  ];
   let lastError = null;
 
   const prompt = `Analyze this food image for a nutrition tracking app. Return ONLY a raw JSON object with keys:
@@ -417,7 +426,16 @@ async function parseTextWithGemini(text, apiKey) {
     throw new Error('GEMINI_API_KEY 未設定，請在 Vercel 後台 Environment Variables 設定 GEMINI_API_KEY');
   }
 
-  const models = ['gemini-2.0-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  const models = [
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
+  ];
   let lastError = null;
 
   const prompt = `Parse this food text: "${text}". Return ONLY a raw JSON object with keys:
