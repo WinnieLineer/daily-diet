@@ -250,6 +250,14 @@ function doPost(e) {
         console.warn("⚠️ [提示] GITHUB_PAT 尚未在指令碼屬性中設定，Gist 雲端同步暫時關閉。");
       }
 
+      // 🌟 Case 0: 首次加入好友 (Follow 事件)
+      if (event.type === 'follow') {
+        recordSystemLog('新用戶加入', userId, '加入好友', '', '發送歡迎詞與免責聲明');
+        const welcomeText = `🐼 歡迎使用 Daily Diet 飲食管理助手！\n\n我是您的專屬 AI 熊貓教練，隨時傳送【餐點照片】或【文字】（例如：「午餐 雞胸肉便當 600卡 35蛋」），我會自動為您計算熱量與營養素！\n\n💡 免責聲明：\n「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」`;
+        replyTextMessage(replyToken, welcomeText, CHANNEL_ACCESS_TOKEN);
+        continue;
+      }
+
       // 🔘 Case 1: 用戶點擊按鈕 (Postback 事件)
       if (event.type === 'postback') {
         let payload = {};
@@ -391,6 +399,14 @@ function doPost(e) {
         else if (event.message.type === 'text') {
           const userText = event.message.text.trim();
           console.log(`💬 [收到用戶文字] "${userText}"`);
+
+          // 💡 說明 / 教學 / 免責聲明
+          if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明') {
+            recordSystemLog('使用說明', userId, userText, '', '發送使用說明與免責聲明');
+            const helpText = `🐼 Daily Diet 使用教學：\n\n1. 📸 拍照記錄：直接傳送餐點照片，AI 自動辨識營養熱量。\n2. ✍️ 打字記錄：直接傳送「雞胸肉沙拉 350卡 30蛋 500水」。\n3. 📊 今日總結：輸入「今日」或「總結」查看進度。\n4. 🎯 目標設定：輸入「改目標 175cm 70kg 男 減脂」。\n5. 🗑️ 刪除紀錄：輸入「刪除最後一筆」或「管理」。\n\n💡 免責聲明：\n「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」`;
+            replyTextMessage(replyToken, helpText, CHANNEL_ACCESS_TOKEN);
+            continue;
+          }
 
           // 查詢今日總結
           if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結') {
