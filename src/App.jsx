@@ -789,6 +789,11 @@ function App() {
 
       setIncomingMeal(null);
       await refreshData('diet');
+
+      // 📲 若在 LINE 內開啟，發送確認訊息回聊天室並自動關閉 LIFF 視窗
+      if (liffService.isInClient()) {
+        await liffService.sendMealMessageAndClose(newLog);
+      }
     } catch (err) {
       console.error("Failed to save incoming meal:", err);
       alert("儲存失敗: " + err.message);

@@ -131,6 +131,37 @@ function doPost(e) {
             continue;
           }
 
+          // 🍱 來自 App / LIFF 微調儲存的餐點同步
+          if (userText.startsWith('🍱 已在 App 記錄餐點：') || userText.startsWith('🍱 已記錄餐點：')) {
+            const nameMatch = userText.match(/：(.*?)(?:\s*\(|$)/);
+            const calMatch = userText.match(/(\d+)\s*kcal/i);
+            const proMatch = userText.match(/蛋白質\s*(\d+(?:\.\d+)?)\s*g/i);
+            const cmtMatch = userText.match(/備註:\s*(.*?)(?:\)|$)/);
+
+            const dishName = nameMatch ? nameMatch[1].trim() : '餐點';
+            const calories = calMatch ? Number(calMatch[1]) : 0;
+            const protein = proMatch ? Number(proMatch[1]) : 0;
+            const comment = cmtMatch ? cmtMatch[1].trim() : '';
+
+            const meal = {
+              id: Date.now(),
+              date: getTodayDateString(),
+              time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+              dish_name: dishName,
+              calories: calories,
+              protein: protein,
+              comment: comment
+            };
+
+            // 儲存餐點 (寫入個人專屬 Gist 與今日紀錄)
+            saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+
+            // 即時計算今日總結並回傳 Flex 卡片
+            const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+            continue;
+          }
+
           // 飲食文字辨識
           const analysis = parseTextWithGemini(userText, GEMINI_API_KEY);
           replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN);

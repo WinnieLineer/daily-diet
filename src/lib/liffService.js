@@ -70,5 +70,19 @@ export const liffService = {
       }
     }
     return null;
+  },
+
+  async sendMealMessageAndClose(meal) {
+    if (this.isInClient()) {
+      try {
+        const text = `🍱 已在 App 記錄餐點：${meal.dish_name} (${meal.calories} kcal, 蛋白質 ${meal.protein}g${meal.comment ? `, 備註: ${meal.comment}` : ''})`;
+        await liff.sendMessages([{ type: 'text', text }]);
+        liff.closeWindow();
+        return true;
+      } catch (err) {
+        console.warn('LIFF sendMessages error:', err);
+      }
+    }
+    return false;
   }
 };
