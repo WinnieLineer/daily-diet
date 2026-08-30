@@ -167,6 +167,19 @@ function doPost(e) {
             continue;
           }
 
+          // 🎯 設定/修改體態目標與客製化建議 (例如: "改目標 175cm 70kg 男 減脂", "設定目標 女 160 55 增肌", "我的目標")
+          const isGoalQuery = userText.startsWith('改目標') || 
+            userText.startsWith('設定目標') || 
+            userText === '目標' || 
+            userText === '我的目標' || 
+            (userText.includes('目標') && (userText.includes('減脂') || userText.includes('增肌') || userText.includes('減重') || userText.includes('維持') || userText.includes('卡') || userText.includes('kcal'))) ||
+            ((userText.includes('身高') || userText.includes('體重')) && (userText.includes('減脂') || userText.includes('增肌') || userText.includes('減重') || userText.includes('維持') || userText.includes('建議')));
+
+          if (isGoalQuery) {
+            handleGoalSettingWithAI(replyToken, userId, userText, userGistId, GITHUB_PAT, props, LIFF_ID, CHANNEL_ACCESS_TOKEN, GEMINI_API_KEY);
+            continue;
+          }
+
           // ✏️ 直接在 LINE 文字修改餐點數值 (例如: "改 600卡 30蛋 500水" 或 "改 排骨便當 650卡 35蛋")
           if (userText.startsWith('改') || userText.startsWith('修改') || userText.startsWith('改成')) {
             const calMatch = userText.match(/(\d+)\s*(?:kcal|卡|大卡)/i) || (userText.includes('熱量') ? userText.match(/熱量\s*(\d+)/i) : null);
@@ -430,7 +443,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           {
             type: "box",
             layout: "horizontal",
-            spacing: "xs",
+            spacing: "sm",
             contents: [
               {
                 type: "button",
@@ -439,20 +452,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 color: "#F4F4F5",
                 action: {
-                  type: "message",
-                  label: "💬 LINE修改",
-                  text: `改 ${analysis.dish_name || '餐點'} ${Number(analysis.calories) || 0}卡 ${Number(analysis.protein) || 0}蛋 ${Number(analysis.water) || 0}水`
-                }
-              },
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                flex: 1,
-                color: "#F4F4F5",
-                action: {
                   type: "uri",
-                  label: "✏️ App修改",
+                  label: "✏️ App微調",
                   uri: appTargetUrl
                 }
               },
@@ -470,6 +471,14 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 }
               }
             ]
+          },
+          {
+            type: "text",
+            text: "💡 或直接打字「改 600卡 30蛋」快速修改",
+            size: "xxs",
+            color: "#71717A",
+            align: "center",
+            margin: "xs"
           }
         ]
       }
@@ -506,9 +515,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     });
   });
 
-  const calGoal = Number(props.getProperty('CALORIE_GOAL')) || DEFAULT_CALORIE_GOAL;
-  const proGoal = Number(props.getProperty('PROTEIN_GOAL')) || DEFAULT_PROTEIN_GOAL;
-  const watGoal = Number(props.getProperty('WATER_GOAL')) || DEFAULT_WATER_GOAL;
+  const calGoal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || Number(props.getProperty('CALORIE_GOAL')) || DEFAULT_CALORIE_GOAL;
+  const proGoal = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || Number(props.getProperty('PROTEIN_GOAL')) || DEFAULT_PROTEIN_GOAL;
+  const watGoal = Number(props.getProperty(`WATER_GOAL_${userId}`)) || Number(props.getProperty('WATER_GOAL')) || DEFAULT_WATER_GOAL;
   const remainingCal = Math.max(0, calGoal - totalCal);
   const calPercent = Math.min(100, Math.round((totalCal / calGoal) * 100));
 
@@ -999,4 +1008,302 @@ function replyTextMessage(replyToken, text, accessToken) {
     }),
     muteHttpExceptions: true
   });
+}
+
+// ========================================================
+// 🎯 5. AI 個人化體態目標分析與修改核心
+// ========================================================
+
+function handleGoalSettingWithAI(replyToken, userId, userText, userGistId, pat, props, liffId, channelAccessToken, apiKey) {
+  const models = [
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
+    'gemini-2.5-flash-lite',
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
+  ];
+
+  const prompt = `You are an expert fitness and nutrition coach panda for a diet tracking app.
+The user is sending a message to set/adjust their diet goals or asking for body transformation advice: "${userText}".
+
+Analyze the message to extract or estimate:
+- gender ("男" or "女", default "男")
+- height (cm, default 170)
+- weight (kg, default 65)
+- age (years, default 28)
+- goal_type: "減脂" (fat loss), "增肌" (muscle gain), "維持體態" (maintain/recomp), "極速減脂" (fast cut)
+- If user directly gave numerical targets (e.g. 1800卡 120蛋 2500水), respect those targets.
+
+Scientific Formulas:
+- BMR = 10 * weight + 6.25 * height - 5 * age + (gender === '男' ? 5 : -161)
+- TDEE = Math.round(BMR * 1.375) (assuming moderate activity)
+- Target Calories: 
+    減脂: TDEE - 400 ~ 500 kcal
+    增肌: TDEE + 300 ~ 400 kcal
+    維持: TDEE
+- Target Protein:
+    減脂: Math.round(weight * 2.0) g
+    增肌: Math.round(weight * 2.0) g
+    維持: Math.round(weight * 1.6) g
+- Target Water: Math.round(weight * 35) ml
+- panda_advice: 繁體中文，溫暖專業的熊貓教練個人化建議（約 60-100 字），說明針對其體型與目標規劃的熱量缺口/盈餘、蛋白質與水分攝取重點、以及預期的體型變化方向。
+
+Return ONLY a raw JSON object with keys:
+{
+  "calories": <integer>,
+  "protein": <integer>,
+  "water": <integer>,
+  "goal_type": "減脂 / 增肌 / 維持體態",
+  "summary": "175cm / 70kg / 男 ➔ 減脂雕塑",
+  "bmr": <integer>,
+  "tdee": <integer>,
+  "panda_advice": "針對您的體重 70kg 與減脂需求，規劃每日熱量缺口約 450 kcal，同時拉高蛋白質至 140g 保留肌肉量。記得每天喝足 2500ml 水分加速代謝喔！🐼"
+}
+Do NOT wrap in markdown backticks.`;
+
+  for (let i = 0; i < models.length; i++) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${models[i]}:generateContent?key=${apiKey}`;
+      const res = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() === 200) {
+        const data = JSON.parse(res.getContentText());
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(cleanJson);
+
+        const calories = Number(parsed.calories) || DEFAULT_CALORIE_GOAL;
+        const protein = Number(parsed.protein) || DEFAULT_PROTEIN_GOAL;
+        const water = Number(parsed.water) || DEFAULT_WATER_GOAL;
+
+        // 1. 儲存至 PropertiesService (個人專屬目標)
+        props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
+        props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
+        props.setProperty(`WATER_GOAL_${userId}`, String(water));
+
+        // 2. 同步至雲端 Gist
+        if (pat && userGistId) {
+          try {
+            syncGoalsToUserGist({ calories, protein, water }, userGistId, pat);
+          } catch (e) {
+            console.error("同步目標至 Gist 失敗:", e);
+          }
+        }
+
+        // 3. 回覆 Flex 卡片
+        const goalFlex = generateGoalSettingFlex(parsed, calories, protein, water, liffId, userGistId);
+        replyFlexMessage(replyToken, goalFlex, channelAccessToken);
+        return true;
+      }
+    } catch (e) {
+      console.error("設定目標失敗:", e);
+    }
+  }
+
+  // Fallback
+  replyTextMessage(replyToken, "🐼 熊貓教練提示：請輸入您的身高、體重、性別與目標，例如：\n「改目標 175cm 70kg 男 減脂」\n或直接輸入：「改目標 1800卡 120蛋 2500水」", channelAccessToken);
+  return false;
+}
+
+function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId) {
+  const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?gistId=${userGistId}` : `https://liff.line.me/${liffId}`;
+
+  return {
+    type: "flex",
+    altText: `🎯 個人飲食目標已更新：${cal} kcal / 蛋白質 ${pro}g / 水分 ${wat}ml`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: info.goal_type ? `🎯 ${info.goal_type}` : "🎯 目標設定", color: "#A1A1AA", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "✅ 個人專屬體態目標已生效！",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: info.summary || "客製化科學營養規劃",
+            color: "#A1A1AA",
+            size: "xxs",
+            margin: "xxs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "kcal / 天", size: "xxs", color: "#881337", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: "ml / 天", size: "xxs", color: "#164E63", weight: "bold" }
+                ]
+              }
+            ]
+          },
+          ...(info.bmr && info.tdee ? [{
+            type: "box",
+            layout: "horizontal",
+            backgroundColor: "#F4F4F5",
+            cornerRadius: "8px",
+            paddingAll: "8px",
+            contents: [
+              { type: "text", text: `🧬 基礎代謝 (BMR): ${info.bmr} kcal`, size: "xxs", color: "#52525B", weight: "bold", flex: 1 },
+              { type: "text", text: `⚡ 每日總消耗 (TDEE): ${info.tdee} kcal`, size: "xxs", color: "#52525B", weight: "bold", align: "end", flex: 1 }
+            ]
+          }] : []),
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF9C3",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            contents: [
+              { type: "text", text: "🐼 熊貓教練體態變化建議：", size: "xs", color: "#713F12", weight: "bold" },
+              {
+                type: "text",
+                text: info.panda_advice || "持之以恆記錄飲食，熊貓教練會陪您一起達成理想身材！",
+                size: "xs",
+                color: "#18181B",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#FDE047",
+            action: {
+              type: "uri",
+              label: "📱 開啟 App 查看目標進度",
+              uri: appTargetUrl
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "message",
+              label: "💬 重新調整目標",
+              text: "改目標 175cm 70kg 男 減脂"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+function syncGoalsToUserGist(goals, gistId, pat) {
+  const gistUrl = `https://api.github.com/gists/${gistId}`;
+  const getRes = UrlFetchApp.fetch(gistUrl, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+    muteHttpExceptions: true
+  });
+
+  if (getRes.getResponseCode() === 200) {
+    let backupData = { dietLogs: [], weightLogs: [], settings: [], favorites: [] };
+    const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+    if (content) {
+      try { backupData = JSON.parse(content); } catch (e) {}
+    }
+    if (!backupData.settings) backupData.settings = [];
+
+    const upsertSetting = (key, val) => {
+      const idx = backupData.settings.findIndex(s => s.key === key);
+      if (idx !== -1) backupData.settings[idx].value = val;
+      else backupData.settings.push({ key, value: val });
+    };
+
+    if (goals.calories) upsertSetting('user_calories', goals.calories);
+    if (goals.protein) upsertSetting('user_protein', goals.protein);
+    if (goals.water) upsertSetting('user_water', goals.water);
+
+    UrlFetchApp.fetch(gistUrl, {
+      method: 'patch',
+      headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+      payload: JSON.stringify({
+        files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+      }),
+      muteHttpExceptions: true
+    });
+  }
 }
