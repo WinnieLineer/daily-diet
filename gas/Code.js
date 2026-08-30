@@ -78,6 +78,9 @@ function doPost(e) {
       currentReplyToken = replyToken;
       const userId = event.source?.userId || 'default_user';
 
+      console.log(`\n========================================`);
+      console.log(`📩 [LINE 事件收到] 用戶 ID: ${userId} | 類型: ${event.type}`);
+
       if (!CHANNEL_ACCESS_TOKEN) throw new Error("LINE_CHANNEL_ACCESS_TOKEN 尚未設定！");
       if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY 尚未設定！");
 
@@ -86,9 +89,12 @@ function doPost(e) {
       if (GITHUB_PAT) {
         try {
           userGistId = getOrCreateUserGist(userId, GITHUB_PAT, props);
+          console.log(`☁️ [Gist 綁定] 用戶 Gist ID: ${userGistId || '未建立'}`);
         } catch (gistErr) {
           console.error("取得使用者 Gist 失敗:", gistErr);
         }
+      } else {
+        console.warn("⚠️ [提示] GITHUB_PAT 尚未在指令碼屬性中設定，Gist 雲端同步暫時關閉。");
       }
 
       // 🔘 Case 1: 用戶點擊按鈕 (Postback 事件)
@@ -99,6 +105,8 @@ function doPost(e) {
         } catch (e) {
           payload = {};
         }
+
+        console.log(`🔘 [按鈕點擊] 動作: ${payload.action} | 內容:`, JSON.stringify(payload));
 
         // ✅ 按下【儲存紀錄】
         if (payload.action === 'save') {
@@ -113,10 +121,8 @@ function doPost(e) {
             comment: payload.cmt || ''
           };
 
-          // 儲存餐點 (包含寫入個人專屬 Gist)
+          console.log(`💾 [儲存餐點] ${meal.dish_name} | ${meal.calories} kcal | 蛋白質 ${meal.protein}g | 水分 ${meal.water}ml`);
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
-
-          // 計算今日總結並回覆 (附帶個人 Gist ID 連結)
           const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
           continue;
@@ -131,6 +137,7 @@ function doPost(e) {
             protein: Number(payload.pro) || 0,
             water: Number(payload.wat) || 0
           };
+          console.log(`⭐ [加入常用] ${favItem.dish_name} | ${favItem.calories} kcal`);
           saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
           const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId);
           replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN);
@@ -149,6 +156,7 @@ function doPost(e) {
             water: Number(payload.wat) || 0,
             comment: '⭐ 常用快捷記錄'
           };
+          console.log(`⚡ [一鍵記錄常用] ${meal.dish_name} | ${meal.calories} kcal`);
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
@@ -157,6 +165,7 @@ function doPost(e) {
 
         // 🗑️ 按下【刪除單筆餐點】
         if (payload.action === 'deleteMeal') {
+          console.log(`🗑️ [刪除單筆餐點] 標識: ${payload.id || payload.index}`);
           deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
@@ -165,6 +174,7 @@ function doPost(e) {
 
         // 🗑️ 按下【移除常用餐點】
         if (payload.action === 'deleteFavorite') {
+          console.log(`🗑️ [移除常用] 標識: ${payload.favId || payload.name}`);
           deleteUserFavorite(userId, payload.favId || payload.name, userGistId, GITHUB_PAT, props);
           const favListFlex = generateFavoritesListFlex(userId, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN);
@@ -180,6 +190,7 @@ function doPost(e) {
 
         // 🗑️ 按下【確定清空今日】
         if (payload.action === 'clearToday') {
+          console.log(`🗑️ [清空今日] 用戶: ${userId}`);
           clearTodayLogs(userId, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
@@ -198,16 +209,19 @@ function doPost(e) {
         // 📸 照片辨識
         if (event.message.type === 'image') {
           const messageId = event.message.id;
+          console.log(`📸 [收到餐點照片] Message ID: ${messageId}`);
           const imageBlob = getLineImageBlob(messageId, CHANNEL_ACCESS_TOKEN);
           const base64Image = Utilities.base64Encode(imageBlob.getBytes());
 
           const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY);
+          console.log(`🤖 [照片 AI 辨識結果]`, JSON.stringify(analysis));
           replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
-
+          continue;
         }
         // 💬 文字訊息
         else if (event.message.type === 'text') {
           const userText = event.message.text.trim();
+          console.log(`💬 [收到用戶文字] "${userText}"`);
 
           // 查詢今日總結
           if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結') {
