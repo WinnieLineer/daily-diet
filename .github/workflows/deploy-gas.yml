@@ -35,7 +35,7 @@ jobs:
             echo "Please add CLASPRC_JSON to Settings -> Secrets and variables -> Actions."
             exit 1
           fi
-
+          # Decode and save clasprc.json
           echo "$CLASPRC_JSON" > ~/.clasprc.json
 
           if [ -n "$GAS_SCRIPT_ID" ]; then
