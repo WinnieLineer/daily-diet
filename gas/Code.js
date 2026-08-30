@@ -263,15 +263,13 @@ function doPost(e) {
   const props = PropertiesService.getScriptProperties();
   const CHANNEL_SECRET = props.getProperty('LINE_CHANNEL_SECRET');
 
-  // 🛡️ 企業級安全性：校驗 LINE 官方 x-line-signature 數位簽章 (防止偽造與 Token 盜刷)
-  if (CHANNEL_SECRET) {
-    const signature = e.postData?.headers?.['x-line-signature'] ||
-                      e.postData?.headers?.['X-Line-Signature'] ||
-                      (e.headers && (e.headers['x-line-signature'] || e.headers['X-Line-Signature']));
-    if (!verifyLineSignature(e.postData.contents, signature, CHANNEL_SECRET)) {
-      console.warn("🚨 [安全攔截] 收到未經授權或偽造的 Webhook 請求！Signature 不符。");
-      recordSystemLog('安全攔截', 'unknown', '偽造Webhook簽章', 'HTTP 403', '已拒絕處理');
-      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden: Invalid signature' }))
+  // 🛡️ Google Apps Script 平台原生限制：GAS Web App 不傳遞 HTTP Headers (x-line-signature)
+  // 若設定了 CHANNEL_SECRET 且 Webhook 網址帶有 ?secret= 參數時進行比對防護
+  if (CHANNEL_SECRET && e.parameter && e.parameter.secret) {
+    if (e.parameter.secret !== CHANNEL_SECRET) {
+      console.warn("🚨 [安全攔截] 收到未經授權的 Webhook 請求！Secret 不符。");
+      recordSystemLog('安全攔截', 'unknown', '偽造Webhook請求', 'HTTP 403', '已拒絕處理');
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
   }
