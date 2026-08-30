@@ -4,62 +4,16 @@ import { Download, X, Share, PlusSquare } from 'lucide-react';
 import { t } from '../lib/translations';
 import NeoButton from './NeoButton';
 
-const PWAInstallPrompt = ({ active = true, deferredPrompt, onPromptUsed }) => {
+const PWAInstallPrompt = ({ active = false, deferredPrompt, onPromptUsed }) => {
   const [showPrompt, setShowPrompt] = useState(false);
   const [isIOS, setIsIOS] = useState(false);
   const [isBrave, setIsBrave] = useState(false);
-  const [isStandalone, setIsStandalone] = useState(false);
+  const [isStandalone, setIsStandalone] = useState(true);
 
+  // Permanently disable automatic popup prompt banner
   useEffect(() => {
-    if (!active) {
-      setShowPrompt(false);
-      return;
-    }
-
-    // 1. Check if already installed
-    const standalone = window.matchMedia('(display-mode: standalone)').matches || window.navigator.standalone;
-    setIsStandalone(standalone);
-
-    // 2. Check if iOS
-    const ios = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-    setIsIOS(ios);
-
-    // Check if Brave browser
-    const checkBrave = async () => {
-      const isBraveUA = /Brave/i.test(navigator.userAgent);
-      if (isBraveUA) {
-        setIsBrave(true);
-        return;
-      }
-      if (navigator.brave && typeof navigator.brave.isBrave === 'function') {
-        try {
-          const res = await navigator.brave.isBrave();
-          if (res) {
-            setIsBrave(true);
-          }
-        } catch (e) {
-          // ignore
-        }
-      }
-    };
-    checkBrave();
-
-    // 3. For iOS/Other, show prompt after a short delay if not standalone
-    const timer = setTimeout(() => {
-      const never = localStorage.getItem('pwa_prompt_never');
-      const later = sessionStorage.getItem('pwa_prompt_later');
-      if (!standalone && !never && !later) {
-        setShowPrompt(true);
-      }
-    }, 3000);
-
-    // 4. Handle Android/Chrome prompt availability
-    if (deferredPrompt && !standalone && !localStorage.getItem('pwa_prompt_never') && !sessionStorage.getItem('pwa_prompt_later')) {
-      setShowPrompt(true);
-    }
-
-    return () => clearTimeout(timer);
-  }, [active, deferredPrompt]);
+    setShowPrompt(false);
+  }, []);
 
   const handleInstallClick = async () => {
     if (!deferredPrompt) return;
