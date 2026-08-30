@@ -763,7 +763,8 @@ function App() {
 
       if (effectiveUserId) {
         try {
-          const res = await fetch(`${GAS_URL}?action=getLogs&userId=${encodeURIComponent(effectiveUserId)}`);
+          const localGist = localStorage.getItem('gist_backup_id') || query.gistId || '';
+          const res = await fetch(`${GAS_URL}?action=getLogs&userId=${encodeURIComponent(effectiveUserId)}${localGist ? `&gistId=${encodeURIComponent(localGist)}` : ''}`);
           if (res.ok) {
             const gasData = await res.json();
             if (gasData.gistId) {

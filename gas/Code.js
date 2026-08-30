@@ -14,8 +14,10 @@ function doGet(e) {
   const props = PropertiesService.getScriptProperties();
   const pat = props.getProperty('GITHUB_PAT');
 
-  // 1. 查詢個人 Gist ID
+  // 1. 查詢/綁定個人 Gist ID
   if (action === 'getGistId' && userId) {
+    const incomingGist = e?.parameter?.gistId;
+    if (incomingGist) props.setProperty(`USER_GIST_${userId}`, incomingGist);
     const gistId = getOrCreateUserGist(userId, pat, props);
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', userId, gistId }))
       .setMimeType(ContentService.MimeType.JSON);
@@ -23,6 +25,11 @@ function doGet(e) {
 
   // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
   if (action === 'getLogs' && userId) {
+    const incomingGist = e?.parameter?.gistId;
+    if (incomingGist) {
+      props.setProperty(`USER_GIST_${userId}`, incomingGist);
+      console.log(`☁️ [Web 端連動] 已自動將用戶 ${userId} 綁定 Gist ID: ${incomingGist}`);
+    }
     const todayStr = getTodayDateString();
     const todayLogs = getTodayLogs(userId, todayStr, props);
     const gistId = getOrCreateUserGist(userId, pat, props);
@@ -534,6 +541,44 @@ function doPost(e) {
             const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
+          }
+
+          // ☁️ 手動綁定既有的 GitHub Gist ID (跨裝置 / 外面 Web 轉移至 LINE)
+          if (userText.startsWith('綁定') || userText.startsWith('連動') || userText.toLowerCase().startsWith('gist')) {
+            const cleanGistId = userText.replace(/^(?:綁定|連動|gist)\s*/i, '').replace(/^(?:id)?[:：\s]*/i, '').trim();
+            if (cleanGistId && cleanGistId.length >= 8) {
+              props.setProperty(`USER_GIST_${userId}`, cleanGistId);
+              recordSystemLog('綁定Gist', userId, userText, cleanGistId, '已成功綁定個人 Gist ID');
+              
+              let extraMsg = '';
+              if (GITHUB_PAT) {
+                try {
+                  const gistUrl = `https://api.github.com/gists/${cleanGistId}`;
+                  const getRes = UrlFetchApp.fetch(gistUrl, {
+                    headers: { 'Authorization': `Bearer ${GITHUB_PAT}`, 'Accept': 'application/vnd.github+json' },
+                    muteHttpExceptions: true
+                  });
+                  if (getRes.getResponseCode() === 200) {
+                    const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+                    if (content) {
+                      const backupData = JSON.parse(content);
+                      if (backupData.settings) {
+                        const cal = backupData.settings.find(s => s.key === 'calorie_goal' || s.key === 'user_calories')?.value;
+                        const pro = backupData.settings.find(s => s.key === 'protein_goal' || s.key === 'user_protein')?.value;
+                        const wat = backupData.settings.find(s => s.key === 'water_goal' || s.key === 'user_water')?.value;
+                        if (cal) props.setProperty(`CALORIE_GOAL_${userId}`, String(cal));
+                        if (pro) props.setProperty(`PROTEIN_GOAL_${userId}`, String(pro));
+                        if (wat) props.setProperty(`WATER_GOAL_${userId}`, String(wat));
+                      }
+                      extraMsg = `\n📦 已偵測到您在 Web 端的歷史紀錄與體態目標，已全面即時連動！`;
+                    }
+                  }
+                } catch (e) {}
+              }
+
+              replyTextMessage(replyToken, `🎉 恭喜！已成功將您的 LINE 帳號連動至 Gist 雲端庫：\n🔑 Gist ID: ${cleanGistId}${extraMsg}\n\n現在在 LINE 記錄餐點或補水，都會 100% 雙向同步至您的 Web App！🐼✨`, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
           }
 
           // 開啟選單 (帶個人專屬 Gist ID 自動綁定)
