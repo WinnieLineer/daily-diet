@@ -64,7 +64,24 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 5. 實時運作日誌 API (提供 JSON)
+  // 5. Web App 觸發更新個人飲食目標
+  if (action === 'updateGoals' && userId) {
+    const calories = Number(e?.parameter?.calories);
+    const protein = Number(e?.parameter?.protein);
+    const water = Number(e?.parameter?.water);
+    if (calories) props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
+    if (protein) props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
+    if (water) props.setProperty(`WATER_GOAL_${userId}`, String(water));
+    const userGistId = getOrCreateUserGist(userId, pat, props);
+    if (pat && userGistId) {
+      syncGoalsToUserGist({ calories, protein, water }, userGistId, pat);
+    }
+    recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, '', '已同步更新');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 6. 實時運作日誌 API (提供 JSON)
   if (action === 'getRecentLogs') {
     const logs = getRecentLogsData();
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs }))
@@ -1731,9 +1748,18 @@ function syncGoalsToUserGist(goals, gistId, pat) {
       else backupData.settings.push({ key, value: val });
     };
 
-    if (goals.calories) upsertSetting('user_calories', goals.calories);
-    if (goals.protein) upsertSetting('user_protein', goals.protein);
-    if (goals.water) upsertSetting('user_water', goals.water);
+    if (goals.calories) {
+      upsertSetting('calorie_goal', goals.calories);
+      upsertSetting('user_calories', goals.calories);
+    }
+    if (goals.protein) {
+      upsertSetting('protein_goal', goals.protein);
+      upsertSetting('user_protein', goals.protein);
+    }
+    if (goals.water) {
+      upsertSetting('water_goal', goals.water);
+      upsertSetting('user_water', goals.water);
+    }
 
     UrlFetchApp.fetch(gistUrl, {
       method: 'patch',

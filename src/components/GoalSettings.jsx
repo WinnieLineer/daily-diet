@@ -322,6 +322,28 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         setApiKey(cleanedKey);
         await db.settings.put({ key: 'user_api_key', value: cleanedKey });
       }
+
+      // ☁️ 雙向同步至雲端 Gist 與 LINE 後端
+      const effectiveUserId = localStorage.getItem('line_user_id');
+      const currentGist = getCurrentGistId();
+      if (effectiveUserId || currentGist) {
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+        try {
+          fetch(`${GAS_URL}?action=updateGoals&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&calories=${parsedCal}&protein=${parsedPro}&water=${parsedWat}`, { mode: 'no-cors' });
+        } catch (e) {}
+
+        if (currentGist) {
+          try {
+            const allSettings = await db.settings.toArray();
+            uploadToGist({
+              dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
+              weightLogs: await db.weightLogs.toArray(),
+              settings: allSettings,
+              favorites: await db.favorites.toArray()
+            }, currentGist);
+          } catch (e) {}
+        }
+      }
       
       setIsOpen(false);
       if (onGoalsUpdated) {

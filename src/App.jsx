@@ -743,12 +743,21 @@ function App() {
               localStorage.setItem('gist_backup_id', gasData.gistId);
             }
             if (gasData.goals) {
+              const cal = Number(gasData.goals.calories) || 2000;
+              const pro = Number(gasData.goals.protein) || 100;
+              const wat = Number(gasData.goals.water) || 2500;
+
+              await db.settings.put({ key: 'calorie_goal', value: cal });
+              await db.settings.put({ key: 'protein_goal', value: pro });
+              await db.settings.put({ key: 'water_goal', value: wat });
+
               setGoals(prev => ({
                 ...prev,
-                calories: gasData.goals.calories || prev.calories,
-                protein: gasData.goals.protein || prev.protein,
-                water: gasData.goals.water || prev.water
+                calories: cal,
+                protein: pro,
+                water: wat
               }));
+              console.log(`📥 [Goals Sync] 成功從 LINE/雲端同步體態目標: ${cal}卡 / ${pro}g蛋 / ${wat}ml水`);
             }
 
             if (gasData.status === 'ok' && Array.isArray(gasData.todayLogs)) {
@@ -825,18 +834,41 @@ function App() {
         }
         try {
           const cloudData = await downloadFromGist(effectiveGistId);
-          if (cloudData && cloudData.dietLogs && cloudData.dietLogs.length > 0) {
-            const localLogs = await db.dietLogs.toArray();
-            const localKeySet = new Set(localLogs.map(l => `${l.date}_${l.dish_name}_${l.calories}`));
-
-            const newLogs = cloudData.dietLogs
-              .filter(cl => !localKeySet.has(`${cl.date}_${cl.dish_name}_${cl.calories}`))
-              .map(({ id, ...rest }) => rest);
-
-            if (newLogs.length > 0) {
-              await db.dietLogs.bulkAdd(newLogs);
-              await refreshData('none');
+          if (cloudData) {
+            // 同步雲端目標設定
+            if (cloudData.settings && Array.isArray(cloudData.settings)) {
+              for (const s of cloudData.settings) {
+                if (s.key && s.value !== undefined) {
+                  await db.settings.put(s);
+                }
+              }
+              const cal = await db.settings.get('calorie_goal');
+              const pro = await db.settings.get('protein_goal');
+              const wat = await db.settings.get('water_goal');
+              if (cal || pro || wat) {
+                setGoals(prev => ({
+                  ...prev,
+                  calories: cal ? cal.value : prev.calories,
+                  protein: pro ? pro.value : prev.protein,
+                  water: wat ? wat.value : prev.water
+                }));
+              }
             }
+
+            // 同步雲端飲食歷史
+            if (cloudData.dietLogs && cloudData.dietLogs.length > 0) {
+              const localLogs = await db.dietLogs.toArray();
+              const localKeySet = new Set(localLogs.map(l => `${l.date}_${l.dish_name}_${l.calories}`));
+
+              const newLogs = cloudData.dietLogs
+                .filter(cl => !localKeySet.has(`${cl.date}_${cl.dish_name}_${cl.calories}`))
+                .map(({ id, ...rest }) => rest);
+
+              if (newLogs.length > 0) {
+                await db.dietLogs.bulkAdd(newLogs);
+              }
+            }
+            await refreshData('none');
           }
         } catch (syncErr) {
           console.log("[Gist] Auto-sync skipped:", syncErr.message);
