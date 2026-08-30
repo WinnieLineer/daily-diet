@@ -287,22 +287,11 @@ function doPost(e) {
         console.log(`🔘 [按鈕點擊] 動作: ${payload.action} | 內容:`, JSON.stringify(payload));
 
         // ✅ 按下【儲存紀錄】
+        // 💾 按下【儲存 / 查看今日總結】
         if (payload.action === 'save') {
-          const meal = {
-            id: Date.now(),
-            date: getTodayDateString(),
-            time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
-            dish_name: payload.name || '餐點',
-            calories: Number(payload.cal) || 0,
-            protein: Number(payload.pro) || 0,
-            water: Number(payload.wat) || 0,
-            comment: payload.cmt || ''
-          };
-
-          console.log(`💾 [儲存餐點] ${meal.dish_name} | ${meal.calories} kcal | 蛋白質 ${meal.protein}g | 水分 ${meal.water}ml`);
-          recordSystemLog('儲存餐點', userId, meal.dish_name, `${meal.calories}卡 / ${meal.protein}g蛋 / ${meal.water}ml水`, '已儲存並回傳總結卡片');
-          saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
-          const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
+          console.log(`💾 [查看今日總結] 用戶: ${userId}`);
+          recordSystemLog('查看總結', userId, payload.name || '今日總結', '', '已發送總結卡片');
+          const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
           continue;
         }
@@ -390,9 +379,15 @@ function doPost(e) {
           continue;
         }
 
-        // ❌ 按下【取消】
+        // ❌ 按下【取消 / 放棄不記錄】
         else if (payload.action === 'cancel') {
-          replyTextMessage(replyToken, "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
+          if (payload.id || payload.name) {
+            deleteMealLog(userId, payload.id || payload.name, userGistId, GITHUB_PAT, props);
+            recordSystemLog('取消紀錄', userId, payload.name || payload.id, '', '已自資料庫刪除此筆餐點');
+            replyTextMessage(replyToken, "👌 已取消並自資料庫刪除此筆餐點。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
+          } else {
+            replyTextMessage(replyToken, "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
+          }
           continue;
         }
       }
@@ -408,8 +403,22 @@ function doPost(e) {
 
           const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY);
           console.log(`🤖 [照片 AI 辨識結果]`, JSON.stringify(analysis));
-          recordSystemLog('照片辨識', userId, `傳送照片 (ID: ${messageId})`, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已發送確認卡片');
-          replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
+
+          const meal = {
+            id: Date.now(),
+            date: getTodayDateString(),
+            time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+            dish_name: analysis.dish_name || '美味餐點',
+            calories: Number(analysis.calories) || 0,
+            protein: Number(analysis.protein) || 0,
+            water: Number(analysis.water) || 0,
+            comment: analysis.panda_comment || ''
+          };
+
+          // ⚡ 即時秒寫入資料庫（無時間差 GAP）
+          saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+          recordSystemLog('照片辨識', userId, `傳送照片 (ID: ${messageId})`, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已即時寫入資料庫並發送卡片');
+          replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
           continue;
         }
         // 💬 文字訊息
@@ -603,8 +612,21 @@ function doPost(e) {
             recordSystemLog('日常對話', userId, userText, '非食物訊息', analysis.reply || '已回覆');
             replyTextMessage(replyToken, analysis.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來幫您計算熱量與記錄！", CHANNEL_ACCESS_TOKEN);
           } else {
-            recordSystemLog('文字辨識', userId, userText, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已發送確認卡片');
-            replyMealConfirmCard(replyToken, analysis, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
+            const meal = {
+              id: Date.now(),
+              date: getTodayDateString(),
+              time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+              dish_name: analysis.dish_name || '美味餐點',
+              calories: Number(analysis.calories) || 0,
+              protein: Number(analysis.protein) || 0,
+              water: Number(analysis.water) || 0,
+              comment: analysis.panda_comment || ''
+            };
+
+            // ⚡ 即時秒寫入資料庫（無時間差 GAP）
+            saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+            recordSystemLog('文字辨識', userId, userText, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已即時寫入資料庫並發送卡片');
+            replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId);
           }
         }
       }
@@ -682,11 +704,8 @@ function getOrCreateUserGist(userId, pat, props) {
 function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessToken, userId) {
   const postbackSaveData = JSON.stringify({
     action: 'save',
-    name: (analysis.dish_name || '餐點').slice(0, 30),
-    cal: Number(analysis.calories) || 0,
-    pro: Number(analysis.protein) || 0,
-    wat: Number(analysis.water) || 0,
-    cmt: (analysis.panda_comment || '').slice(0, 40)
+    id: analysis.id,
+    name: (analysis.dish_name || '餐點').slice(0, 30)
   });
 
   const postbackFavData = JSON.stringify({
@@ -697,14 +716,18 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     wat: Number(analysis.water) || 0
   });
 
-  const postbackCancelData = JSON.stringify({ action: 'cancel' });
+  const postbackCancelData = JSON.stringify({
+    action: 'cancel',
+    id: analysis.id,
+    name: (analysis.dish_name || '餐點').slice(0, 30)
+  });
   const encodedName = encodeURIComponent(analysis.dish_name || '餐點');
   const encodedCmt = encodeURIComponent(analysis.panda_comment || '');
   const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userId ? `&userId=${userId}` : ''}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
   const flexMessage = {
     type: "flex",
-    altText: `🍱 AI 辨識完成：${analysis.dish_name} (${analysis.calories} kcal)`,
+    altText: `🍱 AI 已記錄：${analysis.dish_name} (${analysis.calories} kcal)`,
     contents: {
       type: "bubble",
       size: "mega",
@@ -719,12 +742,12 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             layout: "horizontal",
             contents: [
               { type: "text", text: "🐼 DAILY DIET", weight: "bold", size: "sm", color: "#000000" },
-              { type: "text", text: "AI 食物偵探", weight: "bold", size: "xs", color: "#713F12", align: "end" }
+              { type: "text", text: "AI 即時記錄", weight: "bold", size: "xs", color: "#713F12", align: "end" }
             ]
           },
           {
             type: "text",
-            text: "飲食辨識完成！",
+            text: "✅ 已即時記錄至資料庫！",
             weight: "bold",
             size: "md",
             color: "#000000",
