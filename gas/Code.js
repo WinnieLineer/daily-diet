@@ -44,23 +44,34 @@ function doGet(e) {
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 3. 實時運作日誌儀表板 (直接在瀏覽器查看所有用戶傳入的訊息與 AI 回應)
+  // 3. 實時運作日誌 API (提供 JSON)
+  if (action === 'getRecentLogs') {
+    const logs = getRecentLogsData();
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 4. 實時運作日誌儀表板 (直接在瀏覽器查看所有用戶傳入的訊息與 AI 回應)
   if (action === 'logs' || action === 'viewLogs' || action === 'log') {
-    const raw = props.getProperty('SYSTEM_RECENT_LOGS');
-    const logs = raw ? JSON.parse(raw) : [];
+    const initialLogs = getRecentLogsData();
 
     const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 
-    const rowsHtml = logs.map(l => `
-      <tr style="border-bottom: 1px solid #E4E4E7;">
-        <td style="padding: 10px 8px; font-size: 12px; color: #71717A; white-space: nowrap;">${l.time}</td>
-        <td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">...${l.userId}</td>
-        <td style="padding: 10px 8px; font-size: 12px;"><span style="background: #FEF9C3; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: #713F12;">${l.type}</span></td>
-        <td style="padding: 10px 8px; font-size: 13px; color: #000000; font-weight: bold;">${escapeHtml(l.input)}</td>
-        <td style="padding: 10px 8px; font-size: 12px; color: #2563EB; font-weight: 500;">${escapeHtml(l.aiResult)}</td>
-        <td style="padding: 10px 8px; font-size: 12px; color: #059669; font-weight: 500;">${escapeHtml(l.output)}</td>
-      </tr>
-    `).join('');
+    const generateRows = (logs) => {
+      if (!logs || logs.length === 0) {
+        return '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #A1A1AA; font-weight: bold;">尚無對話紀錄，請在 LINE 聊天室發送照片或文字測試！</td></tr>';
+      }
+      return logs.map(l => `
+        <tr style="border-bottom: 1px solid #E4E4E7;">
+          <td style="padding: 10px 8px; font-size: 12px; color: #71717A; white-space: nowrap;">${l.time}</td>
+          <td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">...${l.userId}</td>
+          <td style="padding: 10px 8px; font-size: 12px;"><span style="background: #FEF9C3; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: #713F12;">${l.type}</span></td>
+          <td style="padding: 10px 8px; font-size: 13px; color: #000000; font-weight: bold;">${escapeHtml(l.input)}</td>
+          <td style="padding: 10px 8px; font-size: 12px; color: #2563EB; font-weight: 500;">${escapeHtml(l.aiResult)}</td>
+          <td style="padding: 10px 8px; font-size: 12px; color: #059669; font-weight: 500;">${escapeHtml(l.output)}</td>
+        </tr>
+      `).join('');
+    };
 
     const html = `
       <!DOCTYPE html>
@@ -69,12 +80,13 @@ function doGet(e) {
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1">
         <title>🐼 Daily Diet 實時對話與運作日誌</title>
-        <meta http-equiv="refresh" content="5">
         <style>
           body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F4F4F5; margin: 0; padding: 20px; }
           .container { max-width: 1100px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); padding: 24px; border: 2px solid #000000; }
           h1 { margin: 0; font-size: 20px; color: #000000; display: flex; align-items: center; gap: 10px; }
           .badge { background: #FDE047; color: #000000; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; border: 1.5px solid #000; }
+          .btn-refresh { background: #000000; color: #FFFFFF; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; transition: opacity 0.2s; }
+          .btn-refresh:active { opacity: 0.8; }
           table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 18px; }
           th { background: #000000; color: #FFFFFF; padding: 12px 8px; font-size: 12px; font-weight: bold; }
           th:first-child { border-top-left-radius: 8px; }
@@ -84,8 +96,11 @@ function doGet(e) {
       <body>
         <div class="container">
           <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <h1>🐼 Daily Diet 實時對話與運作日誌 <span class="badge">每 5 秒自動更新</span></h1>
-            <span style="font-size: 13px; color: #71717A; font-weight: 500;">共保留最近 ${logs.length} 筆紀錄</span>
+            <h1>🐼 Daily Diet 實時對話與運作日誌 <span class="badge" id="statusBadge">⚡ 即時連線中</span></h1>
+            <div style="display: flex; align-items: center; gap: 12px;">
+              <span style="font-size: 13px; color: #71717A; font-weight: 500;" id="logCount">共保留最近 ${initialLogs.length} 筆紀錄</span>
+              <button class="btn-refresh" onclick="refreshLogs()">🔄 手動整理</button>
+            </div>
           </div>
           <table>
             <thead>
@@ -98,11 +113,53 @@ function doGet(e) {
                 <th>回應與狀態</th>
               </tr>
             </thead>
-            <tbody>
-              ${rowsHtml || '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #A1A1AA; font-weight: bold;">尚無對話紀錄，請在 LINE 聊天室發送照片或文字測試！</td></tr>'}
+            <tbody id="logTableBody">
+              ${generateRows(initialLogs)}
             </tbody>
           </table>
         </div>
+
+        <script>
+          function escapeHtml(str) {
+            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+          }
+
+          function renderLogs(logs) {
+            var tbody = document.getElementById('logTableBody');
+            var countSpan = document.getElementById('logCount');
+            if (!tbody) return;
+
+            countSpan.innerText = '共保留最近 ' + (logs ? logs.length : 0) + ' 筆紀錄';
+
+            if (!logs || logs.length === 0) {
+              tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #A1A1AA; font-weight: bold;">尚無對話紀錄，請在 LINE 聊天室發送照片或文字測試！</td></tr>';
+              return;
+            }
+
+            var html = '';
+            for (var i = 0; i < logs.length; i++) {
+              var l = logs[i];
+              html += '<tr style="border-bottom: 1px solid #E4E4E7;">' +
+                '<td style="padding: 10px 8px; font-size: 12px; color: #71717A; white-space: nowrap;">' + l.time + '</td>' +
+                '<td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">...' + l.userId + '</td>' +
+                '<td style="padding: 10px 8px; font-size: 12px;"><span style="background: #FEF9C3; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: #713F12;">' + l.type + '</span></td>' +
+                '<td style="padding: 10px 8px; font-size: 13px; color: #000000; font-weight: bold;">' + escapeHtml(l.input) + '</td>' +
+                '<td style="padding: 10px 8px; font-size: 12px; color: #2563EB; font-weight: 500;">' + escapeHtml(l.aiResult) + '</td>' +
+                '<td style="padding: 10px 8px; font-size: 12px; color: #059669; font-weight: 500;">' + escapeHtml(l.output) + '</td>' +
+                '</tr>';
+            }
+            tbody.innerHTML = html;
+          }
+
+          function refreshLogs() {
+            if (typeof google !== 'undefined' && google.script && google.script.run) {
+              google.script.run.withSuccessHandler(renderLogs).getRecentLogsData();
+            }
+          }
+
+          // 每 3 秒在背景靜默拉取最新日誌，絕不重新載入整個網頁或閃爍
+          setInterval(refreshLogs, 3000);
+        </script>
       </body>
       </html>
     `;
@@ -113,6 +170,12 @@ function doGet(e) {
   }
 
   return ContentService.createTextOutput("Daily Diet LINE Bot is running! 🐼");
+}
+
+function getRecentLogsData() {
+  const props = PropertiesService.getScriptProperties();
+  const raw = props.getProperty('SYSTEM_RECENT_LOGS');
+  return raw ? JSON.parse(raw) : [];
 }
 
 function doPost(e) {
