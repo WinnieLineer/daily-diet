@@ -690,8 +690,16 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
 };
 
 function App() {
+  const isLineEntry = () => {
+    const query = getAppQueryParams();
+    return Boolean(query.userId || query.user || query.gistId || navigator.userAgent.includes('Line'));
+  };
+
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
-  const [showOnboarding, setShowOnboarding] = useState(!localStorage.getItem('onboarding_seen'));
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (isLineEntry()) return false;
+    return !localStorage.getItem('onboarding_seen');
+  });
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [lastSeenVersionState, setLastSeenVersionState] = useState(null);
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '20:00', fasting_end: '12:00' });
@@ -733,11 +741,14 @@ function App() {
       try {
         profile = await liffService.init();
         if (profile) {
-          if (!localStorage.getItem('user_name')) {
+          if (profile.displayName) {
             localStorage.setItem('user_name', profile.displayName);
             setUserName(profile.displayName);
-            setShowNamePrompt(false);
           }
+          localStorage.setItem('onboarding_seen', 'true');
+          setShowOnboarding(false);
+          setShowNamePrompt(false);
+
           if (profile.userId) {
             localStorage.setItem('line_user_id', profile.userId);
           }
