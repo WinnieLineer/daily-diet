@@ -699,22 +699,27 @@ function App() {
         setUserName(query.user);
       }
 
-      if (query.gistId) {
-        localStorage.setItem('gist_backup_id', query.gistId);
-        console.log(`📥 Set Gist ID from URL query: ${query.gistId}`);
-        // Silent sync from cloud if Gist is available
+      const effectiveGistId = query.gistId || localStorage.getItem('gist_backup_id');
+      if (effectiveGistId) {
+        if (query.gistId) {
+          localStorage.setItem('gist_backup_id', query.gistId);
+          console.log(`📥 Set Gist ID from URL query: ${query.gistId}`);
+        }
+        // Silent sync from cloud (Smart merge: pulls any records saved in LINE Bot into Web App)
         try {
-          const cloudData = await downloadFromGist();
+          const cloudData = await downloadFromGist(effectiveGistId);
           if (cloudData && cloudData.dietLogs && cloudData.dietLogs.length > 0) {
-            const count = await db.dietLogs.count();
-            if (count === 0) {
-              await db.transaction('rw', db.dietLogs, db.weightLogs, db.settings, db.favorites, async () => {
-                if (cloudData.dietLogs) await db.dietLogs.bulkAdd(cloudData.dietLogs.map(({ id, ...r }) => r));
-                if (cloudData.weightLogs) await db.weightLogs.bulkAdd(cloudData.weightLogs.map(({ id, ...r }) => r));
-                if (cloudData.settings) await db.settings.bulkAdd(cloudData.settings);
-                if (cloudData.favorites) await db.favorites.bulkAdd(cloudData.favorites.map(({ id, ...r }) => r));
-              });
-              refreshData();
+            const localLogs = await db.dietLogs.toArray();
+            const localKeySet = new Set(localLogs.map(l => `${l.date}_${l.dish_name}_${l.calories}_${l.timestamp || ''}`));
+
+            const newLogs = cloudData.dietLogs
+              .filter(cl => !localKeySet.has(`${cl.date}_${cl.dish_name}_${cl.calories}_${cl.timestamp || ''}`))
+              .map(({ id, ...rest }) => rest);
+
+            if (newLogs.length > 0) {
+              await db.dietLogs.bulkAdd(newLogs);
+              console.log(`📥 [Gist Sync] Synchronized ${newLogs.length} new meal logs from LINE/Gist into Web.`);
+              await refreshData('none');
             }
           }
         } catch (syncErr) {

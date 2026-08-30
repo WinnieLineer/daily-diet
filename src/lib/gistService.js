@@ -153,19 +153,19 @@ export async function uploadToGist(jsonData) {
 /**
  * Download backup from GitHub Gist
  */
-export async function downloadFromGist() {
+export async function downloadFromGist(explicitGistId = null) {
   const token = getGistToken();
-  if (!token) throw new Error("Missing GitHub PAT. Please configure in settings or environment.");
-
-  const gistId = getStoredGistId();
+  const gistId = explicitGistId || getStoredGistId();
   if (!gistId) return null;
 
-  const res = await fetch(`${GITHUB_API}/${gistId}`, {
-    headers: {
-      'Authorization': `Bearer ${token}`,
-      'Accept': 'application/vnd.github+json',
-    }
-  });
+  const headers = {
+    'Accept': 'application/vnd.github+json',
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+  }
+
+  const res = await fetch(`${GITHUB_API}/${gistId}`, { headers });
 
   if (!res.ok) {
     if (res.status === 404) {
