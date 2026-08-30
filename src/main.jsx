@@ -31,10 +31,26 @@ class ErrorBoundary extends React.Component {
           </details>
           <div style={{ marginTop: '20px' }} id="global-errors"></div>
           <button 
-            onClick={() => { localStorage.clear(); window.location.reload(); }}
-            style={{ marginTop: '20px', padding: '10px 15px', background: '#c62828', color: 'white', border: 'none', borderRadius: '5px' }}
+            onClick={async () => { 
+              try {
+                if ('serviceWorker' in navigator) {
+                  const registrations = await navigator.serviceWorker.getRegistrations();
+                  for (const registration of registrations) {
+                    await registration.unregister();
+                  }
+                }
+                if ('caches' in window) {
+                  const keys = await caches.keys();
+                  for (const key of keys) {
+                    await caches.delete(key);
+                  }
+                }
+              } catch (e) {}
+              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+            }}
+            style={{ marginTop: '20px', padding: '10px 15px', background: '#c62828', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}
           >
-            Clear Data & Reload
+            Clear Cache & Reload
           </button>
         </div>
       );
