@@ -1697,9 +1697,11 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId) {
             height: "sm",
             color: "#F4F4F5",
             action: {
-              type: "message",
-              label: "💬 重新調整目標",
-              text: "改目標 175cm 70kg 男 減脂"
+              type: "postback",
+              label: "✏️ 填入輸入框自訂調整",
+              data: JSON.stringify({ action: 'fillGoal' }),
+              inputOption: "openKeyboard",
+              fillInText: `改目標 ${cal}卡 ${pro}蛋 ${wat}水`
             }
           }
         ]
@@ -2140,9 +2142,11 @@ function generateFavoritesListFlex(userId, liffId, userGistId, props) {
             height: "sm",
             color: "#FEF9C3",
             action: {
-              type: "message",
-              label: "➕ 新增常用範例指令",
-              text: "加常用 美式咖啡+茶葉蛋 160卡 14蛋 450水"
+              type: "postback",
+              label: "➕ 填入新增範例指令",
+              data: JSON.stringify({ action: 'fillFav' }),
+              inputOption: "openKeyboard",
+              fillInText: "加常用 美式咖啡+茶葉蛋 160卡 14蛋 450水"
             }
           },
           {
