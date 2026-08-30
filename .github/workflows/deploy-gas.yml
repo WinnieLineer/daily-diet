@@ -24,25 +24,32 @@ jobs:
       - name: Install @google/clasp
         run: npm install -g @google/clasp
 
-      - name: Configure clasp auth & scriptId
-        if: "${{ secrets.CLASPRC_JSON != '' }}"
+      - name: Configure and Deploy to Google Apps Script
+        env:
+          CLASPRC_JSON: ${{ secrets.CLASPRC_JSON }}
+          GAS_SCRIPT_ID: ${{ secrets.GAS_SCRIPT_ID }}
+          GAS_DEPLOYMENT_ID: ${{ secrets.GAS_DEPLOYMENT_ID }}
         run: |
-          echo '${{ secrets.CLASPRC_JSON }}' > ~/.clasprc.json
-          if [ -n "${{ secrets.GAS_SCRIPT_ID }}" ]; then
+          if [ -z "$CLASPRC_JSON" ]; then
+            echo "❌ Error: CLASPRC_JSON secret is not configured in GitHub Secrets."
+            echo "Please add CLASPRC_JSON to Settings -> Secrets and variables -> Actions."
+            exit 1
+          fi
+
+          echo "$CLASPRC_JSON" > ~/.clasprc.json
+
+          if [ -n "$GAS_SCRIPT_ID" ]; then
             if [ -f .clasp.json ]; then
               node -e '
                 const fs = require("fs");
                 const cfg = JSON.parse(fs.readFileSync(".clasp.json", "utf8"));
-                cfg.scriptId = "${{ secrets.GAS_SCRIPT_ID }}";
-                if ("${{ secrets.GAS_DEPLOYMENT_ID }}") cfg.deploymentId = "${{ secrets.GAS_DEPLOYMENT_ID }}";
+                cfg.scriptId = process.env.GAS_SCRIPT_ID;
+                if (process.env.GAS_DEPLOYMENT_ID) cfg.deploymentId = process.env.GAS_DEPLOYMENT_ID;
                 fs.writeFileSync(".clasp.json", JSON.stringify(cfg, null, 2));
               '
             else
-              echo '{"scriptId":"${{ secrets.GAS_SCRIPT_ID }}","rootDir":"./gas"}' > .clasp.json
+              echo "{\"scriptId\":\"$GAS_SCRIPT_ID\",\"rootDir\":\"./gas\"}" > .clasp.json
             fi
           fi
 
-      - name: Deploy to Google Apps Script (Locking Deployment ID)
-        if: "${{ secrets.CLASPRC_JSON != '' }}"
-        run: |
           node scripts/deploy-gas.js
