@@ -843,7 +843,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           {
             type: "box",
             layout: "horizontal",
-            spacing: "xs",
+            spacing: "sm",
             contents: [
               {
                 type: "button",
@@ -852,9 +852,11 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 color: "#F4F4F5",
                 action: {
-                  type: "uri",
-                  label: "✏️ 微調",
-                  uri: appTargetUrl
+                  type: "postback",
+                  label: "✏️ 填入微調",
+                  data: JSON.stringify({ action: 'fillEdit' }),
+                  inputOption: "openKeyboard",
+                  fillInText: `${analysis.dish_name} ${analysis.calories}卡 ${analysis.protein || 0}蛋 ${analysis.water || 0}水`
                 }
               },
               {
@@ -869,29 +871,20 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                   data: postbackFavData,
                   displayText: `⭐ 收藏至常用：${analysis.dish_name}`
                 }
-              },
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                flex: 1,
-                color: "#F4F4F5",
-                action: {
-                  type: "postback",
-                  label: "❌ 取消",
-                  data: postbackCancelData,
-                  displayText: "❌ 取消紀錄"
-                }
               }
             ]
           },
           {
-            type: "text",
-            text: "💡 可打字「改 600卡」修改，或「管理」查看清單",
-            size: "xxs",
-            color: "#71717A",
-            align: "center",
-            margin: "xs"
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FFF1F2",
+            action: {
+              type: "postback",
+              label: "❌ 取消不記錄",
+              data: postbackCancelData,
+              displayText: "❌ 取消紀錄"
+            }
           }
         ]
       }
