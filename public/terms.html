@@ -4,103 +4,181 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="icon" type="image/png" href="favicon.png" />
-    <title>服務條款 - Daily Diet</title>
+    <title>服務條款與免責聲明 - Daily Diet 🐼</title>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;900&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,700;0,800;1,800;1,900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        * { box-sizing: border-box; }
         body { 
-            font-family: 'Inter', sans-serif; 
-            line-height: 1.6; 
+            font-family: 'Plus Jakarta Sans', 'Noto Sans TC', sans-serif; 
+            line-height: 1.7; 
             padding: 20px; 
-            max-width: 800px; 
+            max-width: 860px; 
             margin: 0 auto; 
-            background: #fafafa; 
-            color: #000;
+            background: #FDFBF7; 
+            color: #18181B;
         }
         .container {
-            padding-top: 40px;
+            padding-top: 30px;
             padding-bottom: 80px;
         }
         .card { 
             background: white; 
             padding: 40px; 
-            border-radius: 40px; 
+            border-radius: 36px; 
             border: 4px solid #000; 
-            box-shadow: 8px 8px 0 #000; 
+            box-shadow: 8px 8px 0px #000; 
             position: relative;
         }
+        @media (max-width: 640px) {
+            .card { padding: 24px; border-radius: 24px; }
+            h1 { font-size: 32px !important; }
+        }
         h1 { 
-            font-size: 42px;
+            font-size: 38px;
             font-style: italic; 
             font-weight: 900; 
-            border-bottom: 8px solid #000; 
-            padding-bottom: 10px; 
+            border-bottom: 6px solid #000; 
+            padding-bottom: 12px; 
             margin-top: 0;
-            text-transform: uppercase;
-            letter-spacing: -2px;
+            letter-spacing: -1px;
+            color: #000;
         }
         h2 { 
             font-weight: 900; 
-            margin-top: 40px; 
+            margin-top: 36px; 
             font-style: italic;
-            text-transform: uppercase;
-            background: #FFD600; /* App Accent Color */
+            background: #FDE047;
             display: inline-block;
-            padding: 2px 10px;
+            padding: 4px 12px;
             border: 3px solid #000;
-            transform: rotate(-1deg);
+            border-radius: 8px;
+            box-shadow: 2px 2px 0px #000;
+            transform: rotate(-0.5deg);
+            color: #000;
+            font-size: 18px;
         }
         p, li {
             font-weight: 500;
-            color: #333;
+            color: #3F3F46;
+            font-size: 14.5px;
+        }
+        li { margin-bottom: 8px; }
+        .alert-box {
+            background: #FFF1F2;
+            border: 3px solid #E11D48;
+            border-radius: 16px;
+            padding: 16px 20px;
+            margin: 20px 0;
+            box-shadow: 4px 4px 0px #E11D48;
+        }
+        .alert-title {
+            font-weight: 900;
+            color: #9F1239;
+            font-size: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 6px;
+        }
+        .alert-desc {
+            font-size: 13px;
+            color: #881337;
+            font-weight: 600;
+            line-height: 1.6;
+            margin: 0;
         }
         .back-btn { 
             display: inline-flex; 
             align-items: center;
             gap: 8px;
-            margin-bottom: 30px; 
-            padding: 12px 24px; 
+            margin-bottom: 24px; 
+            padding: 12px 22px; 
             background: #000; 
             color: #fff; 
             text-decoration: none; 
             border-radius: 16px; 
             font-weight: 900; 
             font-style: italic;
-            transition: all 0.2s;
-            border: 4px solid #000;
+            transition: all 0.15s;
+            border: 3px solid #000;
+            box-shadow: 4px 4px 0px #FDE047;
         }
         .back-btn:hover { 
-            transform: translate(-4px, -4px); 
-            box-shadow: 8px 8px 0 #FFD600; 
-            background: #000;
+            transform: translate(-2px, -2px); 
+            box-shadow: 6px 6px 0px #FDE047; 
         }
         .logo-tag {
             background: #000;
-            color: #fff;
+            color: #FDE047;
             padding: 4px 12px;
             border-radius: 8px;
             font-weight: 900;
             font-size: 12px;
             display: inline-block;
-            margin-bottom: 10px;
+            margin-bottom: 12px;
+        }
+        footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px dashed #E4E4E7;
+            text-align: center;
+            font-size: 12px;
+            color: #A1A1AA;
+            font-weight: 700;
         }
     </style>
 </head>
 <body>
     <div class="container">
-        <a href="./" class="back-btn">← BACK TO APP</a>
+        <a href="./" class="back-btn">← 返回應用程式 (APP)</a>
         <div class="card">
-            <div class="logo-tag">DAILY DIET 🐼</div>
-    <h1>服務條款</h1>
-    <p>最後更新日期：2026年5月5日</p>
-    <h2>1. 服務內容</h2>
-    <p>Daily Diet 提供飲食紀錄、熱量追蹤及 AI 食物分析服務。</p>
-    <h2>2. 使用者責任</h2>
-    <p>使用者應自行妥善保管 Google 帳號權限。本應用程式提供的 AI 分析數據僅供參考，不代表專業醫療建議。</p>
-    <h2>3. 資料存儲</h2>
-    <p>本服務主要採用地端儲存，雲端備份功能需使用者主動點擊觸發。我們不對因使用者自行刪除瀏覽器資料或 Google Drive 資料所造成的損失負責。</p>
-    <h2>4. 服務變更</h2>
-    <p>我們保留隨時修改或停止服務的權利。</p>
-    </div>
+            <div class="logo-tag">DAILY DIET · TERMS 🐼</div>
+            <h1>服務條款與免責聲明</h1>
+            <p>最後更新生效日期：2026年8月30日</p>
+            <p>歡迎使用 <strong>Daily Diet 飲食與營養控制管理服務</strong>（包括 Web App、PWA 應用程式及 LINE 官方帳號機器人，以下簡稱「本服務」）。當您使用或存取本服務時，即代表您已詳閱並同意受本服務條款之約束。</p>
+
+            <div class="alert-box">
+                <div class="alert-title">⚖️ 健康自主與非醫療免責宣告</div>
+                <p class="alert-desc">
+                    Daily Diet 與虛擬「熊貓教練」所計算之卡路里、三大營養素比例、飲水量及 BMR/TDEE 數值，<strong>純屬演算法與 AI 視覺模型之估算參考，不具任何醫療效力，絕非醫療診斷、治療建議或專業臨床處方</strong>。<br>
+                    使用者的健康管理與體態控制結果因人而異。若您有特殊疾病史或身體不適，請務必遵照合格執業醫師或營養師之專業指示。
+                </p>
+            </div>
+
+            <h2>1. 服務範疇與使用授權</h2>
+            <ul>
+                <li>本服務提供日常飲食記錄、卡路里追蹤、目標進度視覺化及 AI 輔助食物營養分析。</li>
+                <li>我們授權您出於個人、非商業目的合理使用本服務。不得對本服務進行逆向工程、惡意灌水或破壞系統連線。</li>
+            </ul>
+
+            <h2>2. AI 估算限制與數據準確度</h2>
+            <ul>
+                <li><strong>AI 推論之不確定性：</strong> 食物辨識功能由大型人工智慧模型（如 Google Gemini）提供支援，其辨識準確度受照片角度、光線、份量遮蔽及烹飪調味方式影響，無法保證 100% 絕對無誤。</li>
+                <li><strong>用戶微調權限：</strong> 系統提供每筆餐點之手動數值微調（編輯）功能，用戶應依實際攝取情況核對與修正。</li>
+            </ul>
+
+            <h2>3. 使用者責任與帳號安全</h2>
+            <ul>
+                <li><strong>資料備份：</strong> 本服務採用 Local-First（本機優先）與用戶專屬私有 GitHub Gist 雲端架構。使用者應自行妥善保管其 LINE 帳號與 GitHub Access Token。</li>
+                <li><strong>資料遺失免責：</strong> 因使用者手動清空瀏覽器快取、未綁定備份空間或個人金鑰遺失所導致之資料遺失，本服務不負恢復與賠償責任。</li>
+            </ul>
+
+            <h2>4. 服務變更與中斷免責</h2>
+            <ul>
+                <li>本服務致力於維持 99.9% 穩定運作，但因第三方服務供應商（如 LINE 平台、GitHub API、Google Gemini API、Google Apps Script）臨時維護或不可抗力事故導致之暫時中斷，本服務不承擔衍生之連帶賠償責任。</li>
+                <li>我們保留隨時因產品優化、法規變更而調整、升級或終止本服務部分功能的權利。</li>
+            </ul>
+
+            <h2>5. 智慧財產權聲明</h2>
+            <p>本服務之軟體架構、使用者介面設計、熊貓教練品牌視覺、程式原始碼及商標均受著作權法及智慧財產權法保護。未經授權不得任意複製、抄襲或作未經許可之商業散布。</p>
+
+            <h2>6. 準據法與爭議管轄</h2>
+            <p>本服務條款之解釋與適用均以中華民國法律為準據法。因本服務所生之一切爭議，雙方同意以台灣台北地方法院為第一審管轄法院。</p>
+
+            <footer>
+                Daily Diet © 2026 Winnie Lin Space · All Rights Reserved.
+            </footer>
+        </div>
     </div>
 </body>
 </html>

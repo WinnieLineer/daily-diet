@@ -336,6 +336,15 @@ function doPost(e) {
           continue;
         }
 
+        // 🚨 按下【徹底銷毀所有個人資料 (被遺忘權)】
+        if (payload.action === 'destroyAllData') {
+          console.log(`🚨 [徹底銷毀帳號資料] 用戶: ${userId}`);
+          recordSystemLog('銷毀所有資料', userId, '使用者要求徹底銷毀所有資料', '', '已銷毀全部數據');
+          purgeAllUserData(userId, userGistId, GITHUB_PAT, props);
+          replyTextMessage(replyToken, "🗑️ 您的所有飲食紀錄、體態目標、常用餐點庫及專屬雲端 Gist 已徹底銷毀並解除綁定。\n\n感謝您的使用，若未來需重新記錄，隨時傳送照片或訊息即可重新啟用！🐼", CHANNEL_ACCESS_TOKEN);
+          continue;
+        }
+
         // ❌ 按下【取消】
         else if (payload.action === 'cancel') {
           replyTextMessage(replyToken, "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN);
@@ -421,6 +430,13 @@ function doPost(e) {
             saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
             const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId);
             replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN);
+            continue;
+          }
+
+          // 🚨 徹底銷毀所有個人資料 (被遺忘權)
+          if (userText === '刪除所有資料' || userText === '清除所有資料' || userText === '銷毀所有資料' || userText === '刪除帳號' || userText === '重設資料' || userText === '清空全部') {
+            const destroyConfirmFlex = generateDestroyAllDataConfirmFlex();
+            replyFlexMessage(replyToken, destroyConfirmFlex, CHANNEL_ACCESS_TOKEN);
             continue;
           }
 
@@ -2449,4 +2465,91 @@ function recordSystemLog(type, userId, input, aiResult, output) {
     }
   }
 }
+
+// ========================================================
+// 🚨 10. GDPR / 個資法「被遺忘權」徹底銷毀個人資料核心
+// ========================================================
+
+function generateDestroyAllDataConfirmFlex() {
+  return {
+    type: "flex",
+    altText: "🚨 警告：確定要徹底銷毀您的所有資料嗎？",
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "18px",
+        contents: [
+          { type: "text", text: "🚨 徹底銷毀所有個人資料", weight: "bold", size: "md", color: "#E11D48" },
+          {
+            type: "text",
+            text: "此動作將徹底清空您所有的飲食紀錄、自訂體態目標、常用餐點庫，並銷毀個人私有雲端 Gist 資料庫。\n\n⚠️ 此操作無法復原，確定要執行嗎？",
+            size: "xs",
+            color: "#52525B",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "horizontal",
+        spacing: "sm",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#E11D48",
+            action: {
+              type: "postback",
+              label: "🗑️ 確定徹底銷毀",
+              data: JSON.stringify({ action: 'destroyAllData' }),
+              displayText: "🗑️ 確定徹底銷毀我的所有資料"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "postback",
+              label: "❌ 取消",
+              data: JSON.stringify({ action: 'cancel' }),
+              displayText: "❌ 取消"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+function purgeAllUserData(userId, userGistId, pat, props) {
+  const todayStr = getTodayDateString();
+  props.deleteProperty(`DIET_LOGS_${userId}_${todayStr}`);
+  props.deleteProperty(`FAVORITES_${userId}`);
+  props.deleteProperty(`USER_GIST_${userId}`);
+  props.deleteProperty(`CALORIE_GOAL_${userId}`);
+  props.deleteProperty(`PROTEIN_GOAL_${userId}`);
+  props.deleteProperty(`WATER_GOAL_${userId}`);
+
+  if (pat && userGistId) {
+    try {
+      UrlFetchApp.fetch(`https://api.github.com/gists/${userGistId}`, {
+        method: 'delete',
+        headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      console.log(`✅ 已為用戶 ${userId} 徹底銷毀 GitHub Gist: ${userGistId}`);
+    } catch (e) {
+      console.error("銷毀 Gist 失敗:", e);
+    }
+  }
+}
+
 
