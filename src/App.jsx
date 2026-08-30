@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import PandaCoachCard from './components/PandaCoachCard';
 import Dashboard from './components/Dashboard';
 import FoodDetective from './components/FoodDetective';
+import WeightTracker from './components/WeightTracker';
 import FastingTimer from './components/FastingTimer';
 import NeoCard from './components/NeoCard';
 import NeoButton from './components/NeoButton';
@@ -19,7 +20,6 @@ import { liffService } from './lib/liffService';
 
 // 🚀 Dynamic Lazy-Loaded Modals & Components (Code Splitting)
 const HistoryTrends = lazy(() => import('./components/HistoryTrends'));
-const WeightTracker = lazy(() => import('./components/WeightTracker'));
 const GoalSettings = lazy(() => import('./components/GoalSettings'));
 const WhatsNew = lazy(() => import('./components/WhatsNew'));
 const Onboarding = lazy(() => import('./components/Onboarding'));
@@ -1711,11 +1711,7 @@ function App() {
               </NeoCard>
             );
           } else if (item === 'weight') {
-            blockContent = (
-              <Suspense fallback={<div className="h-28 bg-white rounded-3xl border-4 border-black p-4 animate-pulse" />}>
-                <WeightTracker pointerEventsNone={isEditingLayout} />
-              </Suspense>
-            );
+            blockContent = <WeightTracker pointerEventsNone={isEditingLayout} />;
           } else if (item === 'history' && historyGroups.length > 0) {
             blockContent = (
               <NeoCard className="bg-zinc-100">
