@@ -286,6 +286,29 @@ function doPost(e) {
 
   try {
     const data = JSON.parse(e.postData.contents);
+    const action = e.parameter?.action || data?.action;
+    const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
+
+    // 🌟 1. Web App 直通 Gemini AI 辨識 API (提供 Web App 與 LINE 共享 Gemini 額度)
+    if (action === 'analyzeMeal' || action === 'analyzeFoodImage') {
+      const base64 = data?.image || data?.base64Image || e.parameter?.image;
+      const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'analyzeText' || action === 'analyzeFoodText') {
+      const text = data?.text || data?.textInstruction || e.parameter?.text;
+      const result = parseTextWithGeminiFull(text, GEMINI_API_KEY, data?.context, data?.language);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+    if (action === 'completeText' || action === 'getPandaAdvice') {
+      const prompt = data?.prompt || e.parameter?.prompt;
+      const result = generateGeminiText(prompt, GEMINI_API_KEY);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     const events = data.events || [];
 
     if (events.length === 0) {
@@ -294,7 +317,6 @@ function doPost(e) {
     }
 
     const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
-    const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
     const GITHUB_PAT = props.getProperty('GITHUB_PAT');
     const LIFF_ID = props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
     currentToken = CHANNEL_ACCESS_TOKEN;
@@ -3196,5 +3218,198 @@ function purgeAllUserData(userId, userGistId, pat, props) {
     }
   }
 }
+
+function getOrCreateUserGist(userId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const gistKey = `USER_GIST_${userId}`;
+  let gistId = props.getProperty(gistKey);
+  if (gistId) return gistId;
+  if (!pat) return '';
+
+  try {
+    const payload = {
+      description: `Daily Diet User Cloud Backup - ${userId}`,
+      public: false,
+      files: {
+        'daily-diet-backup.json': {
+          content: JSON.stringify({
+            version: '3.0.0',
+            updatedAt: new Date().toISOString(),
+            userId: userId,
+            dietLogs: [],
+            weightLogs: [],
+            settings: [],
+            favorites: []
+          }, null, 2)
+        }
+      }
+    };
+
+    const res = UrlFetchApp.fetch('https://api.github.com/gists', {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify(payload),
+      muteHttpExceptions: true
+    });
+
+    if (res.getResponseCode() === 201) {
+      const data = JSON.parse(res.getContentText());
+      gistId = data.id;
+      props.setProperty(gistKey, gistId);
+      console.log(`🎉 成功為用戶 ${userId} 建立專屬 Gist 備份庫: ${gistId}`);
+      return gistId;
+    }
+  } catch (e) {
+    console.error("建立 Gist 備份失敗:", e);
+  }
+  return '';
+}
+
+function analyzeMealWithGeminiFull(base64Image, apiKey, context, language) {
+  const models = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b'
+  ];
+  const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
+  const prompt = `Analyze this food image. Return STRICTLY a raw JSON object with keys:
+"dish_name" (${langDisplay} string),
+"calories" (integer kcal),
+"protein" (integer grams),
+"carbs" (integer carbohydrates grams),
+"fat" (integer total fat grams),
+"water" (integer liquid ml, 0 if dry food),
+"description" (${langDisplay} nutritional overview),
+"fun_fact" (${langDisplay} science fact),
+"roast" (${langDisplay} sarcastic burn),
+"panda_comment" (${langDisplay} professional tip, max 35 words).
+No markdown backticks.`;
+
+  const payload = {
+    contents: [{
+      parts: [
+        { text: prompt },
+        { inline_data: { mime_type: "image/jpeg", data: base64Image } }
+      ]
+    }],
+    generationConfig: {
+      temperature: 0.2,
+      response_mime_type: "application/json"
+    }
+  };
+
+  let lastError = null;
+  for (let i = 0; i < models.length; i++) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${models[i]}:generateContent?key=${apiKey}`;
+      const res = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() === 200) {
+        const data = JSON.parse(res.getContentText());
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanJson);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw new Error(`Gemini Vision analysis failed: ${lastError?.message || 'Unknown'}`);
+}
+
+function parseTextWithGeminiFull(text, apiKey, context, language) {
+  const models = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b'
+  ];
+  const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
+  const prompt = `You are an expert nutritionist panda. Analyze: "${text}".
+Return STRICTLY a raw JSON object with keys:
+"dish_name" (${langDisplay}),
+"calories" (integer kcal),
+"protein" (integer grams),
+"carbs" (integer carbohydrates grams),
+"fat" (integer total fat grams),
+"water" (integer liquid ml),
+"description" (${langDisplay}),
+"fun_fact" (${langDisplay}),
+"roast" (${langDisplay}),
+"panda_comment" (${langDisplay}).
+No markdown backticks.`;
+
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.2,
+      response_mime_type: "application/json"
+    }
+  };
+
+  let lastError = null;
+  for (let i = 0; i < models.length; i++) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${models[i]}:generateContent?key=${apiKey}`;
+      const res = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() === 200) {
+        const data = JSON.parse(res.getContentText());
+        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+        return JSON.parse(cleanJson);
+      }
+    } catch (err) {
+      lastError = err;
+    }
+  }
+  throw new Error(`Gemini Text analysis failed: ${lastError?.message || 'Unknown'}`);
+}
+
+function generateGeminiText(prompt, apiKey) {
+  const models = [
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    'gemini-2.0-flash',
+    'gemini-1.5-flash',
+    'gemini-1.5-flash-8b'
+  ];
+  const payload = {
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: { temperature: 0.3 }
+  };
+  for (let i = 0; i < models.length; i++) {
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${models[i]}:generateContent?key=${apiKey}`;
+      const res = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() === 200) {
+        const data = JSON.parse(res.getContentText());
+        return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      }
+    } catch (e) {}
+  }
+  return '繼續保持健康飲控節奏喔！🐼✨';
+}
+
 
 
