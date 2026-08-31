@@ -72,12 +72,13 @@ function doGet(e) {
     const water = Number(e?.parameter?.water || e?.parameter?.wat || 0);
     const carbs = Number(e?.parameter?.carbs || 0);
     const fat = Number(e?.parameter?.fat || 0);
+    const category = e?.parameter?.category || '';
     const comment = e?.parameter?.comment || '';
     const date = e?.parameter?.date || getTodayDateString();
     const time = e?.parameter?.time || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' });
     const id = Number(e?.parameter?.id || Date.now());
 
-    const meal = { id, date, time, dish_name: dishName, calories, protein, carbs, fat, water, comment, source: 'WEB_APP' };
+    const meal = { id, date, time, dish_name: dishName, calories, protein, carbs, fat, water, category, comment, source: 'WEB_APP' };
     const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
     saveMealLog(userId, meal, userGistId, pat, props);
     recordSystemLog('Web同步餐點', userId, dishName, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, '已即時寫入 LINE 與 Gist');
@@ -1160,12 +1161,31 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     totalCal += Number(log.calories) || 0;
     totalPro += Number(log.protein) || 0;
     totalWater += Number(log.water) || 0;
+
+    let timeText = log.time || '';
+    if (!timeText && log.timestamp) {
+      try {
+        timeText = Utilities.formatDate(new Date(Number(log.timestamp)), "Asia/Taipei", "HH:mm");
+      } catch (e) {}
+    }
+
+    const catEmojiMap = {
+      'breakfast': '🍳',
+      'lunch': '🍱',
+      'dinner': '🍲',
+      'snack': '☕',
+      'water': '🚰'
+    };
+    const catPrefix = log.category && catEmojiMap[log.category] ? `${catEmojiMap[log.category]} ` : '';
+    const timePrefix = timeText ? `${timeText} ` : '';
+    const displayName = log.dish_name || '美味餐點';
+
     mealItems.push({
       type: "box",
       layout: "horizontal",
       contents: [
-        { type: "text", text: `• ${log.time} ${log.dish_name}`, size: "xs", color: "#18181B", weight: "bold", flex: 4, wrap: true },
-        { type: "text", text: `${log.calories} kcal`, size: "xs", color: "#E11D48", weight: "bold", flex: 2, align: "end" }
+        { type: "text", text: `• ${timePrefix}${catPrefix}${displayName}`, size: "xs", color: "#18181B", weight: "bold", flex: 4, wrap: true },
+        { type: "text", text: `${Number(log.calories) || 0} kcal`, size: "xs", color: "#E11D48", weight: "bold", flex: 2, align: "end" }
       ]
     });
   });
@@ -2363,8 +2383,25 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
   } else {
     allLogs.forEach((log, index) => {
       totalCal += Number(log.calories) || 0;
-      const encodedName = encodeURIComponent(log.dish_name || '餐點');
+      const dishName = log.dish_name || '餐點';
+      const encodedName = encodeURIComponent(dishName);
       const editAppUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${log.calories}&pro=${log.protein}&wat=${log.water || 0}&userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
+
+      let timeText = log.time || '';
+      if (!timeText && log.timestamp) {
+        try {
+          timeText = Utilities.formatDate(new Date(Number(log.timestamp)), "Asia/Taipei", "HH:mm");
+        } catch (e) {}
+      }
+
+      const catEmojiMap = {
+        'breakfast': '🍳 早餐',
+        'lunch': '🍱 午餐',
+        'dinner': '🍲 晚餐',
+        'snack': '☕ 點心',
+        'water': '🚰 補水'
+      };
+      const catPrefix = log.category && catEmojiMap[log.category] ? `[${catEmojiMap[log.category]}] ` : '';
 
       mealBoxes.push({
         type: "box",
@@ -2380,8 +2417,8 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: `${index + 1}. ${log.dish_name}`, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true },
-              { type: "text", text: log.time || '', size: "xxs", color: "#A1A1AA", flex: 1, align: "end" }
+              { type: "text", text: `${index + 1}. ${catPrefix}${dishName}`, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true },
+              { type: "text", text: timeText, size: "xxs", color: "#A1A1AA", flex: 1, align: "end" }
             ]
           },
           {

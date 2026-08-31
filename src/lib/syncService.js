@@ -28,6 +28,7 @@ export async function syncMealToCloud(meal) {
   const { userId, gistId } = getEffectiveIds();
   if (!meal) return;
 
+  const nowTime = meal.time || (meal.timestamp ? new Date(Number(meal.timestamp)).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) : new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }));
   const params = new URLSearchParams({
     action: 'saveMeal',
     userId,
@@ -37,9 +38,10 @@ export async function syncMealToCloud(meal) {
     wat: String(meal.water || 0),
     carbs: String(meal.carbs || 0),
     fat: String(meal.fat || 0),
+    category: meal.category || '',
     comment: meal.comment || meal.advice || '',
     date: meal.date || new Date().toISOString().split('T')[0],
-    time: meal.time || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    time: nowTime,
     id: String(meal.timestamp || meal.id || Date.now())
   });
   if (gistId) params.append('gistId', gistId);
