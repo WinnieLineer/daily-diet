@@ -1,6 +1,6 @@
 import liff from '@line/liff';
 
-const LIFF_ID = import.meta.env.VITE_LINE_LIFF_ID || '';
+const LIFF_ID = import.meta.env.VITE_LINE_LIFF_ID || '2011098313-nFOisgmf';
 
 export const liffService = {
   profile: null,
@@ -9,15 +9,12 @@ export const liffService = {
   async init() {
     if (this.isInitialized) return this.profile;
 
-    if (!LIFF_ID) {
-      console.warn('⚠️ LINE LIFF ID is not configured (VITE_LINE_LIFF_ID). Running in standalone mode.');
-      return null;
-    }
+    const targetLiffId = LIFF_ID || '2011098313-nFOisgmf';
 
     try {
-      await liff.init({ liffId: LIFF_ID });
+      await liff.init({ liffId: targetLiffId });
       this.isInitialized = true;
-      console.log('✅ LINE LIFF initialized successfully.');
+      console.log('✅ LINE LIFF initialized successfully with ID:', targetLiffId);
 
       if (liff.isLoggedIn()) {
         const profile = await liff.getProfile();
@@ -25,7 +22,6 @@ export const liffService = {
         console.log('👤 LINE User Profile:', profile);
         return profile;
       } else {
-        // If we are in LIFF but not logged in, log in automatically
         if (liff.isInClient()) {
           liff.login();
         }
@@ -37,25 +33,49 @@ export const liffService = {
   },
 
   isInClient() {
-    return this.isInitialized && liff.isInClient();
+    try {
+      return this.isInitialized && liff.isInClient();
+    } catch (e) {
+      return false;
+    }
   },
 
   isLoggedIn() {
-    return this.isInitialized && liff.isLoggedIn();
+    try {
+      return this.isInitialized && liff.isLoggedIn();
+    } catch (e) {
+      return false;
+    }
   },
 
-  login() {
-    if (this.isInitialized && !liff.isLoggedIn()) {
-      liff.login();
+  async login() {
+    const targetLiffId = LIFF_ID || '2011098313-nFOisgmf';
+    try {
+      if (!this.isInitialized) {
+        await this.init();
+      }
+      if (this.isInitialized && !liff.isLoggedIn()) {
+        liff.login({ redirectUri: window.location.href });
+        return;
+      }
+    } catch (e) {
+      console.warn("Direct LIFF SDK login error, redirecting to LIFF gateway:", e);
     }
+
+    // Direct fallback redirect to LINE LIFF Gateway
+    window.location.href = `https://liff.line.me/${targetLiffId}`;
   },
 
   logout() {
-    if (this.isInitialized && liff.isLoggedIn()) {
-      liff.logout();
-      this.profile = null;
-      window.location.reload();
-    }
+    try {
+      if (this.isInitialized && liff.isLoggedIn()) {
+        liff.logout();
+      }
+    } catch (e) {}
+    this.profile = null;
+    localStorage.removeItem('line_user_id');
+    localStorage.removeItem('line_user_name');
+    window.location.reload();
   },
 
   async getProfile() {
