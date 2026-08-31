@@ -583,6 +583,7 @@ function doPost(e) {
               recordSystemLog('綁定Gist', userId, userText, cleanGistId, '已成功綁定個人 Gist ID');
               
               let extraMsg = '';
+              let favCount = 0;
               if (GITHUB_PAT) {
                 try {
                   const gistUrl = `https://api.github.com/gists/${cleanGistId}`;
@@ -602,13 +603,19 @@ function doPost(e) {
                         if (pro) props.setProperty(`PROTEIN_GOAL_${userId}`, String(pro));
                         if (wat) props.setProperty(`WATER_GOAL_${userId}`, String(wat));
                       }
-                      extraMsg = `\n📦 已偵測到您在 Web 端的歷史紀錄與體態目標，已全面即時連動！`;
+                      if (backupData.favorites && Array.isArray(backupData.favorites) && backupData.favorites.length > 0) {
+                        props.setProperty(`FAVORITES_${userId}`, JSON.stringify(backupData.favorites));
+                        favCount = backupData.favorites.length;
+                      }
+                      extraMsg = `\n📦 已偵測到您在 Web 端的歷史紀錄、體態目標與 ${favCount} 筆常用餐點，已全面即時連動！`;
                     }
                   }
-                } catch (e) {}
+                } catch (e) {
+                  console.error("Gist 同步失敗:", e);
+                }
               }
 
-              replyTextMessage(replyToken, `🎉 恭喜！已成功將您的 LINE 帳號連動至 Gist 雲端庫：\n🔑 Gist ID: ${cleanGistId}${extraMsg}\n\n現在在 LINE 記錄餐點或補水，都會 100% 雙向同步至您的 Web App！🐼✨`, CHANNEL_ACCESS_TOKEN, userId, props);
+              replyTextMessage(replyToken, `🎉 恭喜！已成功將您的 LINE 帳號連動至 Gist 雲端庫：\n🔑 Gist ID: ${cleanGistId}${extraMsg}\n\n現在在 LINE 輸入「常用」或「目標」，隨時都能取用您在 Web 建立的自訂常用餐點！🐼✨`, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
             }
           }
@@ -2427,7 +2434,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
 // ========================================================
 
 function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
-  const favorites = getUserFavorites(userId, props);
+  const favorites = getUserFavorites(userId, props, userGistId);
   const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
   const bubbles = [];
 
@@ -3076,14 +3083,43 @@ function generateClearConfirmFlex(liffId, userGistId) {
 // 💾 8. 常用餐點與紀錄管理資料處理核心 (Properties + Gist)
 // ========================================================
 
-function getUserFavorites(userId, props) {
+function getUserFavorites(userId, props, userGistId) {
+  if (!props) props = PropertiesService.getScriptProperties();
   const favKey = `FAVORITES_${userId}`;
   try {
     const raw = props.getProperty(favKey);
-    return raw ? JSON.parse(raw) : [];
-  } catch (e) {
-    return [];
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+    }
+  } catch (e) {}
+
+  // ☁️ 若尚未快取常用餐點，主動向 Gist 雲端資料庫拉取 Web 端的常用清單
+  const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+  const pat = props.getProperty('GITHUB_PAT');
+  if (gistId && pat) {
+    try {
+      const gistUrl = `https://api.github.com/gists/${gistId}`;
+      const getRes = UrlFetchApp.fetch(gistUrl, {
+        headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      if (getRes.getResponseCode() === 200) {
+        const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+        if (content) {
+          const backupData = JSON.parse(content);
+          if (backupData.favorites && Array.isArray(backupData.favorites) && backupData.favorites.length > 0) {
+            props.setProperty(favKey, JSON.stringify(backupData.favorites));
+            return backupData.favorites;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("從 Gist 拉取常用餐點失敗:", e);
+    }
   }
+
+  return [];
 }
 
 function saveUserFavorite(userId, favItem, userGistId, pat, props) {
