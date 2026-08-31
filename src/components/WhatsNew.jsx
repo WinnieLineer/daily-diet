@@ -95,6 +95,12 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v310_header')}</div>
                   
                   <FeatureItem 
+                    icon={Wrench}
+                    title={t('whatsnew_v310_fix_title')}
+                    description={t('whatsnew_v310_fix_desc')}
+                    color="bg-emerald-300"
+                  />
+                  <FeatureItem 
                     icon={Cloud}
                     title={t('whatsnew_v310_sync_title')}
                     description={t('whatsnew_v310_sync_desc')}

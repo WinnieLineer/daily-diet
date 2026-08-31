@@ -433,6 +433,8 @@ const translations = {
     fasting_timer_title: "斷食計時器",
     fasting_remaining: "斷食倒數",
     whatsnew_v310_header: "v3.1.0 LINE 雙向 Gist 綁定 & Gemini 8階 AI 旗艦版 🐼⚡",
+    whatsnew_v310_fix_title: "AI 辨識通道全面修復 🛠️⚡",
+    whatsnew_v310_fix_desc: "徹底修復先前 Web 端 AI 照片與文字辨識失敗問題，已解除伺服器代理攔截並過濾舊版 Key，現在 Web 端與 LINE 聊天室皆享有 100% 滿血極速辨識！",
     whatsnew_v310_sync_title: "Gist 雲端 ID 一鍵綁定 & 常用餐點雙向同步 ☁️",
     whatsnew_v310_sync_desc: "在 Web 設定中即可隨時複製專屬 Gist ID，在 LINE 聊天室輸入「綁定 <您的ID>」，即可秒級同步所有飲食目標、常用餐點庫與歷史紀錄！",
     whatsnew_v310_gemini_title: "Google Gemini 8 階梯多模型 AI 容錯引擎 ⚡",
