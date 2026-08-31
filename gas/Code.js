@@ -2973,6 +2973,33 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                 layout: "horizontal",
                 spacing: "sm",
                 contents: [
+                  { type: "text", text: "✏️", size: "sm", flex: 0 },
+                  { type: "text", text: "快速微調：輸入「改 400卡 35蛋」修正前一餐", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "🎯", size: "sm", flex: 0 },
+                  { type: "text", text: "目標管理：輸入「目標」或「改目標 1800卡」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "⭐", size: "sm", flex: 0 },
+                  { type: "text", text: "常用輪播：輸入「常用」或「加常用 拿鐵 150卡」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
                   { type: "text", text: "💧", size: "sm", flex: 0 },
                   { type: "text", text: "快速補水：輸入「喝水」或「+500水」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
                 ]
@@ -2983,8 +3010,34 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                 spacing: "sm",
                 contents: [
                   { type: "text", text: "📊", size: "sm", flex: 0 },
-                  { type: "text", text: "進度總結：輸入「今日」、「目標」或「管理」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                  { type: "text", text: "進度與管理：輸入「今日」看總結、「管理」刪改餐點", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
                 ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#ECFDF5",
+            cornerRadius: "10px",
+            paddingAll: "12px",
+            borderColor: "#10B981",
+            borderWidth: "1.5px",
+            spacing: "xs",
+            contents: [
+              {
+                type: "text",
+                text: "⚡ Web ➔ LINE 雙向同步小提醒",
+                weight: "bold",
+                size: "xs",
+                color: "#065F46"
+              },
+              {
+                type: "text",
+                text: "若您在 Web App / PWA 端記錄或修改了餐點，在 LINE 聊天室輸入「今日」或「管理」，系統會即時向雲端拉取最新紀錄無縫呈現！",
+                size: "xxs",
+                color: "#047857",
+                wrap: true
               }
             ]
           },
