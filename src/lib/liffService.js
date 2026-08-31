@@ -49,7 +49,6 @@ export const liffService = {
   },
 
   async login() {
-    const targetLiffId = LIFF_ID || '2011098313-nFOisgmf';
     try {
       if (!this.isInitialized) {
         await this.init();
@@ -59,11 +58,8 @@ export const liffService = {
         return;
       }
     } catch (e) {
-      console.warn("Direct LIFF SDK login error, redirecting to LIFF gateway:", e);
+      console.warn("Direct LIFF SDK login error:", e);
     }
-
-    // Direct fallback redirect to LINE LIFF Gateway
-    window.location.href = `https://liff.line.me/${targetLiffId}`;
   },
 
   logout() {

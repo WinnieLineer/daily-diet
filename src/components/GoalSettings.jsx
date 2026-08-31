@@ -550,19 +550,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="flex flex-col gap-1.5 p-2 bg-white rounded-xl border-2 border-black">
                           <div className="flex items-center justify-between">
                             <span className="font-black text-xs flex items-center gap-1.5">
-                              💬 LINE App 連動狀態
+                              💬 LINE 連動狀態
                             </span>
                             {liffService.isInClient() ? (
                               <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
                                 LINE 內建開啟 🟢
                               </span>
                             ) : lineProfile ? (
-                              <span className="bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
-                                LINE 已登入 🟢
+                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
+                                LINE 已連動 🟢
                               </span>
                             ) : (
-                              <span className="bg-zinc-100 text-zinc-400 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
-                                獨立瀏覽器 ⚪
+                              <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
+                                免登入即用 🟢 (PWA 模式)
                               </span>
                             )}
                           </div>
@@ -573,7 +573,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 {lineProfile.pictureUrl && (
                                   <img src={lineProfile.pictureUrl} className="w-5 h-5 rounded-full border border-black" alt="avatar" />
                                 )}
-                                <span>暱稱: <span className="font-black">{lineProfile.displayName}</span></span>
+                                <span>LINE 暱稱: <span className="font-black">{lineProfile.displayName}</span></span>
                               </div>
                               {!liffService.isInClient() && (
                                 <button
@@ -581,22 +581,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   onClick={() => liffService.logout()}
                                   className="px-2 py-1 rounded bg-rose-500 text-white font-black text-[9px] active:scale-95"
                                 >
-                                  登出 LINE
+                                  解除連動
                                 </button>
                               )}
                             </div>
                           ) : (
                             <div className="flex flex-col gap-2 mt-1">
-                              <p className="text-[9px] text-zinc-400 font-bold">
-                                在 LINE 內點擊官方帳號圖文選單，或使用 LINE 掃碼即可無縫免登入開啟！
+                              <p className="text-[9px] text-zinc-500 font-bold leading-relaxed">
+                                💡 PWA 獨立模式下所有功能（AI 視覺辨識、歷史圖表、體重管理）皆已完整啟用，無需登入！若想在 LINE 聊天室同步飲食紀錄，請直接使用下方的 Gist 專屬綁定碼。
                               </p>
                               {!liffService.isInClient() && (
                                 <button
                                   type="button"
                                   onClick={() => liffService.login()}
-                                  className="w-full bg-emerald-500 text-white font-black py-1.5 rounded-xl border-2 border-black shadow-neo-sm-flat text-[10px] hover:bg-emerald-600 active:scale-95 transition-all"
+                                  className="w-full bg-zinc-100 text-zinc-700 font-bold py-1.5 rounded-xl border border-black/20 text-[10px] hover:bg-zinc-200 active:scale-95 transition-all text-center"
                                 >
-                                  使用 LINE 帳號登入
+                                  🌐 透過 LINE 網頁授權頭像與名稱（選填）
                                 </button>
                               )}
                             </div>
