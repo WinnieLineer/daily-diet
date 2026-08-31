@@ -272,24 +272,18 @@ function doPost(e) {
   }
 
   const props = PropertiesService.getScriptProperties();
-  const CHANNEL_SECRET = props.getProperty('LINE_CHANNEL_SECRET');
-
-  // 🛡️ 企業級安全性：URL Secret Token 防偽防盜刷防護
-  if (CHANNEL_SECRET) {
-    const incomingSecret = e.parameter?.secret || e.parameter?.token;
-    if (incomingSecret !== CHANNEL_SECRET) {
-      console.warn("🚨 [安全攔截] 收到未經授權的 Webhook 請求！URL Secret 不符或缺失。");
-      recordSystemLog('安全攔截', 'unknown', '偽造Webhook請求', 'HTTP 403', '已拒絕處理');
-      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden: Invalid or missing secret' }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-  }
 
   let currentReplyToken = null;
   let currentToken = null;
 
   try {
-    const data = JSON.parse(e.postData.contents);
+    let data = {};
+    try {
+      data = JSON.parse(e.postData.contents);
+    } catch (parseErr) {
+      data = {};
+    }
+
     const action = e.parameter?.action || data?.action;
     const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
 
@@ -311,6 +305,18 @@ function doPost(e) {
       const result = generateGeminiText(prompt, GEMINI_API_KEY);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))
         .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 🛡️ LINE Webhook 事件安全驗證
+    const CHANNEL_SECRET = props.getProperty('LINE_CHANNEL_SECRET');
+    if (CHANNEL_SECRET) {
+      const incomingSecret = e.parameter?.secret || e.parameter?.token;
+      if (incomingSecret && incomingSecret !== CHANNEL_SECRET) {
+        console.warn("🚨 [安全攔截] 收到未經授權的 Webhook 請求！URL Secret 不符。");
+        recordSystemLog('安全攔截', 'unknown', '偽造Webhook請求', 'HTTP 403', '已拒絕處理');
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden: Invalid secret' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
     }
 
     const events = data.events || [];

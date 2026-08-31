@@ -42,8 +42,14 @@ async function getApiKey() {
     const userKeyEntry = await db.settings.get('user_api_key');
     let userKey = userKeyEntry ? userKeyEntry.value : null;
     userKey = sanitizeKey(userKey);
-    if (userKey) apiKey = userKey;
+    if (userKey && !userKey.startsWith('gsk_')) {
+      apiKey = userKey;
+    }
   } catch (e) {}
+
+  if (apiKey && apiKey.startsWith('gsk_')) {
+    apiKey = null;
+  }
 
   return apiKey;
 }
