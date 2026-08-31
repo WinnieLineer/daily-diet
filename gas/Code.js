@@ -140,7 +140,7 @@ function doGet(e) {
       return logs.map(l => `
         <tr style="border-bottom: 1px solid #E4E4E7;">
           <td style="padding: 10px 8px; font-size: 12px; color: #71717A; white-space: nowrap;">${l.time}</td>
-          <td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">...${l.userId}</td>
+          <td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">👤 ${escapeHtml(l.userId || '用戶')}</td>
           <td style="padding: 10px 8px; font-size: 12px;"><span style="background: #FEF9C3; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: #713F12;">${l.type}</span></td>
           <td style="padding: 10px 8px; font-size: 13px; color: #000000; font-weight: bold;">${escapeHtml(l.input)}</td>
           <td style="padding: 10px 8px; font-size: 12px; color: #2563EB; font-weight: 500;">${escapeHtml(l.aiResult)}</td>
@@ -184,7 +184,7 @@ function doGet(e) {
             <thead>
               <tr>
                 <th>時間</th>
-                <th>用戶</th>
+                <th>用戶名稱</th>
                 <th>類型</th>
                 <th>用戶傳送內容</th>
                 <th>AI 辨識結果</th>
@@ -203,30 +203,27 @@ function doGet(e) {
           }
 
           function renderLogs(logs) {
-            var tbody = document.getElementById('logTableBody');
-            var countSpan = document.getElementById('logCount');
+            const tbody = document.getElementById('logTableBody');
+            const countSpan = document.getElementById('logCount');
             if (!tbody) return;
-
-            countSpan.innerText = '共保留最近 ' + (logs ? logs.length : 0) + ' 筆紀錄';
-
+            countSpan.textContent = '共保留最近 ' + (logs ? logs.length : 0) + ' 筆紀錄';
             if (!logs || logs.length === 0) {
               tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #A1A1AA; font-weight: bold;">尚無對話紀錄，請在 LINE 聊天室發送照片或文字測試！</td></tr>';
               return;
             }
-
-            var html = '';
+            var rows = '';
             for (var i = 0; i < logs.length; i++) {
               var l = logs[i];
-              html += '<tr style="border-bottom: 1px solid #E4E4E7;">' +
+              rows += '<tr style="border-bottom: 1px solid #E4E4E7;">' +
                 '<td style="padding: 10px 8px; font-size: 12px; color: #71717A; white-space: nowrap;">' + l.time + '</td>' +
-                '<td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">...' + l.userId + '</td>' +
+                '<td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">👤 ' + escapeHtml(l.userId || '用戶') + '</td>' +
                 '<td style="padding: 10px 8px; font-size: 12px;"><span style="background: #FEF9C3; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: #713F12;">' + l.type + '</span></td>' +
                 '<td style="padding: 10px 8px; font-size: 13px; color: #000000; font-weight: bold;">' + escapeHtml(l.input) + '</td>' +
                 '<td style="padding: 10px 8px; font-size: 12px; color: #2563EB; font-weight: 500;">' + escapeHtml(l.aiResult) + '</td>' +
                 '<td style="padding: 10px 8px; font-size: 12px; color: #059669; font-weight: 500;">' + escapeHtml(l.output) + '</td>' +
                 '</tr>';
             }
-            tbody.innerHTML = html;
+            tbody.innerHTML = rows;
           }
 
           function refreshLogs() {
@@ -3098,20 +3095,63 @@ function deleteMealFromUserGist(targetMeal, gistId, pat) {
 // 📊 9. 實時日誌持久化與查詢核心 (PropertiesService + Console + Logger)
 // ========================================================
 
-function recordSystemLog(type, userId, input, aiResult, output) {
+function getUserDisplayName(userId, channelAccessToken, props) {
+  if (!userId || userId === 'unknown' || userId === 'default_user') return '訪客';
+  if (!props) props = PropertiesService.getScriptProperties();
+
+  const cacheKey = `USER_NAME_${userId}`;
+  const cachedName = props.getProperty(cacheKey);
+  if (cachedName) return cachedName;
+
+  if (!channelAccessToken) channelAccessToken = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  if (channelAccessToken && typeof userId === 'string' && userId.startsWith('U')) {
+    try {
+      const res = UrlFetchApp.fetch(`https://api.line.me/v2/bot/profile/${userId}`, {
+        headers: { Authorization: `Bearer ${channelAccessToken}` },
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() === 200) {
+        const profile = JSON.parse(res.getContentText());
+        if (profile.displayName) {
+          props.setProperty(cacheKey, profile.displayName);
+          return profile.displayName;
+        }
+      }
+    } catch (e) {
+      console.warn("取得 LINE 用戶名失敗:", e);
+    }
+  }
+  return userId.length > 8 ? `用戶 (${userId.slice(-4)})` : userId;
+}
+
+function recordSystemLog(type, userId, input, aiResult, output, userName) {
   const props = PropertiesService.getScriptProperties();
   const time = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+
+  let displayName = userName;
+  if (!displayName) {
+    displayName = props.getProperty(`USER_NAME_${userId}`);
+    if (!displayName && typeof userId === 'string' && userId.startsWith('U')) {
+      const channelToken = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+      displayName = getUserDisplayName(userId, channelToken, props);
+    }
+  }
+  if (!displayName) {
+    displayName = (userId && userId.length > 8) ? `用戶 (${userId.slice(-4)})` : (userId || '訪客');
+  }
+
   const logItem = {
     time: time,
-    userId: (userId || 'unknown').slice(-6),
+    userId: displayName,
+    rawUserId: (userId || 'unknown').slice(-6),
     type: type,
     input: typeof input === 'object' ? JSON.stringify(input) : String(input || ''),
     aiResult: typeof aiResult === 'object' ? JSON.stringify(aiResult) : String(aiResult || ''),
     output: typeof output === 'object' ? JSON.stringify(output) : String(output || '')
   };
 
-  Logger.log(`[${logItem.time}] [${logItem.type}] ${logItem.input} -> ${logItem.output}`);
-  console.log(`[${logItem.time}] [${logItem.type}] ${logItem.input} -> ${logItem.output}`);
+  Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
+  console.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
   try {
     let recentLogs = [];
@@ -3131,9 +3171,9 @@ function recordSystemLog(type, userId, input, aiResult, output) {
       const ss = SpreadsheetApp.openById(sheetId);
       const sheet = ss.getSheets()[0];
       if (sheet.getLastRow() === 0) {
-        sheet.appendRow(["時間", "用戶ID", "類型", "用戶傳送內容", "AI辨識結果", "回應狀態"]);
+        sheet.appendRow(["時間", "用戶名稱", "用戶ID", "類型", "用戶傳送內容", "AI辨識結果", "回應狀態"]);
       }
-      sheet.appendRow([logItem.time, userId, logItem.type, logItem.input, logItem.aiResult, logItem.output]);
+      sheet.appendRow([logItem.time, displayName, userId, logItem.type, logItem.input, logItem.aiResult, logItem.output]);
     } catch (sheetErr) {
       console.error("寫入 Google Sheet 日誌失敗:", sheetErr);
     }
