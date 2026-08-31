@@ -434,6 +434,7 @@ function doPost(e) {
       else if (event.type === 'message') {
         // 📸 照片辨識
         if (event.message.type === 'image') {
+          sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 25);
           const messageId = event.message.id;
           console.log(`📸 [收到餐點照片] Message ID: ${messageId}`);
           const imageBlob = getLineImageBlob(messageId, CHANNEL_ACCESS_TOKEN);
@@ -686,6 +687,7 @@ function doPost(e) {
             ((userText.includes('身高') || userText.includes('體重')) && (userText.includes('減脂') || userText.includes('增肌') || userText.includes('減重') || userText.includes('維持') || userText.includes('建議')));
 
           if (isGoalUpdate) {
+            sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
             recordSystemLog('體態目標', userId, userText, '計算BMR/TDEE', '發送目標卡片');
             handleGoalSettingWithAI(replyToken, userId, userText, userGistId, GITHUB_PAT, props, LIFF_ID, CHANNEL_ACCESS_TOKEN, GEMINI_API_KEY);
             continue;
@@ -722,6 +724,7 @@ function doPost(e) {
           }
 
           // 飲食文字辨識 / 日常對話
+          sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
           const analysis = parseTextWithGemini(userText, GEMINI_API_KEY);
           if (analysis.is_food === false) {
             recordSystemLog('日常對話', userId, userText, '非食物訊息', analysis.reply || '已回覆');
@@ -1770,6 +1773,26 @@ function replyTextMessage(replyToken, text, accessToken, userId, props) {
     }
   } catch (err) {
     console.error("🚨 [LINE 文字發送失敗]:", err);
+  }
+}
+
+function sendLineLoadingAnimation(userId, accessToken, loadingSeconds) {
+  if (!userId || !accessToken || !userId.startsWith('U')) return;
+  try {
+    UrlFetchApp.fetch("https://api.line.me/v2/bot/chat/loading/start", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      payload: JSON.stringify({
+        chatId: userId,
+        loadingSeconds: loadingSeconds || 20
+      }),
+      muteHttpExceptions: true
+    });
+  } catch (e) {
+    console.warn("發送 Loading 動畫失敗:", e);
   }
 }
 
