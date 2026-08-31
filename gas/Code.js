@@ -752,11 +752,9 @@ function doPost(e) {
 
           // 🎯 1. 查看目前飲食目標 (例如: "目標", "我的目標", "查看目標", "目前目標")
           if (userText === '目標' || userText === '我的目標' || userText === '查看目標' || userText === '目前目標' || userText === '每日目標') {
-            const cal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || 2000;
-            const pro = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || 100;
-            const wat = Number(props.getProperty(`WATER_GOAL_${userId}`)) || 2500;
-            recordSystemLog('查看目標', userId, userText, `${cal}卡 / ${pro}g蛋 / ${wat}ml水`, '發送目前目標卡片');
-            const goalFlex = generateCurrentGoalFlex(userId, { calories: cal, protein: pro, water: wat }, LIFF_ID, userGistId);
+            const goals = getUserGoals(userId, props, userGistId);
+            recordSystemLog('查看目標', userId, userText, `${goals.calories}卡 / ${goals.protein}g蛋 / ${goals.water}ml水`, '發送目前目標卡片');
+            const goalFlex = generateCurrentGoalFlex(userId, goals, LIFF_ID, userGistId);
             replyFlexMessage(replyToken, goalFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
@@ -1124,7 +1122,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
 
 function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, props) {
   const todayStr = getTodayDateString();
-  const allLogs = getTodayLogs(userId, todayStr, props);
+  const allLogs = getTodayLogs(userId, todayStr, props, userGistId);
+  const goals = getUserGoals(userId, props, userGistId);
 
   let totalCal = 0;
   let totalPro = 0;
@@ -1145,9 +1144,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     });
   });
 
-  const calGoal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || Number(props.getProperty('CALORIE_GOAL')) || DEFAULT_CALORIE_GOAL;
-  const proGoal = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || Number(props.getProperty('PROTEIN_GOAL')) || DEFAULT_PROTEIN_GOAL;
-  const watGoal = Number(props.getProperty(`WATER_GOAL_${userId}`)) || Number(props.getProperty('WATER_GOAL')) || DEFAULT_WATER_GOAL;
+  const calGoal = goals.calories;
+  const proGoal = goals.protein;
+  const watGoal = goals.water;
   const remainingCal = Math.max(0, calGoal - totalCal);
   const calPercent = Math.min(100, Math.round((totalCal / calGoal) * 100));
 
@@ -1330,14 +1329,92 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
   }
 }
 
-function getTodayLogs(userId, dateStr, props) {
+function getUserGoals(userId, props, userGistId) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  let cal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || Number(props.getProperty('CALORIE_GOAL'));
+  let pro = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || Number(props.getProperty('PROTEIN_GOAL'));
+  let wat = Number(props.getProperty(`WATER_GOAL_${userId}`)) || Number(props.getProperty('WATER_GOAL'));
+
+  // ☁️ 若尚未在 Properties 儲存目標，主動向 Gist 雲端資料庫拉取 Web 設定
+  if (!cal || !pro || !wat) {
+    const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+    const pat = props.getProperty('GITHUB_PAT');
+    if (gistId && pat) {
+      try {
+        const gistUrl = `https://api.github.com/gists/${gistId}`;
+        const getRes = UrlFetchApp.fetch(gistUrl, {
+          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (getRes.getResponseCode() === 200) {
+          const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+          if (content) {
+            const backupData = JSON.parse(content);
+            if (backupData.settings && Array.isArray(backupData.settings)) {
+              const gCal = backupData.settings.find(s => s.key === 'calorie_goal' || s.key === 'user_calories')?.value;
+              const gPro = backupData.settings.find(s => s.key === 'protein_goal' || s.key === 'user_protein')?.value;
+              const gWat = backupData.settings.find(s => s.key === 'water_goal' || s.key === 'user_water')?.value;
+              if (gCal && !cal) { cal = Number(gCal); props.setProperty(`CALORIE_GOAL_${userId}`, String(cal)); }
+              if (gPro && !pro) { pro = Number(gPro); props.setProperty(`PROTEIN_GOAL_${userId}`, String(pro)); }
+              if (gWat && !wat) { wat = Number(gWat); props.setProperty(`WATER_GOAL_${userId}`, String(wat)); }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("從 Gist 讀取目標失敗:", e);
+      }
+    }
+  }
+
+  return {
+    calories: cal || DEFAULT_CALORIE_GOAL,
+    protein: pro || DEFAULT_PROTEIN_GOAL,
+    water: wat || DEFAULT_WATER_GOAL
+  };
+}
+
+function getTodayLogs(userId, dateStr, props, userGistId) {
+  if (!props) props = PropertiesService.getScriptProperties();
   const todayKey = `DIET_LOGS_${userId}_${dateStr}`;
+  let localLogs = [];
   try {
     const raw = props.getProperty(todayKey);
-    return raw ? JSON.parse(raw) : [];
+    if (raw) localLogs = JSON.parse(raw);
   } catch (e) {
-    return [];
+    localLogs = [];
   }
+
+  // ☁️ 若 Properties 內無今日紀錄 (例如用戶都在 Web 記錄)，向 Gist 查詢今日紀錄回填
+  if (localLogs.length === 0) {
+    const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+    const pat = props.getProperty('GITHUB_PAT');
+    if (gistId && pat) {
+      try {
+        const gistUrl = `https://api.github.com/gists/${gistId}`;
+        const getRes = UrlFetchApp.fetch(gistUrl, {
+          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (getRes.getResponseCode() === 200) {
+          const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+          if (content) {
+            const backupData = JSON.parse(content);
+            if (backupData.dietLogs && Array.isArray(backupData.dietLogs)) {
+              const todayFromGist = backupData.dietLogs.filter(l => l.date === dateStr);
+              if (todayFromGist.length > 0) {
+                props.setProperty(todayKey, JSON.stringify(todayFromGist));
+                return todayFromGist;
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("從 Gist 拉取今日紀錄失敗:", e);
+      }
+    }
+  }
+
+  return localLogs;
 }
 
 function getTodayDateString() {
@@ -2238,7 +2315,7 @@ function syncGoalsToUserGist(goals, gistId, pat) {
 
 function generateMealManagementFlex(userId, liffId, userGistId, props) {
   const todayStr = getTodayDateString();
-  const allLogs = getTodayLogs(userId, todayStr, props);
+  const allLogs = getTodayLogs(userId, todayStr, props, userGistId);
   const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
   let totalCal = 0;
