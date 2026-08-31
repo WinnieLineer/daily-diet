@@ -287,24 +287,34 @@ function doPost(e) {
     const action = e.parameter?.action || data?.action;
     const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
 
-    // 🌟 1. Web App 直通 Gemini AI 辨識 API (提供 Web App 與 LINE 共享 Gemini 額度)
-    if (action === 'analyzeMeal' || action === 'analyzeFoodImage') {
-      const base64 = data?.image || data?.base64Image || e.parameter?.image;
-      const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    if (action === 'analyzeText' || action === 'analyzeFoodText') {
-      const text = data?.text || data?.textInstruction || e.parameter?.text;
-      const result = parseTextWithGeminiFull(text, GEMINI_API_KEY, data?.context, data?.language);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
-        .setMimeType(ContentService.MimeType.JSON);
-    }
-    if (action === 'completeText' || action === 'getPandaAdvice') {
-      const prompt = data?.prompt || e.parameter?.prompt;
-      const result = generateGeminiText(prompt, GEMINI_API_KEY);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))
-        .setMimeType(ContentService.MimeType.JSON);
+    // 🌟 1. Web App 專屬安全通道：Gemini AI 辨識 API (含防盜刷、時戳驗證與頻率防護)
+    if (action === 'analyzeMeal' || action === 'analyzeFoodImage' || action === 'analyzeText' || action === 'analyzeFoodText' || action === 'completeText' || action === 'getPandaAdvice') {
+      const sec = verifyWebAIRequest(data, e);
+      if (!sec.valid) {
+        console.warn(`🚨 [Web AI 安全攔截] ${sec.reason}`);
+        recordSystemLog('安全攔截', 'web_client', 'Web AI 盜刷防護', sec.reason, '已拒絕處理');
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: `Forbidden: ${sec.reason}` }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      if (action === 'analyzeMeal' || action === 'analyzeFoodImage') {
+        const base64 = data?.image || data?.base64Image || e.parameter?.image;
+        const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language);
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      if (action === 'analyzeText' || action === 'analyzeFoodText') {
+        const text = data?.text || data?.textInstruction || e.parameter?.text;
+        const result = parseTextWithGeminiFull(text, GEMINI_API_KEY, data?.context, data?.language);
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      if (action === 'completeText' || action === 'getPandaAdvice') {
+        const prompt = data?.prompt || e.parameter?.prompt;
+        const result = generateGeminiText(prompt, GEMINI_API_KEY);
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
     }
 
     // 🛡️ LINE Webhook 事件安全驗證
@@ -3687,6 +3697,49 @@ function generateGeminiText(prompt, apiKey) {
   }
   return '繼續保持健康飲控節奏喔！🐼✨';
 }
+
+// ========================================================
+// 🛡️ 13. Web App 專屬防盜刷安全驗證 (時戳防重放 + 專屬權杖 + 頻率流控)
+// ========================================================
+
+function verifyWebAIRequest(data, e) {
+  const WEB_AI_SECRET = "DD_WEB_AI_SECURE_KEY_2026";
+  const client = data?.client || e?.parameter?.client;
+  const timestamp = Number(data?.timestamp || e?.parameter?.timestamp);
+  const nonce = data?.nonce || e?.parameter?.nonce;
+  const appToken = data?.appToken || e?.parameter?.appToken;
+
+  if (client !== 'daily-diet-web' || !timestamp || !nonce || !appToken) {
+    return { valid: false, reason: '缺少專屬授權權杖 (Missing Client Token)' };
+  }
+
+  // 1. 防重放攻擊：時戳需在 5 分鐘內
+  const now = Date.now();
+  if (Math.abs(now - timestamp) > 300000) {
+    return { valid: false, reason: '請求權杖已過期 (Expired Timestamp)' };
+  }
+
+  // 2. 驗證防偽簽章
+  const signatureRaw = `DD_AI_${timestamp}_${nonce}_${WEB_AI_SECRET}`;
+  const expectedToken = Utilities.base64Encode(signatureRaw).substring(0, 32);
+  if (appToken !== expectedToken) {
+    return { valid: false, reason: '防偽簽章校驗失敗 (Invalid Signature)' };
+  }
+
+  // 3. 頻率流控限制 (Rate Limiting: 60 秒內最多 30 次)
+  try {
+    const cache = CacheService.getScriptCache();
+    const rateKey = `RATE_AI_${String(nonce).substring(0, 4)}`;
+    const currentCount = Number(cache.get(rateKey) || 0);
+    if (currentCount > 30) {
+      return { valid: false, reason: '調用頻率過高，請稍候 (Rate Limit Exceeded)' };
+    }
+    cache.put(rateKey, String(currentCount + 1), 60);
+  } catch (err) {}
+
+  return { valid: true };
+}
+
 
 
 

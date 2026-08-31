@@ -85,15 +85,33 @@ async function callGeminiDirect(payload, apiKey) {
   throw lastError || new Error("All Gemini models exhausted");
 }
 
+const WEB_AI_SECRET = "DD_WEB_AI_SECURE_KEY_2026";
+
+function createWebAIPayload(data) {
+  const timestamp = Date.now();
+  const nonce = Math.random().toString(36).substring(2, 10);
+  const signatureRaw = `DD_AI_${timestamp}_${nonce}_${WEB_AI_SECRET}`;
+  const appToken = btoa(signatureRaw).substring(0, 32);
+
+  return {
+    ...data,
+    client: 'daily-diet-web',
+    timestamp,
+    nonce,
+    appToken
+  };
+}
+
 /**
  * Fallback to GAS Server Proxy (which holds master Gemini quota)
  */
 async function callGasProxy(action, data) {
   console.log(`📡 [AI Service] Routing to GAS Backend Proxy for action: ${action}`);
+  const payload = createWebAIPayload(data);
   const res = await fetch(`${GAS_API_URL}?action=${action}`, {
     method: 'POST',
     headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-    body: JSON.stringify(data)
+    body: JSON.stringify(payload)
   });
 
   if (!res.ok) {
