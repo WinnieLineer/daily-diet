@@ -31,6 +31,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show310 = isNewer('3.1.0', lastSeenVersion);
   const show300 = isNewer('3.0.0', lastSeenVersion);
   const show250 = isNewer('2.5.0', lastSeenVersion);
   const show242 = isNewer('2.4.2', lastSeenVersion);
@@ -47,7 +48,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
   // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
-  const isBugFixOnly = !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -89,6 +90,30 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show310 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v310_header')}</div>
+                  
+                  <FeatureItem 
+                    icon={Cloud}
+                    title={t('whatsnew_v310_sync_title')}
+                    description={t('whatsnew_v310_sync_desc')}
+                    color="bg-amber-300"
+                  />
+                  <FeatureItem 
+                    icon={Zap}
+                    title={t('whatsnew_v310_gemini_title')}
+                    description={t('whatsnew_v310_gemini_desc')}
+                    color="bg-rose-300"
+                  />
+                  <FeatureItem 
+                    icon={ShieldCheck}
+                    title={t('whatsnew_v310_pwa_title')}
+                    description={t('whatsnew_v310_pwa_desc')}
+                    color="bg-cyan-300"
+                  />
+                </div>
+              )}
               {show300 && (
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v300_header')}</div>
