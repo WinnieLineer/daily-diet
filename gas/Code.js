@@ -30,6 +30,13 @@ function doGet(e) {
       props.setProperty(`USER_GIST_${userId}`, incomingGist);
       console.log(`☁️ [Web 端連動] 已自動將用戶 ${userId} 綁定 Gist ID: ${incomingGist}`);
     }
+    const incomingCal = Number(e?.parameter?.cal);
+    const incomingPro = Number(e?.parameter?.pro);
+    const incomingWat = Number(e?.parameter?.wat);
+    if (incomingCal) props.setProperty(`CALORIE_GOAL_${userId}`, String(incomingCal));
+    if (incomingPro) props.setProperty(`PROTEIN_GOAL_${userId}`, String(incomingPro));
+    if (incomingWat) props.setProperty(`WATER_GOAL_${userId}`, String(incomingWat));
+
     const todayStr = getTodayDateString();
     const todayLogs = getTodayLogs(userId, todayStr, props);
     const gistId = getOrCreateUserGist(userId, pat, props);

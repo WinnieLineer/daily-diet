@@ -764,7 +764,20 @@ function App() {
       if (effectiveUserId) {
         try {
           const localGist = localStorage.getItem('gist_backup_id') || query.gistId || '';
-          const res = await fetch(`${GAS_URL}?action=getLogs&userId=${encodeURIComponent(effectiveUserId)}${localGist ? `&gistId=${encodeURIComponent(localGist)}` : ''}`);
+          const localCal = (await db.settings.get('calorie_goal'))?.value;
+          const localPro = (await db.settings.get('protein_goal'))?.value;
+          const localWat = (await db.settings.get('water_goal'))?.value;
+
+          const queryParams = new URLSearchParams({
+            action: 'getLogs',
+            userId: effectiveUserId
+          });
+          if (localGist) queryParams.append('gistId', localGist);
+          if (localCal) queryParams.append('cal', localCal);
+          if (localPro) queryParams.append('pro', localPro);
+          if (localWat) queryParams.append('wat', localWat);
+
+          const res = await fetch(`${GAS_URL}?${queryParams.toString()}`);
           if (res.ok) {
             const gasData = await res.json();
             if (gasData.gistId) {
