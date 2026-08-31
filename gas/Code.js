@@ -352,9 +352,9 @@ function doPost(e) {
 
       // 🌟 Case 0: 首次加入好友 (Follow 事件)
       if (event.type === 'follow') {
-        recordSystemLog('新用戶加入', userId, '加入好友', '', '發送歡迎詞與免責聲明');
-        const welcomeText = `🐼 歡迎使用 Daily Diet 飲食管理助手！\n\n我是您的專屬 AI 熊貓教練，隨時傳送【餐點照片】或【文字】（例如：「午餐 雞胸肉便當 600卡 35蛋」），我會自動為您計算熱量與營養素！\n\n💡 免責聲明：\n「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」`;
-        replyTextMessage(replyToken, welcomeText, CHANNEL_ACCESS_TOKEN, userId, props);
+        recordSystemLog('新用戶加入', userId, '加入好友', '', '發送精美圖文歡迎卡片與免責聲明');
+        const welcomeFlex = generateWelcomeFlex(userId, LIFF_ID, userGistId);
+        replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
         continue;
       }
 
@@ -532,11 +532,11 @@ function doPost(e) {
           const userText = event.message.text.trim();
           console.log(`💬 [收到用戶文字] "${userText}"`);
 
-          // 💡 說明 / 教學 / 免責聲明
-          if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明') {
-            recordSystemLog('使用說明', userId, userText, '', '發送使用說明與免責聲明');
-            const helpText = `🐼 Daily Diet 使用教學：\n\n1. 📸 拍照記錄：直接傳送餐點照片，AI 自動辨識營養熱量。\n2. ✍️ 打字記錄：直接傳送「雞胸肉沙拉 350卡 30蛋 500水」。\n3. 📊 今日總結：輸入「今日」或「總結」查看進度。\n4. 🎯 目標設定：輸入「改目標 175cm 70kg 男 減脂」。\n5. 🗑️ 刪除紀錄：輸入「刪除最後一筆」或「管理」。\n\n💡 免責聲明：\n「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」`;
-            replyTextMessage(replyToken, helpText, CHANNEL_ACCESS_TOKEN, userId, props);
+          // 💡 說明 / 教學 / 歡迎 / 免責聲明
+          if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎') {
+            recordSystemLog('使用說明', userId, userText, '', '發送精美圖文歡迎卡片與免責聲明');
+            const welcomeFlex = generateWelcomeFlex(userId, LIFF_ID, userGistId);
+            replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
@@ -2731,6 +2731,185 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
     contents: {
       type: "carousel",
       contents: bubbles
+    }
+  };
+}
+
+function generateWelcomeFlex(userId, liffId, userGistId) {
+  const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
+  const heroImageUrl = "https://raw.githubusercontent.com/WinnieLineer/daily-diet/main/public/cover-photo.jpg";
+
+  return {
+    type: "flex",
+    altText: "🐼 歡迎使用 Daily Diet 飲食管理助手！",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      hero: {
+        type: "image",
+        url: heroImageUrl,
+        size: "full",
+        aspectRatio: "20:11",
+        aspectMode: "cover"
+      },
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: "v3.0 旗艦版", color: "#A1A1AA", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "✨ 您的個人專屬 AI 飲食記錄教練",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "📸", size: "sm", flex: 0 },
+                  { type: "text", text: "直接傳照片：AI 視覺秒算熱量與營養", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "✍️", size: "sm", flex: 0 },
+                  { type: "text", text: "文字記錄：如「雞胸肉沙拉 350卡 30蛋」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "💧", size: "sm", flex: 0 },
+                  { type: "text", text: "快速補水：輸入「喝水」或「+500水」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "📊", size: "sm", flex: 0 },
+                  { type: "text", text: "進度總結：輸入「今日」、「目標」或「管理」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF9C3",
+            cornerRadius: "10px",
+            paddingAll: "12px",
+            borderColor: "#FACC15",
+            borderWidth: "1.5px",
+            spacing: "xs",
+            contents: [
+              {
+                type: "text",
+                text: "☁️ Web 舊用戶無縫連動 Gist ID",
+                weight: "bold",
+                size: "xs",
+                color: "#854D0E"
+              },
+              {
+                type: "text",
+                text: "若您原先在 Web 端有紀錄，請至 Web「設定 ➔ 雲端備份」複製 Gist ID，在此聊天室輸入：",
+                size: "xxs",
+                color: "#713F12",
+                wrap: true
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#FFFFFF",
+                cornerRadius: "6px",
+                paddingAll: "6px",
+                margin: "xs",
+                contents: [
+                  { type: "text", text: "👉 綁定 您的GIST_ID", size: "xs", color: "#000000", weight: "bold" }
+                ]
+              },
+              {
+                type: "text",
+                text: "即可將歷史紀錄與體態目標 100% 雙向同步！",
+                size: "xxs",
+                color: "#713F12",
+                wrap: true
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: "💡 免責聲明：本服務提供之熱量與營養素估算僅供個人日常健康管理參考，不具醫療或專業處方效益。特殊體質請諮詢醫師或營養師。",
+            size: "xxs",
+            color: "#A1A1AA",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "uri",
+              label: "📱 開啟個人飲食日記 (Web App)",
+              uri: appTargetUrl
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FEF08A",
+            action: {
+              type: "postback",
+              label: "☁️ 填入「綁定 Gist」指令",
+              data: JSON.stringify({ action: 'fillGist' }),
+              inputOption: "openKeyboard",
+              fillInText: "綁定 "
+            }
+          }
+        ]
+      }
     }
   };
 }
