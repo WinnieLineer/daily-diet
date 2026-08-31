@@ -157,117 +157,8 @@ function doGet(e) {
   // 6. 實時運作日誌儀表板 (直接在瀏覽器查看所有用戶傳入的訊息與 AI 回應)
   if (action === 'logs' || action === 'viewLogs' || action === 'log') {
     const initialLogs = getRecentLogsData();
-
-    const escapeHtml = (str) => String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-
-    const generateRows = (logs) => {
-      if (!logs || logs.length === 0) {
-        return '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #A1A1AA; font-weight: bold;">尚無對話紀錄，請在 LINE 聊天室發送照片或文字測試！</td></tr>';
-      }
-      return logs.map(l => `
-        <tr style="border-bottom: 1px solid #E4E4E7;">
-          <td style="padding: 10px 8px; font-size: 12px; color: #71717A; white-space: nowrap;">${l.time}</td>
-          <td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">👤 ${escapeHtml(l.userId || '用戶')}</td>
-          <td style="padding: 10px 8px; font-size: 12px;"><span style="background: #FEF9C3; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: #713F12;">${l.type}</span></td>
-          <td style="padding: 10px 8px; font-size: 13px; color: #000000; font-weight: bold;">${escapeHtml(l.input)}</td>
-          <td style="padding: 10px 8px; font-size: 12px; color: #2563EB; font-weight: 500;">${escapeHtml(l.aiResult)}</td>
-          <td style="padding: 10px 8px; font-size: 12px; color: #059669; font-weight: 500;">${escapeHtml(l.output)}</td>
-        </tr>
-      `).join('');
-    };
-
-    const html = `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1">
-        <title>🐼 Daily Diet 實時對話與運作日誌</title>
-        <style>
-          body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #F4F4F5; margin: 0; padding: 20px; }
-          .container { max-width: 1100px; margin: 0 auto; background: #FFFFFF; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.06); padding: 24px; border: 2px solid #000000; }
-          h1 { margin: 0; font-size: 20px; color: #000000; display: flex; align-items: center; gap: 10px; }
-          .badge { background: #FDE047; color: #000000; padding: 4px 10px; border-radius: 6px; font-size: 12px; font-weight: bold; border: 1.5px solid #000; }
-          .btn-refresh { background: #000000; color: #FFFFFF; border: none; padding: 6px 14px; border-radius: 8px; font-weight: bold; font-size: 12px; cursor: pointer; transition: opacity 0.2s; }
-          .btn-refresh:active { opacity: 0.8; }
-          table { width: 100%; border-collapse: collapse; text-align: left; margin-top: 18px; }
-          th { background: #000000; color: #FFFFFF; padding: 12px 8px; font-size: 12px; font-weight: bold; }
-          th:first-child { border-top-left-radius: 8px; }
-          th:last-child { border-top-right-radius: 8px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px;">
-            <h1>🐼 Daily Diet 實時對話與運作日誌 <span class="badge" id="statusBadge">⚡ 即時連線中</span></h1>
-            <div style="display: flex; align-items: center; gap: 10px;">
-              <span style="font-size: 13px; color: #71717A; font-weight: 500;" id="logCount">共保留最近 ${initialLogs.length} 筆紀錄</span>
-              <a href="https://winnielineer.github.io/daily-diet/privacy.html" target="_blank" style="background: #EFF6FF; color: #1D4ED8; text-decoration: none; padding: 6px 12px; border-radius: 8px; font-weight: bold; font-size: 12px; border: 1.5px solid #BFDBFE;">🛡️ 隱私政策</a>
-              <button class="btn-refresh" onclick="refreshLogs()">🔄 手動整理</button>
-            </div>
-          </div>
-
-          <table>
-            <thead>
-              <tr>
-                <th>時間</th>
-                <th>用戶名稱</th>
-                <th>類型</th>
-                <th>用戶傳送內容</th>
-                <th>AI 辨識結果</th>
-                <th>回應與狀態</th>
-              </tr>
-            </thead>
-            <tbody id="logTableBody">
-              ${generateRows(initialLogs)}
-            </tbody>
-          </table>
-        </div>
-
-        <script>
-          function escapeHtml(str) {
-            return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
-          }
-
-          function renderLogs(logs) {
-            const tbody = document.getElementById('logTableBody');
-            const countSpan = document.getElementById('logCount');
-            if (!tbody) return;
-            countSpan.textContent = '共保留最近 ' + (logs ? logs.length : 0) + ' 筆紀錄';
-            if (!logs || logs.length === 0) {
-              tbody.innerHTML = '<tr><td colspan="6" style="padding: 30px; text-align: center; color: #A1A1AA; font-weight: bold;">尚無對話紀錄，請在 LINE 聊天室發送照片或文字測試！</td></tr>';
-              return;
-            }
-            var rows = '';
-            for (var i = 0; i < logs.length; i++) {
-              var l = logs[i];
-              rows += '<tr style="border-bottom: 1px solid #E4E4E7;">' +
-                '<td style="padding: 10px 8px; font-size: 12px; color: #71717A; white-space: nowrap;">' + l.time + '</td>' +
-                '<td style="padding: 10px 8px; font-size: 12px; font-weight: bold; color: #18181B;">👤 ' + escapeHtml(l.userId || '用戶') + '</td>' +
-                '<td style="padding: 10px 8px; font-size: 12px;"><span style="background: #FEF9C3; padding: 3px 8px; border-radius: 6px; font-weight: bold; color: #713F12;">' + l.type + '</span></td>' +
-                '<td style="padding: 10px 8px; font-size: 13px; color: #000000; font-weight: bold;">' + escapeHtml(l.input) + '</td>' +
-                '<td style="padding: 10px 8px; font-size: 12px; color: #2563EB; font-weight: 500;">' + escapeHtml(l.aiResult) + '</td>' +
-                '<td style="padding: 10px 8px; font-size: 12px; color: #059669; font-weight: 500;">' + escapeHtml(l.output) + '</td>' +
-                '</tr>';
-            }
-            tbody.innerHTML = rows;
-          }
-
-          function refreshLogs() {
-            if (typeof google !== 'undefined' && google.script && google.script.run) {
-              google.script.run.withSuccessHandler(renderLogs).getRecentLogsData();
-            }
-          }
-
-          // 每 3 秒在背景靜默拉取最新日誌，絕不重新載入整個網頁或閃爍
-          setInterval(refreshLogs, 3000);
-        </script>
-      </body>
-      </html>
-    `;
-
-    return HtmlService.createHtmlOutput(html)
-      .setTitle("🐼 Daily Diet 實時運作日誌")
+    return HtmlService.createHtmlOutput(generateDashboardHtml(initialLogs))
+      .setTitle("🐼 Daily Diet 實時對話與運作日誌")
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
@@ -3932,6 +3823,616 @@ function verifyWebAIRequest(data, e) {
 
   return { valid: true };
 }
+
+// ========================================================
+// 📊 14. 實時運作日誌儀表板 UI (Neo-Modern Glass & Telemetry Dashboard)
+// ========================================================
+
+function generateDashboardHtml(initialLogs) {
+  const initialJson = JSON.stringify(initialLogs || []).replace(/</g, '\\u003c');
+
+  return `<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <title>🐼 Daily Diet 實時對話與運作日誌儀表板</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800;900&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@400;500;700;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #09090B;
+      --card-bg: rgba(24, 24, 27, 0.85);
+      --card-border: #27272A;
+      --text: #F4F4F5;
+      --text-muted: #A1A1AA;
+      --accent: #FDE047;
+      --accent-glow: rgba(253, 224, 71, 0.25);
+      --rose: #FB7185;
+      --emerald: #34D399;
+      --sky: #38BDF8;
+      --violet: #A78BFA;
+      --amber: #FBBF24;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Plus Jakarta Sans', 'Noto Sans TC', -apple-system, sans-serif;
+      background-color: var(--bg);
+      background-image: 
+        radial-gradient(circle at 15% 15%, rgba(253, 224, 71, 0.05) 0%, transparent 40%),
+        radial-gradient(circle at 85% 85%, rgba(56, 189, 248, 0.04) 0%, transparent 40%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .app-container {
+      max-width: 1380px;
+      margin: 0 auto;
+    }
+
+    /* 頂部 Header */
+    .header-panel {
+      background: var(--card-bg);
+      backdrop-filter: blur(16px);
+      border: 2px solid var(--card-border);
+      border-radius: 20px;
+      padding: 20px 24px;
+      margin-bottom: 16px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .brand-logo {
+      font-size: 32px;
+      background: #18181B;
+      border: 2px solid #3F3F46;
+      width: 52px;
+      height: 52px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+    }
+    .brand-title {
+      font-size: 20px;
+      font-weight: 900;
+      letter-spacing: -0.5px;
+      color: #FFFFFF;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .brand-subtitle {
+      font-size: 12px;
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    /* 狀態徽章與按鈕 */
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(52, 211, 153, 0.12);
+      color: var(--emerald);
+      border: 1.5px solid rgba(52, 211, 153, 0.3);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+    .live-dot {
+      width: 8px;
+      height: 8px;
+      background: var(--emerald);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--emerald);
+      animation: pulse 1.8s infinite;
+    }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(0.85); }
+    }
+
+    .btn-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+    .btn {
+      background: #27272A;
+      color: #FFFFFF;
+      border: 1.5px solid #3F3F46;
+      padding: 8px 16px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 700;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.15s ease;
+      text-decoration: none;
+    }
+    .btn:hover {
+      background: #3F3F46;
+      border-color: #52525B;
+      transform: translateY(-1px);
+    }
+    .btn:active { transform: translateY(0); }
+    .btn-primary {
+      background: var(--accent);
+      color: #000000;
+      border-color: var(--accent);
+    }
+    .btn-primary:hover {
+      background: #FACC15;
+      border-color: #FACC15;
+    }
+
+    /* 📊 遙測統計卡片 Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+      gap: 12px;
+      margin-bottom: 16px;
+    }
+    .metric-card {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 16px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      backdrop-filter: blur(12px);
+      box-shadow: 0 4px 16px rgba(0,0,0,0.2);
+    }
+    .metric-label {
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .metric-val {
+      font-size: 24px;
+      font-weight: 900;
+      font-family: 'JetBrains Mono', monospace;
+      color: #FFFFFF;
+    }
+
+    /* 🔍 搜尋與篩選工具列 */
+    .toolbar-panel {
+      background: var(--card-bg);
+      border: 1.5px solid var(--card-border);
+      border-radius: 16px;
+      padding: 14px 18px;
+      margin-bottom: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    .search-box {
+      flex: 1;
+      min-width: 240px;
+      position: relative;
+    }
+    .search-input {
+      width: 100%;
+      background: #18181B;
+      border: 1.5px solid #3F3F46;
+      border-radius: 12px;
+      padding: 10px 14px 10px 38px;
+      color: #FFFFFF;
+      font-size: 13px;
+      font-weight: 600;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px var(--accent-glow);
+    }
+    .search-icon {
+      position: absolute;
+      left: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 14px;
+      color: #71717A;
+    }
+
+    .filter-pills {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow-x: auto;
+      no-scrollbar: true;
+    }
+    .pill-btn {
+      background: #18181B;
+      border: 1px solid #3F3F46;
+      color: var(--text-muted);
+      padding: 6px 12px;
+      border-radius: 999px;
+      font-size: 11px;
+      font-weight: 700;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all 0.15s;
+    }
+    .pill-btn:hover { background: #27272A; color: #FFFFFF; }
+    .pill-btn.active {
+      background: #FFFFFF;
+      color: #000000;
+      border-color: #FFFFFF;
+      font-weight: 900;
+    }
+
+    /* 📋 表格樣式 */
+    .table-container {
+      background: var(--card-bg);
+      border: 2px solid var(--card-border);
+      border-radius: 20px;
+      overflow: hidden;
+      box-shadow: 0 10px 30px rgba(0,0,0,0.4);
+      backdrop-filter: blur(16px);
+    }
+    .log-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+    }
+    .log-table th {
+      background: #18181B;
+      color: var(--text-muted);
+      font-size: 11px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 14px 16px;
+      border-bottom: 1.5px solid var(--card-border);
+    }
+    .log-table td {
+      padding: 14px 16px;
+      font-size: 13px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+      vertical-align: middle;
+    }
+    .log-table tr:hover td {
+      background: rgba(255, 255, 255, 0.025);
+    }
+
+    /* 標籤徽章 */
+    .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 8px;
+      border-radius: 8px;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: -0.2px;
+      white-space: nowrap;
+    }
+    .tag-photo { background: rgba(167, 139, 250, 0.15); color: #C4B5FD; border: 1px solid rgba(167, 139, 250, 0.3); }
+    .tag-text { background: rgba(56, 189, 248, 0.15); color: #7DD3FC; border: 1px solid rgba(56, 189, 248, 0.3); }
+    .tag-goal { background: rgba(251, 191, 36, 0.15); color: #FDE68A; border: 1px solid rgba(251, 191, 36, 0.3); }
+    .tag-sec { background: rgba(251, 113, 133, 0.15); color: #FDA4AF; border: 1px solid rgba(251, 113, 133, 0.3); }
+    .tag-sync { background: rgba(52, 211, 153, 0.15); color: #6EE7B7; border: 1px solid rgba(52, 211, 153, 0.3); }
+    .tag-mgmt { background: rgba(244, 244, 245, 0.1); color: #E4E4E7; border: 1px solid rgba(244, 244, 245, 0.2); }
+
+    .time-cell {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      color: var(--text-muted);
+      white-space: nowrap;
+    }
+    .user-cell {
+      font-weight: 700;
+      color: #FFFFFF;
+      white-space: nowrap;
+    }
+    .input-cell {
+      color: #F4F4F5;
+      font-weight: 600;
+      word-break: break-word;
+      max-width: 320px;
+    }
+    .ai-cell {
+      color: var(--sky);
+      font-weight: 500;
+      word-break: break-word;
+      max-width: 300px;
+    }
+    .output-cell {
+      color: var(--emerald);
+      font-weight: 500;
+      word-break: break-word;
+    }
+
+    .empty-state {
+      padding: 60px 20px;
+      text-align: center;
+      color: var(--text-muted);
+    }
+    .empty-state-icon { font-size: 40px; margin-bottom: 10px; }
+
+    /* Footer */
+    .footer-bar {
+      margin-top: 16px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 12px;
+      color: #71717A;
+      font-weight: 600;
+      padding: 0 4px;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    @media (max-width: 768px) {
+      body { padding: 10px; }
+      .header-panel { padding: 16px; }
+      .brand-title { font-size: 17px; }
+      .metrics-grid { grid-template-columns: repeat(2, 1fr); }
+      .log-table th:nth-child(5), .log-table td:nth-child(5) { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <!-- 頂部面板 -->
+    <header class="header-panel">
+      <div class="brand">
+        <div class="brand-logo">🐼</div>
+        <div>
+          <div class="brand-title">
+            DAILY DIET 實時對話與運作日誌
+            <span class="status-badge"><span class="live-dot"></span> LIVE</span>
+          </div>
+          <div class="brand-subtitle">Gemini 多模態視覺辨識 · Gist 雙向同步 · 防盜刷即時遙測</div>
+        </div>
+      </div>
+      <div class="btn-group">
+        <button class="btn btn-primary" onclick="triggerManualRefresh()">🔄 立即刷新</button>
+        <button class="btn" id="toggleAutoBtn" onclick="toggleAutoRefresh()">⏸️ 暫停輪詢</button>
+        <a href="https://winnielineer.github.io/daily-diet/privacy.html" target="_blank" class="btn">🛡️ 隱私政策</a>
+      </div>
+    </header>
+
+    <!-- 📊 統計指標卡片 -->
+    <div class="metrics-grid">
+      <div class="metric-card">
+        <div class="metric-label"><span>總請求數 (Total)</span><span>📦</span></div>
+        <div class="metric-val" id="metricTotal">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label"><span>📸 照片視覺辨識</span><span style="color:var(--violet);">Vision</span></div>
+        <div class="metric-val" id="metricPhoto" style="color:var(--violet);">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label"><span>💬 文字與記餐</span><span style="color:var(--sky);">Text</span></div>
+        <div class="metric-val" id="metricText" style="color:var(--sky);">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label"><span>🎯 目標與同步</span><span style="color:var(--amber);">Sync</span></div>
+        <div class="metric-val" id="metricSync" style="color:var(--amber);">0</div>
+      </div>
+      <div class="metric-card">
+        <div class="metric-label"><span>🛡️ 安全防禦阻擋</span><span style="color:var(--rose);">Shield</span></div>
+        <div class="metric-val" id="metricSec" style="color:var(--rose);">0</div>
+      </div>
+    </div>
+
+    <!-- 🔍 搜尋與分類篩選工具列 -->
+    <div class="toolbar-panel">
+      <div class="search-box">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="searchInput" class="search-input" placeholder="搜尋用戶名稱、輸入文字、辨識結果..." oninput="handleSearch()">
+      </div>
+      <div class="filter-pills">
+        <button class="pill-btn active" data-filter="all" onclick="setFilter('all', this)">全部紀錄</button>
+        <button class="pill-btn" data-filter="photo" onclick="setFilter('photo', this)">📸 照片辨識</button>
+        <button class="pill-btn" data-filter="text" onclick="setFilter('text', this)">💬 文字紀錄</button>
+        <button class="pill-btn" data-filter="goal" onclick="setFilter('goal', this)">🎯 體態目標</button>
+        <button class="pill-btn" data-filter="sync" onclick="setFilter('sync', this)">⚡ Web同步</button>
+        <button class="pill-btn" data-filter="sec" onclick="setFilter('sec', this)">🛡️ 安全攔截</button>
+      </div>
+    </div>
+
+    <!-- 📋 日誌主表格 -->
+    <div class="table-container">
+      <table class="log-table">
+        <thead>
+          <tr>
+            <th style="width: 140px;">時間</th>
+            <th style="width: 130px;">用戶</th>
+            <th style="width: 120px;">操作類型</th>
+            <th>用戶傳送內容</th>
+            <th>AI 辨識結果</th>
+            <th>處理與回應狀態</th>
+          </tr>
+        </thead>
+        <tbody id="logTableBody"></tbody>
+      </table>
+    </div>
+
+    <!-- 底部資訊欄 -->
+    <div class="footer-bar">
+      <div>最後更新時間：<span id="lastUpdatedTime" style="font-family:'JetBrains Mono'; color:#FFFFFF;">--:--:--</span> (每 3 秒自動更新)</div>
+      <div>Daily Diet v3.1 Engine · Google Apps Script 雲端架構</div>
+    </div>
+  </div>
+
+  <script>
+    let allLogs = ${initialJson};
+    let currentFilter = 'all';
+    let searchQuery = '';
+    let autoRefreshActive = true;
+    let refreshTimer = null;
+
+    function escapeHtml(str) {
+      return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+
+    function getBadgeClass(type) {
+      if (!type) return 'tag-mgmt';
+      if (type.includes('照片') || type.includes('圖片')) return 'tag-photo';
+      if (type.includes('文字') || type.includes('對話')) return 'tag-text';
+      if (type.includes('目標') || type.includes('體態')) return 'tag-goal';
+      if (type.includes('安全') || type.includes('攔截') || type.includes('防盜刷')) return 'tag-sec';
+      if (type.includes('Web') || type.includes('同步') || type.includes('常用')) return 'tag-sync';
+      return 'tag-mgmt';
+    }
+
+    function updateMetrics(logs) {
+      const list = logs || [];
+      document.getElementById('metricTotal').textContent = list.length;
+      
+      let photo = 0, text = 0, sync = 0, sec = 0;
+      list.forEach(l => {
+        const t = l.type || '';
+        if (t.includes('照片') || t.includes('圖片')) photo++;
+        else if (t.includes('文字') || t.includes('對話')) text++;
+        else if (t.includes('目標') || t.includes('體態') || t.includes('Web') || t.includes('常用') || t.includes('同步')) sync++;
+        else if (t.includes('安全') || t.includes('攔截') || t.includes('防盜刷') || t.includes('失敗')) sec++;
+      });
+
+      document.getElementById('metricPhoto').textContent = photo;
+      document.getElementById('metricText').textContent = text;
+      document.getElementById('metricSync').textContent = sync;
+      document.getElementById('metricSec').textContent = sec;
+    }
+
+    function renderTable() {
+      const tbody = document.getElementById('logTableBody');
+      if (!tbody) return;
+
+      const q = searchQuery.toLowerCase().trim();
+      const filtered = allLogs.filter(item => {
+        // 類別篩選
+        if (currentFilter === 'photo' && !item.type.includes('照片')) return false;
+        if (currentFilter === 'text' && !item.type.includes('文字') && !item.type.includes('對話')) return false;
+        if (currentFilter === 'goal' && !item.type.includes('目標')) return false;
+        if (currentFilter === 'sync' && !item.type.includes('Web') && !item.type.includes('常用') && !item.type.includes('同步')) return false;
+        if (currentFilter === 'sec' && !item.type.includes('安全') && !item.type.includes('攔截')) return false;
+
+        // 搜尋篩選
+        if (q) {
+          const matchUser = (item.userId || '').toLowerCase().includes(q);
+          const matchType = (item.type || '').toLowerCase().includes(q);
+          const matchInput = (item.input || '').toLowerCase().includes(q);
+          const matchAi = (item.aiResult || '').toLowerCase().includes(q);
+          const matchOutput = (item.output || '').toLowerCase().includes(q);
+          return matchUser || matchType || matchInput || matchAi || matchOutput;
+        }
+        return true;
+      });
+
+      if (filtered.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6"><div class="empty-state"><div class="empty-state-icon">🐼</div><div style="font-weight:700; font-size:15px; color:#FFFFFF; margin-bottom:4px;">尚無符合的對話紀錄</div><div>在 LINE 聊天室發送照片或文字，即時遙測將即刻顯示於此！</div></div></td></tr>';
+        return;
+      }
+
+      let rows = '';
+      filtered.forEach(l => {
+        const badgeCls = getBadgeClass(l.type);
+        const timeShort = (l.time || '').split(' ')[1] || l.time;
+
+        rows += '<tr>' +
+          '<td class="time-cell" title="' + escapeHtml(l.time) + '">' + escapeHtml(l.time) + '</td>' +
+          '<td class="user-cell">👤 ' + escapeHtml(l.userId || '用戶') + '</td>' +
+          '<td><span class="tag ' + badgeCls + '">' + escapeHtml(l.type) + '</span></td>' +
+          '<td class="input-cell">' + escapeHtml(l.input) + '</td>' +
+          '<td class="ai-cell">' + escapeHtml(l.aiResult) + '</td>' +
+          '<td class="output-cell">' + escapeHtml(l.output) + '</td>' +
+        '</tr>';
+      });
+
+      tbody.innerHTML = rows;
+    }
+
+    function setFilter(type, btn) {
+      currentFilter = type;
+      document.querySelectorAll('.pill-btn').forEach(b => b.classList.remove('active'));
+      if (btn) btn.classList.add('active');
+      renderTable();
+    }
+
+    function handleSearch() {
+      searchQuery = document.getElementById('searchInput').value;
+      renderTable();
+    }
+
+    function updateLogs(newLogs) {
+      if (newLogs && Array.isArray(newLogs)) {
+        allLogs = newLogs;
+        updateMetrics(allLogs);
+        renderTable();
+        document.getElementById('lastUpdatedTime').textContent = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+      }
+    }
+
+    function fetchLogs() {
+      if (typeof google !== 'undefined' && google.script && google.script.run) {
+        google.script.run.withSuccessHandler(updateLogs).getRecentLogsData();
+      } else {
+        // Fallback REST fetch
+        fetch('?action=getRecentLogs')
+          .then(r => r.json())
+          .then(data => { if (data.status === 'ok') updateLogs(data.logs); })
+          .catch(e => console.warn('Fetch logs error:', e));
+      }
+    }
+
+    function triggerManualRefresh() {
+      fetchLogs();
+    }
+
+    function toggleAutoRefresh() {
+      autoRefreshActive = !autoRefreshActive;
+      const btn = document.getElementById('toggleAutoBtn');
+      if (autoRefreshActive) {
+        btn.innerHTML = '⏸️ 暫停輪詢';
+        refreshTimer = setInterval(fetchLogs, 3000);
+      } else {
+        btn.innerHTML = '▶️ 啟動輪詢';
+        if (refreshTimer) clearInterval(refreshTimer);
+      }
+    }
+
+    // 初始化渲染
+    updateMetrics(allLogs);
+    renderTable();
+    document.getElementById('lastUpdatedTime').textContent = new Date().toLocaleTimeString('zh-TW', { hour12: false });
+    refreshTimer = setInterval(fetchLogs, 3000);
+  </script>
+</body>
+</html>`;
+}
+
 
 
 
