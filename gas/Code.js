@@ -3271,11 +3271,14 @@ function getOrCreateUserGist(userId, pat, props) {
 
 function analyzeMealWithGeminiFull(base64Image, apiKey, context, language) {
   const models = [
-    'gemini-2.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
     'gemini-2.5-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b'
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
   ];
   const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
   const prompt = `Analyze this food image. Return STRICTLY a raw JSON object with keys:
@@ -3329,11 +3332,14 @@ No markdown backticks.`;
 
 function parseTextWithGeminiFull(text, apiKey, context, language) {
   const models = [
-    'gemini-2.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
     'gemini-2.5-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b'
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
   ];
   const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
   const prompt = `You are an expert nutritionist panda. Analyze: "${text}".
@@ -3383,11 +3389,14 @@ No markdown backticks.`;
 
 function generateGeminiText(prompt, apiKey) {
   const models = [
-    'gemini-2.5-flash',
+    'gemini-3.5-flash-lite',
+    'gemini-3.1-flash-lite',
     'gemini-2.5-flash-lite',
-    'gemini-2.0-flash',
-    'gemini-1.5-flash',
-    'gemini-1.5-flash-8b'
+    'gemini-3.7-flash',
+    'gemini-3.6-flash',
+    'gemini-3.5-flash',
+    'gemini-3-flash',
+    'gemini-2.5-flash'
   ];
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
