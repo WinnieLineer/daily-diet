@@ -2763,7 +2763,7 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
             layout: "horizontal",
             contents: [
               { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: "v3.0 旗艦版", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "v3.1 旗艦版", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
           {

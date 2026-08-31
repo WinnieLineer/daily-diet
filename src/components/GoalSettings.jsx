@@ -12,6 +12,8 @@ import { liffService } from '../lib/liffService';
 
 
 const VERSION_HISTORY = [
+  { version: '3.1.0', date: '2026-08-31', features: ['LINE 官方帳號無縫連動 🐼', '雙向 Gist 雲端同步與綁定 ☁️', 'Gemini 8階梯 AI 容錯引擎 ⚡', '主視覺歡迎卡片與實時日誌 📊'] },
+  { version: '3.0.0', date: '2026-08-30', features: [t('whatsnew_v300_line_title'), t('whatsnew_v300_water_title')] },
   { version: '2.5.0', date: '2026-06-05', features: [t('v250_vip_title'), t('v250_timers_title')] },
   { version: '2.4.5', date: '2026-06-05', features: [t('v242_f1'), t('v242_f2'), t('v245_f1')] },
   { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
