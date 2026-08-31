@@ -119,6 +119,31 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                     <p className="text-xs text-zinc-600 font-bold leading-relaxed">
                       {t('whatsnew_v300_line_desc')}
                     </p>
+
+                    {localStorage.getItem('gist_backup_id') && (
+                      <div className="p-2.5 bg-white border-2 border-black rounded-xl space-y-1.5 shadow-neo-xs">
+                        <div className="flex items-center justify-between text-[10px] font-black text-amber-950">
+                          <span>☁️ 您的 Gist 同步 ID</span>
+                          <span className="text-[9px] text-zinc-400 font-bold">在 LINE 傳送「綁定 ID」</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <div className="flex-1 bg-amber-50 border border-black/20 p-1.5 rounded font-mono text-[10px] font-black text-zinc-800 break-all select-all">
+                            {localStorage.getItem('gist_backup_id')}
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(localStorage.getItem('gist_backup_id'));
+                              alert("📋 Gist ID 已成功複製！請在 LINE 聊天室傳送「綁定 <貼上ID>」即可同步！");
+                            }}
+                            className="bg-black text-white px-2.5 py-1.5 rounded font-black text-[10px] active:scale-95 shrink-0"
+                          >
+                            複製
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
                     <a 
                       href="https://line.me/R/ti/p/@618iipof" 
                       target="_blank" 

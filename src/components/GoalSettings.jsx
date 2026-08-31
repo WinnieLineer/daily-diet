@@ -70,6 +70,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [hasPersonas, setHasPersonas] = useState(localStorage.getItem('panda_persona_unlocked') === 'true');
   const [activePersona, setActivePersona] = useState(() => localStorage.getItem('panda_active_persona') || 'tsundere');
   const [lineProfile, setLineProfile] = useState(null);
+  const [currentGistId, setCurrentGistId] = useState(() => localStorage.getItem('gist_backup_id') || getCurrentGistId() || '');
+  const [copiedGist, setCopiedGist] = useState(false);
+  const [isEditingGist, setIsEditingGist] = useState(false);
+  const [manualGistInput, setManualGistInput] = useState('');
 
   const handleSelectTitle = (title) => {
     if (activeTitle === title) {
@@ -594,6 +598,57 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 </button>
                               )}
                             </div>
+                          )}
+                        </div>
+
+                        {/* ☁️ 雲端 Gist 專屬同步 ID 卡片 */}
+                        <div className="flex flex-col gap-2 p-3 bg-amber-50 rounded-xl border-2 border-black">
+                          <div className="flex items-center justify-between">
+                            <span className="font-black text-xs flex items-center gap-1.5 text-amber-950">
+                              ☁️ 雲端 Gist 同步 ID
+                            </span>
+                            {currentGistId ? (
+                              <span className="bg-amber-200 text-amber-900 border border-black/20 px-2 py-0.5 rounded-full text-[8px] font-black">
+                                專屬 ID 已就緒 🟢
+                              </span>
+                            ) : (
+                              <span className="bg-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full text-[8px] font-black">
+                                尚未建立 ⚪
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[9px] text-amber-900 font-bold leading-relaxed">
+                            在 LINE 官方帳號（@618iipof）聊天室傳送「<span className="text-black font-black">綁定 {currentGistId ? currentGistId.slice(0, 8) + '...' : '您的ID'}</span>」，即可在 LINE 隨時雙向同步您的飲食紀錄與目標！
+                          </p>
+                          <div className="flex items-center gap-1.5">
+                            <div className="flex-1 bg-white border-2 border-black p-2 rounded-lg font-mono text-[10px] font-black text-zinc-800 break-all select-all">
+                              {currentGistId || '尚未產生 (點擊資料管理進行備份)'}
+                            </div>
+                            {currentGistId && (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(currentGistId);
+                                  setCopiedGist(true);
+                                  setTimeout(() => setCopiedGist(false), 2000);
+                                }}
+                                className="bg-black text-white px-2.5 py-2 rounded-lg font-black text-[10px] active:scale-95 transition-transform flex items-center gap-1 shrink-0"
+                              >
+                                {copiedGist ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
+                                <span>{copiedGist ? '已複製' : '複製'}</span>
+                              </button>
+                            )}
+                          </div>
+                          {currentGistId && (
+                            <a
+                              href={`https://line.me/R/oaMessage/@618iipof/?%E7%B6%81%E5%AE%9A%20${currentGistId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="w-full bg-[#06C755] text-white py-1.5 rounded-lg border-2 border-black font-black text-[10px] flex items-center justify-center gap-1 hover:bg-[#05b34c] active:scale-95 transition-all text-center"
+                            >
+                              <MessageSquare size={12} />
+                              💬 在 LINE 一鍵送出「綁定」指令
+                            </a>
                           )}
                         </div>
                       </div>
@@ -1354,6 +1409,106 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <RotateCcw size={14} className={stats.loading ? 'animate-spin' : ''} />
                         </button>
                       </div>
+                    </div>
+
+                    {/* ☁️ 雲端 Gist 專屬同步 ID 卡片 (資料管理頁) */}
+                    <div className="bg-amber-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-lg">☁️</span>
+                          <h4 className="font-black italic text-sm uppercase tracking-tight text-amber-950">
+                            雲端 Gist 專屬同步 ID
+                          </h4>
+                        </div>
+                        {currentGistId ? (
+                          <span className="bg-amber-200 text-amber-900 border border-black/20 px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                            已就緒 🟢
+                          </span>
+                        ) : (
+                          <span className="bg-zinc-200 text-zinc-600 px-2.5 py-0.5 rounded-full text-[10px] font-black">
+                            尚未產生 ⚪
+                          </span>
+                        )}
+                      </div>
+
+                      <p className="text-xs font-bold text-amber-900 leading-relaxed">
+                        此 ID 為您在 GitHub Gist 的私有資料庫識別碼。在 LINE 官方帳號（@618iipof）聊天室輸入「<span className="font-black text-black">綁定 {currentGistId ? currentGistId.slice(0, 8) + '...' : '您的ID'}</span>」，即可將 Web 端的飲食日誌、常用餐點與熱量目標 100% 雙向同步！
+                      </p>
+
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 bg-white border-2 border-black p-2.5 rounded-xl font-mono text-xs font-black text-zinc-800 break-all select-all shadow-neo-xs">
+                          {currentGistId || '尚未產生 (點擊下方「手動同步」即可自動建立)'}
+                        </div>
+                        {currentGistId && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              navigator.clipboard.writeText(currentGistId);
+                              setCopiedGist(true);
+                              setTimeout(() => setCopiedGist(false), 2000);
+                            }}
+                            className="bg-black text-white px-3 py-2.5 rounded-xl font-black text-xs active:scale-95 transition-transform flex items-center gap-1.5 shrink-0 shadow-neo-xs"
+                          >
+                            {copiedGist ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
+                            <span>{copiedGist ? '已複製' : '複製 ID'}</span>
+                          </button>
+                        )}
+                      </div>
+
+                      <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                        {currentGistId && (
+                          <a
+                            href={`https://line.me/R/oaMessage/@618iipof/?%E7%B6%81%E5%AE%9A%20${currentGistId}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex-1 bg-[#06C755] text-white py-2 px-3 rounded-xl border-2 border-black font-black text-xs flex items-center justify-center gap-1.5 hover:bg-[#05b34c] active:scale-95 transition-all shadow-neo-xs text-center"
+                          >
+                            <MessageSquare size={14} />
+                            💬 在 LINE 一鍵送出綁定
+                          </a>
+                        )}
+                        <button
+                          type="button"
+                          onClick={() => setIsEditingGist(!isEditingGist)}
+                          className="bg-white text-zinc-700 py-2 px-3 rounded-xl border-2 border-black font-black text-xs active:scale-95 hover:bg-zinc-100 transition-all text-center shadow-neo-xs"
+                        >
+                          {isEditingGist ? '收起' : '✏️ 手動填入既有 Gist ID'}
+                        </button>
+                      </div>
+
+                      {isEditingGist && (
+                        <div className="p-3 bg-white border-2 border-black rounded-2xl space-y-2 mt-2">
+                          <label className="text-[10px] font-black text-zinc-600 block">
+                            手動填入其他裝置或既有的 GitHub Gist ID：
+                          </label>
+                          <div className="flex gap-2">
+                            <input
+                              type="text"
+                              value={manualGistInput}
+                              onChange={(e) => setManualGistInput(e.target.value.trim())}
+                              placeholder="例如：7c9a28b184f..."
+                              className="flex-1 bg-zinc-50 border-2 border-black p-2 rounded-xl text-xs font-mono font-bold outline-none"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (!manualGistInput) {
+                                  alert("請輸入有效的 Gist ID！");
+                                  return;
+                                }
+                                localStorage.setItem('gist_backup_id', manualGistInput);
+                                setGistId(manualGistInput);
+                                setCurrentGistId(manualGistInput);
+                                setIsEditingGist(false);
+                                alert("🎉 已成功儲存 Gist ID！現在可以點擊「手動同步」還原或同步您的飲食資料！");
+                              }}
+                              className="bg-black text-white px-3 rounded-xl font-black text-xs active:scale-95"
+                            >
+                              儲存
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
 
                     {/* Cloud Status Banner */}
