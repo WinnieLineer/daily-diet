@@ -9,14 +9,27 @@ const DEFAULT_WATER_GOAL = 2000;    // 每日預設水分目標 (ml)
 
 function doGet(e) {
   const action = e?.parameter?.action;
-  const userId = e?.parameter?.userId;
+  let userId = e?.parameter?.userId;
+  const incomingGist = e?.parameter?.gistId;
 
   const props = PropertiesService.getScriptProperties();
   const pat = props.getProperty('GITHUB_PAT');
 
+  // 🔗 若 userId 為空或為 default_user，但有帶 Gist ID，透過 Gist ID 反查 LINE 用戶綁定
+  if ((!userId || userId === 'default_user' || userId === 'undefined') && incomingGist) {
+    const allProps = props.getProperties();
+    for (const k in allProps) {
+      if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
+        userId = k.replace('USER_GIST_', '');
+        console.log(`🔗 [Gist 反查綁定] Gist ${incomingGist} 成功對應至 LINE 用戶 ${userId}`);
+        break;
+      }
+    }
+  }
+  if (!userId) userId = 'default_user';
+
   // 1. 查詢/綁定個人 Gist ID
   if (action === 'getGistId' && userId) {
-    const incomingGist = e?.parameter?.gistId;
     if (incomingGist) props.setProperty(`USER_GIST_${userId}`, incomingGist);
     const gistId = getOrCreateUserGist(userId, pat, props);
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', userId, gistId }))
@@ -25,7 +38,6 @@ function doGet(e) {
 
   // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
   if (action === 'getLogs' && userId) {
-    const incomingGist = e?.parameter?.gistId;
     if (incomingGist) {
       props.setProperty(`USER_GIST_${userId}`, incomingGist);
       console.log(`☁️ [Web 端連動] 已自動將用戶 ${userId} 綁定 Gist ID: ${incomingGist}`);
@@ -38,54 +50,68 @@ function doGet(e) {
     if (incomingWat) props.setProperty(`WATER_GOAL_${userId}`, String(incomingWat));
 
     const todayStr = getTodayDateString();
-    const todayLogs = getTodayLogs(userId, todayStr, props);
+    const todayLogs = getTodayLogs(userId, todayStr, props, incomingGist);
     const gistId = getOrCreateUserGist(userId, pat, props);
-
-    const calGoal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || Number(props.getProperty('CALORIE_GOAL')) || DEFAULT_CALORIE_GOAL;
-    const proGoal = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || Number(props.getProperty('PROTEIN_GOAL')) || DEFAULT_PROTEIN_GOAL;
-    const watGoal = Number(props.getProperty(`WATER_GOAL_${userId}`)) || Number(props.getProperty('WATER_GOAL')) || DEFAULT_WATER_GOAL;
+    const goals = getUserGoals(userId, props, incomingGist);
 
     return ContentService.createTextOutput(JSON.stringify({
       status: 'ok',
       userId,
       gistId,
       todayLogs,
-      goals: {
-        calories: calGoal,
-        protein: proGoal,
-        water: watGoal
-      },
-      favorites: getUserFavorites(userId, props)
+      goals,
+      favorites: getUserFavorites(userId, props, incomingGist)
     })).setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 3. Web App 觸發刪除指定餐點
+  // 3. Web App 觸發記錄/新增餐點 (即時雙向同步至 LINE 今日快取與 Gist 雲端)
+  if ((action === 'saveMeal' || action === 'addMeal') && userId) {
+    const dishName = e?.parameter?.dishName || e?.parameter?.name || '美味餐點';
+    const calories = Number(e?.parameter?.calories || e?.parameter?.cal || 0);
+    const protein = Number(e?.parameter?.protein || e?.parameter?.pro || 0);
+    const water = Number(e?.parameter?.water || e?.parameter?.wat || 0);
+    const carbs = Number(e?.parameter?.carbs || 0);
+    const fat = Number(e?.parameter?.fat || 0);
+    const comment = e?.parameter?.comment || '';
+    const date = e?.parameter?.date || getTodayDateString();
+    const time = e?.parameter?.time || new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' });
+    const id = Number(e?.parameter?.id || Date.now());
+
+    const meal = { id, date, time, dish_name: dishName, calories, protein, carbs, fat, water, comment, source: 'WEB_APP' };
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
+    saveMealLog(userId, meal, userGistId, pat, props);
+    recordSystemLog('Web同步餐點', userId, dishName, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, '已即時寫入 LINE 與 Gist');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', meal }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 4. Web App 觸發刪除指定餐點
   if (action === 'deleteMeal' && userId) {
     const dishName = e?.parameter?.dishName;
     const targetId = e?.parameter?.id;
-    const userGistId = getOrCreateUserGist(userId, pat, props);
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
     deleteMealLog(userId, targetId || dishName, userGistId, pat, props);
     recordSystemLog('Web刪除餐點', userId, dishName || targetId, '', '已自雲端刪除');
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 4. Web App 觸發清空今日紀錄
+  // 5. Web App 觸發清空今日紀錄
   if (action === 'clearToday' && userId) {
-    const userGistId = getOrCreateUserGist(userId, pat, props);
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
     clearTodayLogs(userId, userGistId, pat, props);
     recordSystemLog('Web清空今日', userId, '清空今日餐點', '', '已清空今日');
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 5. Web App 觸發新增常用餐點
+  // 6. Web App 觸發新增常用餐點
   if (action === 'addFavorite' && userId) {
     const dishName = e?.parameter?.dishName || e?.parameter?.name || '常用餐點';
     const calories = Number(e?.parameter?.calories) || Number(e?.parameter?.cal) || 0;
     const protein = Number(e?.parameter?.protein) || Number(e?.parameter?.pro) || 0;
     const water = Number(e?.parameter?.water) || Number(e?.parameter?.wat) || 0;
-    const userGistId = getOrCreateUserGist(userId, pat, props);
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
     const favItem = { id: Date.now(), dish_name: dishName, calories, protein, water };
     saveUserFavorite(userId, favItem, userGistId, pat, props);
     recordSystemLog('Web加常用', userId, dishName, `${calories}卡 / ${protein}g蛋`, '已同步常用庫');
@@ -93,17 +119,17 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 6. Web App 觸發刪除常用餐點
+  // 7. Web App 觸發刪除常用餐點
   if (action === 'deleteFavorite' && userId) {
     const favId = e?.parameter?.id || e?.parameter?.favId || e?.parameter?.dishName || e?.parameter?.name;
-    const userGistId = getOrCreateUserGist(userId, pat, props);
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
     deleteUserFavorite(userId, favId, userGistId, pat, props);
     recordSystemLog('Web刪除常用', userId, favId, '', '已自常用庫移除');
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 5. Web App 觸發更新個人飲食目標
+  // 8. Web App 觸發更新個人飲食目標
   if (action === 'updateGoals' && userId) {
     const calories = Number(e?.parameter?.calories);
     const protein = Number(e?.parameter?.protein);
@@ -111,7 +137,7 @@ function doGet(e) {
     if (calories) props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
     if (protein) props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
     if (water) props.setProperty(`WATER_GOAL_${userId}`, String(water));
-    const userGistId = getOrCreateUserGist(userId, pat, props);
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
     if (pat && userGistId) {
       syncGoalsToUserGist({ calories, protein, water }, userGistId, pat);
     }

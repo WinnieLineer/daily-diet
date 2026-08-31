@@ -6,6 +6,7 @@ import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCirc
 import { analyzeFoodImage, analyzeFoodText } from '../lib/groq';
 import { db } from '../db';
 import { getCurrentGistId, uploadToGist } from '../lib/gistService';
+import { syncMealToCloud } from '../lib/syncService';
 import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
@@ -649,7 +650,10 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
     const timestamp = logDateObj.getTime();
 
-    await db.dietLogs.add({ ...dataToSave, date: localDate, timestamp: timestamp, location: dataToSave.location || null, category: selectedCategory });
+    const savedItem = { ...dataToSave, date: localDate, timestamp: timestamp, location: dataToSave.location || null, category: selectedCategory };
+    await db.dietLogs.add(savedItem);
+    syncMealToCloud(savedItem);
+
     if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); setMultiplier(1); setShowCustomMultiplier(false); }
     setManualEntry({ dish_name: '', calories: '', protein: '', water: '', carbs: '', fat: '' });
 
@@ -709,8 +713,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
                 const twoMinutesAgo = timestamp - (2 * 60 * 1000);
                 const lastWaterLog = await db.dietLogs.where('timestamp').above(twoMinutesAgo).filter(log => log.dish_name.includes(t('water'))).last();
-                if (lastWaterLog) { await db.dietLogs.update(lastWaterLog.id, { water: (Number(lastWaterLog.water) || 0) + 250, timestamp: timestamp }); }
-                else { await db.dietLogs.add({ dish_name: `🚰 ${t('water')}`, calories: 0, protein: 0, water: 250, date: localDate, timestamp: timestamp, location: null }); }
+                if (lastWaterLog) {
+                  const updatedWater = (Number(lastWaterLog.water) || 0) + 250;
+                  await db.dietLogs.update(lastWaterLog.id, { water: updatedWater, timestamp: timestamp });
+                  syncMealToCloud({ ...lastWaterLog, water: updatedWater, timestamp });
+                } else {
+                  const waterLog = { dish_name: `🚰 ${t('water')}`, calories: 0, protein: 0, water: 250, date: localDate, timestamp: timestamp, location: null };
+                  await db.dietLogs.add(waterLog);
+                  syncMealToCloud(waterLog);
+                }
                 onLogAdded('fetch');
               }}
               className="w-12 h-12 flex items-center justify-center bg-white rounded-full border-4 border-black active:scale-90 transition-all shadow-neo-sm hover:bg-sky-50 shrink-0 overflow-hidden"
@@ -1163,7 +1174,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
                         const carbsVal = goals.show_carbs_fat ? (Number(item.carbs) || 0) : 0;
                         const fatVal = goals.show_carbs_fat ? (Number(item.fat) || 0) : 0;
-                        await db.dietLogs.add({
+                        const quickMeal = {
                           dish_name: item.dish_name,
                           calories: item.calories,
                           protein: item.protein,
@@ -1174,7 +1185,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                           date: localDate,
                           timestamp: logDateObj.getTime(),
                           category: selectedCategory
-                        });
+                        };
+                        await db.dietLogs.add(quickMeal);
+                        syncMealToCloud(quickMeal);
                         setFavToast(t('added_to_today'));
                         setTimeout(() => setFavToast(null), 1500);
                         onLogAdded('fetch');
@@ -1280,7 +1293,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
                       const carbsVal = goals.show_carbs_fat ? (Number(item.carbs) || 0) : 0;
                       const fatVal = goals.show_carbs_fat ? (Number(item.fat) || 0) : 0;
-                      await db.dietLogs.add({
+                      const searchMeal = {
                         dish_name: item.dish_name,
                         calories: item.calories,
                         protein: item.protein,
@@ -1291,7 +1304,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         date: localDate,
                         timestamp: logDateObj.getTime(),
                         category: selectedCategory
-                      });
+                      };
+                      await db.dietLogs.add(searchMeal);
+                      syncMealToCloud(searchMeal);
                       setFavToast(t('added_to_today'));
                       setTimeout(() => setFavToast(null), 1500);
                       onLogAdded('fetch');
@@ -1365,14 +1380,16 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
                       const timestamp = logDateObj.getTime();
                       setManualSaving(true);
-                      await db.dietLogs.add({
+                      const fastingItem = {
                         ...pendingLogData,
                         date: localDate,
                         timestamp: timestamp,
                         is_fasting_break: true,
                         location: pendingLogData.location || null,
                         category: selectedCategory
-                      });
+                      };
+                      await db.dietLogs.add(fastingItem);
+                      syncMealToCloud(fastingItem);
                       if (mode === 'ai') { setPreview(null); setResult(null); setOriginalResult(null); }
                       setManualEntry({ dish_name: '', calories: '', protein: '', water: '' });
                       onLogAdded(mode === 'ai' ? 'skip' : 'fetch');

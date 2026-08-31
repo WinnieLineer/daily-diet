@@ -10,6 +10,7 @@ import NeoButton from './components/NeoButton';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { db, getDailySummary, calculateStreak } from './db';
 import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
+import { syncMealToCloud, syncDeleteMealToCloud } from './lib/syncService';
 import { getPandaAdvice } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
@@ -1378,14 +1379,8 @@ function App() {
     await db.dietLogs.delete(id);
     refreshData();
 
-    // 同步通知 GAS 刪除 LINE 端紀錄與 Gist
-    const effectiveUserId = localStorage.getItem('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
-    if (effectiveUserId && target) {
-      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-      try {
-        fetch(`${GAS_URL}?action=deleteMeal&userId=${encodeURIComponent(effectiveUserId)}&dishName=${encodeURIComponent(target.dish_name)}&id=${target.timestamp || target.id || ''}`, { mode: 'no-cors' });
-        console.log(`📤 [Web Delete Sync] Sent delete request to GAS for: ${target.dish_name}`);
-      } catch (e) {}
+    if (target) {
+      syncDeleteMealToCloud(target.timestamp || target.id || target.dish_name);
     }
   };
 
@@ -1407,7 +1402,7 @@ function App() {
   };
 
   const saveEdit = async (id) => {
-    await db.dietLogs.update(id, {
+    const updatedFields = {
       dish_name: editValues.dish_name,
       calories: Number(editValues.calories) || 0,
       protein: Number(editValues.protein) || 0,
@@ -1415,7 +1410,12 @@ function App() {
       carbs: Number(editValues.carbs) || 0,
       fat: Number(editValues.fat) || 0,
       category: editValues.category
-    });
+    };
+    await db.dietLogs.update(id, updatedFields);
+    const updatedFull = await db.dietLogs.get(id);
+    if (updatedFull) {
+      syncMealToCloud(updatedFull);
+    }
     setEditingId(null);
     refreshData();
   };
