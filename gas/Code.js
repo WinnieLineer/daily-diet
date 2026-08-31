@@ -1779,7 +1779,8 @@ function replyTextMessage(replyToken, text, accessToken, userId, props) {
 function sendLineLoadingAnimation(userId, accessToken, loadingSeconds) {
   if (!userId || !accessToken || !userId.startsWith('U')) return;
   try {
-    UrlFetchApp.fetch("https://api.line.me/v2/bot/chat/loading/start", {
+    const seconds = Math.min(60, Math.max(5, Math.round((loadingSeconds || 20) / 5) * 5));
+    const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/chat/loading/start", {
       method: "post",
       headers: {
         "Content-Type": "application/json",
@@ -1787,10 +1788,16 @@ function sendLineLoadingAnimation(userId, accessToken, loadingSeconds) {
       },
       payload: JSON.stringify({
         chatId: userId,
-        loadingSeconds: loadingSeconds || 20
+        loadingSeconds: seconds
       }),
       muteHttpExceptions: true
     });
+    const code = res.getResponseCode();
+    if (code !== 202 && code !== 200) {
+      console.warn(`[Loading Animation] Status: ${code}, Body: ${res.getContentText()}`);
+    } else {
+      console.log(`⚡ [Loading Animation] 已成功為用戶 ${userId} 啟動 ${seconds}s 正在輸入中動畫`);
+    }
   } catch (e) {
     console.warn("發送 Loading 動畫失敗:", e);
   }
