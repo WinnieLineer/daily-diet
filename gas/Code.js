@@ -149,15 +149,19 @@ function doGet(e) {
 
   // 6. 實時運作日誌 API (提供 JSON)
   if (action === 'getRecentLogs') {
-    const logs = getRecentLogsData();
-    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs }))
+    const logs = getRecentLogsData(Number(e?.parameter?.limit) || 300);
+    const sheetId = props.getProperty('LOG_SHEET_ID');
+    const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs, sheetUrl }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
   // 6. 實時運作日誌儀表板 (直接在瀏覽器查看所有用戶傳入的訊息與 AI 回應)
   if (action === 'logs' || action === 'viewLogs' || action === 'log') {
-    const initialLogs = getRecentLogsData();
-    return HtmlService.createHtmlOutput(generateDashboardHtml(initialLogs))
+    const initialLogs = getRecentLogsData(300);
+    const sheetId = props.getProperty('LOG_SHEET_ID');
+    const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
+    return HtmlService.createHtmlOutput(generateDashboardHtml(initialLogs, sheetUrl))
       .setTitle("🐼 Daily Diet 實時對話與運作日誌")
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
@@ -165,8 +169,41 @@ function doGet(e) {
   return ContentService.createTextOutput("Daily Diet LINE Bot is running! 🐼");
 }
 
-function getRecentLogsData() {
+function getRecentLogsData(fetchLimit) {
   const props = PropertiesService.getScriptProperties();
+  const limit = fetchLimit || 300;
+
+  // 優先從永久 Google Sheet 讀取最新紀錄
+  const sheetId = props.getProperty('LOG_SHEET_ID');
+  if (sheetId) {
+    try {
+      const ss = SpreadsheetApp.openById(sheetId);
+      const sheet = ss.getSheets()[0];
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        const startRow = Math.max(2, lastRow - limit + 1);
+        const numRows = lastRow - startRow + 1;
+        const values = sheet.getRange(startRow, 1, numRows, 7).getValues();
+        const logs = [];
+        for (let i = values.length - 1; i >= 0; i--) {
+          const row = values[i];
+          logs.push({
+            time: row[0] instanceof Date ? Utilities.formatDate(row[0], "Asia/Taipei", "yyyy-MM-dd HH:mm:ss") : String(row[0] || ''),
+            userId: String(row[1] || '用戶'),
+            rawUserId: String(row[2] || '').slice(-6),
+            type: String(row[3] || '一般'),
+            input: String(row[4] || ''),
+            aiResult: String(row[5] || ''),
+            output: String(row[6] || '')
+          });
+        }
+        return logs;
+      }
+    } catch (e) {
+      console.warn("從 Sheet 讀取日誌失敗，降級至快取:", e);
+    }
+  }
+
   const raw = props.getProperty('SYSTEM_RECENT_LOGS');
   return raw ? JSON.parse(raw) : [];
 }
@@ -3498,30 +3535,67 @@ function recordSystemLog(type, userId, input, aiResult, output, userName) {
   Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
   console.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
+  // 1. 高速暫存快取 (保留最新 100 筆)
   try {
     let recentLogs = [];
     const raw = props.getProperty('SYSTEM_RECENT_LOGS');
     if (raw) recentLogs = JSON.parse(raw);
     recentLogs.unshift(logItem);
-    if (recentLogs.length > 60) recentLogs = recentLogs.slice(0, 60);
+    if (recentLogs.length > 100) recentLogs = recentLogs.slice(0, 100);
     props.setProperty('SYSTEM_RECENT_LOGS', JSON.stringify(recentLogs));
   } catch (e) {
     console.error("儲存實時日誌失敗:", e);
   }
 
-  // 若設定了 LOG_SHEET_ID，自動將日誌追加至 Google 試算表
-  const sheetId = props.getProperty('LOG_SHEET_ID');
+  // 2. 永久 Google 試算表存檔庫 (自動建立與保存所有紀錄，永不刪除)
+  try {
+    const ss = getOrCreateLogSheet(props);
+    if (ss) {
+      const sheet = ss.getSheets()[0];
+      sheet.appendRow([logItem.time, displayName, userId, logItem.type, logItem.input, logItem.aiResult, logItem.output]);
+    }
+  } catch (sheetErr) {
+    console.error("寫入 Google Sheet 日誌失敗:", sheetErr);
+  }
+}
+
+function getOrCreateLogSheet(props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  let sheetId = props.getProperty('LOG_SHEET_ID');
   if (sheetId) {
     try {
       const ss = SpreadsheetApp.openById(sheetId);
-      const sheet = ss.getSheets()[0];
-      if (sheet.getLastRow() === 0) {
-        sheet.appendRow(["時間", "用戶名稱", "用戶ID", "類型", "用戶傳送內容", "AI辨識結果", "回應狀態"]);
-      }
-      sheet.appendRow([logItem.time, displayName, userId, logItem.type, logItem.input, logItem.aiResult, logItem.output]);
-    } catch (sheetErr) {
-      console.error("寫入 Google Sheet 日誌失敗:", sheetErr);
+      return ss;
+    } catch (e) {
+      console.warn("無法開啟現有 LOG_SHEET_ID，將嘗試重新建立:", e);
     }
+  }
+
+  try {
+    const ss = SpreadsheetApp.create('📊 Daily Diet 系統運作與對話日誌庫 (永久存檔)');
+    sheetId = ss.getId();
+    props.setProperty('LOG_SHEET_ID', sheetId);
+
+    const sheet = ss.getSheets()[0];
+    sheet.setName('運作與對話紀錄');
+    sheet.appendRow(["時間", "用戶名稱", "用戶識別碼", "操作類型", "用戶傳送內容", "AI辨識結果", "處理狀態"]);
+
+    // 美化試算表標題列
+    const headerRange = sheet.getRange(1, 1, 1, 7);
+    headerRange.setBackground("#000000").setFontColor("#FDE047").setFontWeight("bold").setFontSize(11);
+    sheet.setFrozenRows(1);
+    sheet.setColumnWidth(1, 160);
+    sheet.setColumnWidth(2, 140);
+    sheet.setColumnWidth(3, 160);
+    sheet.setColumnWidth(4, 120);
+    sheet.setColumnWidth(5, 280);
+    sheet.setColumnWidth(6, 280);
+    sheet.setColumnWidth(7, 200);
+
+    return ss;
+  } catch (err) {
+    console.error("自動建立 Google Sheet 日誌失敗:", err);
+    return null;
   }
 }
 
@@ -3858,8 +3932,9 @@ function verifyWebAIRequest(data, e) {
 // 📊 14. 實時運作日誌儀表板 UI (Authentic Neo-Brutalism Design matching Web App)
 // ========================================================
 
-function generateDashboardHtml(initialLogs) {
+function generateDashboardHtml(initialLogs, sheetUrl) {
   const initialJson = JSON.stringify(initialLogs || []).replace(/</g, '\\u003c');
+  const safeSheetUrl = sheetUrl || '';
 
   return `<!DOCTYPE html>
 <html lang="zh-TW">
@@ -4028,6 +4103,14 @@ function generateDashboardHtml(initialLogs) {
     }
     .neo-btn-primary:hover {
       background: var(--yellow-hover);
+    }
+    .neo-btn-green {
+      background: var(--green);
+      color: var(--green-text);
+    }
+    .neo-btn-blue {
+      background: var(--blue);
+      color: var(--blue-text);
     }
 
     /* 📊 遙測統計卡片 Grid */
@@ -4273,11 +4356,13 @@ function generateDashboardHtml(initialLogs) {
             DAILY DIET 實時對話與運作日誌
             <span class="status-badge"><span class="live-dot"></span> LIVE</span>
           </div>
-          <div class="brand-subtitle">Gemini 多模態視覺辨識 · Gist 雙向同步 · 防盜刷即時遙測</div>
+          <div class="brand-subtitle">Gemini 多模態視覺辨識 · Google 試算表永久存檔 · 防盜刷即時遙測</div>
         </div>
       </div>
       <div class="btn-group">
         <button class="neo-btn neo-btn-primary" onclick="triggerManualRefresh()">🔄 立即刷新</button>
+        <button class="neo-btn neo-btn-blue" onclick="exportLogsToCsv()">📥 匯出 CSV</button>
+        <a id="sheetLinkBtn" href="${safeSheetUrl || '#'}" target="_blank" class="neo-btn neo-btn-green" style="${safeSheetUrl ? '' : 'display:none;'}">📊 永久雲端試算表</a>
         <button class="neo-btn" id="toggleAutoBtn" onclick="toggleAutoRefresh()">⏸️ 暫停輪詢</button>
         <a href="https://winnielineer.github.io/daily-diet/privacy.html" target="_blank" class="neo-btn">🛡️ 隱私政策</a>
       </div>
@@ -4286,7 +4371,7 @@ function generateDashboardHtml(initialLogs) {
     <!-- 📊 統計指標卡片 (Neo-Brutalist Colors) -->
     <div class="metrics-grid">
       <div class="metric-card" style="background:#FFFFFF;">
-        <div class="metric-label"><span>總請求數 (Total)</span><span>📦</span></div>
+        <div class="metric-label"><span>總歷史筆數 (Total)</span><span>📦</span></div>
         <div class="metric-val" id="metricTotal">0</div>
       </div>
       <div class="metric-card" style="background:var(--purple);">
@@ -4342,7 +4427,7 @@ function generateDashboardHtml(initialLogs) {
 
     <!-- 底部資訊欄 -->
     <div class="footer-bar">
-      <div>最後更新時間：<span id="lastUpdatedTime" style="font-family:'JetBrains Mono'; color:var(--black); font-weight:900;">--:--:--</span> (每 3 秒自動更新)</div>
+      <div>最後更新時間：<span id="lastUpdatedTime" style="font-family:'JetBrains Mono'; color:var(--black); font-weight:900;">--:--:--</span> (每 3 秒自動更新 · 永久保留所有歷史紀錄)</div>
       <div>Daily Diet v3.1 Engine · Neo-Brutalism Architecture</div>
     </div>
   </div>
@@ -4353,6 +4438,7 @@ function generateDashboardHtml(initialLogs) {
     let searchQuery = '';
     let autoRefreshActive = true;
     let refreshTimer = null;
+    let sheetUrl = '${safeSheetUrl}';
 
     function escapeHtml(str) {
       return String(str || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -4446,22 +4532,34 @@ function generateDashboardHtml(initialLogs) {
       renderTable();
     }
 
-    function updateLogs(newLogs) {
+    function updateLogs(newLogs, newSheetUrl) {
       if (newLogs && Array.isArray(newLogs)) {
         allLogs = newLogs;
         updateMetrics(allLogs);
         renderTable();
         document.getElementById('lastUpdatedTime').textContent = new Date().toLocaleTimeString('zh-TW', { hour12: false });
       }
+      if (newSheetUrl) {
+        sheetUrl = newSheetUrl;
+        const btn = document.getElementById('sheetLinkBtn');
+        if (btn) {
+          btn.href = sheetUrl;
+          btn.style.display = 'inline-flex';
+        }
+      }
     }
 
     function fetchLogs() {
       if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run.withSuccessHandler(updateLogs).getRecentLogsData();
+        google.script.run.withSuccessHandler(function(logs) {
+          updateLogs(logs);
+        }).getRecentLogsData(300);
       } else {
-        fetch('?action=getRecentLogs')
+        fetch('?action=getRecentLogs&limit=300')
           .then(r => r.json())
-          .then(data => { if (data.status === 'ok') updateLogs(data.logs); })
+          .then(data => {
+            if (data.status === 'ok') updateLogs(data.logs, data.sheetUrl);
+          })
           .catch(e => console.warn('Fetch logs error:', e));
       }
     }
@@ -4480,6 +4578,34 @@ function generateDashboardHtml(initialLogs) {
         btn.innerHTML = '▶️ 啟動輪詢';
         if (refreshTimer) clearInterval(refreshTimer);
       }
+    }
+
+    function exportLogsToCsv() {
+      if (!allLogs || allLogs.length === 0) {
+        alert('尚無任何日誌可供匯出！');
+        return;
+      }
+      let csvContent = "\\uFEFF時間,用戶名稱,操作類型,用戶傳送內容,AI辨識結果,處理狀態\\n";
+      allLogs.forEach(l => {
+        const escapeCsv = (str) => '"' + String(str || '').replace(/"/g, '""') + '"';
+        csvContent += [
+          escapeCsv(l.time),
+          escapeCsv(l.userId),
+          escapeCsv(l.type),
+          escapeCsv(l.input),
+          escapeCsv(l.aiResult),
+          escapeCsv(l.output)
+        ].join(',') + '\\n';
+      });
+
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'Daily_Diet_Logs_' + new Date().toISOString().slice(0, 10) + '.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     }
 
     // 初始化渲染
