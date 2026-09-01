@@ -461,7 +461,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     if (activeTab === 'data') {
       refreshStats();
     }
-  }, [activeTab, gistId, pat]);
+  }, [activeTab]);
 
   return (
     <div className="relative">
