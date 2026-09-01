@@ -1126,16 +1126,24 @@ function App() {
 
     checkVersion();
     
-    // Check version whenever the app is brought to the foreground
+    // Check version whenever the app is brought to the foreground or focused
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
         checkVersion();
       }
     };
+    const handleFocus = () => {
+      checkVersion();
+    };
+
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    window.addEventListener('focus', handleFocus);
+    const intervalId = setInterval(checkVersion, 3 * 60 * 1000);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      window.removeEventListener('focus', handleFocus);
+      clearInterval(intervalId);
     };
   }, []);
 

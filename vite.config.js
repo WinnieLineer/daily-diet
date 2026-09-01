@@ -16,6 +16,7 @@ export default defineConfig(({ command }) => ({
         skipWaiting: true,
         clientsClaim: true,
         cleanupOutdatedCaches: true,
+        globIgnores: ['**/version.json']
       },
       manifest: {
         name: 'daily-diet',
