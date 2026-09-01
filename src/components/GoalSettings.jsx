@@ -457,6 +457,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     }
   };
 
+  useEffect(() => {
+    if (activeTab === 'data') {
+      refreshStats();
+    }
+  }, [activeTab, gistId, pat]);
+
   return (
     <div className="relative">
       <NeoButton
@@ -502,7 +508,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                   { id: 'profile', icon: User, label: t('settings_profile') },
                   { id: 'goals', icon: Target, label: t('settings_goals') },
                   { id: 'fasting', icon: Clock, label: t('fasting_mode') },
-                  { id: 'shop', icon: Heart, label: t('settings_shop') || '良心小舖' },
                   { id: 'data', icon: Database, label: t('settings_data') },
                   { id: 'feedback', icon: MessageSquare, label: t('settings_contact') },
                   { id: 'appinfo', icon: Info, label: t('settings_about') }
@@ -958,428 +963,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                   </div>
                 )}
 
-                {activeTab === 'shop' && (
-                  <div className="space-y-6 text-left animate-fade-in">
-                    {/* Header Intro Card - Elegant Warm Sunset Clay Style */}
-                    <div className="p-6 border-4 border-black rounded-[2.5rem] bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-100 shadow-neo relative overflow-hidden group">
-                      {/* 3D coin background decoration */}
-                      <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-300/20 border-4 border-dashed border-amber-500/30 rounded-full flex items-center justify-center font-black text-2xl text-amber-500/40 select-none transform rotate-12 transition-transform duration-700 group-hover:rotate-45" />
-
-                      <div className="flex items-center gap-4 mb-4 relative z-10">
-                        <div className="w-14 h-14 bg-black border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-sm transform -rotate-3 hover:rotate-3 transition-transform duration-300">
-                          <span className="text-3xl animate-bounce">🪙</span>
-                        </div>
-                        <div>
-                          <h3 className="font-black italic text-2xl tracking-tight leading-none uppercase text-black">{shopText.title}</h3>
-                          <span className="text-[9px] font-black tracking-widest uppercase text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full border border-amber-300 mt-1 inline-block">{shopText.subtitle}</span>
-                        </div>
-                      </div>
-                      <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed relative z-10">
-                        {shopText.desc1}
-                      </p>
-                      <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed mt-2.5 relative z-10">
-                        {shopText.desc2}
-                      </p>
-                    </div>
-
-                    {/* Pricing Cards Grid - 3D Punched Ticket Style */}
-                    <div className="grid grid-cols-3 gap-3">
-                      {[
-                        { title: shopText.card1Title, price: '30', unit: shopText.card1Unit, desc: shopText.card1Desc, color: 'from-emerald-50 to-teal-100/50', accent: 'bg-emerald-400' },
-                        { title: shopText.card2Title, price: '50', unit: shopText.card2Unit, desc: shopText.card2Desc, color: 'from-rose-50 to-pink-100/50', accent: 'bg-rose-400' },
-                        { title: shopText.card3Title, price: '150', unit: shopText.card3Unit, desc: shopText.card3Desc, color: 'from-amber-50 to-yellow-100/50', accent: 'bg-amber-400', popular: true }
-                      ].map((item, idx) => (
-                        <div
-                          key={idx}
-                          className={`relative p-3.5 border-4 border-black rounded-[1.8rem] bg-gradient-to-br ${item.color} shadow-neo flex flex-col justify-between text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden group`}
-                        >
-                          {item.popular && (
-                            <div className="absolute top-0 right-0 bg-black text-white text-[7px] font-black uppercase tracking-widest px-2.5 py-1 rounded-bl-xl border-l-2 border-b-2 border-black z-10 flex items-center gap-0.5">
-                              {shopText.popular}
-                            </div>
-                          )}
-                          <div className="space-y-1 relative z-10">
-                            {/* Ticket punched notches on left and right */}
-                            <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
-                            <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
-
-                            <div className="font-black text-[9px] uppercase tracking-widest text-zinc-500">{item.title}</div>
-                            <div className="flex items-baseline justify-center gap-0.5">
-                              <span className="font-black text-3xl italic tracking-tight text-black">{item.price}</span>
-                              <span className="text-[10px] font-black text-black/60">{item.unit}</span>
-                            </div>
-                          </div>
-                          <div className="text-[8px] font-extrabold text-zinc-500 mt-4 leading-tight border-t-2 border-black/10 pt-2.5">
-                            {item.desc}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-
-                    {/* Payment Sections */}
-                    <div className="space-y-4">
-                      {/* Section Title */}
-                      <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">
-                        {shopText.channels}
-                      </div>
-
-                      {/* Bank Transfer Box - Luxury Black Card Style */}
-                      <div className="p-1 border-4 border-black rounded-[2rem] bg-black shadow-neo relative overflow-hidden group">
-                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none transition-transform duration-1000 group-hover:translate-x-full" />
-
-                        <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 p-5 rounded-[1.8rem] space-y-4 relative z-10">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <div className="w-8 h-8 rounded-lg bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center shadow-inner">
-                                <span className="text-sm">💳</span>
-                              </div>
-                              <div className="text-left">
-                                <div className="text-[10px] font-black uppercase text-amber-400 tracking-wider">{shopText.linebank}</div>
-                                <div className="text-[8px] font-bold text-zinc-500">{shopText.linebankCode}</div>
-                              </div>
-                            </div>
-                            <div className="w-9 h-7 rounded-md bg-gradient-to-br from-zinc-300 via-zinc-400 to-zinc-500 border border-zinc-600 relative overflow-hidden shadow-inner flex flex-col justify-around p-1 opacity-80">
-                              <div className="h-[1px] bg-zinc-800/40 w-full" />
-                              <div className="h-[1px] bg-zinc-800/40 w-full" />
-                              <div className="h-[1px] bg-zinc-800/40 w-full" />
-                            </div>
-                          </div>
-
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 border-y border-zinc-800/60">
-                            <div className="space-y-1 text-left">
-                              <div className="text-xs font-black text-zinc-300 tracking-wider flex items-center gap-1.5">
-                                LINE Bank
-                                <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold border border-zinc-700">824</span>
-                              </div>
-                              <div className="text-xl font-black italic tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] font-mono selection:bg-amber-400 selection:text-black">
-                                111000977323
-                              </div>
-                            </div>
-
-                            <button
-                              onClick={() => {
-                                navigator.clipboard.writeText("111000977323");
-                                alert(shopText.copiedAlert);
-                              }}
-                              className="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase px-4 py-3 rounded-2xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] border-2 border-black shrink-0 mt-1 sm:mt-0"
-                            >
-                              <Copy size={12} strokeWidth={3} /> {isEn ? "Copy" : "複製帳號"}
-                            </button>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* CTBC Pay Card - Polaroid Card Style (Centered) */}
-                      <div className="flex justify-center w-full">
-                        <div
-                          onClick={() => setSelectedQr({ title: shopText.ctbcPay, src: import.meta.env.BASE_URL + 'ctbc_qr.png' })}
-                          className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform -rotate-1 hover:rotate-0 hover:-translate-y-1 transition-all duration-300 relative group/line cursor-pointer w-full max-w-[200px]"
-                        >
-                          <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
-                          <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
-
-                          <div className="flex items-center gap-1.5 mb-3 bg-teal-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
-                            <span className="w-1.5 h-1.5 rounded-full bg-[#008687] animate-pulse" />
-                            <h4 className="font-black text-[9px] text-[#008687] tracking-wider">{shopText.ctbcPay}</h4>
-                          </div>
-
-                          <div className="w-28 h-28 bg-zinc-50 border-4 border-black rounded-2xl p-2 flex items-center justify-center relative overflow-hidden shadow-inner group-hover/line:scale-[1.03] transition-transform">
-                            <img
-                              src={import.meta.env.BASE_URL + 'ctbc_qr.png'}
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                                e.target.nextSibling.style.display = 'flex';
-                              }}
-                              className="w-full h-full object-contain filter contrast-125"
-                              alt="CTBC Pay QR"
-                            />
-                            <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
-                              <span className="text-xl mb-1">📲</span>
-                              <span className="text-[7px] font-black leading-tight text-zinc-500">CTBC QR</span>
-                            </div>
-                          </div>
-                          <p className="text-[8px] font-black text-zinc-500 mt-3 leading-relaxed">
-                            {shopText.ctbcPayDesc}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Sponsor Crown Honesty Unlock Panel */}
-                      <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-4 border-black rounded-2xl shadow-neo-xs space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-amber-400 rounded-xl border-2 border-black flex items-center justify-center text-xl shadow-neo-xs-black">
-                            👑
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="font-black text-xs">{shopText.crownTitle}</div>
-                            <div className="text-[9px] font-bold text-amber-700">{shopText.crownSubtitle}</div>
-                          </div>
-                        </div>
-
-                        <p className="text-[10px] text-zinc-600 font-bold leading-relaxed text-left">
-                          {shopText.crownDesc}
-                        </p>
-
-                        <div className="flex gap-2">
-                          {hasCrown ? (
-                            <button
-                              onClick={() => {
-                                localStorage.removeItem('panda_sponsor_crown');
-                                setHasCrown(false);
-                                window.dispatchEvent(new CustomEvent('panda-crown-updated'));
-                                alert(shopText.crownToastRemove);
-                              }}
-                              className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform animate-fade-in"
-                            >
-                              {shopText.crownActive}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                const confirmUnlock = window.confirm(shopText.crownOath);
-                                if (confirmUnlock) {
-                                  localStorage.setItem('panda_sponsor_crown', 'true');
-                                  setHasCrown(true);
-                                  window.dispatchEvent(new CustomEvent('panda-crown-updated'));
-                                  alert(shopText.crownToastUnlock);
-                                }
-                              }}
-                              className="w-full bg-amber-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs-black transition-transform flex items-center justify-center gap-1.5"
-                            >
-                              {shopText.crownInactive}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Limited Edition stickers & Emojis Unlock Panel */}
-                      <div className="p-4 bg-gradient-to-r from-teal-50 to-emerald-50 border-4 border-black rounded-2xl shadow-neo-xs space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-emerald-400 rounded-xl border-2 border-black flex items-center justify-center text-xl shadow-neo-xs-black">
-                            🎁
-                          </div>
-                          <div className="flex-1 text-left">
-                            <div className="font-black text-xs">{shopText.stickerTitle}</div>
-                            <div className="text-[9px] font-bold text-emerald-700">{shopText.stickerSubtitle}</div>
-                          </div>
-                        </div>
-
-                        <p className="text-[10px] text-zinc-600 font-bold leading-relaxed text-left">
-                          {shopText.stickerDesc}
-                        </p>
-
-                        {/* Stickers Grid */}
-                        <div className="grid grid-cols-5 gap-1.5 py-1">
-                          {[
-                            { id: 'crown', emoji: '🐼👑', label: shopText.sticker1Label, text: shopText.sticker1Text },
-                            { id: 'bamboo', emoji: '🐼🎋', label: shopText.sticker2Label, text: shopText.sticker2Text },
-                            { id: 'coffee', emoji: '🐼☕', label: shopText.sticker3Label, text: shopText.sticker3Text },
-                            { id: 'muscles', emoji: '🐼💪', label: shopText.sticker4Label, text: shopText.sticker4Text },
-                            { id: 'pizza', emoji: '🐼🍕', label: shopText.sticker5Label, text: shopText.sticker5Text }
-                          ].map((sticker, idx) => {
-                            const isActive = activeSticker === sticker.emoji;
-                            return (
-                              <button
-                                key={idx}
-                                onClick={() => {
-                                  if (!hasStickers) {
-                                    alert(shopText.stickerLockTip);
-                                    return;
-                                  }
-                                  const currentActive = localStorage.getItem('panda_active_sticker');
-                                  if (currentActive === sticker.emoji) {
-                                    localStorage.removeItem('panda_active_sticker');
-                                    setActiveSticker('');
-                                    alert(isEn ? "Sticker removed 🎋" : "已將貼紙收起囉 🎋");
-                                  } else {
-                                    localStorage.setItem('panda_active_sticker', sticker.emoji);
-                                    setActiveSticker(sticker.emoji);
-                                    alert(isEn 
-                                      ? "🎉 Sticker pasted onto Coach Panda! Go back to the main screen to check it out! 🐼✨"
-                                      : "🎉 已將紀念貼紙貼在熊貓教練身上囉！快回到主畫面看看吧 🐼✨"
-                                    );
-                                  }
-                                  window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
-                                }}
-                                className={`relative p-2.5 rounded-2xl border-2 border-black flex flex-col items-center justify-center transition-all duration-300 ${
-                                  hasStickers
-                                    ? isActive
-                                      ? 'bg-amber-100 ring-2 ring-amber-400 scale-105 shadow-neo-sm rotate-3 cursor-pointer'
-                                      : 'bg-white hover:-translate-y-1 hover:rotate-2 shadow-neo-xs cursor-pointer active:scale-95'
-                                    : 'bg-zinc-100 filter grayscale opacity-60 border-dashed cursor-not-allowed'
-                                }`}
-                              >
-                                <div className="w-10 h-10 mb-1 select-none flex items-center justify-center">
-                                  {hasStickers ? (
-                                    <PandaSticker id={sticker.id} className="w-full h-full" />
-                                  ) : (
-                                    <span className="text-2xl filter grayscale opacity-45">{sticker.emoji}</span>
-                                  )}
-                                </div>
-                                <span className="text-[7px] font-black text-zinc-500 whitespace-nowrap">{sticker.label}</span>
-                                
-                                {/* Lock Overlay */}
-                                {!hasStickers && (
-                                  <div className="absolute inset-0 bg-black/5 rounded-xl flex items-center justify-center text-[10px]">
-                                    🔒
-                                  </div>
-                                )}
-
-                                {/* Bouncing Active Star Sparkle */}
-                                {hasStickers && isActive && (
-                                  <div className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-emerald-400 border border-black rounded-full flex items-center justify-center text-[8px] font-black shadow-neo-xs-black animate-bounce z-10">
-                                    ✨
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        <div className="flex gap-2">
-                          {hasStickers ? (
-                            <button
-                              onClick={() => {
-                                localStorage.removeItem('panda_stickers_unlocked');
-                                localStorage.removeItem('panda_active_sticker');
-                                setHasStickers(false);
-                                setActiveSticker('');
-                                window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
-                                alert(shopText.stickerToastRemove);
-                              }}
-                              className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform"
-                            >
-                              {shopText.stickerActive}
-                            </button>
-                          ) : (
-                            <button
-                              onClick={() => {
-                                const confirmUnlock = window.confirm(shopText.stickerDesc);
-                                if (confirmUnlock) {
-                                  localStorage.setItem('panda_stickers_unlocked', 'true');
-                                  setHasStickers(true);
-                                  window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
-                                  alert(shopText.stickerToastUnlock);
-                                }
-                              }}
-                              className="w-full bg-emerald-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs-black transition-transform flex items-center justify-center gap-1.5"
-                            >
-                              {shopText.stickerInactive}
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* 熊貓多重性格切換 */}
-                    <div className="p-5 border-4 border-black rounded-[2.2rem] bg-white shadow-neo relative overflow-hidden text-left">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">🎭</span>
-                          <div>
-                            <h4 className="font-black italic text-sm text-black">熊貓教練多重性格切換 (付費解鎖)</h4>
-                            <span className="text-[8px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full inline-block mt-0.5 uppercase">
-                              SUPPORT SPONSORS ONLY
-                            </span>
-                          </div>
-                        </div>
-                        <p className="text-[10px] font-bold text-zinc-500 leading-relaxed">
-                          支持良心燃料商店的贊助者專屬！解鎖三款完全不同的 AI 性格，教練在進行食物辨識或日常評語時的口氣將天差地遠！採自助解鎖 🎋
-                        </p>
-
-                        {/* Character Grid */}
-                        <div className="grid grid-cols-3 gap-2 py-1">
-                          {[
-                            { id: 'tsundere', emoji: '😡', title: '毒舌傲嬌', desc: '口嫌體正直，專挑毛病吐槽' },
-                            { id: 'gentle', emoji: '😇', title: '溫柔甜心', desc: '貼心小天使，用愛包容你的胃' },
-                            { id: 'hardcore', emoji: '💪', title: '鐵血教練', desc: '健身硬漢，咆哮督促絕不妥協' }
-                          ].map(char => {
-                            const isActive = activePersona === char.id;
-                            return (
-                              <button
-                                key={char.id}
-                                type="button"
-                                onClick={() => {
-                                  if (!hasPersonas) {
-                                    alert("🔒 此多重性格切換尚未解鎖！請點選下方「自助解鎖限定性格」進行支持 🎋");
-                                    return;
-                                  }
-                                  localStorage.setItem('panda_active_persona', char.id);
-                                  setActivePersona(char.id);
-                                  window.dispatchEvent(new CustomEvent('panda-persona-updated'));
-                                  alert(`已切換為專屬性格：${char.emoji} ${char.title}！`);
-                                }}
-                                className={`relative p-2 border-2 border-black rounded-2xl text-center flex flex-col items-center justify-between min-h-[95px] transition-all hover:bg-zinc-50 ${
-                                  isActive && hasPersonas ? 'bg-indigo-50/70 border-2 border-black ring-2 ring-indigo-500/20' : 'bg-white'
-                                }`}
-                              >
-                                <span className="text-xl">{char.emoji}</span>
-                                <span className="font-black text-[10px] text-black mt-1 leading-none">{char.title}</span>
-                                <span className="text-[7px] font-extrabold text-zinc-400 leading-tight mt-1.5">{char.desc}</span>
-                                
-                                {/* Lock overlay */}
-                                {!hasPersonas && (
-                                  <div className="absolute inset-0 bg-black/5 rounded-xl flex items-center justify-center text-[10px]">
-                                    🔒
-                                  </div>
-                                )}
-
-                                {/* Active Star Sparkle */}
-                                {hasPersonas && isActive && (
-                                  <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-400 border border-black rounded-full flex items-center justify-center text-[7px] font-black shadow-neo-xs animate-bounce z-10">
-                                    ✨
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-
-                        {/* Action Unlock Button */}
-                        <div className="flex gap-2">
-                          {hasPersonas ? (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                localStorage.removeItem('panda_persona_unlocked');
-                                localStorage.setItem('panda_active_persona', 'tsundere');
-                                setHasPersonas(false);
-                                setActivePersona('tsundere');
-                                window.dispatchEvent(new CustomEvent('panda-persona-updated'));
-                                alert("已封存多重性格切換，教練恢復為預設傲嬌性格 🎋");
-                              }}
-                              className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform"
-                            >
-                              🎁 性格切換已開啟 (點擊封存)
-                            </button>
-                          ) : (
-                            <button
-                              type="button"
-                              onClick={() => {
-                                const confirmUnlock = window.confirm("🎋 熊貓教練多重性格自助解鎖小卡\n\n「感謝你支持開發者的真實 API 燃料開銷！解鎖後即可任意切換 3 款完全不同的 AI 對話性格！」\n\n準備好開啟多重性格了嗎？");
-                                if (confirmUnlock) {
-                                   localStorage.setItem('panda_persona_unlocked', 'true');
-                                   setHasPersonas(true);
-                                   window.dispatchEvent(new CustomEvent('panda-persona-updated'));
-                                   alert("🎉 恭喜！「多重性格切換」已自助解鎖成功！快點選上方頭像性格，體驗不同性格教練的精彩對話吧 🐼⚡");
-                                }
-                              }}
-                              className="w-full bg-indigo-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs transition-transform flex items-center justify-center gap-1.5"
-                            >
-                              ✨ 自助解鎖限定性格 🎁
-                            </button>
-                          )}
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Thank You Note */}
-                    <div className="text-center font-black italic text-xs text-zinc-500 pt-2">
-                      「您的支持，是讓這隻熊貓教練繼續為您服務的最大動力！🎋❤️」
-                    </div>
-                  </div>
-                )}
-
                 {activeTab === 'data' && (
                   <div className="space-y-6">
                     {/* Data Stats Card */}
@@ -1689,6 +1272,430 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                       <div className="absolute -bottom-6 -right-6 opacity-10 rotate-12 pointer-events-none">
                         <MessageSquare size={120} className="text-black" />
+                      </div>
+                    </div>
+
+                    {/* ☕ 贊助支持 / 良心燃料小舖 (Sponsor & Support Developer) */}
+                    <div className="space-y-6 text-left animate-fade-in pt-2">
+                      {/* Header Intro Card - Elegant Warm Sunset Clay Style */}
+                      <div className="p-6 border-4 border-black rounded-[2.5rem] bg-gradient-to-br from-yellow-50 via-amber-50 to-orange-100 shadow-neo relative overflow-hidden group">
+                        {/* 3D coin background decoration */}
+                        <div className="absolute -top-6 -right-6 w-20 h-20 bg-amber-300/20 border-4 border-dashed border-amber-500/30 rounded-full flex items-center justify-center font-black text-2xl text-amber-500/40 select-none transform rotate-12 transition-transform duration-700 group-hover:rotate-45" />
+
+                        <div className="flex items-center gap-4 mb-4 relative z-10">
+                          <div className="w-14 h-14 bg-black border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-sm transform -rotate-3 hover:rotate-3 transition-transform duration-300">
+                            <span className="text-3xl animate-bounce">🪙</span>
+                          </div>
+                          <div>
+                            <h3 className="font-black italic text-2xl tracking-tight leading-none uppercase text-black">{shopText.title}</h3>
+                            <span className="text-[9px] font-black tracking-widest uppercase text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full border border-amber-300 mt-1 inline-block">{shopText.subtitle}</span>
+                          </div>
+                        </div>
+                        <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed relative z-10">
+                          {shopText.desc1}
+                        </p>
+                        <p className="text-xs sm:text-sm font-bold text-zinc-700 leading-relaxed mt-2.5 relative z-10">
+                          {shopText.desc2}
+                        </p>
+                      </div>
+
+                      {/* Pricing Cards Grid - 3D Punched Ticket Style */}
+                      <div className="grid grid-cols-3 gap-3">
+                        {[
+                          { title: shopText.card1Title, price: '30', unit: shopText.card1Unit, desc: shopText.card1Desc, color: 'from-emerald-50 to-teal-100/50', accent: 'bg-emerald-400' },
+                          { title: shopText.card2Title, price: '50', unit: shopText.card2Unit, desc: shopText.card2Desc, color: 'from-rose-50 to-pink-100/50', accent: 'bg-rose-400' },
+                          { title: shopText.card3Title, price: '150', unit: shopText.card3Unit, desc: shopText.card3Desc, color: 'from-amber-50 to-yellow-100/50', accent: 'bg-amber-400', popular: true }
+                        ].map((item, idx) => (
+                          <div
+                            key={idx}
+                            className={`relative p-3.5 border-4 border-black rounded-[1.8rem] bg-gradient-to-br ${item.color} shadow-neo flex flex-col justify-between text-center transition-all duration-300 hover:-translate-y-1 hover:shadow-[6px_6px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 active:shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] overflow-hidden group`}
+                          >
+                            {item.popular && (
+                              <div className="absolute top-0 right-0 bg-black text-white text-[7px] font-black uppercase tracking-widest px-2.5 py-1 rounded-bl-xl border-l-2 border-b-2 border-black z-10 flex items-center gap-0.5">
+                                {shopText.popular}
+                              </div>
+                            )}
+                            <div className="space-y-1 relative z-10">
+                              <div className="absolute -left-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
+                              <div className="absolute -right-6 top-1/2 -translate-y-1/2 w-4 h-4 bg-white border-2 border-black rounded-full" />
+
+                              <div className="font-black text-[9px] uppercase tracking-widest text-zinc-500">{item.title}</div>
+                              <div className="flex items-baseline justify-center gap-0.5">
+                                <span className="font-black text-3xl italic tracking-tight text-black">{item.price}</span>
+                                <span className="text-[10px] font-black text-black/60">{item.unit}</span>
+                              </div>
+                            </div>
+                            <div className="text-[8px] font-extrabold text-zinc-500 mt-4 leading-tight border-t-2 border-black/10 pt-2.5">
+                              {item.desc}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+
+                      {/* Payment Sections */}
+                      <div className="space-y-4">
+                        <div className="text-[10px] font-black text-zinc-400 uppercase tracking-widest pl-1">
+                          {shopText.channels}
+                        </div>
+
+                        {/* Bank Transfer Box */}
+                        <div className="p-1 border-4 border-black rounded-[2rem] bg-black shadow-neo relative overflow-hidden group">
+                          <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/5 to-white/0 pointer-events-none transition-transform duration-1000 group-hover:translate-x-full" />
+
+                          <div className="bg-gradient-to-br from-zinc-900 to-zinc-950 p-5 rounded-[1.8rem] space-y-4 relative z-10">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <div className="w-8 h-8 rounded-lg bg-zinc-800 border-2 border-zinc-700 flex items-center justify-center shadow-inner">
+                                  <span className="text-sm">💳</span>
+                                </div>
+                                <div className="text-left">
+                                  <div className="text-[10px] font-black uppercase text-amber-400 tracking-wider">{shopText.linebank}</div>
+                                  <div className="text-[8px] font-bold text-zinc-500">{shopText.linebankCode}</div>
+                                </div>
+                              </div>
+                              <div className="w-9 h-7 rounded-md bg-gradient-to-br from-zinc-300 via-zinc-400 to-zinc-500 border border-zinc-600 relative overflow-hidden shadow-inner flex flex-col justify-around p-1 opacity-80">
+                                <div className="h-[1px] bg-zinc-800/40 w-full" />
+                                <div className="h-[1px] bg-zinc-800/40 w-full" />
+                                <div className="h-[1px] bg-zinc-800/40 w-full" />
+                              </div>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 py-3 border-y border-zinc-800/60">
+                              <div className="space-y-1 text-left">
+                                <div className="text-xs font-black text-zinc-300 tracking-wider flex items-center gap-1.5">
+                                  LINE Bank
+                                  <span className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-400 font-bold border border-zinc-700">824</span>
+                                </div>
+                                <div className="text-xl font-black italic tracking-widest text-white drop-shadow-[0_2px_4px_rgba(0,0,0,0.5)] font-mono selection:bg-amber-400 selection:text-black">
+                                  111000977323
+                                </div>
+                              </div>
+
+                              <button
+                                onClick={() => {
+                                  navigator.clipboard.writeText("111000977323");
+                                  alert(shopText.copiedAlert);
+                                }}
+                                className="w-full sm:w-auto bg-amber-400 hover:bg-amber-300 text-black font-black text-xs uppercase px-4 py-3 rounded-2xl flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-[2px_2px_0px_0px_rgba(255,255,255,1)] border-2 border-black shrink-0 mt-1 sm:mt-0"
+                              >
+                                <Copy size={12} strokeWidth={3} /> {isEn ? "Copy" : "複製帳號"}
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* CTBC Pay Card */}
+                        <div className="flex justify-center w-full">
+                          <div
+                            onClick={() => setSelectedQr({ title: shopText.ctbcPay, src: import.meta.env.BASE_URL + 'ctbc_qr.png' })}
+                            className="p-4 border-4 border-black rounded-3xl bg-white shadow-neo flex flex-col items-center text-center transform -rotate-1 hover:rotate-0 hover:-translate-y-1 transition-all duration-300 relative group/line cursor-pointer w-full max-w-[200px]"
+                          >
+                            <div className="absolute top-2 left-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
+                            <div className="absolute top-2 right-2 w-1.5 h-1.5 rounded-full bg-zinc-200 border border-zinc-400" />
+
+                            <div className="flex items-center gap-1.5 mb-3 bg-teal-50 px-3 py-1 rounded-full border-2 border-black shadow-neo-xs">
+                              <span className="w-1.5 h-1.5 rounded-full bg-[#008687] animate-pulse" />
+                              <h4 className="font-black text-[9px] text-[#008687] tracking-wider">{shopText.ctbcPay}</h4>
+                            </div>
+
+                            <div className="w-28 h-28 bg-zinc-50 border-4 border-black rounded-2xl p-2 flex items-center justify-center relative overflow-hidden shadow-inner group-hover/line:scale-[1.03] transition-transform">
+                              <img
+                                src={import.meta.env.BASE_URL + 'ctbc_qr.png'}
+                                onError={(e) => {
+                                  e.target.style.display = 'none';
+                                  e.target.nextSibling.style.display = 'flex';
+                                }}
+                                className="w-full h-full object-contain filter contrast-125"
+                                alt="CTBC Pay QR"
+                              />
+                              <div className="hidden absolute inset-0 flex flex-col items-center justify-center p-2 text-zinc-400 text-center">
+                                <span className="text-xl mb-1">📲</span>
+                                <span className="text-[7px] font-black leading-tight text-zinc-500">CTBC QR</span>
+                              </div>
+                            </div>
+                            <p className="text-[8px] font-black text-zinc-500 mt-3 leading-relaxed">
+                              {shopText.ctbcPayDesc}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Sponsor Crown Honesty Unlock Panel */}
+                        <div className="p-4 bg-gradient-to-r from-amber-50 to-orange-50 border-4 border-black rounded-2xl shadow-neo-xs space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-amber-400 rounded-xl border-2 border-black flex items-center justify-center text-xl shadow-neo-xs-black">
+                              👑
+                            </div>
+                            <div className="flex-1 text-left">
+                              <div className="font-black text-xs">{shopText.crownTitle}</div>
+                              <div className="text-[9px] font-bold text-amber-700">{shopText.crownSubtitle}</div>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-zinc-600 font-bold leading-relaxed text-left">
+                            {shopText.crownDesc}
+                          </p>
+
+                          <div className="flex gap-2">
+                            {hasCrown ? (
+                              <button
+                                onClick={() => {
+                                  localStorage.removeItem('panda_sponsor_crown');
+                                  setHasCrown(false);
+                                  window.dispatchEvent(new CustomEvent('panda-crown-updated'));
+                                  alert(shopText.crownToastRemove);
+                                }}
+                                className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform animate-fade-in"
+                              >
+                                {shopText.crownActive}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  const confirmUnlock = window.confirm(shopText.crownOath);
+                                  if (confirmUnlock) {
+                                    localStorage.setItem('panda_sponsor_crown', 'true');
+                                    setHasCrown(true);
+                                    window.dispatchEvent(new CustomEvent('panda-crown-updated'));
+                                    alert(shopText.crownToastUnlock);
+                                  }
+                                }}
+                                className="w-full bg-amber-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs-black transition-transform flex items-center justify-center gap-1.5"
+                              >
+                                {shopText.crownInactive}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Limited Edition stickers */}
+                        <div className="p-4 bg-gradient-to-r from-teal-50 to-emerald-50 border-4 border-black rounded-2xl shadow-neo-xs space-y-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 bg-emerald-400 rounded-xl border-2 border-black flex items-center justify-center text-xl shadow-neo-xs-black">
+                              🎁
+                            </div>
+                            <div className="flex-1 text-left">
+                              <div className="font-black text-xs">{shopText.stickerTitle}</div>
+                              <div className="text-[9px] font-bold text-emerald-700">{shopText.stickerSubtitle}</div>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-zinc-600 font-bold leading-relaxed text-left">
+                            {shopText.stickerDesc}
+                          </p>
+
+                          {/* Stickers Grid */}
+                          <div className="grid grid-cols-5 gap-1.5 py-1">
+                            {[
+                              { id: 'crown', emoji: '🐼👑', label: shopText.sticker1Label, text: shopText.sticker1Text },
+                              { id: 'bamboo', emoji: '🐼🎋', label: shopText.sticker2Label, text: shopText.sticker2Text },
+                              { id: 'coffee', emoji: '🐼☕', label: shopText.sticker3Label, text: shopText.sticker3Text },
+                              { id: 'muscles', emoji: '🐼💪', label: shopText.sticker4Label, text: shopText.sticker4Text },
+                              { id: 'pizza', emoji: '🐼🍕', label: shopText.sticker5Label, text: shopText.sticker5Text }
+                            ].map((sticker, idx) => {
+                              const isActive = activeSticker === sticker.emoji;
+                              return (
+                                <button
+                                  key={idx}
+                                  onClick={() => {
+                                    if (!hasStickers) {
+                                      alert(shopText.stickerLockTip);
+                                      return;
+                                    }
+                                    const currentActive = localStorage.getItem('panda_active_sticker');
+                                    if (currentActive === sticker.emoji) {
+                                      localStorage.removeItem('panda_active_sticker');
+                                      setActiveSticker('');
+                                      alert(isEn ? "Sticker removed 🎋" : "已將貼紙收起囉 🎋");
+                                    } else {
+                                      localStorage.setItem('panda_active_sticker', sticker.emoji);
+                                      setActiveSticker(sticker.emoji);
+                                      alert(isEn 
+                                        ? "🎉 Sticker pasted onto Coach Panda! Go back to the main screen to check it out! 🐼✨"
+                                        : "🎉 已將紀念貼紙貼在熊貓教練身上囉！快回到主畫面看看吧 🐼✨"
+                                      );
+                                    }
+                                    window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
+                                  }}
+                                  className={`relative p-2.5 rounded-2xl border-2 border-black flex flex-col items-center justify-center transition-all duration-300 ${
+                                    hasStickers
+                                      ? isActive
+                                        ? 'bg-amber-100 ring-2 ring-amber-400 scale-105 shadow-neo-sm rotate-3 cursor-pointer'
+                                        : 'bg-white hover:-translate-y-1 hover:rotate-2 shadow-neo-xs cursor-pointer active:scale-95'
+                                      : 'bg-zinc-100 filter grayscale opacity-60 border-dashed cursor-not-allowed'
+                                  }`}
+                                >
+                                  <div className="w-10 h-10 mb-1 select-none flex items-center justify-center">
+                                    {hasStickers ? (
+                                      <PandaSticker id={sticker.id} className="w-full h-full" />
+                                    ) : (
+                                      <span className="text-2xl filter grayscale opacity-45">{sticker.emoji}</span>
+                                    )}
+                                  </div>
+                                  <span className="text-[7px] font-black text-zinc-500 whitespace-nowrap">{sticker.label}</span>
+                                  
+                                  {/* Lock Overlay */}
+                                  {!hasStickers && (
+                                    <div className="absolute inset-0 bg-black/5 rounded-xl flex items-center justify-center text-[10px]">
+                                      🔒
+                                    </div>
+                                  )}
+
+                                  {/* Bouncing Active Star Sparkle */}
+                                  {hasStickers && isActive && (
+                                    <div className="absolute -top-1.5 -right-1.5 w-4.5 h-4.5 bg-emerald-400 border border-black rounded-full flex items-center justify-center text-[8px] font-black shadow-neo-xs-black animate-bounce z-10">
+                                      ✨
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          <div className="flex gap-2">
+                            {hasStickers ? (
+                              <button
+                                onClick={() => {
+                                  localStorage.removeItem('panda_stickers_unlocked');
+                                  localStorage.removeItem('panda_active_sticker');
+                                  setHasStickers(false);
+                                  setActiveSticker('');
+                                  window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
+                                  alert(shopText.stickerToastRemove);
+                                }}
+                                className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform"
+                              >
+                                {shopText.stickerActive}
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => {
+                                  const confirmUnlock = window.confirm(shopText.stickerDesc);
+                                  if (confirmUnlock) {
+                                    localStorage.setItem('panda_stickers_unlocked', 'true');
+                                    setHasStickers(true);
+                                    window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
+                                    alert(shopText.stickerToastUnlock);
+                                  }
+                                }}
+                                className="w-full bg-emerald-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs-black transition-transform flex items-center justify-center gap-1.5"
+                              >
+                                {shopText.stickerInactive}
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* 熊貓多重性格切換 */}
+                      <div className="p-5 border-4 border-black rounded-[2.2rem] bg-white shadow-neo relative overflow-hidden text-left">
+                        <div className="space-y-4">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">🎭</span>
+                            <div>
+                              <h4 className="font-black italic text-sm text-black">熊貓教練多重性格切換 (付費解鎖)</h4>
+                              <span className="text-[8px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full inline-block mt-0.5 uppercase">
+                                SUPPORT SPONSORS ONLY
+                              </span>
+                            </div>
+                          </div>
+
+                          <p className="text-[10px] text-zinc-600 font-bold leading-relaxed">
+                            感謝贊助支持！解鎖後可點選下方頭像切換教練語氣與性格：
+                          </p>
+
+                          {/* Personas Grid */}
+                          <div className="grid grid-cols-3 gap-2">
+                            {[
+                              { id: 'tsundere', emoji: '🐼😤', label: '傲嬌教練', desc: '口嫌體正直、毒舌但關心你' },
+                              { id: 'gentle', emoji: '🐼🥰', label: '治癒天使', desc: '溫柔鼓勵、滿滿正能量' },
+                              { id: 'hardcore', emoji: '🐼🔥', label: '魔鬼士官長', desc: '熱血嚴格、斯巴達式紀律' }
+                            ].map((persona) => {
+                              const isActive = activePersona === persona.id;
+                              return (
+                                <button
+                                  key={persona.id}
+                                  type="button"
+                                  onClick={() => {
+                                    if (!hasPersonas) {
+                                      alert("🔒 請先完成贊助並在下方點擊解鎖多重性格喔！");
+                                      return;
+                                    }
+                                    localStorage.setItem('panda_active_persona', persona.id);
+                                    setActivePersona(persona.id);
+                                    window.dispatchEvent(new CustomEvent('panda-persona-updated'));
+                                    alert(`🎉 已成功切換為【${persona.label}】！快去跟教練對話看看吧 🐼✨`);
+                                  }}
+                                  className={`relative p-3 rounded-2xl border-2 border-black flex flex-col items-center justify-between text-center transition-all ${
+                                    hasPersonas
+                                      ? isActive
+                                        ? 'bg-indigo-100 ring-2 ring-indigo-400 scale-105 shadow-neo-sm rotate-1 cursor-pointer'
+                                        : 'bg-white hover:-translate-y-1 shadow-neo-xs cursor-pointer active:scale-95'
+                                      : 'bg-zinc-100 filter grayscale opacity-60 border-dashed cursor-not-allowed'
+                                  }`}
+                                >
+                                  <span className="text-3xl mb-1">{persona.emoji}</span>
+                                  <span className="text-[9px] font-black text-black">{persona.label}</span>
+                                  <span className="text-[7px] font-bold text-zinc-400 leading-tight mt-1">{persona.desc}</span>
+
+                                  {/* Lock overlay */}
+                                  {!hasPersonas && (
+                                    <div className="absolute inset-0 bg-black/5 rounded-xl flex items-center justify-center text-[10px]">
+                                      🔒
+                                    </div>
+                                  )}
+
+                                  {/* Active Star Sparkle */}
+                                  {hasPersonas && isActive && (
+                                    <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-400 border border-black rounded-full flex items-center justify-center text-[7px] font-black shadow-neo-xs animate-bounce z-10">
+                                      ✨
+                                    </div>
+                                  )}
+                                </button>
+                              );
+                            })}
+                          </div>
+
+                          {/* Action Unlock Button */}
+                          <div className="flex gap-2">
+                            {hasPersonas ? (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  localStorage.removeItem('panda_persona_unlocked');
+                                  localStorage.setItem('panda_active_persona', 'tsundere');
+                                  setHasPersonas(false);
+                                  setActivePersona('tsundere');
+                                  window.dispatchEvent(new CustomEvent('panda-persona-updated'));
+                                  alert("已封存多重性格切換，教練恢復為預設傲嬌性格 🎋");
+                                }}
+                                className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform"
+                              >
+                                🎁 性格切換已開啟 (點擊封存)
+                              </button>
+                            ) : (
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const confirmUnlock = window.confirm("🎋 熊貓教練多重性格自助解鎖小卡\n\n「感謝你支持開發者的真實 API 燃料開銷！解鎖後即可任意切換 3 款完全不同的 AI 對話性格！」\n\n準備好開啟多重性格了嗎？");
+                                  if (confirmUnlock) {
+                                     localStorage.setItem('panda_persona_unlocked', 'true');
+                                     setHasPersonas(true);
+                                     window.dispatchEvent(new CustomEvent('panda-persona-updated'));
+                                     alert("🎉 恭喜！「多重性格切換」已自助解鎖成功！快點選上方頭像性格，體驗不同性格教練的精彩對話吧 🐼⚡");
+                                  }
+                                }}
+                                className="w-full bg-indigo-400 text-black border-2 border-black py-2 rounded-xl text-xs font-black italic active:scale-95 shadow-neo-xs transition-transform flex items-center justify-center gap-1.5"
+                              >
+                                ✨ 自助解鎖限定性格 🎁
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Thank You Note */}
+                      <div className="text-center font-black italic text-xs text-zinc-500 pt-2 pb-4">
+                        「您的支持，是讓這隻熊貓教練繼續為您服務的最大動力！🎋❤️」
                       </div>
                     </div>
                   </div>

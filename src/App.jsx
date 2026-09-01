@@ -1602,16 +1602,6 @@ function App() {
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
             <NeoButton 
-              variant="black" 
-              className="w-9 h-9 sm:w-10 sm:h-10 p-0 flex items-center justify-center text-rose-500 hover:text-rose-600 active:scale-95 shrink-0"
-              onClick={() => {
-                window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'shop' } }));
-              }}
-              title="Support Us"
-            >
-              <Heart className="fill-rose-500 w-4 h-4 sm:w-4.5 sm:h-4.5" />
-            </NeoButton>
-            <NeoButton 
               variant={new Date().getDay() === 0 ? "accent" : "black"} 
               className={`w-9 h-9 sm:w-10 sm:h-10 p-0 flex items-center justify-center relative shrink-0 ${new Date().getDay() === 0 ? 'bg-accent text-black border-black animate-pulse' : ''}`}
               onClick={() => setShowWeeklyReport(true)}
