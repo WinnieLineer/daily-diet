@@ -1691,36 +1691,6 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <MessageSquare size={120} className="text-black" />
                       </div>
                     </div>
-
-                    {/* ☕ Ko-fi Support Card */}
-                    <a
-                      href="https://ko-fi.com/winnielinspace"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="block group"
-                    >
-                      <div className="relative p-5 bg-[#FF5E5B] border-4 border-black rounded-[2rem] shadow-neo overflow-hidden transition-transform active:scale-95 group-hover:-translate-y-1">
-                        <div className="absolute -top-6 -right-6 text-[80px] opacity-10 rotate-12 pointer-events-none select-none">☕</div>
-                        <div className="relative z-10 flex flex-col gap-3">
-                          <div className="flex items-center gap-4">
-                            <div className="shrink-0 w-14 h-14 bg-white border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-xs text-2xl">
-                              ☕
-                            </div>
-                            <div className="flex-1">
-                              <p className="font-black italic text-white text-base uppercase tracking-tight leading-snug drop-shadow">
-                                {t('kofi_title') || '請我喝杯咖啡！'}
-                              </p>
-                            </div>
-                          </div>
-                          <p className="text-white/95 text-[12px] font-bold leading-relaxed whitespace-pre-wrap">
-                            {t('kofi_desc') || 'App 完全免費，你的支持讓開發者能繼續更新新功能 🐼'}
-                          </p>
-                          <div className="w-full bg-white border-4 border-black rounded-xl px-3 py-2.5 shadow-neo-xs text-center mt-1 active:scale-95 transition-transform">
-                            <span className="font-black italic text-sm text-black uppercase">認養伺服器與開發者 ☕</span>
-                          </div>
-                        </div>
-                      </div>
-                    </a>
                   </div>
                 )}
 

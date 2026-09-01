@@ -1248,7 +1248,6 @@ function App() {
 
   const adviceUpdateLockRef = useRef(false);
   const adviceTimerRef = useRef(null);
-  const kofiRef = useRef(null);
 
   const refreshData = async (adviceMode = 'none') => {
     // adviceMode: 'none' (just refresh data), 'fetch' (call AI), 'skip' (already have fresh AI advice)
