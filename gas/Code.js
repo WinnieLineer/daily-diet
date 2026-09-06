@@ -413,6 +413,18 @@ function doPost(e) {
       console.log(`\n========================================`);
       console.log(`📩 [LINE 事件收到] 用戶 ID: ${userId} | 類型: ${event.type}`);
 
+      // 🌟 強制為用戶綁定最新圖文選單 (直接推送到該用戶手機，突破 LINE App 本地快取與個人優先權限制)
+      const currentRichMenuId = props.getProperty('CURRENT_RICH_MENU_ID');
+      if (currentRichMenuId && userId && userId !== 'default_user') {
+        try {
+          UrlFetchApp.fetch('https://api.line.me/v2/bot/user/' + userId + '/richmenu/' + currentRichMenuId, {
+            method: 'post',
+            headers: { 'Authorization': 'Bearer ' + CHANNEL_ACCESS_TOKEN },
+            muteHttpExceptions: true
+          });
+        } catch (rmErr) {}
+      }
+
       if (!CHANNEL_ACCESS_TOKEN) throw new Error("LINE_CHANNEL_ACCESS_TOKEN 尚未設定！");
       if (!GEMINI_API_KEY) throw new Error("GEMINI_API_KEY 尚未設定！");
 
@@ -722,7 +734,7 @@ function doPost(e) {
 
 
           // 🚀 建立/更新原生相機圖文選單 (點擊直接滑出開相機)
-          if (userText === '更新相機選單' || userText === '設定相機選單' || userText === '更新選單' || userText === '部署選單') {
+          if (userText === '更新相機選單' || userText === '設定相機選單' || userText === '更新選單' || userText === '部署選單' || userText === '新選單' || userText === '換選單' || userText === '重整選單') {
             recordSystemLog('部署選單', userId, userText, '', '觸發原生相機圖文選單部署');
             try {
               const richMenuId = setupNativeCameraRichMenu(CHANNEL_ACCESS_TOKEN, LIFF_ID, props);
