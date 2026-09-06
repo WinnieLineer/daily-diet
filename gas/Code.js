@@ -581,6 +581,28 @@ function doPost(e) {
           continue;
         }
 
+        // 🍚 碳水減半 / 飯吃一半 快捷按鈕動作
+        if (payload.action === 'halveCarbs') {
+          const logs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+          if (logs.length > 0) {
+            const lastMeal = logs[logs.length - 1];
+            const oldCarbs = Number(lastMeal.carbs) || 60;
+            const newCarbs = Math.round(oldCarbs / 2);
+            const savedCals = (oldCarbs - newCarbs) * 4;
+            const newCals = Math.max(0, (Number(lastMeal.calories) || 0) - savedCals);
+            const updateFields = {
+              carbs: newCarbs,
+              calories: newCals,
+              comment: (lastMeal.comment || '') + ' (🍚 飯量已減半 -50% 碳水)'
+            };
+            const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
+            recordSystemLog('碳水減半', userId, payload.name || lastMeal.dish_name, `碳水 ${oldCarbs}g ➔ ${newCarbs}g (-${savedCals} kcal)`, '已將碳水減半並扣除熱量');
+            const summaryFlex = generateDailySummaryFlex(userId, updatedMeal, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
+            continue;
+          }
+        }
+
         // ✅ 按下【儲存紀錄】
         // 💾 按下【儲存 / 查看今日總結】
         if (payload.action === 'save') {
@@ -942,10 +964,24 @@ function doPost(e) {
             }
           }
 
-          // 💧 快速喝水打卡 (例如: "喝水 500", "喝水 250ml", "+500水", "喝水")
-          const waterMatch = userText.match(/^(?:喝水|補水|\+)\s*(\d+)?\s*(?:ml|cc|水)?$/i) || userText.match(/^(\d+)\s*(?:ml|cc)\s*(?:水)?$/i);
+          // 💧 快速喝水打卡 (例如: "喝水 500", "喝水 250ml", "+500水", "喝水", "500ml水")
+          // 🛡️ 嚴格排除 "+1"、"+"、"+2" 等日常符號誤觸
+          const waterMatch = userText.match(/^(?:喝水|補水)\s*(\d{2,4})?\s*(?:ml|cc|水)?$/i) 
+            || userText.match(/^\+(\d{2,4})\s*(?:ml|cc|水)?$/i) 
+            || userText.match(/^(\d{2,4})\s*(?:ml|cc)\s*(?:水)?$/i);
           if (waterMatch || userText === '喝水' || userText === '補水') {
             const amount = (waterMatch && waterMatch[1]) ? Number(waterMatch[1]) : 500;
+
+            // 🛡️ 防連擊防重複：如果 15 秒內已記錄過相同喝水打卡，直接提醒略過
+            const lastWaterKey = `LAST_WATER_${userId}`;
+            const lastWaterTime = Number(props.getProperty(lastWaterKey) || 0);
+            const nowMs = Date.now();
+            if (nowMs - lastWaterTime < 15000) {
+              replyTextMessage(replyToken, `💧 剛剛已為您記錄過喝水囉！請稍候再打卡 🐼✨\n（您剛才已補充 ${amount}ml 水分）`, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
+            props.setProperty(lastWaterKey, String(nowMs));
+
             const meal = {
               id: Date.now(),
               date: getTodayDateString(),
@@ -1172,30 +1208,67 @@ function doPost(e) {
             continue;
           }
 
-          // ✏️ 直接在 LINE 文字修改餐點數值 (例如: "改 600卡 30蛋 500水" 或 "改 排骨便當 650卡 35蛋")
+          // ✏️ 直接在 LINE 文字修改餐點數值 (例如: "改 600卡 30蛋 500水" 或 "改 35蛋 40碳 15脂" 或 "改 碳水減半")
           if (userText.startsWith('改') || userText.startsWith('修改') || userText.startsWith('改成')) {
+            const isHalveCarbs = userText.includes('碳水減半') || userText.includes('飯減半') || userText.includes('飯吃一半') || userText.includes('半碗飯');
+
             const calMatch = userText.match(/(\d+)\s*(?:kcal|卡|大卡)/i) || (userText.includes('熱量') ? userText.match(/熱量\s*(\d+)/i) : null);
-            const proMatch = userText.match(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質)/i) || (userText.includes('蛋白質') ? userText.match(/蛋白質\s*(\d+(?:\.\d+)?)/i) : null);
+            const proMatch = userText.match(/(\d+(?:\.\d+)?)\s*(?:g|克)?\s*(?:蛋|蛋白質)/i) || (userText.includes('蛋白質') ? userText.match(/蛋白質\s*(\d+(?:\.\d+)?)/i) : null);
+            const carbsMatch = userText.match(/(\d+(?:\.\d+)?)\s*(?:g|克)?\s*(?:碳|碳水|醣)/i) || (userText.includes('碳水') ? userText.match(/碳水\s*(\d+(?:\.\d+)?)/i) : null);
+            const fatMatch = userText.match(/(\d+(?:\.\d+)?)\s*(?:g|克)?\s*(?:脂|脂肪|油)/i) || (userText.includes('脂肪') ? userText.match(/脂肪\s*(\d+(?:\.\d+)?)/i) : null);
             const watMatch = userText.match(/(\d+)\s*(?:ml|cc|水|水分)/i) || (userText.includes('水分') ? userText.match(/水分\s*(\d+)/i) : null);
 
             let cleanName = userText.replace(/^(?:改|修改|改成)\s*/, '')
+              .replace(/碳水減半|飯減半|飯吃一半|半碗飯/g, '')
               .replace(/(\d+)\s*(?:kcal|卡|大卡)/gi, '')
               .replace(/(?:熱量)?\s*(\d+)\s*(?:kcal|卡|大卡)?/gi, '')
-              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質)/gi, '')
+              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克)?\s*(?:蛋|蛋白質)/gi, '')
+              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克)?\s*(?:碳|碳水|醣)/gi, '')
+              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克)?\s*(?:脂|脂肪|油)/gi, '')
               .replace(/(\d+)\s*(?:ml|cc|水|水分)/gi, '')
               .trim();
 
             const updateFields = {};
-            if (cleanName && cleanName !== '熱量' && cleanName !== '蛋白質' && cleanName !== '水分') {
+            if (cleanName && cleanName !== '熱量' && cleanName !== '蛋白質' && cleanName !== '水分' && cleanName !== '碳水' && cleanName !== '脂肪') {
               updateFields.dish_name = cleanName;
             }
             if (calMatch) updateFields.calories = Number(calMatch[1]);
             if (proMatch) updateFields.protein = Number(proMatch[1]);
+            if (carbsMatch) updateFields.carbs = Number(carbsMatch[1]);
+            if (fatMatch) updateFields.fat = Number(fatMatch[1]);
             if (watMatch) updateFields.water = Number(watMatch[1]);
+
+            if (isHalveCarbs) {
+              // 🍚 將上一餐的碳水直接減半，並按比例減少卡路里
+              const logs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+              if (logs.length > 0) {
+                const lastMeal = logs[logs.length - 1];
+                const oldCarbs = Number(lastMeal.carbs) || 60;
+                const newCarbs = Math.round(oldCarbs / 2);
+                updateFields.carbs = newCarbs;
+                const savedCals = (oldCarbs - newCarbs) * 4;
+                if (!calMatch) {
+                  updateFields.calories = Math.max(0, (Number(lastMeal.calories) || 0) - savedCals);
+                }
+                updateFields.comment = (lastMeal.comment || '') + ' (🍚 飯/碳水已減半 -50%)';
+              }
+            } else if (!calMatch && (carbsMatch || fatMatch || proMatch)) {
+              // 若只改了碳水/脂肪/蛋白質而未指定熱量，自動重新依 4*pro + 4*carbs + 9*fat 計算熱量
+              const logs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+              if (logs.length > 0) {
+                const lastMeal = logs[logs.length - 1];
+                const p = updateFields.protein !== undefined ? updateFields.protein : (Number(lastMeal.protein) || 0);
+                const c = updateFields.carbs !== undefined ? updateFields.carbs : (Number(lastMeal.carbs) || 0);
+                const f = updateFields.fat !== undefined ? updateFields.fat : (Number(lastMeal.fat) || 0);
+                if (c > 0 || f > 0 || p > 0) {
+                  updateFields.calories = Math.round(p * 4 + c * 4 + f * 9);
+                }
+              }
+            }
 
             if (Object.keys(updateFields).length > 0) {
               const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
-              recordSystemLog('修改數值', userId, userText, `${updatedMeal.dish_name} (${updatedMeal.calories}卡 / ${updatedMeal.protein}g)`, '已更新餐點');
+              recordSystemLog('修改數值', userId, userText, `${updatedMeal.dish_name} (${updatedMeal.calories}卡 / ${updatedMeal.protein}g蛋 / ${updatedMeal.carbs || 0}g碳)`, '已更新餐點');
               const summaryFlex = generateDailySummaryFlex(userId, updatedMeal, LIFF_ID, userGistId, props);
               replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN);
               continue;
@@ -1598,7 +1671,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                   label: isEn ? "✏️ Adjust" : "✏️ 微調內容",
                   data: JSON.stringify({ action: 'fillEdit' }),
                   inputOption: "openKeyboard",
-                  fillInText: `改 ${analysis.dish_name} ${analysis.calories}卡 ${analysis.protein || 0}蛋 ${analysis.water || 0}水`
+                  fillInText: `改 ${analysis.dish_name} ${analysis.calories}卡 ${analysis.protein || 0}蛋 ${analysis.carbs || 0}碳 ${analysis.fat || 0}脂`
                 },
                 contents: [
                   {
@@ -1639,6 +1712,33 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
               }
             ]
           },
+          // 🍚 飯吃一半 (碳水減半 -50% 快捷按鈕)
+          ...((Number(analysis.carbs) >= 20 || (analysis.dish_name && (analysis.dish_name.includes('便當') || analysis.dish_name.includes('飯')))) ? [{
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#EFF6FF",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "10px",
+            alignItems: "center",
+            justifyContent: "center",
+            action: {
+              type: "postback",
+              label: isEn ? "🍚 Halve Rice / Carbs (-50%)" : "🍚 飯吃一半 (碳水減半 -50%)",
+              data: JSON.stringify({ action: 'halveCarbs', id: analysis.id, name: analysis.dish_name }),
+              displayText: isEn ? "🍚 Halve rice/carbs (-50%)" : "🍚 飯吃一半 (碳水減半)"
+            },
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "🍚 Halve Rice / Carbs (-50%)" : "🍚 飯吃一半 (碳水減半 -50%)",
+                weight: "bold",
+                size: "xs",
+                color: "#1E40AF"
+              }
+            ]
+          }] : []),
           // 🗑️ 撤回這筆紀錄 (Neo-Brutalist 淺紅粗黑框按鈕)
           {
             type: "box",
@@ -1993,7 +2093,23 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
     } catch (e) {
       logs = [];
     }
-    logs.push(meal);
+
+    // 🛡️ 防重複：若同一 ID 已存在，或 3 分鐘內的喝水打卡重複同步，則更新而非無限制新增
+    const mealId = meal.id || meal.timestamp;
+    let existingIdx = -1;
+    if (mealId) {
+      existingIdx = logs.findIndex(l => l.id && String(l.id) === String(mealId));
+    }
+    if (existingIdx === -1 && meal.dish_name && (meal.dish_name.includes('水') || meal.dish_name.includes('water'))) {
+      const isRecentWater = logs.findIndex(l => l.dish_name && (l.dish_name.includes('水') || l.dish_name.includes('water')) && (Math.abs((l.id || 0) - (mealId || 0)) < 3 * 60 * 1000 || l.time === meal.time));
+      if (isRecentWater !== -1) existingIdx = isRecentWater;
+    }
+
+    if (existingIdx !== -1) {
+      logs[existingIdx] = { ...logs[existingIdx], ...meal };
+    } else {
+      logs.push(meal);
+    }
     props.setProperty(todayKey, JSON.stringify(logs));
 
     // 同步寫入該用戶專屬的 Gist
@@ -2508,19 +2624,38 @@ function syncLogToUserGist(meal, gistId, pat) {
     }
     if (!backupData.dietLogs) backupData.dietLogs = [];
 
-    // 插入新紀錄 (相容 Dexie 格式)
-    backupData.dietLogs.unshift({
-      date: meal.date,
-      dish_name: meal.dish_name,
-      calories: Number(meal.calories) || 0,
-      protein: Number(meal.protein) || 0,
-      carbs: Number(meal.carbs) || 0,
-      fat: Number(meal.fat) || 0,
-      water: Number(meal.water) || 0,
-      timestamp: Date.now(),
-      comment: meal.comment || '',
-      source: 'LINE_BOT'
-    });
+    // 🛡️ 檢查是否已有相同 ID 或相近的喝水打卡紀錄
+    const mealId = meal.id || meal.timestamp;
+    let foundIndex = -1;
+    if (mealId) {
+      foundIndex = backupData.dietLogs.findIndex(l => (l.id && String(l.id) === String(mealId)) || (l.timestamp && String(l.timestamp) === String(mealId)));
+    }
+    if (foundIndex === -1 && meal.dish_name && (meal.dish_name.includes('水') || meal.dish_name.includes('water'))) {
+      foundIndex = backupData.dietLogs.findIndex(l => l.date === meal.date && l.dish_name && (l.dish_name.includes('水') || l.dish_name.includes('water')) && Math.abs((l.timestamp || 0) - (mealId || Date.now())) < 3 * 60 * 1000);
+    }
+
+    if (foundIndex !== -1) {
+      backupData.dietLogs[foundIndex] = {
+        ...backupData.dietLogs[foundIndex],
+        ...meal,
+        water: Number(meal.water) || backupData.dietLogs[foundIndex].water || 0
+      };
+    } else {
+      // 插入新紀錄 (相容 Dexie 格式)
+      backupData.dietLogs.unshift({
+        id: mealId || Date.now(),
+        date: meal.date,
+        dish_name: meal.dish_name,
+        calories: Number(meal.calories) || 0,
+        protein: Number(meal.protein) || 0,
+        carbs: Number(meal.carbs) || 0,
+        fat: Number(meal.fat) || 0,
+        water: Number(meal.water) || 0,
+        timestamp: meal.timestamp || Date.now(),
+        comment: meal.comment || '',
+        source: meal.source || 'LINE_BOT'
+      });
+    }
 
     UrlFetchApp.fetch(gistUrl, {
       method: 'patch',
@@ -2568,6 +2703,8 @@ function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
     }
     if (updateFields.calories !== undefined) targetMeal.calories = Number(updateFields.calories);
     if (updateFields.protein !== undefined) targetMeal.protein = Number(updateFields.protein);
+    if (updateFields.carbs !== undefined) targetMeal.carbs = Number(updateFields.carbs);
+    if (updateFields.fat !== undefined) targetMeal.fat = Number(updateFields.fat);
     if (updateFields.water !== undefined) targetMeal.water = Number(updateFields.water);
     if (updateFields.comment !== undefined) targetMeal.comment = updateFields.comment;
 
@@ -2589,6 +2726,8 @@ function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
       dish_name: updateFields.dish_name || '餐點',
       calories: Number(updateFields.calories) || 0,
       protein: Number(updateFields.protein) || 0,
+      carbs: Number(updateFields.carbs) || 0,
+      fat: Number(updateFields.fat) || 0,
       water: Number(updateFields.water) || 0,
       comment: updateFields.comment || ''
     };
@@ -2617,8 +2756,11 @@ function updateMealInUserGist(updatedMeal, gistId, pat) {
         if (backupData.dietLogs[i].id && updatedMeal.id && backupData.dietLogs[i].id === updatedMeal.id) {
           backupData.dietLogs[i].calories = Number(updatedMeal.calories) || 0;
           backupData.dietLogs[i].protein = Number(updatedMeal.protein) || 0;
+          if (updatedMeal.carbs !== undefined) backupData.dietLogs[i].carbs = Number(updatedMeal.carbs) || 0;
+          if (updatedMeal.fat !== undefined) backupData.dietLogs[i].fat = Number(updatedMeal.fat) || 0;
           backupData.dietLogs[i].water = Number(updatedMeal.water) || 0;
           if (updatedMeal.dish_name) backupData.dietLogs[i].dish_name = updatedMeal.dish_name;
+          if (updatedMeal.comment) backupData.dietLogs[i].comment = updatedMeal.comment;
           found = true;
           break;
         }
@@ -2626,8 +2768,11 @@ function updateMealInUserGist(updatedMeal, gistId, pat) {
       if (!found && backupData.dietLogs.length > 0) {
         backupData.dietLogs[0].calories = Number(updatedMeal.calories) || 0;
         backupData.dietLogs[0].protein = Number(updatedMeal.protein) || 0;
+        if (updatedMeal.carbs !== undefined) backupData.dietLogs[0].carbs = Number(updatedMeal.carbs) || 0;
+        if (updatedMeal.fat !== undefined) backupData.dietLogs[0].fat = Number(updatedMeal.fat) || 0;
         backupData.dietLogs[0].water = Number(updatedMeal.water) || 0;
         if (updatedMeal.dish_name) backupData.dietLogs[0].dish_name = updatedMeal.dish_name;
+        if (updatedMeal.comment) backupData.dietLogs[0].comment = updatedMeal.comment;
       }
     }
 

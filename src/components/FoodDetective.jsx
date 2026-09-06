@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
-import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap, Pencil } from 'lucide-react';
+import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap, Pencil, Sliders } from 'lucide-react';
 import { analyzeFoodImage, analyzeFoodText } from '../lib/groq';
 import { db } from '../db';
 import { getCurrentGistId, uploadToGist } from '../lib/gistService';
@@ -126,6 +126,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [multiplierInput, setMultiplierInput] = useState('1');
   const [originalResult, setOriginalResult] = useState(null);
   const [showCustomMultiplier, setShowCustomMultiplier] = useState(false);
+  const [showMacroEditor, setShowMacroEditor] = useState(false);
+  const [waterToast, setWaterToast] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(() => {
@@ -705,7 +707,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               </motion.div>
             )}
           </AnimatePresence>
-          <div className="flex items-center gap-1.5 shrink-0">
+          <div className="flex items-center gap-1.5 shrink-0 relative">
             <button
               onClick={async () => {
                 const now = new Date();
@@ -723,12 +725,26 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   syncMealToCloud(waterLog);
                 }
                 onLogAdded('fetch');
+                setWaterToast(true);
+                setTimeout(() => setWaterToast(false), 1800);
               }}
               className="w-12 h-12 flex items-center justify-center bg-white rounded-full border-4 border-black active:scale-90 transition-all shadow-neo-sm hover:bg-sky-50 shrink-0 overflow-hidden"
               title={t('add_water')}
             >
               <img src={`${import.meta.env.BASE_URL}water.png`} alt="250ml" className="w-10 h-10 object-contain" />
             </button>
+            <AnimatePresence>
+              {waterToast && (
+                <motion.div
+                  initial={{ opacity: 0, y: 10, scale: 0.8 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="absolute -bottom-8 left-1/2 -translate-x-1/2 whitespace-nowrap bg-sky-500 text-white font-black text-[10px] px-2.5 py-1 rounded-full border-2 border-black shadow-neo-sm pointer-events-none z-50 flex items-center gap-1"
+                >
+                  💧 +250ml
+                </motion.div>
+              )}
+            </AnimatePresence>
           </div>
           <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0 overflow-x-auto no-scrollbar">
             {[{ id: 'ai', label: t('ai_mode') }, { id: 'manual', label: t('manual_mode') }, { id: 'favorites', label: t('favorites_mode') }, { id: 'search', label: t('search_mode') }].map(tab => (
@@ -904,7 +920,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     <div className="flex items-center gap-2 mb-1 opacity-60"><Star size={14} /><span className="text-[10px] font-black uppercase">{t('protein')}</span></div>
                     <div className="text-2xl font-black italic">{result.protein} <span className="text-xs">g</span></div>
                   </div>
-                  {goals.show_carbs_fat && (
+                  {(goals.show_carbs_fat || result.carbs !== undefined || result.fat !== undefined) && (
                     <>
                       <div className="bg-white border-4 border-black p-4 rounded-[2rem] shadow-neo-sm">
                         <div className="flex items-center gap-2 mb-1 opacity-60"><span>🍞</span><span className="text-[10px] font-black uppercase">{t('carbs')}</span></div>
@@ -917,6 +933,155 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     </>
                   )}
                 </div>
+
+                {/* 🍚 快速調整與微調克數快捷工具列 */}
+                <div className="flex items-center gap-2 overflow-x-auto no-scrollbar py-1">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const curCarbs = Number(result.carbs) || 0;
+                      const newCarbs = Math.round(curCarbs / 2);
+                      const diffCarbs = curCarbs - newCarbs;
+                      const savedCals = Math.round(diffCarbs * 4);
+                      const newCals = Math.max(0, (Number(result.calories) || 0) - savedCals);
+                      setResult(prev => ({
+                        ...prev,
+                        carbs: newCarbs,
+                        calories: newCals,
+                        calculation_note: (prev.calculation_note ? prev.calculation_note + '；' : '') + `🍚 飯/碳水已減半 (碳水 -${diffCarbs}g, 熱量 -${savedCals} kcal)`
+                      }));
+                    }}
+                    className="px-3 py-1.5 rounded-xl font-black text-xs border-2 border-black bg-amber-100 text-amber-950 shadow-neo-sm hover:bg-amber-200 active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                  >
+                    🍚 飯/碳水減半 (-50%)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const curProtein = Number(result.protein) || 0;
+                      const newProtein = Math.round(curProtein * 1.5 * 10) / 10;
+                      const diffProtein = newProtein - curProtein;
+                      const addCals = Math.round(diffProtein * 4);
+                      setResult(prev => ({
+                        ...prev,
+                        protein: newProtein,
+                        calories: (Number(result.calories) || 0) + addCals
+                      }));
+                    }}
+                    className="px-3 py-1.5 rounded-xl font-black text-xs border-2 border-black bg-blue-50 text-blue-900 shadow-neo-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
+                  >
+                    🥩 蛋白質加倍 (+50%)
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setShowMacroEditor(!showMacroEditor)}
+                    className={twMerge(
+                      "px-3 py-1.5 rounded-xl font-black text-xs border-2 border-black shadow-neo-sm active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0",
+                      showMacroEditor ? "bg-black text-white" : "bg-white text-black hover:bg-zinc-100"
+                    )}
+                  >
+                    <Sliders size={13} /> {showMacroEditor ? "收起微調" : "✏️ 自訂克數 (g)"}
+                  </button>
+                </div>
+
+                {/* ⚖️ 展開式營養素克數自由微調面板 */}
+                <AnimatePresence>
+                  {showMacroEditor && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      className="bg-amber-50/80 border-4 border-black p-4 rounded-[2rem] shadow-neo-sm overflow-hidden space-y-3"
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-1.5 font-black text-xs text-black">
+                          <span>⚖️</span>
+                          <span>編輯計算後的營養素克數 (g)</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const p = Number(result.protein) || 0;
+                            const c = Number(result.carbs) || 0;
+                            const f = Number(result.fat) || 0;
+                            const autoCal = Math.round(p * 4 + c * 4 + f * 9);
+                            setResult(prev => ({ ...prev, calories: autoCal }));
+                          }}
+                          className="text-[10px] font-black bg-white border-2 border-black px-2.5 py-1 rounded-xl shadow-neo-sm hover:bg-amber-100 active:scale-95 transition-all text-zinc-800"
+                        >
+                          ✨ 自動重算熱量 (4P+4C+9F)
+                        </button>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                        <div className="bg-white border-2 border-black p-2.5 rounded-xl">
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🍞 碳水 (g)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={result.carbs ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseFloat(e.target.value) || 0);
+                              setResult(prev => ({ ...prev, carbs: val }));
+                            }}
+                            className="w-full font-mono font-black text-lg outline-none bg-transparent"
+                          />
+                        </div>
+
+                        <div className="bg-white border-2 border-black p-2.5 rounded-xl">
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🥩 蛋白質 (g)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={result.protein ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseFloat(e.target.value) || 0);
+                              setResult(prev => ({ ...prev, protein: val }));
+                            }}
+                            className="w-full font-mono font-black text-lg outline-none bg-transparent"
+                          />
+                        </div>
+
+                        <div className="bg-white border-2 border-black p-2.5 rounded-xl">
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🥑 脂肪 (g)</label>
+                          <input
+                            type="number"
+                            step="1"
+                            min="0"
+                            value={result.fat ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseFloat(e.target.value) || 0);
+                              setResult(prev => ({ ...prev, fat: val }));
+                            }}
+                            className="w-full font-mono font-black text-lg outline-none bg-transparent"
+                          />
+                        </div>
+
+                        <div className="bg-white border-2 border-black p-2.5 rounded-xl">
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🔥 熱量 (kcal)</label>
+                          <input
+                            type="number"
+                            step="5"
+                            min="0"
+                            value={result.calories ?? 0}
+                            onChange={(e) => {
+                              const val = Math.max(0, parseFloat(e.target.value) || 0);
+                              setResult(prev => ({ ...prev, calories: val }));
+                            }}
+                            className="w-full font-mono font-black text-lg outline-none bg-transparent text-rose-600"
+                          />
+                        </div>
+                      </div>
+                      <p className="text-[9px] font-bold text-zinc-400">
+                        💡 提示：微調克數後直接點擊最下方「儲存這餐」即可按您修改後的數值記錄！
+                      </p>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
                 <NeoCard className="bg-white border-4 border-black">
                   <div className="flex justify-between items-start gap-4 mb-4">

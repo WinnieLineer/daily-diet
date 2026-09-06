@@ -881,10 +881,17 @@ function App() {
 
               // 📥 新增/更新同步：將 LINE 端的最新紀錄寫入本機
               for (const lineLog of lineTodayLogs) {
-                const existing = localTodayLogs.find(l => 
-                  l.date === lineLog.date && 
-                  (l.dish_name === lineLog.dish_name || (l.time && lineLog.time && l.time === lineLog.time))
-                );
+                const isLineWater = lineLog.dish_name && (lineLog.dish_name.includes('水') || lineLog.dish_name.includes('water'));
+                const existing = localTodayLogs.find(l => {
+                  if (l.date !== lineLog.date) return false;
+                  if (lineLog.id && l.id && String(l.id) === String(lineLog.id)) return true;
+                  if (isLineWater && l.dish_name && (l.dish_name.includes('水') || l.dish_name.includes('water'))) {
+                    if (l.time && lineLog.time && l.time === lineLog.time) return true;
+                    if (l.timestamp && lineLog.timestamp && Math.abs(l.timestamp - lineLog.timestamp) < 5 * 60 * 1000) return true;
+                    return true;
+                  }
+                  return (l.dish_name === lineLog.dish_name || (l.time && lineLog.time && l.time === lineLog.time));
+                });
 
                 if (existing) {
                   if (existing.calories !== lineLog.calories || existing.protein !== lineLog.protein || existing.water !== lineLog.water || existing.carbs !== lineLog.carbs || existing.fat !== lineLog.fat) {
