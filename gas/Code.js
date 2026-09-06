@@ -1401,7 +1401,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
   const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userId ? `&userId=${userId}` : ''}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
   const userPersona = getUserPersona(userId, props, userGistId);
-  const userLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
+  const userLang = getUserLanguage(userId, props, userGistId);
   const isEn = userLang === 'en';
   const displayComment = (analysis.panda_comment && analysis.panda_comment.trim()) ? analysis.panda_comment.trim() : generateFallbackComment(analysis.dish_name || '餐點', Number(analysis.calories) || 0, Number(analysis.protein) || 0, userPersona);
 
@@ -2244,6 +2244,83 @@ function setUserPersona(userId, persona, userGistId, pat, props) {
     }
   }
   return validPersona;
+}
+
+function getUserLanguage(userId, props, userGistId, pat) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  let lang = props.getProperty(`LANGUAGE_${userId}`);
+  if (!lang) {
+    const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+    const token = pat || props.getProperty('GITHUB_PAT');
+    if (gistId && token) {
+      try {
+        const gistUrl = `https://api.github.com/gists/${gistId}`;
+        const getRes = UrlFetchApp.fetch(gistUrl, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (getRes.getResponseCode() === 200) {
+          const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+          if (content) {
+            const backupData = JSON.parse(content);
+            if (backupData.settings && Array.isArray(backupData.settings)) {
+              const l = backupData.settings.find(s => s.key === 'app_language' || s.key === 'language')?.value;
+              if (l) {
+                lang = l;
+                props.setProperty(`LANGUAGE_${userId}`, l);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("從 Gist 讀取語言設定失敗:", e);
+      }
+    }
+  }
+  return lang || 'zh';
+}
+
+function setUserLanguage(userId, lang, userGistId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const validLang = (lang === 'en' || lang === 'zh') ? lang : 'zh';
+  props.setProperty(`LANGUAGE_${userId}`, validLang);
+
+  const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+  const token = pat || props.getProperty('GITHUB_PAT');
+  if (gistId && token) {
+    try {
+      const gistUrl = `https://api.github.com/gists/${gistId}`;
+      const getRes = UrlFetchApp.fetch(gistUrl, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      if (getRes.getResponseCode() === 200) {
+        let backupData = { settings: [] };
+        const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+        if (content) backupData = JSON.parse(content);
+        if (!backupData.settings) backupData.settings = [];
+        
+        const existingIdx = backupData.settings.findIndex(s => s.key === 'app_language' || s.key === 'language');
+        if (existingIdx >= 0) {
+          backupData.settings[existingIdx].value = validLang;
+        } else {
+          backupData.settings.push({ key: 'app_language', value: validLang });
+        }
+
+        UrlFetchApp.fetch(gistUrl, {
+          method: 'patch',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          payload: JSON.stringify({
+            files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+          }),
+          muteHttpExceptions: true
+        });
+      }
+    } catch (e) {
+      console.warn("同步語言至 Gist 失敗:", e);
+    }
+  }
+  return validLang;
 }
 
 function getPersonaInstruction(persona) {
