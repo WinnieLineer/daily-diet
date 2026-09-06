@@ -54,6 +54,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [githubPat, setGithubPat] = useState(localStorage.getItem('github_pat') || '');
   const [copiedGistId, setCopiedGistId] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
+  const [calcResult, setCalcResult] = useState(null);
   const [syncStatus, setSyncStatus] = useState('idle');
   const [calc, setCalc] = useState({ height: 170, weight: 70, age: 25, gender: 'male', activity: 1.375, goal: 'maintain' });
   const [stats, setStats] = useState({ localSize: 0, cloudSize: 0, cloudTime: null, loading: false });
@@ -363,25 +364,49 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   };
 
   const calculateSuggestion = () => {
-    const bmr = (10 * Number(calc.weight)) + (6.25 * Number(calc.height)) - (5 * Number(calc.age)) + (calc.gender === 'male' ? 5 : -161);
-    const tdee = bmr * Number(calc.activity);
+    const weightNum = Number(calc.weight) || 70;
+    const heightNum = Number(calc.height) || 170;
+    const ageNum = Number(calc.age) || 25;
+    const bmr = Math.round((10 * weightNum) + (6.25 * heightNum) - (5 * ageNum) + (calc.gender === 'male' ? 5 : -161));
+    const tdee = Math.round(bmr * Number(calc.activity || 1.375));
     let suggestedCals = tdee;
     if (calc.goal === 'lose') suggestedCals -= 500;
     if (calc.goal === 'recomp') suggestedCals -= 200;
     if (calc.goal === 'gain') suggestedCals += 300;
-    let suggestedPro = Number(calc.weight) * (calc.goal === 'recomp' ? 2.2 : calc.goal === 'lose' ? 2.0 : 1.8);
+    let suggestedPro = Math.round(weightNum * (calc.goal === 'recomp' ? 2.2 : calc.goal === 'lose' ? 2.0 : 1.8));
 
     // Suggest Carbs and Fat values symmetrically
-    const suggestedFat = (suggestedCals * 0.25) / 9;
-    const suggestedCarb = (suggestedCals - (suggestedPro * 4) - (suggestedFat * 9)) / 4;
+    const suggestedFat = Math.round((suggestedCals * 0.25) / 9);
+    const suggestedCarb = Math.round((suggestedCals - (suggestedPro * 4) - (suggestedFat * 9)) / 4);
+    const suggestedWater = Math.round(weightNum * 35);
 
     setGoals({
       ...goals,
       calories: Math.round(suggestedCals),
-      protein: Math.round(suggestedPro),
-      water: Math.round(Number(calc.weight) * 35),
-      carbs: Math.round(suggestedCarb),
-      fat: Math.round(suggestedFat)
+      protein: suggestedPro,
+      water: suggestedWater,
+      carbs: suggestedCarb,
+      fat: suggestedFat
+    });
+
+    const goalNames = {
+      lose: '減脂雕塑 (-500 kcal)',
+      recomp: '減脂增肌 (-200 kcal)',
+      maintain: '維持體態 (TDEE)',
+      gain: '增肌增重 (+300 kcal)'
+    };
+
+    setCalcResult({
+      bmr,
+      tdee,
+      calories: Math.round(suggestedCals),
+      protein: suggestedPro,
+      water: suggestedWater,
+      carbs: suggestedCarb,
+      fat: suggestedFat,
+      height: heightNum,
+      weight: weightNum,
+      goalName: goalNames[calc.goal] || '客製目標'
     });
     setShowCalculator(false);
   };
@@ -736,13 +761,56 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                 {activeTab === 'goals' && (
                   <div className="space-y-6">
-                    <div className="bg-accent/10 border-4 border-black p-4 rounded-2xl flex items-center justify-between shadow-neo-sm">
-                      <div>
-                        <h4 className="font-black italic text-sm">{t('smart_goal')}</h4>
-                        <p className="text-[10px] font-bold text-zinc-400">{t('formula_tdee')}</p>
+                    {/* 🪄 AI 智能推薦目標 Banner */}
+                    <div className="bg-[#FEF9C3] border-4 border-black p-4 rounded-2xl shadow-neo-sm text-left">
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xl">🪄</span>
+                            <h4 className="font-black italic text-sm text-black">{t('smart_goal')}</h4>
+                          </div>
+                          <p className="text-[11px] font-bold text-amber-950 leading-relaxed">
+                            {t('formula_tdee')}
+                          </p>
+                        </div>
+                        <button 
+                          type="button"
+                          onClick={() => setShowCalculator(!showCalculator)} 
+                          className={`px-3 py-2 rounded-xl shadow-neo-xs border-2 border-black font-black text-xs shrink-0 transition-all flex items-center gap-1.5 ${
+                            showCalculator ? 'bg-black text-white' : 'bg-accent text-black hover:bg-yellow-300 active:scale-95'
+                          }`}
+                        >
+                          <Calculator size={16} />
+                          <span>{showCalculator ? '收合計算器' : '自動推薦'}</span>
+                        </button>
                       </div>
-                      <button onClick={() => setShowCalculator(!showCalculator)} className="p-2 rounded-xl shadow-neo-xs border-2 border-black bg-white"><Calculator size={20} /></button>
                     </div>
+
+                    {/* ✅ 套用 AI 推薦結果回饋卡片 */}
+                    {calcResult && (
+                      <div className="bg-[#DCFCE7] border-4 border-black p-4 rounded-2xl shadow-neo-sm space-y-2 text-left animate-fade-in">
+                        <div className="flex items-center justify-between flex-wrap gap-1">
+                          <span className="font-black text-xs text-green-900 flex items-center gap-1">
+                            <span>✅</span> 已自動計算並套用個人化推薦！
+                          </span>
+                          <span className="text-[10px] bg-white border-2 border-black font-black px-2 py-0.5 rounded-full shadow-neo-xs text-black">
+                            {calcResult.goalName}
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-bold text-green-800">
+                          依身高 <strong>{calcResult.height} cm</strong> / 體重 <strong>{calcResult.weight} kg</strong> 計算：
+                          <span className="block mt-0.5 font-mono font-black text-xs text-green-900">
+                            ⚡ BMR: {calcResult.bmr} kcal ｜ TDEE: {calcResult.tdee} kcal
+                          </span>
+                        </div>
+                        <div className="text-[11px] font-black text-black pt-1.5 border-t-2 border-green-300 flex items-center justify-between flex-wrap gap-2">
+                          <span>🎯 建議熱量：<strong>{calcResult.calories}</strong> kcal</span>
+                          <span>🥚 蛋白質：<strong>{calcResult.protein}</strong> g</span>
+                          <span>💧 水分：<strong>{calcResult.water}</strong> ml</span>
+                        </div>
+                      </div>
+                    )}
+
                     {showCalculator && (
                       <div className="p-4 border-4 border-black rounded-[2rem] bg-white space-y-4 shadow-neo-sm text-left">
                         <div className="grid grid-cols-2 gap-3">
@@ -824,6 +892,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <button onClick={calculateSuggestion} className="w-full bg-black text-white py-3 rounded-xl font-black italic shadow-neo-xs active:scale-[0.98] transition-transform">{t('apply_suggestion')}</button>
                       </div>
                     )}
+
+                    <div className="flex items-center justify-between pt-1">
+                      <span className="text-xs font-black text-black">🎯 每日目標設定</span>
+                      <span className="text-[10px] font-bold text-zinc-400">可隨時在此微調</span>
+                    </div>
+
                     <div className="space-y-4">
                       <div>
                         <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')} (kcal)</label>

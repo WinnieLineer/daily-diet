@@ -517,6 +517,14 @@ function doPost(e) {
           }
         }
 
+        // 🎯 體態目標推薦導引
+        if (payload.action === 'goalGuide') {
+          recordSystemLog('目標推薦導引', userId, '點擊目標推薦', '', '發送 AI 體態目標推薦導引卡片');
+          const guideFlex = generateGoalGuideFlex(userId, LIFF_ID, userGistId);
+          replyFlexMessage(replyToken, guideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 📖 查看完整操作指令手冊
         if (payload.action === 'showHelp' || payload.action === 'help') {
           recordSystemLog('指令手冊', userId, '點擊查看指令手冊', '', '發送操作指令手冊卡片');
@@ -1051,7 +1059,27 @@ function doPost(e) {
             continue;
           }
 
-          // 🎯 2. 設定/修改體態目標與客製化建議 (例如: "改目標 165cm 55kg 女 減脂", "設定目標 1800卡 120蛋 2500水")
+          // 🎯 2. 設定目標導引 (若用戶只輸入「設定目標」、「改目標」、「推薦目標」、「智能目標」等，但未提供身高體重或數值，發送智能引導卡片)
+          const isGoalGuideRequest = userText === '設定目標' ||
+            userText === '改目標' ||
+            userText === '修改目標' ||
+            userText === '調整目標' ||
+            userText === '目標設定' ||
+            userText === '推薦目標' ||
+            userText === '目標推薦' ||
+            userText === '智能目標' ||
+            userText === '體態目標' ||
+            userText === '如何設定目標' ||
+            ((userText.startsWith('改目標') || userText.startsWith('設定目標') || userText.startsWith('修改目標')) && !/\d+/.test(userText));
+
+          if (isGoalGuideRequest) {
+            recordSystemLog('目標推薦導引', userId, userText, '', '發送 AI 體態目標推薦導引卡片');
+            const guideFlex = generateGoalGuideFlex(userId, LIFF_ID, userGistId);
+            replyFlexMessage(replyToken, guideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 🎯 3. 設定/修改體態目標與客製化建議 (例如: "改目標 165cm 55kg 女 減脂", "設定目標 1800卡 120蛋 2500水")
           const isGoalUpdate = userText.startsWith('改目標') ||
             userText.startsWith('設定目標') ||
             userText.startsWith('修改目標') ||
@@ -2874,11 +2902,214 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId) {
   };
 }
 
+function generateGoalGuideFlex(userId, liffId, userGistId) {
+  const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?tab=goals&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=goals`;
+
+  return {
+    type: "flex",
+    altText: "🎯 AI 智能體態目標推薦導引：告訴教練身高體重與目標，自動規劃！",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: "🪄 AI 智能推薦", color: "#A1A1AA", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "🎯 AI 體態目標自動推薦",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: "不需要自己算熱量！告訴教練身材，AI 自動規劃",
+            color: "#A1A1AA",
+            size: "xxs",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF9C3",
+            cornerRadius: "12px",
+            paddingAll: "12px",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            contents: [
+              {
+                type: "text",
+                text: "💡 什麼是智能推薦？",
+                weight: "bold",
+                size: "xs",
+                color: "#854D0E"
+              },
+              {
+                type: "text",
+                text: "不必自己計算熱量！只要告訴熊貓教練您的【身高、體重、性別與期望目標】，AI 將依據醫學 BMR/TDEE 公式與活動量，自動規劃每日熱量赤字/盈餘、蛋白質與飲水建議！",
+                size: "xxs",
+                color: "#713F12",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: "👇 點擊下方快速範例，帶入後微調送出：",
+            weight: "bold",
+            size: "xs",
+            color: "#000000"
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#DCFCE7",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "🏃‍♀️ 女生減脂",
+                  data: JSON.stringify({ action: 'fillGoal' }),
+                  inputOption: "openKeyboard",
+                  fillInText: "改目標 160cm 52kg 女 減脂"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FEF08A",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "🥗 男生減脂",
+                  data: JSON.stringify({ action: 'fillGoal' }),
+                  inputOption: "openKeyboard",
+                  fillInText: "改目標 175cm 75kg 男 減脂"
+                }
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#EFF6FF",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "💪 男生增肌",
+                  data: JSON.stringify({ action: 'fillGoal' }),
+                  inputOption: "openKeyboard",
+                  fillInText: "改目標 175cm 68kg 男 增肌"
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#F3E8FF",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "🧘 維持體態",
+                  data: JSON.stringify({ action: 'fillGoal' }),
+                  inputOption: "openKeyboard",
+                  fillInText: "改目標 165cm 55kg 女 維持體態"
+                }
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F4F4F5",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            contents: [
+              {
+                type: "text",
+                text: "✏️ 若已有專屬菜單，也可以直接指定數值：\n「改目標 1800卡 120蛋 2500水」",
+                size: "xxs",
+                color: "#52525B",
+                wrap: true
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#FDE047",
+            action: {
+              type: "uri",
+              label: "⚙️ 開啟 App 完整目標設定 (TDEE)",
+              uri: appTargetUrl
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "postback",
+              label: "💬 填入我的身材數據",
+              data: JSON.stringify({ action: 'fillGoal' }),
+              inputOption: "openKeyboard",
+              fillInText: "改目標 165cm 55kg 女 減脂"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
 function generateCurrentGoalFlex(userId, goals, liffId, userGistId) {
   const cal = goals.calories || 2000;
   const pro = goals.protein || 100;
   const wat = goals.water || 2500;
-  const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?gistId=${userGistId}` : `https://liff.line.me/${liffId}`;
+  const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?tab=goals&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=goals`;
 
   return {
     type: "flex",
@@ -2974,7 +3205,7 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId) {
             contents: [
               {
                 type: "text",
-                text: "💡 如何修改目標？\n直接輸入「改目標 165cm 55kg 女 減脂」\n或「改目標 1800卡 120蛋 2500水」即可自動更新！",
+                text: "💡 如何修改目標？\n不需自己算熱量！直接輸入「改目標 165cm 55kg 女 減脂」，AI 自動推薦最佳熱量與蛋白質！\n也可手動指定：「改目標 1800卡 120蛋 2500水」",
                 size: "xxs",
                 color: "#52525B",
                 wrap: true
@@ -3007,10 +3238,9 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId) {
             color: "#F4F4F5",
             action: {
               type: "postback",
-              label: "✏️ 填入修改範例",
-              data: JSON.stringify({ action: 'fillGoal' }),
-              inputOption: "openKeyboard",
-              fillInText: `改目標 ${cal}卡 ${pro}蛋 ${wat}水`
+              label: "🪄 依身材智能推薦目標",
+              data: JSON.stringify({ action: 'goalGuide' }),
+              displayText: "設定目標"
             }
           }
         ]
@@ -4289,7 +4519,7 @@ function generateNewUserGuideFlex(userId, liffId, userGistId, props) {
                 spacing: "sm",
                 contents: [
                   { type: "text", text: "3️⃣", size: "sm", flex: 0 },
-                  { type: "text", text: "體態目標：預設為 2000 kcal / 100g 蛋，點下方按鈕即可自訂！", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                  { type: "text", text: "智能目標：輸入身高體重與效果（如「改目標 165cm 55kg 女 減脂」），AI 自動算 BMR/TDEE 推薦熱量！", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
                 ]
               },
               {
@@ -4318,10 +4548,9 @@ function generateNewUserGuideFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "postback",
-              label: "🎯 設定個人體態目標",
-              data: JSON.stringify({ action: 'fillGoal' }),
-              inputOption: "openKeyboard",
-              fillInText: "改目標 2000卡 100蛋 2000水"
+              label: "🎯 智能目標推薦 (依身材)",
+              data: JSON.stringify({ action: 'goalGuide' }),
+              displayText: "設定目標"
             }
           },
           {
@@ -4695,10 +4924,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "🎯 設定目標",
-                      data: JSON.stringify({ action: 'fillGoal' }),
-                      inputOption: "openKeyboard",
-                      fillInText: "改目標 2000卡 100蛋 2000水"
+                      label: "🎯 智能目標推薦",
+                      data: JSON.stringify({ action: 'goalGuide' }),
+                      displayText: "設定目標"
                     }
                   },
                   {
