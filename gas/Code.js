@@ -1328,7 +1328,83 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
   const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userId ? `&userId=${userId}` : ''}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
   const userPersona = getUserPersona(userId, props, userGistId);
+  const userLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
+  const isEn = userLang === 'en';
   const displayComment = (analysis.panda_comment && analysis.panda_comment.trim()) ? analysis.panda_comment.trim() : generateFallbackComment(analysis.dish_name || '餐點', Number(analysis.calories) || 0, Number(analysis.protein) || 0, userPersona);
+
+  const breakdownList = (analysis.breakdown && Array.isArray(analysis.breakdown)) ? analysis.breakdown : [];
+  const breakdownRows = breakdownList.slice(0, 5).map(item => ({
+    type: "box",
+    layout: "horizontal",
+    margin: "xs",
+    contents: [
+      {
+        type: "text",
+        text: `• ${item.name || (isEn ? 'Item' : '項目')} ${item.portion ? `(${item.portion})` : ''}`,
+        size: "xxs",
+        color: "#18181B",
+        weight: "bold",
+        flex: 6,
+        wrap: true
+      },
+      {
+        type: "text",
+        text: `${Number(item.calories) || 0} kcal${Number(item.protein) > 0 ? ` / ${item.protein}g蛋` : ''}`,
+        size: "xxs",
+        color: "#E11D48",
+        weight: "bold",
+        align: "end",
+        flex: 4
+      }
+    ]
+  }));
+  const calcNote = analysis.calculation_note || '';
+
+  let breakdownSection = [];
+  if (breakdownRows.length > 0) {
+    breakdownSection = [{
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFFFF",
+      cornerRadius: "14px",
+      borderColor: "#000000",
+      borderWidth: "2.5px",
+      paddingAll: "12px",
+      spacing: "xs",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: isEn ? "🧮 Nutrient Breakdown" : "🧮 估算拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 1 },
+            { type: "text", text: isEn ? "Calories / Protein" : "估算熱量 / 蛋白質", size: "xxs", color: "#71717A", align: "end" }
+          ]
+        },
+        ...breakdownRows,
+        ...(calcNote ? [{
+          type: "text",
+          text: `💡 ${isEn ? 'Formula' : '公式'}：${calcNote}`,
+          size: "xxs",
+          color: "#52525B",
+          wrap: true,
+          margin: "xs"
+        }] : [])
+      ]
+    }];
+  } else if (calcNote) {
+    breakdownSection = [{
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFFFF",
+      cornerRadius: "14px",
+      borderColor: "#000000",
+      borderWidth: "2.5px",
+      paddingAll: "10px",
+      contents: [
+        { type: "text", text: `🧮 ${isEn ? 'Calculation' : '估算依據'}：${calcNote}`, size: "xxs", color: "#000000", wrap: true }
+      ]
+    }];
+  }
 
   const flexMessage = {
     type: "flex",
@@ -1347,12 +1423,12 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             layout: "horizontal",
             contents: [
               { type: "text", text: "🐼 DAILY DIET", weight: "bold", size: "sm", color: "#000000" },
-              { type: "text", text: "AI 即時記錄", weight: "bold", size: "xs", color: "#713F12", align: "end" }
+              { type: "text", text: isEn ? "AI MEAL LOG" : "AI 即時記錄", weight: "bold", size: "xs", color: "#713F12", align: "end" }
             ]
           },
           {
             type: "text",
-            text: "✅ 已即時記錄至資料庫！",
+            text: isEn ? "✅ Logged to your Diary!" : "✅ 已即時記錄至資料庫！",
             weight: "bold",
             size: "md",
             color: "#000000",
@@ -1365,15 +1441,17 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
         layout: "vertical",
         spacing: "md",
         paddingAll: "16px",
+        backgroundColor: "#FFFFFF",
         contents: [
           {
             type: "text",
-            text: analysis.dish_name || "美味餐點",
+            text: analysis.dish_name || (isEn ? "Delicious Meal" : "美味餐點"),
             weight: "bold",
-            size: "lg",
+            size: "xl",
             color: "#000000",
             wrap: true
           },
+          // 3 大營養素粗黑框卡片
           {
             type: "box",
             layout: "horizontal",
@@ -1383,7 +1461,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#FFF1F2",
-                cornerRadius: "10px",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
                 paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
@@ -1397,7 +1477,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#EFF6FF",
-                cornerRadius: "10px",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
                 paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
@@ -1411,7 +1493,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#ECFEFF",
-                cornerRadius: "10px",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
                 paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
@@ -1424,96 +1508,24 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             ]
           },
 
-          // 🧮 估算過程拆解 (份量與熱量依據)
-          ...((() => {
-            const breakdownList = (analysis.breakdown && Array.isArray(analysis.breakdown)) ? analysis.breakdown : [];
-            const breakdownRows = breakdownList.slice(0, 5).map(item => ({
-              type: "box",
-              layout: "horizontal",
-              margin: "xs",
-              contents: [
-                {
-                  type: "text",
-                  text: `• ${item.name || '項目'} ${item.portion ? `(${item.portion})` : ''}`,
-                  size: "xxs",
-                  color: "#1E293B",
-                  weight: "bold",
-                  flex: 6,
-                  wrap: true
-                },
-                {
-                  type: "text",
-                  text: `${Number(item.calories) || 0} kcal${Number(item.protein) > 0 ? ` / ${item.protein}g蛋` : ''}`,
-                  size: "xxs",
-                  color: "#E11D48",
-                  weight: "bold",
-                  align: "end",
-                  flex: 4
-                }
-              ]
-            }));
+          // 🧮 估算過程拆解 (粗黑框明細卡)
+          ...breakdownSection,
 
-            const calcNote = analysis.calculation_note || '';
-
-            if (breakdownRows.length > 0) {
-              return [{
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#F8FAFC",
-                cornerRadius: "10px",
-                borderColor: "#E2E8F0",
-                borderWidth: "1px",
-                paddingAll: "10px",
-                spacing: "xs",
-                contents: [
-                  {
-                    type: "box",
-                    layout: "horizontal",
-                    contents: [
-                      { type: "text", text: "🧮 估算拆解明細", size: "xxs", color: "#475569", weight: "bold", flex: 1 },
-                      { type: "text", text: "估算熱量 / 蛋白質", size: "xxs", color: "#94A3B8", align: "end" }
-                    ]
-                  },
-                  ...breakdownRows,
-                  ...(calcNote ? [{
-                    type: "text",
-                    text: `💡 公式：${calcNote}`,
-                    size: "xxs",
-                    color: "#64748B",
-                    wrap: true,
-                    margin: "xs"
-                  }] : [])
-                ]
-              }];
-            } else if (calcNote) {
-              return [{
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#F8FAFC",
-                cornerRadius: "10px",
-                borderColor: "#E2E8F0",
-                borderWidth: "1px",
-                paddingAll: "8px",
-                contents: [
-                  { type: "text", text: `🧮 估算過程：${calcNote}`, size: "xxs", color: "#475569", wrap: true }
-                ]
-              }];
-            }
-            return [];
-          })()),
-
+          // 💬 熊貓短評 (Neo-Brutalist 黃色粗黑框對話框)
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#FEF9C3",
-            cornerRadius: "10px",
-            paddingAll: "10px",
+            backgroundColor: "#FEF08A",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
             contents: [
               {
                 type: "text",
-                text: `💬 熊貓短評：${displayComment}`,
+                text: `${isEn ? "💬 Panda Coach: " : "💬 熊貓短評："}${displayComment}`,
                 size: "xs",
-                color: "#713F12",
+                color: "#000000",
                 weight: "bold",
                 wrap: true
               }
@@ -1522,7 +1534,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
 
           {
             type: "text",
-            text: "⚡ 餐點已自動入帳！數值有誤差可點擊微調：",
+            text: isEn ? "⚡ Meal saved! Tap buttons below to adjust or favorite:" : "⚡ 餐點已入帳！點擊下方按鈕可快速微調或收藏：",
             size: "xxs",
             color: "#71717A",
             align: "center",
@@ -1535,64 +1547,124 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
         layout: "vertical",
         spacing: "sm",
         paddingAll: "14px",
+        backgroundColor: "#FAFAFA",
         contents: [
+          // 📊 查看今日總結 (Neo-Brutalist 經典亮黃粗黑框按鈕)
           {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FDE047",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "postback",
-              label: "📊 查看今日總結",
+              label: isEn ? "📊 View Daily Summary" : "📊 查看今日總結",
               data: postbackSaveData,
-              displayText: "📊 查看今日總結"
-            }
+              displayText: isEn ? "📊 查看今日總結" : "📊 查看今日總結"
+            },
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "📊 View Daily Summary" : "📊 查看今日總結",
+                weight: "bold",
+                size: "sm",
+                color: "#000000"
+              }
+            ]
           },
+          // ✏️ 微調內容 + ⭐ 存為常用 (並排兩顆 Neo-Brutalist 粗黑框按鈕)
           {
             type: "box",
             layout: "horizontal",
             spacing: "sm",
             contents: [
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFFFFF",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
+                paddingAll: "10px",
                 flex: 1,
-                color: "#F4F4F5",
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: "✏️ 微調內容",
+                  label: isEn ? "✏️ Adjust" : "✏️ 微調內容",
                   data: JSON.stringify({ action: 'fillEdit' }),
                   inputOption: "openKeyboard",
                   fillInText: `改 ${analysis.dish_name} ${analysis.calories}卡 ${analysis.protein || 0}蛋 ${analysis.water || 0}水`
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "✏️ Adjust" : "✏️ 微調內容",
+                    weight: "bold",
+                    size: "xs",
+                    color: "#000000"
+                  }
+                ]
               },
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF9C3",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
+                paddingAll: "10px",
                 flex: 1,
-                color: "#FEF9C3",
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: "⭐ 存為常用",
+                  label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
                   data: postbackFavData,
-                  displayText: `⭐ 存為常用：${analysis.dish_name}`
-                }
+                  displayText: isEn ? `⭐ Favorite: ${analysis.dish_name}` : `⭐ 存為常用：${analysis.dish_name}`
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "⭐ Favorite" : "⭐ 存為常用",
+                    weight: "bold",
+                    size: "xs",
+                    color: "#000000"
+                  }
+                ]
               }
             ]
           },
+          // 🗑️ 撤回這筆紀錄 (Neo-Brutalist 淺紅粗黑框按鈕)
           {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FFF1F2",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FFF1F2",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            cornerRadius: "12px",
+            paddingAll: "9px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "postback",
-              label: "🗑️ 撤回這筆紀錄",
+              label: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄",
               data: postbackCancelData,
-              displayText: "🗑️ 撤回這筆紀錄"
-            }
+              displayText: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄"
+            },
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄",
+                weight: "bold",
+                size: "xs",
+                color: "#E11D48"
+              }
+            ]
           }
         ]
       }
@@ -1722,7 +1794,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#FFF1F2",
-                cornerRadius: "10px",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
                 paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
@@ -1736,7 +1810,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#EFF6FF",
-                cornerRadius: "10px",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
                 paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
@@ -1750,7 +1826,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 type: "box",
                 layout: "vertical",
                 backgroundColor: "#ECFEFF",
-                cornerRadius: "10px",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
                 paddingAll: "8px",
                 flex: 1,
                 alignItems: "center",
@@ -1765,9 +1843,11 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#F4F4F5",
-            cornerRadius: "10px",
-            paddingAll: "10px",
+            backgroundColor: "#FFFFFF",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
             spacing: "xs",
             contents: [
               { type: "text", text: isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`, size: "xs", weight: "bold", color: "#000000" },
@@ -1777,11 +1857,13 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#FEF9C3",
-            cornerRadius: "10px",
-            paddingAll: "10px",
+            backgroundColor: "#FEF08A",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
             contents: [
-              { type: "text", text: `💬 熊貓教練：${coachTip}`, size: "xs", color: "#713F12", weight: "bold", wrap: true }
+              { type: "text", text: `💬 熊貓教練：${coachTip}`, size: "xs", color: "#000000", weight: "bold", wrap: true }
             ]
           }
         ]
@@ -1791,30 +1873,52 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
         layout: "vertical",
         spacing: "sm",
         paddingAll: "14px",
+        backgroundColor: "#FAFAFA",
         contents: [
+          // 📋 管理今日紀錄 (Neo-Brutalist 經典亮黃粗黑框按鈕)
           {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FDE047",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "postback",
               label: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`,
               data: JSON.stringify({ action: 'manageMeals', date: todayStr }),
               displayText: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`,
+                weight: "bold",
+                size: "sm",
+                color: "#000000"
+              }
+            ]
           },
+          // 📅 查日期 + 📊 7 日週報 (並排 Neo-Brutalist 粗黑框按鈕)
           {
             type: "box",
             layout: "horizontal",
             spacing: "sm",
             contents: [
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#EFF6FF",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFFFFF",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
+                paddingAll: "10px",
                 flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "datetimepicker",
                   label: "📅 查日期",
@@ -1822,20 +1926,43 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   mode: "date",
                   initial: todayStr,
                   max: getTodayDateString()
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: "📅 查日期",
+                    weight: "bold",
+                    size: "xs",
+                    color: "#000000"
+                  }
+                ]
               },
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#FEF9C3",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF9C3",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
+                paddingAll: "10px",
                 flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "postback",
                   label: "📊 7 日週報",
                   data: JSON.stringify({ action: 'viewWeeklyTrends' }),
                   displayText: "📊 查看 7 日趨勢週報"
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: "📊 7 日週報",
+                    weight: "bold",
+                    size: "xs",
+                    color: "#000000"
+                  }
+                ]
               }
             ]
           }
@@ -2108,17 +2235,31 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
                 margin: "xs"
               },
               {
-                type: "button",
-                style: !isEn ? "primary" : "secondary",
-                height: "sm",
-                color: !isEn ? "#FDE047" : "#FFFFFF",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: !isEn ? "#FDE047" : "#FFFFFF",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
+                paddingAll: "10px",
+                alignItems: "center",
+                justifyContent: "center",
                 margin: "sm",
                 action: {
                   type: "postback",
                   label: !isEn ? "✅ 保持繁體中文" : "切換至繁體中文",
                   data: JSON.stringify({ action: 'setLanguage', lang: 'zh' }),
                   displayText: "切換成中文"
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: !isEn ? "✅ 保持繁體中文" : "切換至繁體中文",
+                    weight: "bold",
+                    size: "xs",
+                    color: "#000000"
+                  }
+                ]
               }
             ]
           },
@@ -2149,17 +2290,31 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
                 margin: "xs"
               },
               {
-                type: "button",
-                style: isEn ? "primary" : "secondary",
-                height: "sm",
-                color: isEn ? "#FDE047" : "#FFFFFF",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: isEn ? "#FDE047" : "#FFFFFF",
+                borderColor: "#000000",
+                borderWidth: "2.5px",
+                cornerRadius: "14px",
+                paddingAll: "10px",
+                alignItems: "center",
+                justifyContent: "center",
                 margin: "sm",
                 action: {
                   type: "postback",
                   label: isEn ? "✅ Active (English)" : "Switch to English",
                   data: JSON.stringify({ action: 'setLanguage', lang: 'en' }),
                   displayText: "Switch to English"
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "✅ Active (English)" : "Switch to English",
+                    weight: "bold",
+                    size: "xs",
+                    color: "#000000"
+                  }
+                ]
               }
             ]
           }
@@ -2172,15 +2327,29 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
         paddingAll: "14px",
         contents: [
           ...(appTargetUrl ? [{
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FDE047",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "uri",
               label: "📱 開啟 Web App 完整設定",
               uri: appTargetUrl
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: "📱 開啟 Web App 完整設定",
+                weight: "bold",
+                size: "sm",
+                color: "#000000"
+              }
+            ]
           }] : [])
         ]
       }
@@ -2235,16 +2404,30 @@ function generatePersonaSelectionFlex(userId, liffId, userGistId, props) {
         paddingAll: "12px",
         contents: [
           {
-            type: "button",
-            style: isCurrent ? "secondary" : "primary",
-            color: isCurrent ? "#E4E4E7" : "#000000",
-            height: "sm",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: isCurrent ? "#F4F4F5" : "#FDE047",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "10px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "postback",
               label: isCurrent ? "使用中" : "切換至此性格",
               data: JSON.stringify({ action: 'setPersona', persona: p.id }),
               displayText: `切換教練性格：${p.name}`
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: isCurrent ? "✅ 目前使用中" : "切換至此性格",
+                weight: "bold",
+                size: "xs",
+                color: "#000000"
+              }
+            ]
           }
         ]
       }
@@ -4561,28 +4744,56 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                 margin: "sm",
                 contents: [
                   {
-                    type: "button",
-                    style: "primary",
-                    height: "sm",
-                    color: "#2563EB",
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#FDE047",
+                    borderColor: "#000000",
+                    borderWidth: "2.5px",
+                    cornerRadius: "14px",
+                    paddingAll: "12px",
+                    alignItems: "center",
+                    justifyContent: "center",
                     action: {
                       type: "postback",
                       label: "🐣 我是全新用戶 (快速上手引導)",
                       data: JSON.stringify({ action: 'onboarding', type: 'new' }),
                       displayText: "🐣 我是全新用戶"
-                    }
+                    },
+                    contents: [
+                      {
+                        type: "text",
+                        text: "🐣 我是全新用戶 (快速上手引導)",
+                        weight: "bold",
+                        size: "sm",
+                        color: "#000000"
+                      }
+                    ]
                   },
                   {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#DBEAFE",
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#FFFFFF",
+                    borderColor: "#000000",
+                    borderWidth: "2.5px",
+                    cornerRadius: "14px",
+                    paddingAll: "12px",
+                    alignItems: "center",
+                    justifyContent: "center",
                     action: {
                       type: "postback",
                       label: "🌐 我用過 Web 版 (資料綁定同步)",
                       data: JSON.stringify({ action: 'onboarding', type: 'web_user' }),
                       displayText: "🌐 我用過 Web 版"
-                    }
+                    },
+                    contents: [
+                      {
+                        type: "text",
+                        text: "🌐 我用過 Web 版 (資料綁定同步)",
+                        weight: "bold",
+                        size: "sm",
+                        color: "#000000"
+                      }
+                    ]
                   }
                 ]
               }
@@ -4676,27 +4887,55 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
         paddingAll: "12px",
         contents: [
           {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FDE047",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "uri",
               label: "📱 開啟個人飲食日記 (Web App)",
               uri: appTargetUrl
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: "📱 開啟個人飲食日記 (Web App)",
+                weight: "bold",
+                size: "sm",
+                color: "#000000"
+              }
+            ]
           },
           {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FEF9C3",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FFFFFF",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "postback",
               label: "📖 查看所有操作指令清單",
               data: JSON.stringify({ action: 'showHelp' }),
               displayText: "說明"
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: "📖 查看所有操作指令清單",
+                weight: "bold",
+                size: "sm",
+                color: "#000000"
+              }
+            ]
           }
         ]
       }
