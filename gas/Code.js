@@ -1851,7 +1851,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 text: isEn ? "🍚 Halve Rice / Carbs (-50%)" : "🍚 飯吃一半 (碳水減半 -50%)",
                 weight: "bold",
                 size: "xs",
-                color: "#1E40AF"
+                color: "#1E40AF",
+                wrap: true
               }
             ]
           }] : []),
@@ -3843,7 +3844,7 @@ function generateGoalGuideFlex(userId, liffId, userGistId) {
             color: "#FDE047",
             action: {
               type: "uri",
-              label: "⚙️ 開啟 App 完整目標設定 (TDEE)",
+              label: "⚙️ 開啟 App 完整目標設定",
               uri: appTargetUrl
             }
           },
@@ -4307,7 +4308,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props, targetDat
             color: "#FFF1F2",
             action: {
               type: "postback",
-              label: "🗑️ 清空今日所有紀錄",
+              label: "🗑️ 清空今日紀錄",
               data: JSON.stringify({ action: 'clearTodayConfirm' }),
               displayText: "🗑️ 清空今日紀錄"
             }
@@ -5093,17 +5094,18 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                     justifyContent: "center",
                     action: {
                       type: "postback",
-                      label: "🐣 我是全新用戶 (快速上手引導)",
+                      label: "🐣 全新用戶 30 秒引導",
                       data: JSON.stringify({ action: 'onboarding', type: 'new' }),
                       displayText: "🐣 我是全新用戶"
                     },
                     contents: [
                       {
                         type: "text",
-                        text: "🐣 我是全新用戶 (快速上手引導)",
+                        text: "🐣 全新用戶快速上手 (30秒)",
                         weight: "bold",
                         size: "sm",
-                        color: "#000000"
+                        color: "#000000",
+                        wrap: true
                       }
                     ]
                   },
@@ -5119,17 +5121,18 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                     justifyContent: "center",
                     action: {
                       type: "postback",
-                      label: "🌐 我用過 Web 版 (資料綁定同步)",
+                      label: "🌐 舊用戶 Gist 資料綁定",
                       data: JSON.stringify({ action: 'onboarding', type: 'web_user' }),
                       displayText: "🌐 我用過 Web 版"
                     },
                     contents: [
                       {
                         type: "text",
-                        text: "🌐 我用過 Web 版 (資料綁定同步)",
+                        text: "🌐 舊用戶 Gist 資料綁定",
                         weight: "bold",
                         size: "sm",
-                        color: "#000000"
+                        color: "#000000",
+                        wrap: true
                       }
                     ]
                   }
@@ -5236,13 +5239,13 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
             justifyContent: "center",
             action: {
               type: "uri",
-              label: "📱 開啟個人飲食日記 (Web App)",
+              label: "📱 開啟個人飲食日記",
               uri: appTargetUrl
             },
             contents: [
               {
                 type: "text",
-                text: "📱 開啟個人飲食日記 (Web App)",
+                text: "📱 開啟個人飲食日記",
                 weight: "bold",
                 size: "sm",
                 color: "#000000"
@@ -5365,7 +5368,7 @@ function generateNewUserGuideFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "postback",
-              label: "🎯 智能目標推薦 (依身材)",
+              label: "🎯 智能體態目標推薦",
               data: JSON.stringify({ action: 'goalGuide' }),
               displayText: "設定目標"
             }
@@ -5377,7 +5380,7 @@ function generateNewUserGuideFlex(userId, liffId, userGistId, props) {
             color: "#FEF08A",
             action: {
               type: "postback",
-              label: "🎭 挑選教練性格 (傲嬌/溫柔/士官長)",
+              label: "🎭 挑選熊貓教練性格",
               data: JSON.stringify({ action: 'choosePersona' }),
               displayText: "切換性格"
             }
@@ -5389,7 +5392,7 @@ function generateNewUserGuideFlex(userId, liffId, userGistId, props) {
             color: "#EFF6FF",
             action: {
               type: "uri",
-              label: "📱 開啟個人飲食日記 (Web App)",
+              label: "📱 開啟個人飲食日記",
               uri: appTargetUrl
             }
           }
@@ -5454,7 +5457,7 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "uri",
-              label: "📱 開啟 Web App 複製 Gist ID",
+              label: "📱 開啟 Web 複製 Gist ID",
               uri: appTargetUrl
             }
           },
@@ -5465,7 +5468,7 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props) {
             color: "#FEF08A",
             action: {
               type: "postback",
-              label: "☁️ 填入「綁定 Gist」指令",
+              label: "☁️ 填入「綁定 Gist」",
               data: JSON.stringify({ action: 'fillGist' }),
               inputOption: "openKeyboard",
               fillInText: "綁定 "
@@ -5755,7 +5758,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "🎯 智能目標推薦",
+                      label: "🎯 智能目標",
                       data: JSON.stringify({ action: 'goalGuide' }),
                       displayText: "設定目標"
                     }
@@ -5789,7 +5792,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "📋 管理刪改",
+                      label: "📋 管理紀錄",
                       data: JSON.stringify({ action: 'manageMeals' }),
                       displayText: "管理"
                     }
@@ -5802,7 +5805,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "uri",
-                      label: "🐛 回報問題 (表單)",
+                      label: "🐛 問題回報",
                       uri: userGistId ? `https://liff.line.me/${liffId}?tab=feedback&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=feedback`
                     }
                   }
@@ -5822,7 +5825,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "🌐 語言 / Language",
+                      label: "🌐 語言切換",
                       data: JSON.stringify({ action: 'chooseLanguage' }),
                       displayText: "切換語言"
                     }
@@ -5846,7 +5849,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "uri",
-              label: "📱 開啟個人飲食日記 (Web App)",
+              label: "📱 開啟個人飲食日記",
               uri: appTargetUrl
             }
           }
