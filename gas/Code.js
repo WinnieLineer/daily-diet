@@ -3142,7 +3142,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
               backgroundColor: barColor,
               cornerRadius: "6px",
               height: "12px",
-              width: `${Math.max(6, pct)}%`
+              width: `${Math.max(6, pct)}%`,
+              contents: [{ type: "filler" }]
             }
           ]
         },
