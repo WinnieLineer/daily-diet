@@ -375,6 +375,24 @@ function doPost(e) {
           continue;
         }
 
+        // 📋 按下【管理今日紀錄】
+        if (payload.action === 'manageMeals' || payload.action === 'manage') {
+          console.log(`📋 [管理紀錄] 用戶: ${userId}`);
+          recordSystemLog('管理清單', userId, '點擊管理紀錄', '', '已發送管理面板');
+          const mgmtFlex = generateMealManagementFlex(userId, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
+        // 📈 按下【查看 7 日趨勢週報】
+        if (payload.action === 'viewWeeklyTrends' || payload.action === 'weeklyTrends') {
+          console.log(`📈 [查看週報] 用戶: ${userId}`);
+          recordSystemLog('週報趨勢', userId, '點擊7日週報', '', '已發送7日趨勢週報');
+          const weeklyFlex = generateWeeklyTrendsFlex(userId, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, weeklyFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 💧 按下【快速補水】
         if (payload.action === 'quickWater') {
           const amount = Number(payload.amount) || 500;
@@ -565,6 +583,33 @@ function doPost(e) {
           if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結') {
             recordSystemLog('查詢總結', userId, userText, '', '已發送今日總結');
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 📊 查詢 7 日趨勢與歷史週報
+          if (userText === '週報' || userText === '趨勢' || userText === '圖表' || userText === '歷史' || userText === '歷史紀錄' || userText === '戰報' || userText === '7天' || userText === '七天' || userText === '分析') {
+            recordSystemLog('週報趨勢', userId, userText, '', '已發送7日趨勢週報');
+            const weeklyFlex = generateWeeklyTrendsFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, weeklyFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 📅 查詢昨日/前天歷史紀錄
+          if (userText === '昨天' || userText === '昨日') {
+            const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+            const dateStr = Utilities.formatDate(yesterday, "Asia/Taipei", "yyyy-MM-dd");
+            recordSystemLog('查詢歷史', userId, userText, dateStr, '已發送昨天總結');
+            const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, dateStr);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          if (userText === '前天') {
+            const dayBefore = new Date(Date.now() - 48 * 60 * 60 * 1000);
+            const dateStr = Utilities.formatDate(dayBefore, "Asia/Taipei", "yyyy-MM-dd");
+            recordSystemLog('查詢歷史', userId, userText, dateStr, '已發送前天總結');
+            const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, dateStr);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
@@ -1090,7 +1135,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                   label: "✏️ 微調內容",
                   data: JSON.stringify({ action: 'fillEdit' }),
                   inputOption: "openKeyboard",
-                  fillInText: `${analysis.dish_name} ${analysis.calories}卡 ${analysis.protein || 0}蛋 ${analysis.water || 0}水`
+                  fillInText: `改 ${analysis.dish_name} ${analysis.calories}卡 ${analysis.protein || 0}蛋 ${analysis.water || 0}水`
                 }
               },
               {
@@ -1132,8 +1177,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
 // 📊 2. 今日飲食進度總結卡片
 // ========================================================
 
-function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, props) {
-  const todayStr = getTodayDateString();
+function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, props, targetDateStr) {
+  const todayStr = targetDateStr || getTodayDateString();
   const allLogs = getTodayLogs(userId, todayStr, props, userGistId);
   const goals = getUserGoals(userId, props, userGistId);
 
@@ -1304,17 +1349,31 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
       footer: {
         type: "box",
         layout: "vertical",
+        spacing: "sm",
         paddingAll: "14px",
         contents: [
           {
             type: "button",
             style: "primary",
             height: "sm",
-            color: "#FDE047",
+            color: "#000000",
             action: {
-              type: "uri",
-              label: "📱 開啟 App 查看完整圖表",
-              uri: appTargetUrl
+              type: "postback",
+              label: "📋 管理今日紀錄",
+              data: JSON.stringify({ action: 'manageMeals' }),
+              displayText: "📋 管理今日紀錄"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FEF9C3",
+            action: {
+              type: "postback",
+              label: "📊 查看 7 日趨勢週報",
+              data: JSON.stringify({ action: 'viewWeeklyTrends' }),
+              displayText: "📊 查看 7 日趨勢週報"
             }
           }
         ]
@@ -2716,9 +2775,11 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
                 color: "#F4F4F5",
                 flex: 1,
                 action: {
-                  type: "uri",
-                  label: "✏️ App修改",
-                  uri: editAppUrl
+                  type: "postback",
+                  label: "✏️ 微調",
+                  data: JSON.stringify({ action: 'fillEdit', id: log.id }),
+                  inputOption: "openKeyboard",
+                  fillInText: `改 ${dishName} ${log.calories}卡 ${log.protein || 0}蛋 ${log.water || 0}水`
                 }
               },
               {
@@ -2798,9 +2859,10 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
             height: "sm",
             color: "#000000",
             action: {
-              type: "uri",
-              label: "📱 開啟 App 完整圖表",
-              uri: appTargetUrl
+              type: "postback",
+              label: "📊 查看 7 日趨勢週報",
+              data: JSON.stringify({ action: 'viewWeeklyTrends' }),
+              displayText: "📊 查看 7 日趨勢週報"
             }
           },
           ...(allLogs.length > 0 ? [{
@@ -2815,6 +2877,342 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
               displayText: "🗑️ 清空今日紀錄"
             }
           }] : [])
+        ]
+      }
+    }
+  };
+}
+
+// ========================================================
+// 📊 6.5. 7 日飲食趨勢與歷史週報 (Neo-Brutalist 視覺圖表)
+// ========================================================
+
+function getRecentDaysLogs(userId, days, props, userGistId) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+  const pat = props.getProperty('GITHUB_PAT');
+  let gistLogs = null;
+
+  if (gistId && pat) {
+    try {
+      const gistUrl = `https://api.github.com/gists/${gistId}`;
+      const res = UrlFetchApp.fetch(gistUrl, {
+        headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      if (res.getResponseCode() === 200) {
+        const content = JSON.parse(res.getContentText()).files?.['daily-diet-backup.json']?.content;
+        if (content) {
+          const backupData = JSON.parse(content);
+          if (backupData.dietLogs && Array.isArray(backupData.dietLogs)) {
+            gistLogs = backupData.dietLogs;
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("從 Gist 批量拉取歷史日誌失敗:", e);
+    }
+  }
+
+  const result = [];
+  const now = new Date();
+  const weekdays = ['週日', '週一', '週二', '週三', '週四', '週五', '週六'];
+
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    const dateStr = Utilities.formatDate(d, "Asia/Taipei", "yyyy-MM-dd");
+    const displayDate = Utilities.formatDate(d, "Asia/Taipei", "MM/dd");
+    const dayOfWeek = weekdays[d.getDay()];
+
+    let dayLogs = [];
+    const todayKey = `DIET_LOGS_${userId}_${dateStr}`;
+    const raw = props.getProperty(todayKey);
+    if (raw) {
+      try { dayLogs = JSON.parse(raw); } catch (e) {}
+    }
+
+    if (dayLogs.length === 0 && gistLogs) {
+      dayLogs = gistLogs.filter(l => l.date === dateStr);
+    }
+
+    let totalCal = 0;
+    let totalPro = 0;
+    let totalWater = 0;
+    dayLogs.forEach(l => {
+      totalCal += Number(l.calories) || 0;
+      totalPro += Number(l.protein) || 0;
+      totalWater += Number(l.water) || 0;
+    });
+
+    result.push({
+      date: dateStr,
+      displayDate: displayDate,
+      dayOfWeek: dayOfWeek,
+      totalCal: totalCal,
+      totalPro: totalPro,
+      totalWater: totalWater,
+      count: dayLogs.length,
+      logs: dayLogs
+    });
+  }
+
+  return result;
+}
+
+function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
+  const daysData = getRecentDaysLogs(userId, 7, props, userGistId);
+  const goals = getUserGoals(userId, props, userGistId);
+  const goalCal = Number(goals.calories) || 2000;
+  const goalPro = Number(goals.protein) || 100;
+
+  let totalCalSum = 0;
+  let totalProSum = 0;
+  let loggedDaysCount = 0;
+  let targetMetDays = 0;
+
+  daysData.forEach(d => {
+    if (d.totalCal > 0) {
+      totalCalSum += d.totalCal;
+      totalProSum += d.totalPro;
+      loggedDaysCount++;
+      if (d.totalCal <= goalCal * 1.15 && d.totalCal >= goalCal * 0.7) {
+        targetMetDays++;
+      }
+    }
+  });
+
+  const avgCal = loggedDaysCount > 0 ? Math.round(totalCalSum / loggedDaysCount) : 0;
+  const avgPro = loggedDaysCount > 0 ? Math.round(totalProSum / loggedDaysCount) : 0;
+
+  // 繪製 7 天水平長條圖
+  const chartRows = daysData.map(d => {
+    const isToday = d.date === getTodayDateString();
+    const pct = goalCal > 0 ? Math.min(100, Math.round((d.totalCal / goalCal) * 100)) : 0;
+    
+    let barColor = "#10B981"; // 理想綠
+    if (d.totalCal === 0) {
+      barColor = "#E4E4E7"; // 無紀錄
+    } else if (d.totalCal > goalCal * 1.15) {
+      barColor = "#F43F5E"; // 超標紅
+    } else if (d.totalCal < goalCal * 0.7) {
+      barColor = "#F59E0B"; // 偏低黃
+    }
+
+    return {
+      type: "box",
+      layout: "horizontal",
+      alignItems: "center",
+      spacing: "sm",
+      margin: "xs",
+      contents: [
+        {
+          type: "text",
+          text: `${d.dayOfWeek} ${d.displayDate}${isToday ? '★' : ''}`,
+          size: "xs",
+          color: isToday ? "#000000" : "#52525B",
+          weight: isToday ? "bold" : "regular",
+          flex: 4
+        },
+        {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#F4F4F5",
+          cornerRadius: "6px",
+          height: "12px",
+          flex: 6,
+          contents: [
+            {
+              type: "box",
+              layout: "vertical",
+              backgroundColor: barColor,
+              cornerRadius: "6px",
+              height: "12px",
+              width: `${Math.max(6, pct)}%`
+            }
+          ]
+        },
+        {
+          type: "text",
+          text: d.totalCal > 0 ? `${d.totalCal}k` : "-",
+          size: "xs",
+          weight: "bold",
+          color: d.totalCal > goalCal * 1.15 ? "#E11D48" : "#18181B",
+          align: "end",
+          flex: 3
+        }
+      ]
+    };
+  });
+
+  let coachComment = "養成規律記錄是體態改變的第一步，繼續保持！🐼";
+  if (loggedDaysCount >= 5 && targetMetDays >= 4) {
+    coachComment = `太強了！本週有 ${targetMetDays} 天完美達標，飲食自律度拉滿！🔥`;
+  } else if (avgCal > goalCal * 1.15) {
+    coachComment = `這週日均熱量 (${avgCal} kcal) 稍微偏高囉，多喝水並適度增加活動量！🐼`;
+  } else if (loggedDaysCount < 3) {
+    coachComment = "這週打卡天數比較少喔，吃什麼隨手拍照給教練，幫你把關！🐼✨";
+  }
+
+  return {
+    type: "flex",
+    altText: `📈 7 日飲食趨勢週報：日均 ${avgCal} kcal ｜ 達標 ${targetMetDays}/7 天`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: "7 日趨勢週報", color: "#A1A1AA", size: "xs", align: "end", weight: "bold" }
+            ]
+          },
+          {
+            type: "text",
+            text: "📈 飲食歷程與趨勢圖表",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "lg",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: `🎯 每日目標：${goalCal} kcal ｜ ${goalPro}g 蛋白質`,
+            color: "#FDE047",
+            size: "xxs",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                alignItems: "center",
+                flex: 1,
+                contents: [
+                  { type: "text", text: "🔥 日均熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: `${avgCal}`, size: "md", color: "#000000", weight: "bold", margin: "xs" },
+                  { type: "text", text: "kcal / 天", size: "xxs", color: "#881337" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                alignItems: "center",
+                flex: 1,
+                contents: [
+                  { type: "text", text: "🥩 日均蛋白", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: `${avgPro}g`, size: "md", color: "#000000", weight: "bold", margin: "xs" },
+                  { type: "text", text: "克 / 天", size: "xxs", color: "#1E3A8A" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFDF5",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                alignItems: "center",
+                flex: 1,
+                contents: [
+                  { type: "text", text: "🎯 達標天數", size: "xxs", color: "#059669", weight: "bold" },
+                  { type: "text", text: `${targetMetDays} / 7`, size: "md", color: "#000000", weight: "bold", margin: "xs" },
+                  { type: "text", text: "天達標", size: "xxs", color: "#065F46" }
+                ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FAFAFA",
+            cornerRadius: "12px",
+            paddingAll: "12px",
+            borderColor: "#E4E4E7",
+            borderWidth: "1px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "📊 近 7 日熱量長條圖", size: "xs", color: "#18181B", weight: "bold", flex: 1 },
+                  { type: "text", text: `目標 ${goalCal}k`, size: "xxs", color: "#71717A", align: "end" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                margin: "sm",
+                spacing: "xs",
+                contents: chartRows
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF9C3",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            contents: [
+              { type: "text", text: `💬 熊貓週評：${coachComment}`, size: "xs", color: "#713F12", weight: "bold", wrap: true }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "postback",
+              label: "📋 管理今日紀錄",
+              data: JSON.stringify({ action: 'manageMeals' }),
+              displayText: "📋 管理今日紀錄"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "postback",
+              label: "📊 查看今日總結",
+              data: JSON.stringify({ action: 'save' }),
+              displayText: "📊 查看今日總結"
+            }
+          }
         ]
       }
     }
