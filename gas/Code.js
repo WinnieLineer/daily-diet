@@ -1457,7 +1457,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 contents: [
                   { type: "text", text: isToday ? "🔥 今日總熱量" : "🔥 當日總熱量", size: "xxs", color: "#E11D48", weight: "bold" },
                   { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: `${calPercent}%`, size: "xxs", color: "#71717A", weight: "bold" }
+                  { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold" }
                 ]
               },
               {
@@ -3278,7 +3278,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
           backgroundColor: "#F4F4F5",
           cornerRadius: "6px",
           height: "12px",
-          flex: 6,
+          flex: 5,
           contents: [
             {
               type: "box",
@@ -3293,12 +3293,12 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
         },
         {
           type: "text",
-          text: d.totalCal > 0 ? `${d.totalCal}k` : "-",
+          text: d.totalCal > 0 ? `${d.totalCal} kcal` : "-",
           size: "xs",
           weight: "bold",
           color: d.totalCal > goalCal * 1.15 ? "#E11D48" : "#18181B",
           align: "end",
-          flex: 3
+          flex: 4
         }
       ]
     };

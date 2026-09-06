@@ -123,9 +123,9 @@ const HistoryTrends = ({ goals, summary }) => {
               y={CALORIE_GOAL} stroke="#000" strokeDasharray="8 8" strokeWidth={2} 
               label={({ viewBox }) => (
                 <g>
-                  <rect x={viewBox.width - 65} y={viewBox.y - 12} width="60" height="18" rx="6" fill="#000" />
-                  <text x={viewBox.width - 35} y={viewBox.y} dy={1} fill="#fff" fontSize="9" fontWeight="900" textAnchor="middle">
-                    🔥 {CALORIE_GOAL}
+                  <rect x={viewBox.width - 80} y={viewBox.y - 12} width="76" height="18" rx="6" fill="#000" />
+                  <text x={viewBox.width - 42} y={viewBox.y} dy={1} fill="#fff" fontSize="9" fontWeight="900" textAnchor="middle">
+                    🔥 {CALORIE_GOAL} kcal
                   </text>
                 </g>
               )} 

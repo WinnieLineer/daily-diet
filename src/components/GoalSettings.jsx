@@ -826,11 +826,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     )}
                     <div className="space-y-4">
                       <div>
-                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')}</label>
+                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('calories')} (kcal)</label>
                         <input type="number" value={goals.calories} onChange={e => setGoals({ ...goals, calories: e.target.value })} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
                       <div>
-                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')}</label>
+                        <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1">{t('protein')} (g)</label>
                         <input type="number" value={goals.protein} onChange={e => setGoals({ ...goals, protein: e.target.value })} className="w-full border-2 border-black p-3 rounded-xl font-black text-xl" />
                       </div>
                       <div>
@@ -884,7 +884,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           className="grid grid-cols-2 gap-4 mt-2 overflow-hidden"
                         >
                           <div>
-                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('carbs_goal')}</label>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('carbs_goal')} (g)</label>
                             <input
                               type="number"
                               value={goals.carbs}
@@ -893,7 +893,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             />
                           </div>
                           <div>
-                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('fat_goal')}</label>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 block mb-1 ml-1 text-left">{t('fat_goal')} (g)</label>
                             <input
                               type="number"
                               value={goals.fat}

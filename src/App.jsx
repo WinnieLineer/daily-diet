@@ -606,19 +606,19 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
         {/* Bottom Row: Nutrients and Badges (Flex-wrap prevents cramping) */}
         <div className="flex flex-wrap items-center gap-1.5 mt-0.5">
           {log.calories > 0 && (
-            <span className="text-[10px] font-black bg-accent px-1.5 py-0.5 rounded border border-black/10 shadow-neo-sm whitespace-nowrap">🔥{log.calories}</span>
+            <span className="text-[10px] font-black bg-accent px-1.5 py-0.5 rounded border border-black/10 shadow-neo-sm whitespace-nowrap">🔥{log.calories} kcal</span>
           )}
           {log.protein > 0 && (
-            <span className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍖{log.protein}</span>
+            <span className="text-[10px] font-black text-white bg-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍖{log.protein}g</span>
           )}
           {goals?.show_carbs_fat && log.carbs > 0 && (
-            <span className="text-[10px] font-black bg-white text-[#d97706] border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍞{log.carbs}</span>
+            <span className="text-[10px] font-black bg-white text-[#d97706] border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🍞{log.carbs}g</span>
           )}
           {goals?.show_carbs_fat && log.fat > 0 && (
-            <span className="text-[10px] font-black bg-white text-[#e11d48] border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🥑{log.fat}</span>
+            <span className="text-[10px] font-black bg-white text-[#e11d48] border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🥑{log.fat}g</span>
           )}
           {log.water > 0 && (
-            <span className="text-[10px] font-black text-black border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}</span>
+            <span className="text-[10px] font-black text-black border-2 border-black px-1.5 py-0.5 rounded shadow-neo-sm whitespace-nowrap">🚰{log.water}ml</span>
           )}
 
           {log.category && log.dish_name && !log.dish_name.startsWith(t(log.category)) && (
@@ -1799,13 +1799,13 @@ function App() {
                                     
                                     <div className="flex flex-wrap gap-x-2 gap-y-1 text-[10px] font-black italic uppercase tracking-wider text-gray-400 flex-1">
                                       <span className={caloriePercent > 110 ? 'text-rose-500' : caloriePercent >= 100 ? 'text-emerald-600' : ''}>
-                                        🔥 {caloriePercent}%
+                                        🔥 {group.totalCalories} kcal ({caloriePercent}%)
                                       </span>
                                       <span className={proteinPercent >= 100 ? 'text-emerald-600' : ''}>
-                                        🍖 {proteinPercent}%
+                                        🍖 {group.totalProtein}g ({proteinPercent}%)
                                       </span>
                                       <span className={waterPercent >= 100 ? 'text-emerald-600' : ''}>
-                                        🚰 {waterPercent}%
+                                        🚰 {group.totalWater || 0}ml
                                       </span>
                                     </div>
 

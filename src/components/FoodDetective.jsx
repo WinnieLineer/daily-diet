@@ -1232,11 +1232,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       <div className="flex-1 min-w-0">
                         <div className="font-black text-sm truncate">{item.dish_name}</div>
                         <div className="flex flex-wrap gap-2 text-[10px] font-bold font-mono text-zinc-400 mt-1">
-                          <span>🔥 {item.calories}</span>
-                          <span>🍖 {item.protein}</span>
-                          {item.water > 0 && <span>🚰 {item.water}</span>}
-                          {goals?.show_carbs_fat && item.carbs > 0 && <span>🍞 {item.carbs}</span>}
-                          {goals?.show_carbs_fat && item.fat > 0 && <span>🥑 {item.fat}</span>}
+                          <span>🔥 {item.calories} kcal</span>
+                          <span>🍖 {item.protein}g</span>
+                          {item.water > 0 && <span>🚰 {item.water}ml</span>}
+                          {goals?.show_carbs_fat && item.carbs > 0 && <span>🍞 {item.carbs}g</span>}
+                          {goals?.show_carbs_fat && item.fat > 0 && <span>🥑 {item.fat}g</span>}
                         </div>
                       </div>
                       <div className="flex items-center gap-2 shrink-0">
@@ -1356,11 +1356,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         {item.category && item.dish_name && !item.dish_name.startsWith(t(item.category)) && (
                           <span className="text-[7px] font-black uppercase tracking-tighter px-1 py-0.5 rounded bg-zinc-100 text-zinc-400 border border-zinc-200 shrink-0">{t(item.category)}</span>
                         )}
-                        <span>🔥 {item.calories}</span>
-                        <span>🍖 {item.protein}</span>
-                        {item.water > 0 && <span>🚰 {item.water}</span>}
-                        {goals?.show_carbs_fat && item.carbs > 0 && <span>🍞 {item.carbs}</span>}
-                        {goals?.show_carbs_fat && item.fat > 0 && <span>🥑 {item.fat}</span>}
+                        <span>🔥 {item.calories} kcal</span>
+                        <span>🍖 {item.protein}g</span>
+                        {item.water > 0 && <span>🚰 {item.water}ml</span>}
+                        {goals?.show_carbs_fat && item.carbs > 0 && <span>🍞 {item.carbs}g</span>}
+                        {goals?.show_carbs_fat && item.fat > 0 && <span>🥑 {item.fat}g</span>}
                       </div>
                     </div>
                     <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors shrink-0" />
