@@ -53,6 +53,7 @@ function doGet(e) {
     const todayLogs = getTodayLogs(userId, todayStr, props, incomingGist);
     const gistId = getOrCreateUserGist(userId, pat, props);
     const goals = getUserGoals(userId, props, incomingGist);
+    const persona = getUserPersona(userId, props, incomingGist, pat);
 
     return ContentService.createTextOutput(JSON.stringify({
       status: 'ok',
@@ -60,9 +61,11 @@ function doGet(e) {
       gistId,
       todayLogs,
       goals,
+      persona,
       favorites: getUserFavorites(userId, props, incomingGist)
     })).setMimeType(ContentService.MimeType.JSON);
   }
+
 
   // 3. Web App 觸發記錄/新增餐點 (即時雙向同步至 LINE 今日快取與 Gist 雲端)
   if ((action === 'saveMeal' || action === 'addMeal') && userId) {
@@ -146,6 +149,17 @@ function doGet(e) {
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+
+  // 9. Web App 觸發更新教練性格
+  if (action === 'updatePersona' && userId) {
+    const persona = e?.parameter?.persona || 'tsundere';
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
+    setUserPersona(userId, persona, userGistId, pat, props);
+    recordSystemLog('Web更新性格', userId, persona, '', '已同步更新教練性格');
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', persona }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
 
   // 6. 實時運作日誌 API (提供 JSON)
   if (action === 'getRecentLogs') {
@@ -340,9 +354,20 @@ function doPost(e) {
 
         console.log(`🔘 [按鈕點擊] 動作: ${payload.action} | 內容:`, JSON.stringify(payload));
 
+        // 🎭 按下【切換教練性格】
+        if (payload.action === 'setPersona') {
+          const newPersona = payload.persona || 'tsundere';
+          setUserPersona(userId, newPersona, userGistId, GITHUB_PAT, props);
+          const personaNames = { tsundere: '傲嬌毒舌教練 🐼😡', gentle: '治癒天使 🐼🥰', hardcore: '魔鬼士官長 🐼🔥' };
+          recordSystemLog('切換性格', userId, newPersona, '', `已切換為 ${personaNames[newPersona] || newPersona}`);
+          replyTextMessage(replyToken, `🎭 已成功將熊貓教練性格切換為【${personaNames[newPersona] || '傲嬌毒舌'}】！\n\n現在傳送餐點照片或輸入食物，教練就會以全新性格為您專業分析與吐槽囉 🐼✨`, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // ✅ 按下【儲存紀錄】
         // 💾 按下【儲存 / 查看今日總結】
         if (payload.action === 'save') {
+
           console.log(`💾 [查看今日總結] 用戶: ${userId}`);
           recordSystemLog('查看總結', userId, payload.name || '今日總結', '', '已發送總結卡片');
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
@@ -477,7 +502,7 @@ function doPost(e) {
           const imageBlob = getLineImageBlob(messageId, CHANNEL_ACCESS_TOKEN);
           const base64Image = Utilities.base64Encode(imageBlob.getBytes());
 
-          const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY);
+          const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
           console.log(`🤖 [照片 AI 辨識結果]`, JSON.stringify(analysis));
 
           const meal = {
@@ -504,6 +529,29 @@ function doPost(e) {
           const userText = event.message.text.trim();
           console.log(`💬 [收到用戶文字] "${userText}"`);
 
+          // 🎭 切換教練性格 (例如: "切換性格", "換教練", "性格", "溫柔模式", "傲嬌模式", "鐵血模式")
+          if (userText === '切換性格' || userText === '換教練' || userText === '教練性格' || userText === '性格' || userText === '教練' || userText === '多重性格') {
+            recordSystemLog('切換性格', userId, userText, '', '發送教練性格選擇卡片');
+            const personaFlex = generatePersonaSelectionFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, personaFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          if (userText.startsWith('切換') || userText.startsWith('換成') || userText.startsWith('模式') || userText.startsWith('設定性格') || userText.includes('教練')) {
+            let targetPersona = '';
+            if (userText.includes('溫柔') || userText.includes('天使') || userText.includes('治癒')) targetPersona = 'gentle';
+            else if (userText.includes('鐵血') || userText.includes('魔鬼') || userText.includes('熱血') || userText.includes('斯巴達')) targetPersona = 'hardcore';
+            else if (userText.includes('傲嬌') || userText.includes('毒舌') || userText.includes('預設')) targetPersona = 'tsundere';
+
+            if (targetPersona) {
+              setUserPersona(userId, targetPersona, userGistId, GITHUB_PAT, props);
+              const personaNames = { tsundere: '傲嬌毒舌教練 🐼😡', gentle: '治癒天使 🐼🥰', hardcore: '魔鬼士官長 🐼🔥' };
+              recordSystemLog('切換性格', userId, targetPersona, '', `已切換為 ${personaNames[targetPersona]}`);
+              replyTextMessage(replyToken, `🎭 已成功將教練性格切換為【${personaNames[targetPersona]}】！\n快傳送照片或打字測試看看吧 🐼✨`, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
+          }
+
           // 💡 說明 / 教學 / 歡迎 / 免責聲明
           if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎') {
             recordSystemLog('使用說明', userId, userText, '', '發送精美圖文歡迎卡片與免責聲明');
@@ -511,6 +559,7 @@ function doPost(e) {
             replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
+
 
           // 查詢今日總結
           if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結') {
@@ -762,8 +811,9 @@ function doPost(e) {
 
           // 飲食文字辨識 / 日常對話
           sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
-          const analysis = parseTextWithGemini(userText, GEMINI_API_KEY);
+          const analysis = parseTextWithGemini(userText, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
           if (analysis.is_food === false) {
+
             recordSystemLog('日常對話', userId, userText, '非食物訊息', analysis.reply || '已回覆');
             replyTextMessage(replyToken, analysis.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來幫您計算熱量與記錄！", CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
@@ -882,6 +932,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
   const encodedCmt = encodeURIComponent(analysis.panda_comment || '');
   const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userId ? `&userId=${userId}` : ''}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
+  const userPersona = getUserPersona(userId, props, userGistId);
+  const displayComment = (analysis.panda_comment && analysis.panda_comment.trim()) ? analysis.panda_comment.trim() : generateFallbackComment(analysis.dish_name || '餐點', Number(analysis.calories) || 0, Number(analysis.protein) || 0, userPersona);
+
   const flexMessage = {
     type: "flex",
     altText: `🍱 AI 已記錄：${analysis.dish_name} (${analysis.calories} kcal)`,
@@ -984,7 +1037,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             contents: [
               {
                 type: "text",
-                text: `💬 熊貓短評：${analysis.panda_comment || '這餐看起來營養很均衡喔！'}`,
+                text: `💬 熊貓短評：${displayComment}`,
                 size: "xs",
                 color: "#713F12",
                 weight: "bold",
@@ -992,6 +1045,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
               }
             ]
           },
+
           {
             type: "text",
             text: "請確認營養數值，點擊儲存或微調：",
@@ -1350,6 +1404,188 @@ function getUserGoals(userId, props, userGistId) {
   };
 }
 
+function getUserPersona(userId, props, userGistId, pat) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  let persona = props.getProperty(`PERSONA_${userId}`);
+  if (!persona) {
+    const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+    const token = pat || props.getProperty('GITHUB_PAT');
+    if (gistId && token) {
+      try {
+        const gistUrl = `https://api.github.com/gists/${gistId}`;
+        const getRes = UrlFetchApp.fetch(gistUrl, {
+          headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (getRes.getResponseCode() === 200) {
+          const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+          if (content) {
+            const backupData = JSON.parse(content);
+            if (backupData.settings && Array.isArray(backupData.settings)) {
+              const p = backupData.settings.find(s => s.key === 'panda_active_persona')?.value;
+              if (p) {
+                persona = p;
+                props.setProperty(`PERSONA_${userId}`, p);
+              }
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("從 Gist 讀取性格失敗:", e);
+      }
+    }
+  }
+  return persona || 'tsundere';
+}
+
+function setUserPersona(userId, persona, userGistId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const validPersona = (persona === 'gentle' || persona === 'hardcore' || persona === 'tsundere') ? persona : 'tsundere';
+  props.setProperty(`PERSONA_${userId}`, validPersona);
+
+  const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+  const token = pat || props.getProperty('GITHUB_PAT');
+  if (gistId && token) {
+    try {
+      const gistUrl = `https://api.github.com/gists/${gistId}`;
+      const getRes = UrlFetchApp.fetch(gistUrl, {
+        headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      if (getRes.getResponseCode() === 200) {
+        let backupData = { settings: [] };
+        const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+        if (content) backupData = JSON.parse(content);
+        if (!backupData.settings) backupData.settings = [];
+        
+        const existingIdx = backupData.settings.findIndex(s => s.key === 'panda_active_persona');
+        if (existingIdx >= 0) {
+          backupData.settings[existingIdx].value = validPersona;
+        } else {
+          backupData.settings.push({ key: 'panda_active_persona', value: validPersona });
+        }
+
+        UrlFetchApp.fetch(gistUrl, {
+          method: 'patch',
+          headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+          payload: JSON.stringify({
+            files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+          }),
+          muteHttpExceptions: true
+        });
+      }
+    } catch (e) {
+      console.warn("同步性格至 Gist 失敗:", e);
+    }
+  }
+  return validPersona;
+}
+
+function getPersonaInstruction(persona) {
+  if (persona === 'gentle') {
+    return `Persona Style: Sweet, gentle, supportive, and healing partner (無比溫柔、體貼、溫馨且鼓勵感滿滿的療癒小幫手熊貓). Praise user, show empathy, encourage with warm tone, never use harsh words.`;
+  }
+  if (persona === 'hardcore') {
+    return `Persona Style: Fiery, energetic, hardcore gym personal trainer (熱血、鐵血健身教練熊貓). Push strictly like a drill sergeant, use gym fitness slang ('動起來！', '把熱量燃燒掉！', '再一組！'), demand strict discipline.`;
+  }
+  // Default: tsundere
+  return `Persona Style: Tsundere Elite Registered Dietitian (毒舌且傲嬌的菁英營養師熊貓). Witty, professional, sarcastic and tsundere (口嫌體正直，犀利吐槽但給予專家飲食建議與 1 個具體改善叮嚀).`;
+}
+
+function generateFallbackComment(dishName, calories, protein, persona = 'tsundere') {
+  if (persona === 'gentle') {
+    if (calories > 700) return `這餐份量很充足呢！記得多喝水幫助代謝，下一餐可以多吃點綠色蔬菜喔 🐼💚`;
+    if (protein >= 25) return `蛋白質補充得很棒呢！你今天也很用心照顧自己的身體，繼續加油喔 🐼✨`;
+    if (calories < 300) return `吃得比較輕量呢，如果容易餓記得隨時補充健康小點心與水分喔 🐼🌸`;
+    return `已經為你記錄好「${dishName}」囉！每一餐都要好好享受，記得補充水分 🐼`;
+  }
+  if (persona === 'hardcore') {
+    if (calories > 700) return `熱量破 ${calories} 大卡了！等下給我深蹲跳繩把多餘熱量全部燃燒掉！🔥💪`;
+    if (protein >= 25) return `蛋白質有 ${protein}g 非常到位！肌肉正在修復生長，繼續保持這個訓練強度！🏋️‍♂️`;
+    if (calories < 300) return `吃這麼少哪來的力氣重訓？下一餐給我把優質碳水和蛋白質補齊！👊`;
+    return `紀錄完畢！吃飽了就別躺在沙發上偷懶，準備動起來！🔥`;
+  }
+  // tsundere (default)
+  if (calories > 700) return `熱量居然飆到 ${calories} 大卡…哼，等下別忘了多喝水，下一餐多吃點青菜贖罪！🐼`;
+  if (protein >= 25) return `蛋白質有 ${protein}g 算你過關啦，可別以為這樣就能放肆偷吃甜點喔！🐼`;
+  if (calories < 300) return `吃這麼少是想成仙嗎？小心掉肌肉，下一餐給我好好吃正餐！🐼`;
+  return `哼，勉強幫你記下「${dishName}」了，下一餐記得多補充點蔬菜跟水分！🐼`;
+}
+
+function generatePersonaSelectionFlex(userId, liffId, userGistId, props) {
+  const currentPersona = getUserPersona(userId, props, userGistId);
+  const personas = [
+    { id: 'tsundere', name: '傲嬌毒舌教練', desc: '口嫌體正直、犀利吐槽與專業飲食點評', emoji: '🐼😡', color: '#FEF08A' },
+    { id: 'gentle', name: '治癒天使教練', desc: '溫柔體貼、溫馨鼓勵與同理陪伴', emoji: '🐼🥰', color: '#DCFCE7' },
+    { id: 'hardcore', name: '魔鬼士官長', desc: '熱血斯巴達、嚴格鞭策燃燒卡路里', emoji: '🐼🔥', color: '#FEE2E2' }
+  ];
+
+  const bubbles = personas.map(p => {
+    const isCurrent = currentPersona === p.id;
+    return {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: p.color,
+        paddingAll: "14px",
+        contents: [
+          { type: "text", text: p.emoji, size: "3xl", align: "center" },
+          { type: "text", text: p.name, weight: "bold", size: "md", align: "center", color: "#000000", margin: "sm" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          { type: "text", text: p.desc, size: "xs", color: "#52525B", wrap: true, align: "center" },
+          {
+            type: "text",
+            text: isCurrent ? "✅ 目前使用中" : "點擊立即切換",
+            size: "xxs",
+            weight: "bold",
+            color: isCurrent ? "#16A34A" : "#A1A1AA",
+            align: "center",
+            margin: "md"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: isCurrent ? "secondary" : "primary",
+            color: isCurrent ? "#E4E4E7" : "#000000",
+            height: "sm",
+            action: {
+              type: "postback",
+              label: isCurrent ? "使用中" : "切換至此性格",
+              data: JSON.stringify({ action: 'setPersona', persona: p.id }),
+              displayText: `切換教練性格：${p.name}`
+            }
+          }
+        ]
+      }
+    };
+  });
+
+  return {
+    type: "flex",
+    altText: "🎭 請選擇您偏好的熊貓教練性格",
+    contents: {
+      type: "carousel",
+      contents: bubbles
+    }
+  };
+}
+
+
 function getTodayLogs(userId, dateStr, props, userGistId) {
   if (!props) props = PropertiesService.getScriptProperties();
   const todayKey = `DIET_LOGS_${userId}_${dateStr}`;
@@ -1547,7 +1783,7 @@ function updateMealInUserGist(updatedMeal, gistId, pat) {
   }
 }
 
-function analyzeMealWithGemini(base64Image, apiKey) {
+function analyzeMealWithGemini(base64Image, apiKey, userId, props, userGistId, pat) {
   const models = [
     'gemini-3.5-flash-lite',
     'gemini-3.1-flash-lite',
@@ -1558,14 +1794,34 @@ function analyzeMealWithGemini(base64Image, apiKey) {
     'gemini-3-flash',
     'gemini-2.5-flash'
   ];
-  const prompt = `Analyze this food image. Return ONLY a raw JSON object with keys:
-"dish_name" (Traditional Chinese string),
-"calories" (integer calories in kcal, 0 if unknown),
-"protein" (integer protein in grams, 0 if unknown),
-"carbs" (integer estimated carbohydrates in grams, 0 if unknown),
-"fat" (integer estimated total fat in grams, 0 if unknown),
-"water" (integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food),
-"panda_comment" (Traditional Chinese witty comment). No markdown.`;
+
+  const userPersona = getUserPersona(userId, props, userGistId, pat);
+  const personaInstruction = getPersonaInstruction(userPersona);
+
+  const prompt = `You are a professional nutrition expert panda. Analyze this food image. Return STRICTLY a raw JSON object. NO MARKDOWN.
+${personaInstruction}
+
+CRITICAL NUTRITIONAL EVALUATION RULES FOR "panda_comment":
+1. NEVER give generic polite compliments. NEVER say "這餐看起來營養很均衡喔" or "營養很豐富" unless the meal truly contains high dietary fiber/vegetables, lean quality protein, and unprocessed complex carbs in ideal proportion.
+2. Critically inspect the meal:
+   - High oil / deep-fried / greasy / high sodium: roast the grease/sodium in character, warn about excess fat calories, and demand drinking water.
+   - High refined sugar / dessert / sweet beverage / boba tea: roast the blood sugar spike and lack of satiety.
+   - Heavy carbs (white rice, noodles, pastry) with little protein/veg: point out the muscle-wasting protein deficit and lack of fiber.
+   - High protein: acknowledge the good protein intake in character, but check if veggies/fiber are missing.
+   - If truly balanced: praise specific good components.
+3. Provide EXACTLY 1 actionable, practical improvement tip for the next meal or rest of the day.
+4. Keep "panda_comment" strictly under 35 Traditional Chinese characters (繁體中文), matching your persona style.
+
+Required Schema:
+{
+  "dish_name": "餐點名稱 (Traditional Chinese)",
+  "calories": <integer calories in kcal, 0 if unknown>,
+  "protein": <integer protein in grams, 0 if unknown>,
+  "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
+  "fat": <integer estimated total fat in grams, 0 if unknown>,
+  "water": <integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food>,
+  "panda_comment": "<Concise, witty, critical nutritional evaluation matching selected persona in Traditional Chinese, max 35 characters>"
+}`;
 
   const payload = {
     contents: [{
@@ -1573,7 +1829,11 @@ function analyzeMealWithGemini(base64Image, apiKey) {
         { text: prompt },
         { inline_data: { mime_type: "image/jpeg", data: base64Image } }
       ]
-    }]
+    }],
+    generationConfig: {
+      temperature: 0.2,
+      response_mime_type: "application/json"
+    }
   };
 
   let lastError = null;
@@ -1595,14 +1855,22 @@ function analyzeMealWithGemini(base64Image, apiKey) {
       const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
 
+      const dishName = parsed.dish_name || "美味餐點";
+      const cal = Number(parsed.calories) || 0;
+      const pro = Number(parsed.protein) || 0;
+      const carbs = Number(parsed.carbs) || 0;
+      const fat = Number(parsed.fat) || 0;
+      const water = Number(parsed.water) || 0;
+      const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, userPersona);
+
       return {
-        dish_name: parsed.dish_name || "美味餐點",
-        calories: Number(parsed.calories) || 0,
-        protein: Number(parsed.protein) || 0,
-        carbs: Number(parsed.carbs) || 0,
-        fat: Number(parsed.fat) || 0,
-        water: Number(parsed.water) || 0,
-        panda_comment: parsed.panda_comment || "看起來營養很豐富喔！🐼"
+        dish_name: dishName,
+        calories: cal,
+        protein: pro,
+        carbs: carbs,
+        fat: fat,
+        water: water,
+        panda_comment: comment
       };
     } catch (err) {
       lastError = err;
@@ -1611,7 +1879,7 @@ function analyzeMealWithGemini(base64Image, apiKey) {
   throw new Error(`Gemini 辨識失敗：${lastError?.message || '未知錯誤'}`);
 }
 
-function parseTextWithGemini(text, apiKey) {
+function parseTextWithGemini(text, apiKey, userId, props, userGistId, pat) {
   const models = [
     'gemini-3.5-flash-lite',
     'gemini-3.1-flash-lite',
@@ -1622,7 +1890,13 @@ function parseTextWithGemini(text, apiKey) {
     'gemini-3-flash',
     'gemini-2.5-flash'
   ];
-  const prompt = `You are an AI panda nutrition coach for a diet tracking app. Analyze this user message: "${text}".
+
+  const userPersona = getUserPersona(userId, props, userGistId, pat);
+  const personaInstruction = getPersonaInstruction(userPersona);
+
+  const prompt = `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
+${personaInstruction}
+
 Determine if the user is describing food, a drink, or a meal they ate/drank.
 
 If it IS food/meal/drink:
@@ -1635,14 +1909,14 @@ Return ONLY raw JSON:
   "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
   "fat": <integer estimated total fat in grams, 0 if unknown>,
   "water": <integer estimated liquid/water intake in ml, e.g. 500 for coffee/tea/water/soup, or 0 if dry food>,
-  "panda_comment": "幽默的熊貓飲食短評 (Traditional Chinese)"
+  "panda_comment": "<Critical, witty nutritional evaluation with 1 actionable tip matching selected persona in Traditional Chinese, max 35 characters. DO NOT generically say 營養均衡 unless truly balanced with greens and lean protein>"
 }
 
 If it is NOT food (e.g. "XD", laughter, greetings "你好", questions, casual chat):
 Return ONLY raw JSON:
 {
   "is_food": false,
-  "reply": "親切、幽默又帶點熊貓教練個性的繁體中文回覆，並溫馨提醒可以傳送照片或輸入吃了什麼來記錄飲食 🐼"
+  "reply": "符合選擇性格（${userPersona}）的繁體中文親切幽默回覆，並提醒可以傳送照片或輸入吃了什麼來記錄 🐼"
 }
 Do NOT wrap in markdown backticks.`;
 
@@ -1652,7 +1926,7 @@ Do NOT wrap in markdown backticks.`;
       const res = UrlFetchApp.fetch(url, {
         method: "post",
         contentType: "application/json",
-        payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+        payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, response_mime_type: "application/json" } }),
         muteHttpExceptions: true
       });
       if (res.getResponseCode() === 200) {
@@ -1663,27 +1937,37 @@ Do NOT wrap in markdown backticks.`;
         if (parsed.is_food === false) {
           return {
             is_food: false,
-            reply: parsed.reply || "哈囉！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或打字告訴我吃了什麼，我幫您計算熱量與記錄！"
+            reply: parsed.reply || (userPersona === 'gentle' ? "哈囉！我是您的治癒系飲食小幫手 🐼🥰，今天吃了什麼美味好料呢？隨時傳送照片或打字跟我分享喔！" : userPersona === 'hardcore' ? "嘿！我是你的魔鬼教練 🐼🔥！吃了什麼趕快老實報上來，別想偷吃垃圾食物！" : "哈囉！我是您的 AI 傲嬌教練 🐼，隨時傳送餐點照片或打字告訴我吃了什麼，我來幫您嚴格把關！")
           };
         }
+
+        const dishName = parsed.dish_name || text;
+        const cal = Number(parsed.calories) || 0;
+        const pro = Number(parsed.protein) || 0;
+        const carbs = Number(parsed.carbs) || 0;
+        const fat = Number(parsed.fat) || 0;
+        const water = Number(parsed.water) || 0;
+        const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, userPersona);
+
         return {
           is_food: true,
-          dish_name: parsed.dish_name || text,
-          calories: Number(parsed.calories) || 0,
-          protein: Number(parsed.protein) || 0,
-          carbs: Number(parsed.carbs) || 0,
-          fat: Number(parsed.fat) || 0,
-          water: Number(parsed.water) || 0,
-          panda_comment: parsed.panda_comment || "已辨識您的文字飲食！"
+          dish_name: dishName,
+          calories: cal,
+          protein: pro,
+          carbs: carbs,
+          fat: fat,
+          water: water,
+          panda_comment: comment
         };
       }
     } catch (e) { }
   }
   return {
     is_food: false,
-    reply: "收到！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來為您記錄熱量！"
+    reply: "收到！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來為您分析營養！"
   };
 }
+
 
 function attachQuickReply(message, userId, props) {
   if (!userId || !props) return message;

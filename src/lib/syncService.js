@@ -92,3 +92,23 @@ export async function syncGoalsToCloud(goals) {
     console.log(`🎯 [Web ➔ LINE Sync] 即時同步體態目標: ${goals.calories}卡 / ${goals.protein}g蛋`);
   } catch (err) {}
 }
+
+/**
+ * 即時同步教練性格至 LINE 後端與 Gist
+ */
+export async function syncPersonaToCloud(persona) {
+  const { userId, gistId } = getEffectiveIds();
+  const params = new URLSearchParams({
+    action: 'updatePersona',
+    userId,
+    persona: String(persona || 'tsundere')
+  });
+  if (gistId) params.append('gistId', gistId);
+
+  try {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+    console.log(`🎭 [Web ➔ LINE Sync] 即時同步教練性格: ${persona}`);
+  } catch (err) {}
+}
+
+

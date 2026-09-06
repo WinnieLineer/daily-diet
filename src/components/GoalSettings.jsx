@@ -9,6 +9,7 @@ import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
 import { liffService } from '../lib/liffService';
+import { syncPersonaToCloud } from '../lib/syncService';
 
 
 const VERSION_HISTORY = [
@@ -1622,6 +1623,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                     }
                                     localStorage.setItem('panda_active_persona', persona.id);
                                     setActivePersona(persona.id);
+                                    syncPersonaToCloud(persona.id);
                                     window.dispatchEvent(new CustomEvent('panda-persona-updated'));
                                     alert(`🎉 已成功切換為【${persona.label}】！快去跟教練對話看看吧 🐼✨`);
                                   }}
@@ -1665,9 +1667,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   localStorage.setItem('panda_active_persona', 'tsundere');
                                   setHasPersonas(false);
                                   setActivePersona('tsundere');
+                                  syncPersonaToCloud('tsundere');
                                   window.dispatchEvent(new CustomEvent('panda-persona-updated'));
                                   alert("已封存多重性格切換，教練恢復為預設傲嬌性格 🎋");
                                 }}
+
                                 className="w-full bg-zinc-200 text-zinc-600 border-2 border-zinc-400 py-2 rounded-xl text-xs font-black italic active:scale-95 transition-transform"
                               >
                                 🎁 性格切換已開啟 (點擊封存)

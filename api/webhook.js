@@ -267,12 +267,13 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
             contents: [
               {
                 type: 'text',
-                text: `💬 熊貓教練短評：\n${analysis.panda_comment || '這餐看起來營養很均衡喔！'}`,
+                text: `💬 熊貓教練短評：\n${analysis.panda_comment || generateFallbackComment(analysis.dish_name, analysis.calories, analysis.protein)}`,
                 size: 'xs',
                 color: '#713F12',
                 weight: 'bold',
                 wrap: true
               }
+
             ]
           },
           {
@@ -339,10 +340,41 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
   }
 }
 
+function getPersonaInstruction(persona) {
+  if (persona === 'gentle') {
+    return `Persona Style: Sweet, gentle, supportive, and healing partner (無比溫柔、體貼、溫馨且鼓勵感滿滿的療癒小幫手熊貓). Praise user, show empathy, encourage with warm tone, never use harsh words.`;
+  }
+  if (persona === 'hardcore') {
+    return `Persona Style: Fiery, energetic, hardcore gym personal trainer (熱血、鐵血健身教練熊貓). Push strictly like a drill sergeant, use gym fitness slang ('動起來！', '把熱量燃燒掉！', '再一組！'), demand strict discipline.`;
+  }
+  // Default: tsundere
+  return `Persona Style: Tsundere Elite Registered Dietitian (毒舌且傲嬌的菁英營養師熊貓). Witty, professional, sarcastic and tsundere (口嫌體正直，犀利吐槽但給予專家飲食建議與 1 個具體改善叮嚀).`;
+}
+
+function generateFallbackComment(dishName, calories, protein, persona = 'tsundere') {
+  if (persona === 'gentle') {
+    if (calories > 700) return `這餐份量很充足呢！記得多喝水幫助代謝，下一餐可以多吃點綠色蔬菜喔 🐼💚`;
+    if (protein >= 25) return `蛋白質補充得很棒呢！你今天也很用心照顧自己的身體，繼續加油喔 🐼✨`;
+    if (calories < 300) return `吃得比較輕量呢，如果容易餓記得隨時補充健康小點心與水分喔 🐼🌸`;
+    return `已經為你記錄好「${dishName}」囉！每一餐都要好好享受，記得補充水分 🐼`;
+  }
+  if (persona === 'hardcore') {
+    if (calories > 700) return `熱量破 ${calories} 大卡了！等下給我深蹲跳繩把多餘熱量全部燃燒掉！🔥💪`;
+    if (protein >= 25) return `蛋白質有 ${protein}g 非常到位！肌肉正在修復生長，繼續保持這個訓練強度！🏋️‍♂️`;
+    if (calories < 300) return `吃這麼少哪來的力氣重訓？下一餐給我把優質碳水和蛋白質補齊！👊`;
+    return `紀錄完畢！吃飽了就別躺在沙發上偷懶，準備動起來！🔥`;
+  }
+  // tsundere (default)
+  if (calories > 700) return `熱量居然飆到 ${calories} 大卡…哼，等下別忘了多喝水，下一餐多吃點青菜贖罪！🐼`;
+  if (protein >= 25) return `蛋白質有 ${protein}g 算你過關啦，可別以為這樣就能放肆偷吃甜點喔！🐼`;
+  if (calories < 300) return `吃這麼少是想成仙嗎？小心掉肌肉，下一餐給我好好吃正餐！🐼`;
+  return `哼，勉強幫你記下「${dishName}」了，下一餐記得多補充點蔬菜跟水分！🐼`;
+}
+
 /**
  * Call Gemini Vision API to analyze image
  */
-async function analyzeMealWithGemini(base64Image, apiKey) {
+async function analyzeMealWithGemini(base64Image, apiKey, persona = 'tsundere') {
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY 未設定，請在 Vercel 後台 Environment Variables 設定 GEMINI_API_KEY');
   }
@@ -360,13 +392,32 @@ async function analyzeMealWithGemini(base64Image, apiKey) {
   ];
   let lastError = null;
 
-  const prompt = `Analyze this food image for a nutrition tracking app. Return ONLY a raw JSON object with keys:
-"dish_name" (string in Traditional Chinese),
-"calories" (integer number),
-"protein" (integer number in grams),
-"water" (integer number in ml, default 0),
-"panda_comment" (string in Traditional Chinese, sassy witty humor encouraging healthy habits).
-Do NOT wrap in markdown backticks.`;
+  const personaInstruction = getPersonaInstruction(persona);
+
+  const prompt = `You are a professional nutrition expert panda. Analyze this food image. Return STRICTLY a raw JSON object. NO MARKDOWN.
+${personaInstruction}
+
+CRITICAL NUTRITIONAL EVALUATION RULES FOR "panda_comment":
+1. NEVER give generic polite compliments. NEVER say "這餐看起來營養很均衡喔" or "營養很豐富" unless the meal truly contains high dietary fiber/vegetables, lean quality protein, and unprocessed complex carbs in ideal proportion.
+2. Critically inspect the meal:
+   - High oil / deep-fried / greasy / high sodium: roast the grease/sodium in character, warn about excess fat calories, and demand drinking water.
+   - High refined sugar / dessert / sweet beverage / boba tea: roast the blood sugar spike and lack of satiety.
+   - Heavy carbs (white rice, noodles, pastry) with little protein/veg: point out the muscle-wasting protein deficit and lack of fiber.
+   - High protein: acknowledge the good protein intake in character, but check if veggies/fiber are missing.
+   - If truly balanced: praise specific good components.
+3. Provide EXACTLY 1 actionable, practical improvement tip for the next meal or rest of the day.
+4. Keep "panda_comment" strictly under 35 Traditional Chinese characters (繁體中文), matching your persona style.
+
+Required Schema:
+{
+  "dish_name": "餐點名稱 (Traditional Chinese)",
+  "calories": <integer calories in kcal, 0 if unknown>,
+  "protein": <integer protein in grams, 0 if unknown>,
+  "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
+  "fat": <integer estimated total fat in grams, 0 if unknown>,
+  "water": <integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food>,
+  "panda_comment": "<Concise, witty, critical nutritional evaluation matching selected persona in Traditional Chinese, max 35 characters>"
+}`;
 
   const payload = {
     contents: [
@@ -381,7 +432,11 @@ Do NOT wrap in markdown backticks.`;
           }
         ]
       }
-    ]
+    ],
+    generationConfig: {
+      temperature: 0.2,
+      response_mime_type: "application/json"
+    }
   };
 
   for (const model of models) {
@@ -402,12 +457,18 @@ Do NOT wrap in markdown backticks.`;
       const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
 
+      const dishName = parsed.dish_name || "美味餐點";
+      const cal = Number(parsed.calories) || 450;
+      const pro = Number(parsed.protein) || 20;
+      const water = Number(parsed.water) || 0;
+      const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, persona);
+
       return {
-        dish_name: parsed.dish_name || "美味餐點",
-        calories: Number(parsed.calories) || 450,
-        protein: Number(parsed.protein) || 20,
-        water: Number(parsed.water) || 0,
-        panda_comment: parsed.panda_comment || "拍得很好！這餐看起來營養很均衡喔 🐼"
+        dish_name: dishName,
+        calories: cal,
+        protein: pro,
+        water: water,
+        panda_comment: comment
       };
     } catch (err) {
       console.warn(`⚠️ 模型 ${model} 辨識失敗: ${err.message}，嘗試下一個模型...`);
@@ -421,7 +482,7 @@ Do NOT wrap in markdown backticks.`;
 /**
  * Call Gemini Text API to parse text meal
  */
-async function parseTextWithGemini(text, apiKey) {
+async function parseTextWithGemini(text, apiKey, persona = 'tsundere') {
   if (!apiKey) {
     throw new Error('GEMINI_API_KEY 未設定，請在 Vercel 後台 Environment Variables 設定 GEMINI_API_KEY');
   }
@@ -438,16 +499,25 @@ async function parseTextWithGemini(text, apiKey) {
   ];
   let lastError = null;
 
-  const prompt = `Parse this food text: "${text}". Return ONLY a raw JSON object with keys:
+  const personaInstruction = getPersonaInstruction(persona);
+
+  const prompt = `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
+${personaInstruction}
+
+Return ONLY a raw JSON object with keys:
 "dish_name" (string in Traditional Chinese),
-"calories" (integer number estimate),
+"calories" (integer number estimate in kcal),
 "protein" (integer number estimate in grams),
 "water" (integer number in ml),
-"panda_comment" (string in Traditional Chinese).
+"panda_comment" (string in Traditional Chinese, critical witty evaluation with 1 actionable tip matching persona style, max 35 characters. DO NOT generically say 營養均衡 unless truly balanced).
 Do NOT wrap in markdown backticks.`;
 
   const payload = {
-    contents: [{ parts: [{ text: prompt }] }]
+    contents: [{ parts: [{ text: prompt }] }],
+    generationConfig: {
+      temperature: 0.2,
+      response_mime_type: "application/json"
+    }
   };
 
   for (const model of models) {
@@ -468,12 +538,18 @@ Do NOT wrap in markdown backticks.`;
       const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
 
+      const dishName = parsed.dish_name || text;
+      const cal = Number(parsed.calories) || 350;
+      const pro = Number(parsed.protein) || 15;
+      const water = Number(parsed.water) || 0;
+      const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, persona);
+
       return {
-        dish_name: parsed.dish_name || text,
-        calories: Number(parsed.calories) || 350,
-        protein: Number(parsed.protein) || 15,
-        water: Number(parsed.water) || 0,
-        panda_comment: parsed.panda_comment || "已記下您的文字紀錄！"
+        dish_name: dishName,
+        calories: cal,
+        protein: pro,
+        water: water,
+        panda_comment: comment
       };
     } catch (err) {
       console.warn(`⚠️ 模型 ${model} 文字解析失敗: ${err.message}，嘗試下一個模型...`);
@@ -486,9 +562,10 @@ Do NOT wrap in markdown backticks.`;
     calories: 350,
     protein: 15,
     water: 0,
-    panda_comment: "已記下您的文字紀錄！"
+    panda_comment: generateFallbackComment(text, 350, 15, persona)
   };
 }
+
 
 /**
  * Update GitHub Gist JSON file with new log entry
