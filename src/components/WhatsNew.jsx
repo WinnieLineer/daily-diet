@@ -30,6 +30,13 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
+export const LATEST_WHATSNEW_VERSION = '3.1.0';
+
+export const hasWhatsNewContent = (lastSeenVersion) => {
+  if (!lastSeenVersion) return false;
+  return isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
+};
+
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show310 = isNewer('3.1.0', lastSeenVersion);
   const show300 = isNewer('3.0.0', lastSeenVersion);
@@ -47,6 +54,8 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
+  const hasAnyFeatures = show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
+
   // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
   const isBugFixOnly = !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
@@ -56,12 +65,14 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
       className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-sm"
+      onClick={onClose}
     >
       <motion.div 
         initial={{ scale: 0.9, y: 20, rotate: -1 }}
         animate={{ scale: 1, y: 0, rotate: 0 }}
         exit={{ scale: 0.9, opacity: 0 }}
         className="bg-accent border-4 border-black w-full max-w-md rounded-[2.5rem] shadow-neo relative flex flex-col max-h-[95vh] overflow-hidden"
+        onClick={(e) => e.stopPropagation()}
       >
         <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/20 rounded-full blur-3xl pointer-events-none" />
         
@@ -460,7 +471,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                 </div>
               )}
               
-              {!show231 && !show230 && !show220 && !show212 && !show211 && !show210 && !show208 && !show206 && !show201 && !show200 && (
+              {!hasAnyFeatures && (
                 <div className="text-center p-8 border-4 border-black rounded-3xl bg-white shadow-neo-sm font-black italic">
                   {t('whatsnew_up_to_date') || 'You are completely up to date! 🚀'}
                 </div>

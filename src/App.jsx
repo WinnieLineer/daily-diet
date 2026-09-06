@@ -41,6 +41,9 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
+// 📢 Latest version with release notes configured in WhatsNew modal
+export const LATEST_WHATSNEW_VERSION = '3.1.0';
+
 const getLocalDateString = () => {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -1148,18 +1151,20 @@ function App() {
           const lastSeenVersion = localStorage.getItem('last_seen_version');
           console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
           
-          if (lastSeenVersion !== APP_VERSION) {
+          // 🚀 Always immediately persist current version to prevent repeated triggers on visibility/focus/interval
+          localStorage.setItem('last_seen_version', APP_VERSION);
+
+          if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
-            console.log("[VersionCheck] Needs update modal. isFrom16:", isFrom16);
+            console.log("[VersionCheck] Version changed from", lastSeenVersion, "to", APP_VERSION);
 
-            const hasNewContent = !lastSeenVersion || isNewer(APP_VERSION, lastSeenVersion);
+            // Only show What's New modal if there are ACTUAL new feature release notes configured!
+            const hasNewContent = !isFrom16 && isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
 
-            if (!isFrom16 && hasNewContent) {
+            if (hasNewContent) {
               console.log("[VersionCheck] Triggering WhatsNew modal!");
               setLastSeenVersionState(lastSeenVersion);
               setShowWhatsNew(true);
-            } else {
-              localStorage.setItem('last_seen_version', APP_VERSION);
             }
           }
         }
