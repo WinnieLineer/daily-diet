@@ -563,6 +563,14 @@ function doPost(e) {
           continue;
         }
 
+        // 🎭 點擊按鈕【挑選教練性格】
+        if (payload.action === 'choosePersona') {
+          recordSystemLog('切換性格', userId, '點擊切換教練性格', '', '發送教練性格選擇卡片');
+          const personaFlex = generatePersonaSelectionFlex(userId, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, personaFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 🎭 按下【切換教練性格】
         if (payload.action === 'setPersona') {
           const newPersona = payload.persona || 'tsundere';
@@ -793,8 +801,8 @@ function doPost(e) {
             continue;
           }
 
-          // 🎭 切換教練性格 (例如: "切換性格", "換教練", "性格", "溫柔模式", "傲嬌模式", "鐵血模式")
-          if (userText === '切換性格' || userText === '換教練' || userText === '教練性格' || userText === '性格' || userText === '教練' || userText === '多重性格') {
+          // 🎭 切換教練性格 (例如: "切換性格", "挑選性格", "選擇性格", "挑選教練性格", "換性格", "換教練", "性格", "溫柔模式", "傲嬌模式", "鐵血模式")
+          if (userText === '切換性格' || userText === '挑選性格' || userText === '選擇性格' || userText === '挑選教練性格' || userText === '換性格' || userText === '改性格' || userText === '換教練' || userText === '教練性格' || userText === '性格' || userText === '教練' || userText === '多重性格' || userText.toLowerCase() === 'persona') {
             recordSystemLog('切換性格', userId, userText, '', '發送教練性格選擇卡片');
             const personaFlex = generatePersonaSelectionFlex(userId, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, personaFlex, CHANNEL_ACCESS_TOKEN, userId, props);
