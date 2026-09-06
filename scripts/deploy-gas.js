@@ -35,6 +35,20 @@ try {
   } else {
     execSync('npx @google/clasp deploy', { stdio: 'inherit' });
   }
+
+  // 5. 查詢當前版本總數並即時反饋
+  try {
+    const verOutput = execSync('npx @google/clasp versions', { encoding: 'utf8' });
+    const verMatch = verOutput.match(/Found (\d+) versions/);
+    if (verMatch) {
+      const count = parseInt(verMatch[1], 10);
+      console.log(`📊 目前專案版本數：${count} / 200 (剩餘 ${200 - count} 次可用)`);
+      if (count >= 160) {
+        console.warn(`\n⚠️  【提醒：版本數已達 ${count} 個，接近 200 上限】`);
+        console.warn(`👉 建議隨時至 https://script.google.com/home/projects/${claspConfig.scriptId}/history 進行批次刪除。`);
+      }
+    }
+  } catch (e) {}
 } catch (err) {
   if (err.message && err.message.includes('limit of 200 versions')) {
     const claspConfig = JSON.parse(fs.readFileSync('./.clasp.json', 'utf8'));
