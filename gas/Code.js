@@ -765,11 +765,30 @@ function doPost(e) {
             }
           }
 
-          // 🐛 問題回報 / Bug Report / 意見反饋
+          // 🐛 問題回報 / Bug Report / 意見反饋 (與 Web 端相同表單提交邏輯)
           if (userText.startsWith('回報') || userText.startsWith('bug') || userText.startsWith('Bug') || userText.startsWith('BUG') || userText.startsWith('問題') || userText.startsWith('建議') || userText.startsWith('反饋') || userText.startsWith('報錯')) {
             console.log(`🐛 [收到問題回報] 用戶 ${userId}: ${userText}`);
-            recordSystemLog('問題回報', userId, userText, '', '已成功記錄用戶問題回報');
-            const ackFlex = generateBugReportAckFlex(userText);
+            recordSystemLog('問題回報', userId, userText, '', '已成功記錄用戶問題回報並提交 Web3Forms');
+
+            // 🚀 與 Web 端 100% 相同邏輯：透過 Web3Forms 提交表單至團隊信箱
+            try {
+              UrlFetchApp.fetch('https://api.web3forms.com/submit', {
+                method: 'post',
+                contentType: 'application/json',
+                payload: JSON.stringify({
+                  access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+                  subject: `[Daily-Diet LINE] 問題回報 (${userId.slice(-6)})`,
+                  message: userText,
+                  from_name: `LINE Bot User (${userId.slice(-6)})`,
+                  device: 'LINE Messaging API'
+                }),
+                muteHttpExceptions: true
+              });
+            } catch (web3Err) {
+              console.warn('Web3Forms 提交失敗:', web3Err);
+            }
+
+            const ackFlex = generateBugReportAckFlex(userText, LIFF_ID, userGistId);
             replyFlexMessage(replyToken, ackFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
@@ -4662,10 +4681,12 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props) {
 
 // 🛠️ 操作說明與所有功能手冊清單 (輸入「說明」或「指令」即刻呼叫全部選項)
 
-function generateBugReportAckFlex(userText) {
+function generateBugReportAckFlex(userText, liffId, userGistId) {
+  const feedbackUrl = (liffId ? `https://liff.line.me/${liffId}?tab=feedback` : '') + (userGistId ? `&gistId=${userGistId}` : '');
+
   return {
     type: "flex",
-    altText: "🛠️ 感謝您的問題回報！我們已收到您的寶貴反饋",
+    altText: "🛠️ 感謝您的問題回報！已同步以表單提交至開發團隊",
     contents: {
       type: "bubble",
       size: "kilo",
@@ -4676,7 +4697,7 @@ function generateBugReportAckFlex(userText) {
         paddingAll: "14px",
         contents: [
           { type: "text", text: "🛠️ 問題回報已送達！", weight: "bold", size: "md", color: "#FDE047" },
-          { type: "text", text: "工程團隊已即時收到您的反饋 🐼❤️", size: "xxs", color: "#A1A1AA", margin: "xs" }
+          { type: "text", text: "已同步表單提交至工程團隊信箱 🐼❤️", size: "xxs", color: "#A1A1AA", margin: "xs" }
         ]
       },
       body: {
@@ -4687,10 +4708,10 @@ function generateBugReportAckFlex(userText) {
         contents: [
           {
             type: "text",
-            text: "感謝您協助讓 Daily Diet 變得更穩定！我們已記錄：",
+            text: "✅ 已同步透過 Web3Forms 表單提交：",
             size: "xs",
-            color: "#3F3F46",
-            wrap: true
+            color: "#15803D",
+            weight: "bold"
           },
           {
             type: "box",
@@ -4713,7 +4734,7 @@ function generateBugReportAckFlex(userText) {
           },
           {
             type: "text",
-            text: "開發團隊將會第一時間排查並修復，謝謝您的支持！",
+            text: "若需要更詳細描述問題或建議，也可點擊下方開啟 Web 表單填寫完整內容！",
             size: "xxs",
             color: "#71717A",
             wrap: true
@@ -4723,13 +4744,25 @@ function generateBugReportAckFlex(userText) {
       footer: {
         type: "box",
         layout: "vertical",
+        spacing: "sm",
         paddingAll: "10px",
         contents: [
-          {
+          ...(feedbackUrl ? [{
             type: "button",
             style: "primary",
             height: "sm",
-            color: "#000000",
+            color: "#FDE047",
+            action: {
+              type: "uri",
+              label: "📝 開啟 Web 完整回報表單",
+              uri: feedbackUrl
+            }
+          }] : []),
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
             action: {
               type: "message",
               label: "💡 查看全功能手冊",
@@ -4970,11 +5003,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     color: "#F1F5F9",
                     flex: 1,
                     action: {
-                      type: "postback",
-                      label: "🐛 回報問題",
-                      data: JSON.stringify({ action: 'fillBugReport' }),
-                      inputOption: "openKeyboard",
-                      fillInText: "回報: "
+                      type: "uri",
+                      label: "🐛 回報問題 (表單)",
+                      uri: userGistId ? `https://liff.line.me/${liffId}?tab=feedback&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=feedback`
                     }
                   }
                 ]

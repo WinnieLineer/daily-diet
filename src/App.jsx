@@ -79,6 +79,7 @@ function getAppQueryParams() {
     cmt: getParam('cmt') || getParam('comment'),
     gistId: getParam('gistId'),
     user: getParam('user') || getParam('userName'),
+    tab: getParam('tab'),
   };
 }
 
@@ -735,6 +736,13 @@ function App() {
       if (query.user) {
         localStorage.setItem('user_name', query.user);
         setUserName(query.user);
+      }
+
+      // 1.5 Handle direct tab navigation from LINE LIFF URL (e.g. ?tab=feedback or ?tab=goals)
+      if (query.tab) {
+        setTimeout(() => {
+          window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: query.tab } }));
+        }, 400);
       }
 
       // 2. Initialize LINE LIFF
