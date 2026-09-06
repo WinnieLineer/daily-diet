@@ -3985,7 +3985,7 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
             layout: "horizontal",
             contents: [
               { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: "v3.1 旗艦版", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "AI 智能教練", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
           {
