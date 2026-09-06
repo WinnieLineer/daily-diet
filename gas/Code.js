@@ -2418,7 +2418,7 @@ function attachQuickReply(message, userId, props) {
       type: "action",
       action: {
         type: "postback",
-        label: "💧 喝水 500ml",
+        label: "💧 補水 500",
         data: JSON.stringify({ action: 'quickWater', amount: 500 }),
         displayText: "💧 喝水 500ml"
       }
@@ -4565,7 +4565,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "💧 喝水 +500ml",
+                      label: "💧 補水 500",
                       data: JSON.stringify({ action: 'quickWater', amount: 500 }),
                       displayText: "💧 喝水 +500ml"
                     }
