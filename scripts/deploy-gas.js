@@ -36,6 +36,15 @@ try {
     execSync('npx @google/clasp deploy', { stdio: 'inherit' });
   }
 } catch (err) {
-  console.error('❌ 部署失敗:', err.message);
+  if (err.message && err.message.includes('limit of 200 versions')) {
+    const claspConfig = JSON.parse(fs.readFileSync('./.clasp.json', 'utf8'));
+    console.error('\n⚠️  【Google Apps Script 達到 200 個版本上限】');
+    console.error('👉 請點擊以下連結開啟專案歷程記錄：');
+    console.error(`   https://script.google.com/home/projects/${claspConfig.scriptId}/history`);
+    console.error('👉 在頁面右上角點擊「批次刪除版本 (Bulk delete versions)」清空歷史版本。');
+    console.error('👉 清空後執行 npm run deploy:gas 即可完成部署！\n');
+  } else {
+    console.error('❌ 部署失敗:', err.message);
+  }
   process.exit(1);
 }
