@@ -3,6 +3,57 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
+function reportWebErrorToWeb3Forms(title, message, stack) {
+  try {
+    let userName = 'Web 訪客';
+    let userId = 'web_guest';
+    try {
+      userId = localStorage.getItem('line_user_id') || 'web_user';
+      userName = localStorage.getItem('line_user_name') || localStorage.getItem('user_name') || `Web 用戶 (${userId.slice(-6)})`;
+    } catch (e) {}
+
+    const timeStr = new Date().toLocaleString('zh-TW', { timeZone: 'Asia/Taipei' });
+    const errSig = `${title}_${message}`;
+    const lastSentKey = 'last_web3_alert_sig';
+    const lastTimeKey = 'last_web3_alert_time';
+    const lastSig = sessionStorage.getItem(lastSentKey);
+    const lastTime = Number(sessionStorage.getItem(lastTimeKey) || 0);
+    if (lastSig === errSig && Date.now() - lastTime < 60000) return;
+    sessionStorage.setItem(lastSentKey, errSig);
+    sessionStorage.setItem(lastTimeKey, String(Date.now()));
+
+    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'N/A';
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A';
+
+    fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+        subject: `🚨 [Daily-Diet Web前端異常] ${userName} | ${title.slice(0, 40)}`,
+        from_name: '🐼 Daily-Diet 前端異常監控',
+        time: timeStr,
+        user_name: userName,
+        user_id: userId,
+        operation: `Web 頁面/操作: ${currentUrl}`,
+        error_message: message,
+        message: [
+          `🚨 【Daily-Diet Web 前端異常自動回報】`,
+          `----------------------------------------`,
+          `⏰ 發生時間：${timeStr} (台灣時間 GMT+8)`,
+          `👤 相關用戶：${userName}`,
+          `🆔 用戶識別碼：${userId}`,
+          `🕹️ 當前頁面/操作：${currentUrl}`,
+          `❌ 錯誤類型：${title}`,
+          `💬 錯誤訊息：${message}`,
+          stack ? `\n📜 呼叫堆疊 (Stack Trace)：\n${stack}` : '',
+          `\n📱 裝置資訊：${userAgent}`
+        ].join('\n')
+      })
+    }).catch(() => {});
+  } catch (err) {}
+}
+
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
@@ -16,6 +67,7 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
     console.error("ErrorBoundary caught an error", error, errorInfo);
+    reportWebErrorToWeb3Forms('React ErrorBoundary Crash', error?.message || error?.toString(), errorInfo?.componentStack);
   }
 
   render() {
@@ -73,6 +125,7 @@ window.addEventListener('error', (event) => {
   div.style.position = 'relative';
   div.innerText = `Global Error: ${event.message}\nAt: ${event.filename}:${event.lineno}\nStack: ${event.error?.stack}`;
   document.body.prepend(div);
+  reportWebErrorToWeb3Forms('Global Window Error', event.message, event.error?.stack || `${event.filename}:${event.lineno}`);
 });
 
 window.addEventListener('unhandledrejection', (event) => {
@@ -88,6 +141,7 @@ window.addEventListener('unhandledrejection', (event) => {
   div.style.position = 'relative';
   div.innerText = `Unhandled Promise Rejection: ${event.reason}`;
   document.body.prepend(div);
+  reportWebErrorToWeb3Forms('Unhandled Promise Rejection', String(event.reason), event.reason?.stack || '');
 });
 
 // Service Worker is handled automatically by vite-plugin-pwa

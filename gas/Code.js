@@ -128,9 +128,10 @@ function getAiQuotaStats(props) {
 
 
 function doGet(e) {
-  const action = e?.parameter?.action;
-  let userId = e?.parameter?.userId;
-  const incomingGist = e?.parameter?.gistId;
+  try {
+    const action = e?.parameter?.action;
+    let userId = e?.parameter?.userId;
+    const incomingGist = e?.parameter?.gistId;
 
   const props = PropertiesService.getScriptProperties();
   const pat = props.getProperty('GITHUB_PAT');
@@ -328,7 +329,19 @@ function doGet(e) {
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
 
-  return ContentService.createTextOutput("Daily Diet LINE Bot is running! 🐼");
+    return ContentService.createTextOutput("Daily Diet LINE Bot is running! 🐼");
+  } catch (err) {
+    console.error("doGet 處理時發生錯誤:", err);
+    sendErrorAlertToWeb3Forms({
+      error: err,
+      userId: e?.parameter?.userId || 'web_user',
+      operation: `Web API GET (action: ${e?.parameter?.action || 'none'})`,
+      userInput: JSON.stringify(e?.parameter || {}),
+      source: 'Web App ➔ GAS doGet'
+    });
+    return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message || err.toString() }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
 }
 
 function getRecentLogsData(fetchLimit) {
@@ -392,6 +405,9 @@ function doPost(e) {
 
   let currentReplyToken = null;
   let currentToken = null;
+  let currentUserId = 'system';
+  let currentOperation = '接收請求';
+  let currentUserInput = '';
 
   try {
     let data = {};
@@ -463,6 +479,9 @@ function doPost(e) {
       const replyToken = event.replyToken;
       currentReplyToken = replyToken;
       const userId = event.source?.userId || 'default_user';
+      currentUserId = userId;
+      currentOperation = `LINE 事件 (${event.type})`;
+      currentUserInput = '';
 
       console.log(`\n========================================`);
       console.log(`📩 [LINE 事件收到] 用戶 ID: ${userId} | 類型: ${event.type}`);
@@ -497,6 +516,8 @@ function doPost(e) {
 
       // 🌟 Case 0: 首次加入好友 (Follow 事件)
       if (event.type === 'follow') {
+        currentOperation = '首次加入好友 (Follow)';
+        currentUserInput = '加入好友';
         recordSystemLog('新用戶加入', userId, '加入好友', '', '發送精美圖文歡迎卡片與免責聲明');
         const welcomeFlex = generateWelcomeFlex(userId, LIFF_ID, userGistId);
         replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -511,6 +532,9 @@ function doPost(e) {
         } catch (e) {
           payload = {};
         }
+
+        currentOperation = `點擊按鈕: ${payload.action || '未知動作'}`;
+        currentUserInput = event.postback?.data || '';
 
         console.log(`🔘 [按鈕點擊] 動作: ${payload.action} | 內容:`, JSON.stringify(payload));
 
@@ -767,6 +791,8 @@ function doPost(e) {
       else if (event.type === 'message') {
         // 📸 照片辨識
         if (event.message.type === 'image') {
+          currentOperation = '傳送餐點照片進行 AI 分析';
+          currentUserInput = `照片 Message ID: ${event.message.id}`;
           sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 25);
           const messageId = event.message.id;
           console.log(`📸 [收到餐點照片] Message ID: ${messageId}`);
@@ -800,6 +826,8 @@ function doPost(e) {
         // 💬 文字訊息
         else if (event.message.type === 'text') {
           const userText = event.message.text.trim();
+          currentOperation = '傳送文字訊息';
+          currentUserInput = userText;
           console.log(`💬 [收到用戶文字] "${userText}"`);
 
           // 🌐 雙語切換 (支援中文/英文雙向切換)
@@ -1308,7 +1336,17 @@ function doPost(e) {
     }
   } catch (err) {
     console.error("處理請求時發生錯誤:", err);
-    recordSystemLog('系統異常', 'system', err.message || err.toString(), '', '異常報警');
+    recordSystemLog('系統異常', currentUserId || 'system', err.message || err.toString(), '', '異常報警');
+    
+    // 🚨 當遇到不可預期的錯誤時，自動回傳表單 (Web3Forms) 通報開發者
+    sendErrorAlertToWeb3Forms({
+      error: err,
+      userId: currentUserId,
+      operation: currentOperation,
+      userInput: currentUserInput,
+      source: 'LINE Bot / GAS doPost'
+    });
+
     if (currentReplyToken && currentToken) {
       try {
         replyTextMessage(currentReplyToken, `⚠️ 熊貓教練提示：\n\n${err.message || err.toString()}`, currentToken);
@@ -1318,6 +1356,84 @@ function doPost(e) {
 
   return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
     .setMimeType(ContentService.MimeType.JSON);
+}
+
+// ========================================================
+// 🚨 系統異常 Web3Forms 自動通報模組
+// ========================================================
+
+function sendErrorAlertToWeb3Forms(info) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    const channelToken = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+
+    const error = info.error || {};
+    const errMessage = error.message || error.toString() || '未知異常';
+    const errStack = error.stack || (typeof error === 'object' ? JSON.stringify(error) : '');
+    const userId = info.userId || 'system';
+
+    // 🛡️ 1 分鐘內防重複防刷：相同用戶 + 相同錯誤訊息 60 秒內只通報一次
+    const errSignature = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, `${userId}_${errMessage}`));
+    const lastAlertKey = `LAST_ALERT_${errSignature.slice(0, 20)}`;
+    const lastAlertTime = Number(props.getProperty(lastAlertKey) || 0);
+    const nowMs = Date.now();
+    if (nowMs - lastAlertTime < 60000) {
+      console.log(`⏳ 60秒內已通報過相同異常，略過 Web3Forms 發送: ${errMessage}`);
+      return;
+    }
+    props.setProperty(lastAlertKey, String(nowMs));
+
+    // 取得親切的用戶暱稱
+    let userName = '未知用戶';
+    if (userId && userId !== 'system' && userId !== 'default_user' && userId !== 'web_user') {
+      userName = getUserDisplayName(userId, channelToken, props) || `LINE用戶 (${userId.slice(-6)})`;
+    } else {
+      userName = info.userName || '系統背景 / Web訪客';
+    }
+
+    const operation = info.operation || '未記錄之操作';
+    const userInput = info.userInput || info.userText || '無輸入內容';
+    const source = info.source || 'Daily-Diet 伺服端';
+
+    const subject = `🚨 [Daily-Diet 系統異常] ${userName} | ${errMessage.slice(0, 40)}`;
+
+    const messageContent = [
+      `🚨 【Daily-Diet 熊貓教練系統異常自動通報】`,
+      `----------------------------------------`,
+      `⏰ 發生時間：${timeStr} (台灣時間 GMT+8)`,
+      `👤 相關用戶：${userName}`,
+      `🆔 用戶識別碼：${userId}`,
+      `🕹️ 執行操作：${operation}`,
+      `💬 用戶輸入內容：${userInput}`,
+      `🌐 觸發來源：${source}`,
+      `----------------------------------------`,
+      `❌ 錯誤訊息：`,
+      `${errMessage}`,
+      errStack ? `\n📜 呼叫堆疊 (Stack Trace)：\n${errStack}` : ''
+    ].join('\n');
+
+    UrlFetchApp.fetch('https://api.web3forms.com/submit', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+        subject: subject,
+        from_name: '🐼 Daily-Diet 異常監控小幫手',
+        time: timeStr,
+        user_name: userName,
+        user_id: userId,
+        operation: operation,
+        error_message: errMessage,
+        message: messageContent
+      }),
+      muteHttpExceptions: true
+    });
+
+    console.log(`📧 [Web3Forms] 成功寄送異常報告信件至開發者信箱: ${subject}`);
+  } catch (alertErr) {
+    console.warn("⚠️ 發送 Web3Forms 錯誤回報失敗:", alertErr);
+  }
 }
 
 // ========================================================
