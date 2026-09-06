@@ -4091,58 +4091,46 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                 spacing: "xs",
                 contents: [
                   {
-                    type: "box",
-                    layout: "horizontal",
-                    spacing: "xs",
-                    contents: [
-                      { type: "text", text: "🎯 體態目標：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
-                      { type: "text", text: "輸入「改目標 1800卡 80蛋 2000水」或「目標」", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
-                    ]
+                    type: "text",
+                    text: "🎯 體態目標：輸入「改目標 1800卡 80蛋」或「目標」",
+                    size: "xxs",
+                    color: "#18181B",
+                    wrap: true
                   },
                   {
-                    type: "box",
-                    layout: "horizontal",
-                    spacing: "xs",
-                    contents: [
-                      { type: "text", text: "🎭 教練語氣：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
-                      { type: "text", text: "輸入「切換性格」挑選傲嬌、溫柔、士官長", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
-                    ]
+                    type: "text",
+                    text: "🎭 教練語氣：輸入「切換性格」挑選傲嬌、溫柔、士官長",
+                    size: "xxs",
+                    color: "#18181B",
+                    wrap: true
                   },
                   {
-                    type: "box",
-                    layout: "horizontal",
-                    spacing: "xs",
-                    contents: [
-                      { type: "text", text: "⭐ 常用餐點：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
-                      { type: "text", text: "輸入「常用」輪播或「加常用 拿鐵 150卡」", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
-                    ]
+                    type: "text",
+                    text: "⭐ 常用餐點：輸入「常用」輪播或「加常用 拿鐵 150卡」",
+                    size: "xxs",
+                    color: "#18181B",
+                    wrap: true
                   },
                   {
-                    type: "box",
-                    layout: "horizontal",
-                    spacing: "xs",
-                    contents: [
-                      { type: "text", text: "✏️ 修正紀錄：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
-                      { type: "text", text: "輸入「改 400卡 35蛋」微調前一筆餐點", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
-                    ]
+                    type: "text",
+                    text: "✏️ 修正紀錄：輸入「改 400卡 35蛋」微調前一餐",
+                    size: "xxs",
+                    color: "#18181B",
+                    wrap: true
                   },
                   {
-                    type: "box",
-                    layout: "horizontal",
-                    spacing: "xs",
-                    contents: [
-                      { type: "text", text: "💧 快速補水：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
-                      { type: "text", text: "輸入「喝水」或「+500水」打卡", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
-                    ]
+                    type: "text",
+                    text: "💧 快速補水：輸入「喝水」或「+500水」打卡",
+                    size: "xxs",
+                    color: "#18181B",
+                    wrap: true
                   },
                   {
-                    type: "box",
-                    layout: "horizontal",
-                    spacing: "xs",
-                    contents: [
-                      { type: "text", text: "📅 歷史與管理：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
-                      { type: "text", text: "輸入「9/3」、「昨日」、「管理」刪改餐點", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
-                    ]
+                    type: "text",
+                    text: "📅 歷史管理：輸入「9/3」、「昨日」或「管理」刪改餐點",
+                    size: "xxs",
+                    color: "#18181B",
+                    wrap: true
                   }
                 ]
               }
@@ -4492,7 +4480,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             layout: "horizontal",
             contents: [
               { type: "text", text: "🛠️ DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: "功能總覽與指令手冊", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "全功能操作手冊", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
           {
@@ -4511,7 +4499,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
         spacing: "md",
         paddingAll: "14px",
         contents: [
-          // 區塊 1: 常用與記錄
+          // 區塊 1: 常用與記錄 (2 欄按鈕，寬度充裕不截斷)
           {
             type: "box",
             layout: "vertical",
@@ -4521,26 +4509,13 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
               {
                 type: "box",
                 layout: "horizontal",
-                spacing: "xs",
+                spacing: "sm",
                 contents: [
                   {
                     type: "button",
                     style: "secondary",
                     height: "sm",
-                    color: "#FEE2E2",
-                    flex: 1,
-                    action: {
-                      type: "postback",
-                      label: "📸 拍照辨識",
-                      data: JSON.stringify({ action: 'guideCamera' }),
-                      displayText: "拍照辨識"
-                    }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FEF9C3",
+                    color: "#FEF08A",
                     flex: 1,
                     action: {
                       type: "postback",
@@ -4553,32 +4528,36 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     type: "button",
                     style: "secondary",
                     height: "sm",
+                    color: "#FEE2E2",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "📸 拍照指引",
+                      data: JSON.stringify({ action: 'guideCamera' }),
+                      displayText: "拍照辨識"
+                    }
+                  }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                margin: "xs",
+                contents: [
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
                     color: "#E0F2FE",
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "💧 喝水 500ml",
+                      label: "💧 喝水 +500ml",
                       data: JSON.stringify({ action: 'quickWater', amount: 500 }),
                       displayText: "💧 喝水 +500ml"
                     }
-                  }
-                ]
-              }
-            ]
-          },
-
-          // 區塊 2: 查詢與趨勢
-          {
-            type: "box",
-            layout: "vertical",
-            spacing: "xs",
-            contents: [
-              { type: "text", text: "📊 數據進度與週報", weight: "bold", size: "xs", color: "#000000" },
-              {
-                type: "box",
-                layout: "horizontal",
-                spacing: "xs",
-                contents: [
+                  },
                   {
                     type: "button",
                     style: "primary",
@@ -4591,12 +4570,29 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                       data: JSON.stringify({ action: 'save' }),
                       displayText: "今日"
                     }
-                  },
+                  }
+                ]
+              }
+            ]
+          },
+
+          // 區塊 2: 歷史與趨勢分析
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: "📈 歷程與歷史回顧", weight: "bold", size: "xs", color: "#000000" },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
                   {
                     type: "button",
                     style: "secondary",
                     height: "sm",
-                    color: "#FEF08A",
+                    color: "#FEF9C3",
                     flex: 1,
                     action: {
                       type: "postback",
@@ -4613,7 +4609,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "datetimepicker",
-                      label: "📅 查日期",
+                      label: "📅 選擇日期",
                       data: JSON.stringify({ action: 'pickDate' }),
                       mode: "date",
                       initial: todayStr,
@@ -4625,31 +4621,18 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             ]
           },
 
-          // 區塊 3: 個性化與管理
+          // 區塊 3: 個性化目標與管理
           {
             type: "box",
             layout: "vertical",
             spacing: "xs",
             contents: [
-              { type: "text", text: "⚙️ 個性化設定與管理", weight: "bold", size: "xs", color: "#000000" },
+              { type: "text", text: "⚙️ 目標設定與管理", weight: "bold", size: "xs", color: "#000000" },
               {
                 type: "box",
                 layout: "horizontal",
-                spacing: "xs",
+                spacing: "sm",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#F3E8FF",
-                    flex: 1,
-                    action: {
-                      type: "postback",
-                      label: "🎭 切換性格",
-                      data: JSON.stringify({ action: 'choosePersona' }),
-                      displayText: "切換性格"
-                    }
-                  },
                   {
                     type: "button",
                     style: "secondary",
@@ -4668,13 +4651,48 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     type: "button",
                     style: "secondary",
                     height: "sm",
+                    color: "#F3E8FF",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "🎭 切換性格",
+                      data: JSON.stringify({ action: 'choosePersona' }),
+                      displayText: "切換性格"
+                    }
+                  }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                margin: "xs",
+                contents: [
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
                     color: "#FEE2E2",
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "📋 管理餐點",
+                      label: "📋 管理刪改",
                       data: JSON.stringify({ action: 'manageMeals' }),
                       displayText: "管理"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#F1F5F9",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "🐛 回報問題",
+                      data: JSON.stringify({ action: 'fillBugReport' }),
+                      inputOption: "openKeyboard",
+                      fillInText: "回報: "
                     }
                   }
                 ]
@@ -4698,19 +4716,6 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
               type: "uri",
               label: "📱 開啟個人飲食日記 (Web App)",
               uri: appTargetUrl
-            }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FEE2E2",
-            action: {
-              type: "postback",
-              label: "🐛 回報問題 / 意見反饋",
-              data: JSON.stringify({ action: 'fillBugReport' }),
-              inputOption: "openKeyboard",
-              fillInText: "回報: "
             }
           }
         ]
