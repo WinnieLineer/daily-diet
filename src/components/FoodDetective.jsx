@@ -938,6 +938,40 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       </div>
                     </div>
                   </div>
+
+                  {/* 🔍 食物熱量與份量估算拆解明細 */}
+                  {((result.breakdown && result.breakdown.length > 0) || result.calculation_note) && (
+                    <div className="bg-zinc-50 border-4 border-black p-4 rounded-[2rem] mb-3 shadow-neo-sm">
+                      <div className="flex justify-between items-center mb-2">
+                        <span className="text-[10px] font-black uppercase text-zinc-600 flex items-center gap-1">
+                          🧮 熱量與份量估算依據
+                        </span>
+                        <span className="text-[9px] font-black text-zinc-400">各項成分拆解</span>
+                      </div>
+                      {result.breakdown && result.breakdown.length > 0 && (
+                        <div className="space-y-1.5 mb-2">
+                          {result.breakdown.map((item, idx) => (
+                            <div key={idx} className="flex justify-between items-center text-xs border-b border-zinc-200 pb-1 last:border-0 last:pb-0">
+                              <div className="font-bold text-black flex items-center gap-1">
+                                <span>• {item.name}</span>
+                                {item.portion && <span className="text-zinc-500 text-[11px] font-normal">({item.portion})</span>}
+                              </div>
+                              <div className="font-black text-rose-600 font-mono text-[11px]">
+                                {item.calories} kcal
+                                {Number(item.protein) > 0 && <span className="text-blue-600 ml-1">/ {item.protein}g蛋</span>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      {result.calculation_note && (
+                        <div className="pt-2 border-t-2 border-dashed border-zinc-300 text-[10px] font-bold text-zinc-600 leading-snug">
+                          💡 計算過程：{result.calculation_note}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {result.panda_comment && (
                     <div className="bg-accent/5 border-4 border-black p-4 rounded-[2rem] mb-3 relative shadow-neo-sm">
                       <div className="absolute top-[-12px] left-4 bg-accent border-2 border-black px-2 py-0.5 rounded-lg flex items-center gap-1">

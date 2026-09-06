@@ -155,6 +155,15 @@ Required Schema:
   "carbs": <integer carbohydrates in grams>,
   "fat": <integer total fat in grams>,
   "water": <integer liquid intake in ml, e.g. 500 for soup/drink, or 0 if dry food>,
+  "breakdown": [
+    {
+      "name": "<Food item or ingredient name>",
+      "portion": "<Estimated portion, e.g. 1 塊約 150g, 1 碗約 160g>",
+      "calories": <integer kcal>,
+      "protein": <integer grams>
+    }
+  ],
+  "calculation_note": "<Calculation process formula e.g. 炸雞腿約380卡 + 白飯約220卡 + 青菜約50卡 = 650 kcal in ${langDisplay}>",
   "description": "<Brief nutritional overview in ${langDisplay}>",
   "fun_fact": "<Science-based nutritional fact in ${langDisplay}>",
   "roast": "<Sarcastic but expert nutritional roast in ${langDisplay}>",

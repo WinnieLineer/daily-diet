@@ -533,6 +533,8 @@ function doPost(e) {
             carbs: Number(analysis.carbs) || 0,
             fat: Number(analysis.fat) || 0,
             water: Number(analysis.water) || 0,
+            breakdown: analysis.breakdown || [],
+            calculation_note: analysis.calculation_note || '',
             comment: analysis.panda_comment || ''
           };
 
@@ -872,6 +874,8 @@ function doPost(e) {
               carbs: Number(analysis.carbs) || 0,
               fat: Number(analysis.fat) || 0,
               water: Number(analysis.water) || 0,
+              breakdown: analysis.breakdown || [],
+              calculation_note: analysis.calculation_note || '',
               comment: analysis.panda_comment || ''
             };
 
@@ -1073,6 +1077,85 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
               }
             ]
           },
+
+          // 🧮 估算過程拆解 (份量與熱量依據)
+          ...((() => {
+            const breakdownList = (analysis.breakdown && Array.isArray(analysis.breakdown)) ? analysis.breakdown : [];
+            const breakdownRows = breakdownList.slice(0, 5).map(item => ({
+              type: "box",
+              layout: "horizontal",
+              margin: "xs",
+              contents: [
+                {
+                  type: "text",
+                  text: `• ${item.name || '項目'} ${item.portion ? `(${item.portion})` : ''}`,
+                  size: "xxs",
+                  color: "#1E293B",
+                  weight: "bold",
+                  flex: 6,
+                  wrap: true
+                },
+                {
+                  type: "text",
+                  text: `${Number(item.calories) || 0} kcal${Number(item.protein) > 0 ? ` / ${item.protein}g蛋` : ''}`,
+                  size: "xxs",
+                  color: "#E11D48",
+                  weight: "bold",
+                  align: "end",
+                  flex: 4
+                }
+              ]
+            }));
+
+            const calcNote = analysis.calculation_note || '';
+
+            if (breakdownRows.length > 0) {
+              return [{
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F8FAFC",
+                cornerRadius: "10px",
+                borderColor: "#E2E8F0",
+                borderWidth: "1px",
+                paddingAll: "10px",
+                spacing: "xs",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: "🧮 估算拆解明細", size: "xxs", color: "#475569", weight: "bold", flex: 1 },
+                      { type: "text", text: "估算熱量 / 蛋白質", size: "xxs", color: "#94A3B8", align: "end" }
+                    ]
+                  },
+                  ...breakdownRows,
+                  ...(calcNote ? [{
+                    type: "text",
+                    text: `💡 公式：${calcNote}`,
+                    size: "xxxs",
+                    color: "#64748B",
+                    wrap: true,
+                    margin: "xs"
+                  }] : [])
+                ]
+              }];
+            } else if (calcNote) {
+              return [{
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F8FAFC",
+                cornerRadius: "10px",
+                borderColor: "#E2E8F0",
+                borderWidth: "1px",
+                paddingAll: "8px",
+                contents: [
+                  { type: "text", text: `🧮 估算過程：${calcNote}`, size: "xxs", color: "#475569", wrap: true }
+                ]
+              }];
+            }
+            return [];
+          })()),
+
           {
             type: "box",
             layout: "vertical",
@@ -1871,6 +1954,12 @@ CRITICAL NUTRITIONAL EVALUATION RULES FOR "panda_comment":
 3. Provide EXACTLY 1 actionable, practical improvement tip for the next meal or rest of the day.
 4. Keep "panda_comment" strictly under 35 Traditional Chinese characters (繁體中文), matching your persona style.
 
+IMPORTANT - NUTRITIONAL BREAKDOWN & CALCULATION PROCESS:
+Itemize every visible food item and ingredient in "breakdown":
+- Provide estimated visual portion size (e.g. "1 塊約 150g", "1 碗約 160g", "1 碟約 80g")
+- Provide estimated calories and protein for each item
+- Provide "calculation_note" explaining the full calculation process in Traditional Chinese (e.g. "炸雞腿(約180g, 380卡) + 白飯(約160g, 220卡) + 炒高麗菜(約80g, 50卡) = 總計 650 kcal")
+
 Required Schema:
 {
   "dish_name": "餐點名稱 (Traditional Chinese)",
@@ -1879,6 +1968,15 @@ Required Schema:
   "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
   "fat": <integer estimated total fat in grams, 0 if unknown>,
   "water": <integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food>,
+  "breakdown": [
+    {
+      "name": "食材/餐點品項名稱 (e.g. 炸雞腿, 白飯, 炒青菜)",
+      "portion": "估計份量 (e.g. 1 支約 180g, 1 碗約 160g)",
+      "calories": <integer calories in kcal>,
+      "protein": <integer protein in grams>
+    }
+  ],
+  "calculation_note": "計算過程簡述 (Traditional Chinese, e.g. 炸雞腿1支約380卡 + 白飯1碗約220卡 + 炒高麗菜約50卡 = 總計650卡)",
   "panda_comment": "<Concise, witty, critical nutritional evaluation matching selected persona in Traditional Chinese, max 35 characters>"
 }`;
 
@@ -1920,6 +2018,8 @@ Required Schema:
       const carbs = Number(parsed.carbs) || 0;
       const fat = Number(parsed.fat) || 0;
       const water = Number(parsed.water) || 0;
+      const breakdown = Array.isArray(parsed.breakdown) ? parsed.breakdown : [];
+      const calculationNote = parsed.calculation_note || '';
       const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, userPersona);
 
       return {
@@ -1929,6 +2029,8 @@ Required Schema:
         carbs: carbs,
         fat: fat,
         water: water,
+        breakdown: breakdown,
+        calculation_note: calculationNote,
         panda_comment: comment
       };
     } catch (err) {
@@ -1968,6 +2070,15 @@ Return ONLY raw JSON:
   "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
   "fat": <integer estimated total fat in grams, 0 if unknown>,
   "water": <integer estimated liquid/water intake in ml, e.g. 500 for coffee/tea/water/soup, or 0 if dry food>,
+  "breakdown": [
+    {
+      "name": "食材/餐點品項名稱 (e.g. 滷蛋, 陽春麵)",
+      "portion": "估計份量 (e.g. 1 顆約 50g, 1 碗約 200g)",
+      "calories": <integer calories in kcal>,
+      "protein": <integer protein in grams>
+    }
+  ],
+  "calculation_note": "計算過程簡述 (e.g. 陽春麵1碗約350卡 + 滷蛋1顆約75卡 = 總計425卡)",
   "panda_comment": "<Critical, witty nutritional evaluation with 1 actionable tip matching selected persona in Traditional Chinese, max 35 characters. DO NOT generically say 營養均衡 unless truly balanced with greens and lean protein>"
 }
 
@@ -2006,6 +2117,8 @@ Do NOT wrap in markdown backticks.`;
         const carbs = Number(parsed.carbs) || 0;
         const fat = Number(parsed.fat) || 0;
         const water = Number(parsed.water) || 0;
+        const breakdown = Array.isArray(parsed.breakdown) ? parsed.breakdown : [];
+        const calculationNote = parsed.calculation_note || '';
         const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, userPersona);
 
         return {
@@ -2016,6 +2129,8 @@ Do NOT wrap in markdown backticks.`;
           carbs: carbs,
           fat: fat,
           water: water,
+          breakdown: breakdown,
+          calculation_note: calculationNote,
           panda_comment: comment
         };
       }
@@ -4436,6 +4551,8 @@ function analyzeMealWithGeminiFull(base64Image, apiKey, context, language) {
 "carbs" (integer carbohydrates grams),
 "fat" (integer total fat grams),
 "water" (integer liquid ml, 0 if dry food),
+"breakdown" (array of objects, each with "name", "portion", "calories", "protein"),
+"calculation_note" (string formula in ${langDisplay} e.g. "炸雞腿約380卡 + 白飯約220卡 + 炒青菜約50卡 = 650 kcal"),
 "description" (${langDisplay} nutritional overview),
 "fun_fact" (${langDisplay} science fact),
 "roast" (${langDisplay} sarcastic burn),
