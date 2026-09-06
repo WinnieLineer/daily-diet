@@ -7,6 +7,84 @@ const DEFAULT_CALORIE_GOAL = 2000; // 每日預設熱量目標 (kcal)
 const DEFAULT_PROTEIN_GOAL = 100;  // 每日預設蛋白質目標 (g)
 const DEFAULT_WATER_GOAL = 2000;    // 每日預設水分目標 (ml)
 
+// ========================================================
+// 🤖 Gemini AI 用量統計與額度監控 (Free Tier: 1500 RPD / 15 RPM)
+// ========================================================
+
+function recordAiUsage(model, isSuccess, props) {
+  try {
+    const p = props || PropertiesService.getScriptProperties();
+    const today = getTodayDateString();
+    const key = 'AI_QUOTA_' + today;
+    const raw = p.getProperty(key);
+    let stats = raw ? JSON.parse(raw) : { count: 0, success: 0, fail: 0, models: {} };
+    stats.count = (stats.count || 0) + 1;
+    if (isSuccess) stats.success = (stats.success || 0) + 1;
+    else stats.fail = (stats.fail || 0) + 1;
+    const m = model || PRIMARY_GEMINI_MODEL;
+    stats.models[m] = (stats.models[m] || 0) + 1;
+    p.setProperty(key, JSON.stringify(stats));
+  } catch (e) {
+    console.warn('記錄 AI 用量失敗:', e);
+  }
+}
+
+function getAiQuotaStats(props) {
+  try {
+    const p = props || PropertiesService.getScriptProperties();
+    const today = getTodayDateString();
+    const key = 'AI_QUOTA_' + today;
+    const raw = p.getProperty(key);
+    let stats = raw ? JSON.parse(raw) : { count: 0, success: 0, fail: 0, models: {} };
+
+    // 若今日尚無計數器紀錄，自近 300 筆對話日誌統計今日已調用次數
+    if (!stats.count) {
+      const logs = getRecentLogsData(300);
+      let aiCount = 0;
+      logs.forEach(function(l) {
+        if (l.time && l.time.indexOf(today) === 0) {
+          if (l.type && (l.type.indexOf('照片') >= 0 || l.type.indexOf('文字') >= 0 || l.aiResult)) {
+            aiCount++;
+          }
+        }
+      });
+      if (aiCount > 0) {
+        stats.count = aiCount;
+        stats.success = aiCount;
+      }
+    }
+
+    const limit = 1500; // Gemini Flash Free Tier 每日限額 1,500 RPD
+    const used = stats.count || 0;
+    const remaining = Math.max(0, limit - used);
+    const percent = Math.min(100, Math.round((used / limit) * 100));
+    const successRate = used > 0 ? Math.round(((stats.success || used) / used) * 100) : 100;
+
+    return {
+      today: today,
+      limit: limit,
+      used: used,
+      remaining: remaining,
+      percent: percent,
+      rpmLimit: 15,
+      successRate: successRate,
+      currentModel: PRIMARY_GEMINI_MODEL
+    };
+  } catch (e) {
+    return {
+      today: getTodayDateString(),
+      limit: 1500,
+      used: 0,
+      remaining: 1500,
+      percent: 0,
+      rpmLimit: 15,
+      successRate: 100,
+      currentModel: PRIMARY_GEMINI_MODEL
+    };
+  }
+}
+
+
 function doGet(e) {
   const action = e?.parameter?.action;
   let userId = e?.parameter?.userId;
@@ -180,7 +258,8 @@ function doGet(e) {
     const logs = getRecentLogsData(Number(e?.parameter?.limit) || 300);
     const sheetId = props.getProperty('LOG_SHEET_ID');
     const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
-    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs, sheetUrl }))
+    const aiQuota = getAiQuotaStats(props);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs, sheetUrl, aiQuota }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -189,7 +268,8 @@ function doGet(e) {
     const initialLogs = getRecentLogsData(300);
     const sheetId = props.getProperty('LOG_SHEET_ID');
     const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
-    return HtmlService.createHtmlOutput(generateDashboardHtml(initialLogs, sheetUrl))
+    const aiQuota = getAiQuotaStats(props);
+    return HtmlService.createHtmlOutput(generateDashboardHtml(initialLogs, sheetUrl, aiQuota))
       .setTitle("🐼 Daily Diet 實時對話與運作日誌")
       .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
   }
@@ -367,6 +447,29 @@ function doPost(e) {
         }
 
         console.log(`🔘 [按鈕點擊] 動作: ${payload.action} | 內容:`, JSON.stringify(payload));
+
+        // 🐣 / 🌐 新舊用戶分流引導
+        if (payload.action === 'onboarding') {
+          if (payload.type === 'new') {
+            recordSystemLog('新手引導', userId, '點擊全新用戶', '', '發送新手30秒引導卡片');
+            const newGuideFlex = generateNewUserGuideFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, newGuideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          } else if (payload.type === 'web_user') {
+            recordSystemLog('老用戶連動', userId, '點擊Web舊用戶', '', '發送Web綁定引導卡片');
+            const webGuideFlex = generateWebUserGuideFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, webGuideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+        }
+
+        // 📖 查看完整操作指令手冊
+        if (payload.action === 'showHelp' || payload.action === 'help') {
+          recordSystemLog('指令手冊', userId, '點擊查看指令手冊', '', '發送操作指令手冊卡片');
+          const helpFlex = generateCommandMenuFlex(userId, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, helpFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
 
         // 🎭 按下【切換教練性格】
         if (payload.action === 'setPersona') {
@@ -600,11 +703,11 @@ function doPost(e) {
             }
           }
 
-          // 💡 說明 / 教學 / 歡迎 / 免責聲明
-          if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎') {
-            recordSystemLog('使用說明', userId, userText, '', '發送精美圖文歡迎卡片與免責聲明');
-            const welcomeFlex = generateWelcomeFlex(userId, LIFF_ID, userGistId);
-            replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          // 💡 說明 / 指令 / 教學 / 歡迎 / 功能清單 / 免責聲明 (呼叫所有功能選項)
+          if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
+            recordSystemLog('使用說明', userId, userText, '', '發送操作說明與功能手冊卡片');
+            const helpFlex = generateCommandMenuFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, helpFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
@@ -1545,7 +1648,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 action: {
                   type: "datetimepicker",
-                  label: "📅 查其他日期",
+                  label: "📅 查日期",
                   data: JSON.stringify({ action: 'pickDate' }),
                   mode: "date",
                   initial: todayStr,
@@ -2119,6 +2222,7 @@ Required Schema:
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
+      recordAiUsage(model, true, props);
 
       const dishName = parsed.dish_name || "美味餐點";
       const cal = Number(parsed.calories) || 0;
@@ -3102,7 +3206,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props, targetDat
                 flex: 1,
                 action: {
                   type: "datetimepicker",
-                  label: "📅 換其他日期",
+                  label: "📅 換日期",
                   data: JSON.stringify({ action: 'pickDate' }),
                   mode: "date",
                   initial: todayStr,
@@ -3418,7 +3522,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
                 type: "box",
                 layout: "horizontal",
                 contents: [
-                  { type: "text", text: "📊 近 7 日熱量長條圖", size: "xs", color: "#18181B", weight: "bold", flex: 1 },
+                  { type: "text", text: "📊 7日熱量圖", size: "xs", color: "#18181B", weight: "bold", flex: 1 },
                   { type: "text", text: `目標 ${goalCal}k`, size: "xxs", color: "#71717A", align: "end" }
                 ]
               },
@@ -3474,7 +3578,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
                 flex: 1,
                 action: {
                   type: "datetimepicker",
-                  label: "📅 查指定日期",
+                  label: "📅 查日期",
                   data: JSON.stringify({ action: 'pickDate' }),
                   mode: "date",
                   initial: getTodayDateString(),
@@ -3821,8 +3925,13 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
   };
 }
 
+
+// ========================================================
+// 🐼 8. 歡迎卡片、新舊用戶導引與全功能指令手冊 (Neo-Brutalist 旗艦設計)
+// ========================================================
+
 function generateWelcomeFlex(userId, liffId, userGistId) {
-  const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
+  const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + userId + (userGistId ? '&gistId=' + userGistId : '');
   const heroImageUrl = "https://raw.githubusercontent.com/WinnieLineer/daily-diet/main/public/cover-photo.jpg";
 
   return {
@@ -3868,149 +3977,153 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
         spacing: "md",
         paddingAll: "16px",
         contents: [
+          // ❓ 1. 新舊用戶分流選擇區 (清楚詢問用戶，給予直接點選按鈕)
           {
             type: "box",
             layout: "vertical",
+            backgroundColor: "#EFF6FF",
+            borderColor: "#3B82F6",
+            borderWidth: "2px",
+            cornerRadius: "12px",
+            paddingAll: "12px",
             spacing: "xs",
             contents: [
               {
-                type: "box",
-                layout: "horizontal",
-                spacing: "sm",
-                contents: [
-                  { type: "text", text: "📸", size: "sm", flex: 0 },
-                  { type: "text", text: "直接傳照片：AI 視覺秒算熱量與營養", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
-                ]
+                type: "text",
+                text: "❓ 請問您是新用戶，還是使用過 Web 版？",
+                weight: "bold",
+                size: "xs",
+                color: "#1E3A8A"
+              },
+              {
+                type: "text",
+                text: "點擊下方符合您的身份，教練將立即引導專屬設定：",
+                size: "xxs",
+                color: "#2563EB",
+                wrap: true
               },
               {
                 type: "box",
                 layout: "horizontal",
                 spacing: "sm",
+                margin: "sm",
                 contents: [
-                  { type: "text", text: "✍️", size: "sm", flex: 0 },
-                  { type: "text", text: "文字記錄：如「雞胸肉沙拉 350卡 30蛋」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                spacing: "sm",
-                contents: [
-                  { type: "text", text: "✏️", size: "sm", flex: 0 },
-                  { type: "text", text: "快速微調：輸入「改 400卡 35蛋」修正前一餐", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                spacing: "sm",
-                contents: [
-                  { type: "text", text: "🎯", size: "sm", flex: 0 },
-                  { type: "text", text: "目標管理：輸入「目標」或「改目標 1800卡」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                spacing: "sm",
-                contents: [
-                  { type: "text", text: "⭐", size: "sm", flex: 0 },
-                  { type: "text", text: "常用輪播：輸入「常用」或「加常用 拿鐵 150卡」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                spacing: "sm",
-                contents: [
-                  { type: "text", text: "💧", size: "sm", flex: 0 },
-                  { type: "text", text: "快速補水：輸入「喝水」或「+500水」", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                spacing: "sm",
-                contents: [
-                  { type: "text", text: "📊", size: "sm", flex: 0 },
-                  { type: "text", text: "進度與管理：輸入「今日」看總結、「管理」刪改餐點", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                  {
+                    type: "button",
+                    style: "primary",
+                    height: "sm",
+                    color: "#2563EB",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "🐣 我是全新用戶",
+                      data: JSON.stringify({ action: 'onboarding', type: 'new' }),
+                      displayText: "🐣 我是全新用戶"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#DBEAFE",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "🌐 我用過 Web 版",
+                      data: JSON.stringify({ action: 'onboarding', type: 'web_user' }),
+                      displayText: "🌐 我用過 Web 版"
+                    }
+                  }
                 ]
               }
             ]
           },
+
+          // 🛠️ 2. 目前所有可以調整的項目說明 (完整清單)
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#ECFDF5",
-            cornerRadius: "10px",
-            paddingAll: "12px",
-            borderColor: "#10B981",
+            backgroundColor: "#FAFAFA",
+            borderColor: "#000000",
             borderWidth: "1.5px",
-            spacing: "xs",
-            contents: [
-              {
-                type: "text",
-                text: "⚡ Web ➔ LINE 雙向同步小提醒",
-                weight: "bold",
-                size: "xs",
-                color: "#065F46"
-              },
-              {
-                type: "text",
-                text: "若您在 Web App / PWA 端記錄或修改了餐點，在 LINE 聊天室輸入「今日」或「管理」，系統會即時向雲端拉取最新紀錄無縫呈現！",
-                size: "xxs",
-                color: "#047857",
-                wrap: true
-              }
-            ]
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            backgroundColor: "#FEF9C3",
-            cornerRadius: "10px",
+            cornerRadius: "12px",
             paddingAll: "12px",
-            borderColor: "#FACC15",
-            borderWidth: "1.5px",
-            spacing: "xs",
+            spacing: "sm",
             contents: [
-              {
-                type: "text",
-                text: "☁️ Web 舊用戶無縫連動 Gist ID",
-                weight: "bold",
-                size: "xs",
-                color: "#854D0E"
-              },
-              {
-                type: "text",
-                text: "若您原先在 Web 端有紀錄，請至 Web「設定 ➔ 雲端備份」複製 Gist ID，在此聊天室輸入：",
-                size: "xxs",
-                color: "#713F12",
-                wrap: true
-              },
               {
                 type: "box",
                 layout: "horizontal",
-                backgroundColor: "#FFFFFF",
-                cornerRadius: "6px",
-                paddingAll: "6px",
-                margin: "xs",
                 contents: [
-                  { type: "text", text: "👉 綁定 您的GIST_ID", size: "xs", color: "#000000", weight: "bold" }
+                  { type: "text", text: "🛠️ 目前可調整與自訂項目", weight: "bold", size: "xs", color: "#000000" },
+                  { type: "text", text: "完整指令", size: "xxs", color: "#71717A", align: "end" }
                 ]
               },
               {
-                type: "text",
-                text: "即可將歷史紀錄與體態目標 100% 雙向同步！",
-                size: "xxs",
-                color: "#713F12",
-                wrap: true
+                type: "box",
+                layout: "vertical",
+                spacing: "xs",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "🎯 體態目標：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
+                      { type: "text", text: "輸入「改目標 1800卡 80蛋 2000水」或「目標」", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "🎭 教練語氣：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
+                      { type: "text", text: "輸入「切換性格」挑選傲嬌、溫柔、士官長", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "⭐ 常用餐點：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
+                      { type: "text", text: "輸入「常用」輪播或「加常用 拿鐵 150卡」", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "✏️ 修正紀錄：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
+                      { type: "text", text: "輸入「改 400卡 35蛋」微調前一筆餐點", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "💧 快速補水：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
+                      { type: "text", text: "輸入「喝水」或「+500水」打卡", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    contents: [
+                      { type: "text", text: "📅 歷史與管理：", size: "xxs", color: "#000000", weight: "bold", flex: 0 },
+                      { type: "text", text: "輸入「9/3」、「昨日」、「管理」刪改餐點", size: "xxs", color: "#52525B", wrap: true, flex: 1 }
+                    ]
+                  }
+                ]
               }
             ]
           },
           {
             type: "text",
-            text: "💡 免責聲明：本服務提供之熱量與營養素估算僅供個人日常健康管理參考，不具醫療或專業處方效益。特殊體質請諮詢醫師或營養師。",
+            text: "💡 提示：隨時輸入「說明」或「指令」，可再次呼叫所有功能操作面板！",
             size: "xxs",
             color: "#A1A1AA",
             wrap: true
@@ -4038,6 +4151,202 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
             type: "button",
             style: "secondary",
             height: "sm",
+            color: "#FEF9C3",
+            action: {
+              type: "postback",
+              label: "📖 查看所有操作指令清單",
+              data: JSON.stringify({ action: 'showHelp' }),
+              displayText: "說明"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+// 🐣 全新用戶專屬引導卡片
+function generateNewUserGuideFlex(userId, liffId, userGistId, props) {
+  const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + userId + (userGistId ? '&gistId=' + userGistId : '');
+
+  return {
+    type: "flex",
+    altText: "🐣 歡迎新朋友！30 秒快速上手指南",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FDE047",
+        paddingAll: "14px",
+        contents: [
+          { type: "text", text: "🐣 歡迎新朋友加入 Daily Diet！", weight: "bold", size: "md", color: "#000000" },
+          { type: "text", text: "只要 30 秒，教練帶您輕鬆掌握飲食紀錄 🐼✨", size: "xxs", color: "#713F12", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "1️⃣", size: "sm", flex: 0 },
+                  { type: "text", text: "拍照辨識：點下方相機拍下餐點，AI 自動算熱量與三大營養素！", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "2️⃣", size: "sm", flex: 0 },
+                  { type: "text", text: "文字或語音：輸入「雞肉便當 650卡 35蛋」也能精準記帳！", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "3️⃣", size: "sm", flex: 0 },
+                  { type: "text", text: "體態目標：預設為 2000 kcal / 100g 蛋，點下方按鈕即可自訂！", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  { type: "text", text: "4️⃣", size: "sm", flex: 0 },
+                  { type: "text", text: "切換語氣：喜歡毒舌吐槽還是溫柔治癒？隨時可自由換！", size: "xs", color: "#18181B", weight: "bold", flex: 1, wrap: true }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "postback",
+              label: "🎯 設定個人體態目標",
+              data: JSON.stringify({ action: 'fillGoal' }),
+              inputOption: "openKeyboard",
+              fillInText: "改目標 2000卡 100蛋 2000水"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FEF08A",
+            action: {
+              type: "postback",
+              label: "🎭 挑選教練性格 (傲嬌/溫柔/士官長)",
+              data: JSON.stringify({ action: 'choosePersona' }),
+              displayText: "切換性格"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#EFF6FF",
+            action: {
+              type: "uri",
+              label: "📱 開啟個人飲食日記 (Web App)",
+              uri: appTargetUrl
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+// 🌐 Web 舊用戶無縫連動引導卡片
+function generateWebUserGuideFlex(userId, liffId, userGistId, props) {
+  const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + userId + (userGistId ? '&gistId=' + userGistId : '');
+
+  return {
+    type: "flex",
+    altText: "🌐 歡迎老朋友！Web 紀錄無縫同步指南",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#18181B",
+        paddingAll: "14px",
+        contents: [
+          { type: "text", text: "🌐 歡迎老朋友！無縫連動 Web 紀錄", weight: "bold", size: "md", color: "#FDE047" },
+          { type: "text", text: "綁定 Gist ID，讓歷史餐點與目標 100% 雙向同步！", size: "xxs", color: "#E4E4E7", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            backgroundColor: "#FEF9C3",
+            cornerRadius: "10px",
+            paddingAll: "12px",
+            contents: [
+              { type: "text", text: "📌 簡單 3 步驟完成連動：", weight: "bold", size: "xs", color: "#854D0E" },
+              { type: "text", text: "1. 點擊下方按鈕開啟 Web 版 Daily Diet", size: "xxs", color: "#713F12" },
+              { type: "text", text: "2. 前往右上角「⚙️ 設定」➔「雲端備份」複製 Gist ID", size: "xxs", color: "#713F12" },
+              { type: "text", text: "3. 點擊下方「填入綁定指令」，送出「綁定 您的GistID」即可！", size: "xxs", color: "#713F12" }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "uri",
+              label: "📱 開啟 Web App 複製 Gist ID",
+              uri: appTargetUrl
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
             color: "#FEF08A",
             action: {
               type: "postback",
@@ -4045,6 +4354,242 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
               data: JSON.stringify({ action: 'fillGist' }),
               inputOption: "openKeyboard",
               fillInText: "綁定 "
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
+// 🛠️ 操作說明與所有功能手冊清單 (輸入「說明」或「指令」即刻呼叫全部選項)
+function generateCommandMenuFlex(userId, liffId, userGistId, props) {
+  const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + userId + (userGistId ? '&gistId=' + userGistId : '');
+  const todayStr = getTodayDateString();
+
+  return {
+    type: "flex",
+    altText: "🛠️ Daily Diet 操作說明與所有功能指令手冊",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🛠️ DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: "功能總覽與指令手冊", color: "#A1A1AA", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "點擊下方任何按鈕，直接執行對應操作 🐼👇",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "xs",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "14px",
+        contents: [
+          // 區塊 1: 常用與記錄
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: "⚡ 快速記錄與補水", weight: "bold", size: "xs", color: "#000000" },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "xs",
+                contents: [
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FEE2E2",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "📸 拍照辨識",
+                      data: JSON.stringify({ action: 'guideCamera' }),
+                      displayText: "拍照辨識"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FEF9C3",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "⭐ 常用餐點",
+                      data: JSON.stringify({ action: 'viewFavorites' }),
+                      displayText: "常用"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#E0F2FE",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "💧 喝水 500ml",
+                      data: JSON.stringify({ action: 'quickWater', amount: 500 }),
+                      displayText: "💧 喝水 +500ml"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+
+          // 區塊 2: 查詢與趨勢
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: "📊 數據進度與週報", weight: "bold", size: "xs", color: "#000000" },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "xs",
+                contents: [
+                  {
+                    type: "button",
+                    style: "primary",
+                    height: "sm",
+                    color: "#000000",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "📊 今日總結",
+                      data: JSON.stringify({ action: 'save' }),
+                      displayText: "今日"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FEF08A",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "📈 7 日週報",
+                      data: JSON.stringify({ action: 'viewWeeklyTrends' }),
+                      displayText: "週報"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#EFF6FF",
+                    flex: 1,
+                    action: {
+                      type: "datetimepicker",
+                      label: "📅 查日期",
+                      data: JSON.stringify({ action: 'pickDate' }),
+                      mode: "date",
+                      initial: todayStr,
+                      max: todayStr
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+
+          // 區塊 3: 個性化與管理
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: "⚙️ 個性化設定與管理", weight: "bold", size: "xs", color: "#000000" },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "xs",
+                contents: [
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#F3E8FF",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "🎭 切換性格",
+                      data: JSON.stringify({ action: 'choosePersona' }),
+                      displayText: "切換性格"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#DCFCE7",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "🎯 設定目標",
+                      data: JSON.stringify({ action: 'fillGoal' }),
+                      inputOption: "openKeyboard",
+                      fillInText: "改目標 2000卡 100蛋 2000水"
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FEE2E2",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "📋 管理餐點",
+                      data: JSON.stringify({ action: 'manageMeals' }),
+                      displayText: "管理"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "uri",
+              label: "📱 開啟個人飲食日記 (Web App)",
+              uri: appTargetUrl
             }
           }
         ]
@@ -4899,7 +5444,8 @@ function verifyWebAIRequest(data, e) {
 // 📊 14. 實時運作日誌儀表板 UI (Authentic Neo-Brutalism Design matching Web App)
 // ========================================================
 
-function generateDashboardHtml(initialLogs, sheetUrl) {
+function generateDashboardHtml(initialLogs, sheetUrl, initialAiQuota) {
+  const aiQuotaJson = JSON.stringify(initialAiQuota || getAiQuotaStats()).replace(/</g, '\\u003c');
   const initialJson = JSON.stringify(initialLogs || []).replace(/</g, '\\u003c');
   const safeSheetUrl = sheetUrl || '';
 
@@ -5335,6 +5881,55 @@ function generateDashboardHtml(initialLogs, sheetUrl) {
       </div>
     </header>
 
+    <!-- 🤖 Gemini AI 當日額度與即時用量監控區塊 (Free Tier 1,500 RPD) -->
+    <div class="ai-quota-panel neo-box" style="background:#FFFFFF; border:3.5px solid var(--black); border-radius:22px; padding:18px 22px; margin-bottom:18px; box-shadow:5px 5px 0px 0px var(--black);">
+      <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div style="font-size:26px; background:var(--yellow); border:3px solid var(--black); border-radius:12px; width:48px; height:48px; display:flex; align-items:center; justify-content:center; box-shadow:2px 2px 0px var(--black);">🤖</div>
+          <div>
+            <div style="font-size:18px; font-weight:900; color:var(--black); display:flex; align-items:center; gap:10px;">
+              Gemini AI 當日額度與用量即時監控
+              <span id="aiBadge" class="status-badge" style="background:var(--green); color:var(--green-text); font-size:11px;">🟢 額度充足</span>
+            </div>
+            <div style="font-size:12px; color:#52525B; font-weight:700; margin-top:2px;">
+              模型：<code id="aiModelName" style="background:#F1F5F9; padding:2px 6px; border-radius:6px; font-family:'JetBrains Mono'; font-weight:800; color:#000;">gemini-3.5-flash-lite</code> ｜ 免費方案限額 1,500 請求/天 (15 RPM)
+            </div>
+          </div>
+        </div>
+        <div style="display:flex; gap:14px; align-items:center;">
+          <div style="text-align:right;">
+            <div style="font-size:11px; font-weight:800; color:#71717A;">今日剩餘可用額度</div>
+            <div style="font-size:22px; font-weight:900; font-family:'JetBrains Mono'; color:#15803D;" id="aiRemainingVal">1,500 / 1,500</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- 額度進度條 -->
+      <div style="background:#F1F5F9; border:3px solid var(--black); border-radius:999px; height:20px; position:relative; overflow:hidden; box-shadow:2px 2px 0px var(--black);">
+        <div id="aiProgressBar" style="background:var(--yellow); height:100%; width:0%; border-right:2px solid var(--black); transition:width 0.4s ease;"></div>
+      </div>
+
+      <!-- 額度指標卡片 -->
+      <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-top:14px;">
+        <div style="background:#FEF9C3; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
+          <div style="font-size:11px; font-weight:800; color:#854D0E;">今日已調用次數</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#854D0E;" id="aiUsedCount">0 次</div>
+        </div>
+        <div style="background:#EFF6FF; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
+          <div style="font-size:11px; font-weight:800; color:#1D4ED8;">每日上限 (RPD)</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#1D4ED8;">1,500 次/天</div>
+        </div>
+        <div style="background:#F3E8FF; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
+          <div style="font-size:11px; font-weight:800; color:#7E22CE;">速率上限 (RPM)</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#7E22CE;">15 次/分</div>
+        </div>
+        <div style="background:#DCFCE7; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
+          <div style="font-size:11px; font-weight:800; color:#15803D;">調用成功率</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#15803D;" id="aiSuccessRate">100%</div>
+        </div>
+      </div>
+    </div>
+
     <!-- 📊 統計指標卡片 (Neo-Brutalist Colors) -->
     <div class="metrics-grid">
       <div class="metric-card" style="background:#FFFFFF;">
@@ -5401,6 +5996,7 @@ function generateDashboardHtml(initialLogs, sheetUrl) {
 
   <script>
     let allLogs = ${initialJson};
+    let currentAiQuota = ${aiQuotaJson};
     let currentFilter = 'all';
     let searchQuery = '';
     let autoRefreshActive = true;
@@ -5439,6 +6035,55 @@ function generateDashboardHtml(initialLogs, sheetUrl) {
       document.getElementById('metricSync').textContent = sync;
       document.getElementById('metricSec').textContent = sec;
     }
+
+    function updateAiQuotaUI(quota) {
+      if (!quota) return;
+      const limit = quota.limit || 1500;
+      const used = quota.used || 0;
+      const remaining = quota.remaining !== undefined ? quota.remaining : Math.max(0, limit - used);
+      const percent = quota.percent !== undefined ? quota.percent : Math.round((used / limit) * 100);
+      const successRate = quota.successRate !== undefined ? quota.successRate : 100;
+      
+      const progressBar = document.getElementById('aiProgressBar');
+      if (progressBar) {
+        progressBar.style.width = Math.max(1, percent) + '%';
+        if (percent > 85) progressBar.style.background = '#EF4444';
+        else if (percent > 60) progressBar.style.background = '#F59E0B';
+        else progressBar.style.background = '#FDE047';
+      }
+
+      const remVal = document.getElementById('aiRemainingVal');
+      if (remVal) remVal.textContent = remaining.toLocaleString() + ' / ' + limit.toLocaleString();
+
+      const usedCount = document.getElementById('aiUsedCount');
+      if (usedCount) usedCount.textContent = used.toLocaleString() + ' 次';
+
+      const sRate = document.getElementById('aiSuccessRate');
+      if (sRate) sRate.textContent = successRate + '%';
+
+      const badge = document.getElementById('aiBadge');
+      if (badge) {
+        if (remaining <= 50) {
+          badge.textContent = '🔴 額度告急';
+          badge.style.background = '#FEE2E2';
+          badge.style.color = '#B91C1C';
+        } else if (percent > 60) {
+          badge.textContent = '🟡 用量過半';
+          badge.style.background = '#FEF9C3';
+          badge.style.color = '#854D0E';
+        } else {
+          badge.textContent = '🟢 額度充足';
+          badge.style.background = '#DCFCE7';
+          badge.style.color = '#15803D';
+        }
+      }
+
+      const modelName = document.getElementById('aiModelName');
+      if (modelName && quota.currentModel) {
+        modelName.textContent = quota.currentModel;
+      }
+    }
+
 
     function renderTable() {
       const tbody = document.getElementById('logTableBody');
@@ -5499,13 +6144,15 @@ function generateDashboardHtml(initialLogs, sheetUrl) {
       renderTable();
     }
 
-    function updateLogs(newLogs, newSheetUrl) {
+    function updateLogs(newLogs, newSheetUrl, newAiQuota) {
       if (newLogs && Array.isArray(newLogs)) {
         allLogs = newLogs;
         updateMetrics(allLogs);
         renderTable();
+        updateAiQuotaUI(currentAiQuota);
         document.getElementById('lastUpdatedTime').textContent = new Date().toLocaleTimeString('zh-TW', { hour12: false });
       }
+      if (newAiQuota) updateAiQuotaUI(newAiQuota);
       if (newSheetUrl) {
         sheetUrl = newSheetUrl;
         const btn = document.getElementById('sheetLinkBtn');
@@ -5518,14 +6165,14 @@ function generateDashboardHtml(initialLogs, sheetUrl) {
 
     function fetchLogs() {
       if (typeof google !== 'undefined' && google.script && google.script.run) {
-        google.script.run.withSuccessHandler(function(logs) {
-          updateLogs(logs);
+        google.script.run.withSuccessHandler(function(data) {
+          updateLogs(data.logs, data.sheetUrl, data.aiQuota);
         }).getRecentLogsData(300);
       } else {
         fetch('?action=getRecentLogs&limit=300')
           .then(r => r.json())
           .then(data => {
-            if (data.status === 'ok') updateLogs(data.logs, data.sheetUrl);
+            if (data.status === 'ok') updateLogs(data.logs, data.sheetUrl, data.aiQuota);
           })
           .catch(e => console.warn('Fetch logs error:', e));
       }
