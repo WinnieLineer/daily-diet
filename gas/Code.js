@@ -14,6 +14,19 @@ const DEFAULT_WATER_GOAL = 2000;    // 每日預設水分目標 (ml)
 function recordAiUsage(model, isSuccess, props) {
   try {
     const p = props || PropertiesService.getScriptProperties();
+    const cache = CacheService.getScriptCache();
+    const now = Date.now();
+    const cutoff = now - 60000;
+
+    // ⚡ 1. 記錄 60 秒 RPM 滾動窗口
+    const windowKey = 'RPM_TIMESTAMPS_WINDOW';
+    let rawWindow = cache.get(windowKey);
+    let timestamps = rawWindow ? JSON.parse(rawWindow) : [];
+    timestamps = timestamps.filter(function(t) { return t > cutoff; });
+    timestamps.push(now);
+    cache.put(windowKey, JSON.stringify(timestamps), 120);
+
+    // 2. 每日累計記錄
     const today = getTodayDateString();
     const key = 'AI_QUOTA_' + today;
     const raw = p.getProperty(key);
@@ -22,6 +35,7 @@ function recordAiUsage(model, isSuccess, props) {
     if (isSuccess) stats.success = (stats.success || 0) + 1;
     else stats.fail = (stats.fail || 0) + 1;
     const m = model || PRIMARY_GEMINI_MODEL;
+    stats.models = stats.models || {};
     stats.models[m] = (stats.models[m] || 0) + 1;
     p.setProperty(key, JSON.stringify(stats));
   } catch (e) {
@@ -32,12 +46,39 @@ function recordAiUsage(model, isSuccess, props) {
 function getAiQuotaStats(props) {
   try {
     const p = props || PropertiesService.getScriptProperties();
+    const cache = CacheService.getScriptCache();
+    const now = Date.now();
+    const cutoff = now - 60000;
+
+    // ⚡ 計算目前 60 秒內的真實 RPM
+    const windowKey = 'RPM_TIMESTAMPS_WINDOW';
+    let rawWindow = cache.get(windowKey);
+    let timestamps = rawWindow ? JSON.parse(rawWindow) : [];
+    timestamps = timestamps.filter(function(t) { return t > cutoff; });
+
+    // 輔助容錯：若 Cache 剛啟動，從近 30 筆日誌計算 60 秒內請求
+    if (timestamps.length === 0) {
+      const logs = getRecentLogsData(30);
+      logs.forEach(function(l) {
+        if (l.time) {
+          const logT = new Date(l.time.replace(' ', 'T') + '+08:00').getTime();
+          if (now - logT <= 60000 && (l.type && (l.type.indexOf('照片') >= 0 || l.type.indexOf('文字') >= 0 || l.aiResult))) {
+            timestamps.push(logT);
+          }
+        }
+      });
+    }
+
+    const currentRpm = timestamps.length;
+    const rpmLimit = 15; // Gemini Flash 15 RPM
+    const rpmPercent = Math.min(100, Math.round((currentRpm / rpmLimit) * 100));
+
+    // 每日統計
     const today = getTodayDateString();
     const key = 'AI_QUOTA_' + today;
     const raw = p.getProperty(key);
     let stats = raw ? JSON.parse(raw) : { count: 0, success: 0, fail: 0, models: {} };
 
-    // 若今日尚無計數器紀錄，自近 300 筆對話日誌統計今日已調用次數
     if (!stats.count) {
       const logs = getRecentLogsData(300);
       let aiCount = 0;
@@ -54,30 +95,31 @@ function getAiQuotaStats(props) {
       }
     }
 
-    const limit = 1500; // Gemini Flash Free Tier 每日限額 1,500 RPD
     const used = stats.count || 0;
+    const limit = 1500;
     const remaining = Math.max(0, limit - used);
-    const percent = Math.min(100, Math.round((used / limit) * 100));
     const successRate = used > 0 ? Math.round(((stats.success || used) / used) * 100) : 100;
 
     return {
       today: today,
+      currentRpm: currentRpm,
+      rpmLimit: rpmLimit,
+      rpmPercent: rpmPercent,
       limit: limit,
       used: used,
       remaining: remaining,
-      percent: percent,
-      rpmLimit: 15,
       successRate: successRate,
       currentModel: PRIMARY_GEMINI_MODEL
     };
   } catch (e) {
     return {
       today: getTodayDateString(),
+      currentRpm: 0,
+      rpmLimit: 15,
+      rpmPercent: 0,
       limit: 1500,
       used: 0,
       remaining: 1500,
-      percent: 0,
-      rpmLimit: 15,
       successRate: 100,
       currentModel: PRIMARY_GEMINI_MODEL
     };
@@ -6019,51 +6061,51 @@ function generateDashboardHtml(initialLogs, sheetUrl, initialAiQuota) {
       </div>
     </header>
 
-    <!-- 🤖 Gemini AI 當日額度與即時用量監控區塊 (Free Tier 1,500 RPD) -->
+    <!-- ⚡ Gemini AI 即時速率監控 (RPM Monitor) -->
     <div class="ai-quota-panel neo-box" style="background:#FFFFFF; border:3.5px solid var(--black); border-radius:22px; padding:18px 22px; margin-bottom:18px; box-shadow:5px 5px 0px 0px var(--black);">
       <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:12px; margin-bottom:14px;">
         <div style="display:flex; align-items:center; gap:12px;">
-          <div style="font-size:26px; background:var(--yellow); border:3px solid var(--black); border-radius:12px; width:48px; height:48px; display:flex; align-items:center; justify-content:center; box-shadow:2px 2px 0px var(--black);">🤖</div>
+          <div style="font-size:26px; background:var(--yellow); border:3px solid var(--black); border-radius:12px; width:48px; height:48px; display:flex; align-items:center; justify-content:center; box-shadow:2px 2px 0px var(--black);">⚡</div>
           <div>
             <div style="font-size:18px; font-weight:900; color:var(--black); display:flex; align-items:center; gap:10px;">
-              Gemini AI 當日額度與用量即時監控
-              <span id="aiBadge" class="status-badge" style="background:var(--green); color:var(--green-text); font-size:11px;">🟢 額度充足</span>
+              Gemini AI 即時速率監控 (RPM)
+              <span id="aiBadge" class="status-badge" style="background:var(--green); color:var(--green-text); font-size:11px;">🟢 速率極佳</span>
             </div>
             <div style="font-size:12px; color:#52525B; font-weight:700; margin-top:2px;">
-              模型：<code id="aiModelName" style="background:#F1F5F9; padding:2px 6px; border-radius:6px; font-family:'JetBrains Mono'; font-weight:800; color:#000;">gemini-3.5-flash-lite</code> ｜ 免費方案限額 1,500 請求/天 (15 RPM)
+              模型：<code id="aiModelName" style="background:#F1F5F9; padding:2px 6px; border-radius:6px; font-family:'JetBrains Mono'; font-weight:800; color:#000;">gemini-3.5-flash-lite</code> ｜ 免費上限 15 次/分 (60 秒滑動窗口)
             </div>
           </div>
         </div>
         <div style="display:flex; gap:14px; align-items:center;">
           <div style="text-align:right;">
-            <div style="font-size:11px; font-weight:800; color:#71717A;">今日剩餘可用額度</div>
-            <div style="font-size:22px; font-weight:900; font-family:'JetBrains Mono'; color:#15803D;" id="aiRemainingVal">1,500 / 1,500</div>
+            <div style="font-size:11px; font-weight:800; color:#71717A;">⚡ 即時調用速率 (RPM)</div>
+            <div style="font-size:26px; font-weight:900; font-family:'JetBrains Mono'; color:#15803D;" id="aiRpmHero">0 <span style="font-size:15px; color:#71717A; font-weight:800;">/ 15 RPM</span></div>
           </div>
         </div>
       </div>
 
-      <!-- 額度進度條 -->
+      <!-- RPM 即時速率條 (0~15 RPM) -->
       <div style="background:#F1F5F9; border:3px solid var(--black); border-radius:999px; height:20px; position:relative; overflow:hidden; box-shadow:2px 2px 0px var(--black);">
-        <div id="aiProgressBar" style="background:var(--yellow); height:100%; width:0%; border-right:2px solid var(--black); transition:width 0.4s ease;"></div>
+        <div id="aiProgressBar" style="background:var(--green); height:100%; width:0%; border-right:2px solid var(--black); transition:width 0.4s ease, background-color 0.4s ease;"></div>
       </div>
 
-      <!-- 額度指標卡片 -->
+      <!-- RPM 指標卡片群 -->
       <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(130px, 1fr)); gap:12px; margin-top:14px;">
-        <div style="background:#FEF9C3; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
-          <div style="font-size:11px; font-weight:800; color:#854D0E;">今日已調用次數</div>
-          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#854D0E;" id="aiUsedCount">0 次</div>
+        <div style="background:#DCFCE7; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
+          <div style="font-size:11px; font-weight:800; color:#15803D;">當前速率 (Current RPM)</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#15803D;" id="aiCurrentRpm">0 / 15</div>
         </div>
         <div style="background:#EFF6FF; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
-          <div style="font-size:11px; font-weight:800; color:#1D4ED8;">每日上限 (RPD)</div>
-          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#1D4ED8;">1,500 次/天</div>
+          <div style="font-size:11px; font-weight:800; color:#1D4ED8;">今日累計 (RPD)</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#1D4ED8;" id="aiUsedCount">0 / 1,500</div>
+        </div>
+        <div style="background:#FEF9C3; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
+          <div style="font-size:11px; font-weight:800; color:#854D0E;">冷卻狀態 (Status)</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#854D0E;" id="aiStatusText">無排隊阻塞</div>
         </div>
         <div style="background:#F3E8FF; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
-          <div style="font-size:11px; font-weight:800; color:#7E22CE;">速率上限 (RPM)</div>
-          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#7E22CE;">15 次/分</div>
-        </div>
-        <div style="background:#DCFCE7; border:2.5px solid var(--black); border-radius:14px; padding:10px 14px; box-shadow:3px 3px 0px var(--black);">
-          <div style="font-size:11px; font-weight:800; color:#15803D;">調用成功率</div>
-          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#15803D;" id="aiSuccessRate">100%</div>
+          <div style="font-size:11px; font-weight:800; color:#7E22CE;">調用成功率</div>
+          <div style="font-size:20px; font-weight:900; font-family:'JetBrains Mono'; color:#7E22CE;" id="aiSuccessRate">100%</div>
         </div>
       </div>
     </div>
@@ -6176,41 +6218,56 @@ function generateDashboardHtml(initialLogs, sheetUrl, initialAiQuota) {
 
     function updateAiQuotaUI(quota) {
       if (!quota) return;
-      const limit = quota.limit || 1500;
-      const used = quota.used || 0;
-      const remaining = quota.remaining !== undefined ? quota.remaining : Math.max(0, limit - used);
-      const percent = quota.percent !== undefined ? quota.percent : Math.round((used / limit) * 100);
+      const currentRpm = quota.currentRpm || 0;
+      const rpmLimit = quota.rpmLimit || 15;
+      const rpmPercent = Math.min(100, Math.round((currentRpm / rpmLimit) * 100));
+      const dailyUsed = quota.used || 0;
+      const dailyLimit = quota.limit || 1500;
       const successRate = quota.successRate !== undefined ? quota.successRate : 100;
       
       const progressBar = document.getElementById('aiProgressBar');
       if (progressBar) {
-        progressBar.style.width = Math.max(1, percent) + '%';
-        if (percent > 85) progressBar.style.background = '#EF4444';
-        else if (percent > 60) progressBar.style.background = '#F59E0B';
-        else progressBar.style.background = '#FDE047';
+        progressBar.style.width = Math.max(currentRpm > 0 ? 5 : 0, rpmPercent) + '%';
+        if (currentRpm >= 13) progressBar.style.background = '#EF4444';
+        else if (currentRpm >= 9) progressBar.style.background = '#F59E0B';
+        else progressBar.style.background = '#10B981';
       }
 
-      const remVal = document.getElementById('aiRemainingVal');
-      if (remVal) remVal.textContent = remaining.toLocaleString() + ' / ' + limit.toLocaleString();
+      const rpmHero = document.getElementById('aiRpmHero');
+      if (rpmHero) {
+        const color = currentRpm >= 13 ? '#DC2626' : (currentRpm >= 9 ? '#D97706' : '#15803D');
+        rpmHero.innerHTML = currentRpm + ' <span style="font-size:15px; color:#71717A; font-weight:800;">/ ' + rpmLimit + ' RPM</span>';
+        rpmHero.style.color = color;
+      }
+
+      const currentRpmEl = document.getElementById('aiCurrentRpm');
+      if (currentRpmEl) currentRpmEl.textContent = currentRpm + ' / ' + rpmLimit;
 
       const usedCount = document.getElementById('aiUsedCount');
-      if (usedCount) usedCount.textContent = used.toLocaleString() + ' 次';
+      if (usedCount) usedCount.textContent = dailyUsed + ' / ' + dailyLimit.toLocaleString();
 
       const sRate = document.getElementById('aiSuccessRate');
       if (sRate) sRate.textContent = successRate + '%';
 
+      const statusText = document.getElementById('aiStatusText');
+      if (statusText) {
+        if (currentRpm >= 13) statusText.textContent = '接近限流 (警戒)';
+        else if (currentRpm >= 9) statusText.textContent = '速率偏高';
+        else statusText.textContent = '無排隊阻塞';
+      }
+
       const badge = document.getElementById('aiBadge');
       if (badge) {
-        if (remaining <= 50) {
-          badge.textContent = '🔴 額度告急';
+        if (currentRpm >= 13) {
+          badge.textContent = '🔴 接近限流 (' + currentRpm + '/15)';
           badge.style.background = '#FEE2E2';
           badge.style.color = '#B91C1C';
-        } else if (percent > 60) {
-          badge.textContent = '🟡 用量過半';
+        } else if (currentRpm >= 9) {
+          badge.textContent = '🟡 速率注意 (' + currentRpm + '/15)';
           badge.style.background = '#FEF9C3';
           badge.style.color = '#854D0E';
         } else {
-          badge.textContent = '🟢 額度充足';
+          badge.textContent = '🟢 速率安全 (' + currentRpm + '/15)';
           badge.style.background = '#DCFCE7';
           badge.style.color = '#15803D';
         }
