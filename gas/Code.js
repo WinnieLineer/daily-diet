@@ -2359,34 +2359,26 @@ function attachQuickReply(message, userId, props) {
   if (!userId || !props) return message;
   try {
     const favorites = getUserFavorites(userId, props);
-    const items = [
-      {
-        type: "action",
-        action: {
-          type: "postback",
-          label: "💧 喝水 500ml",
-          data: JSON.stringify({ action: 'quickWater', amount: 500 }),
-          displayText: "💧 喝水 500ml"
-        }
-      },
-      {
-        type: "action",
-        action: {
-          type: "postback",
-          label: "💧 喝水 250ml",
-          data: JSON.stringify({ action: 'quickWater', amount: 250 }),
-          displayText: "💧 喝水 250ml"
-        }
-      }
-    ];
+    const items = [];
 
+    // 🌟 1. 飲控人最常用：⭐ 常用餐點永遠擺在第一顆最前面！
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "⭐ 常用餐點",
+        text: "常用"
+      }
+    });
+
+    // 🌟 2. 若用戶有存常用餐點，直接奉上前 3~4 顆一鍵記帳膠囊 (0秒入帳)！
     if (favorites && favorites.length > 0) {
-      favorites.slice(0, 6).forEach(fav => {
+      favorites.slice(0, 4).forEach(fav => {
         items.push({
           type: "action",
           action: {
             type: "postback",
-            label: `⭐ ${(fav.dish_name || '常用').slice(0, 12)}`,
+            label: `⭐ ${(fav.dish_name || '常用').slice(0, 8)}`,
             data: JSON.stringify({
               action: 'quickLogFavorite',
               name: encodeURIComponent(fav.dish_name),
@@ -2400,21 +2392,47 @@ function attachQuickReply(message, userId, props) {
       });
     }
 
+    // 💧 3. 補水打卡
     items.push({
       type: "action",
       action: {
-        type: "message",
-        label: "⭐ 常用輪播",
-        text: "常用"
+        type: "postback",
+        label: "💧 喝水 500ml",
+        data: JSON.stringify({ action: 'quickWater', amount: 500 }),
+        displayText: "💧 喝水 500ml"
       }
     });
 
+    // 📊 4. 今日總結
     items.push({
       type: "action",
       action: {
         type: "message",
-        label: "📊 今日進度",
+        label: "📊 今日總結",
         text: "今日"
+      }
+    });
+
+    // 📅 5. 查歷史日期 (原生滾輪)
+    items.push({
+      type: "action",
+      action: {
+        type: "datetimepicker",
+        label: "📅 查日期",
+        data: JSON.stringify({ action: 'pickDate' }),
+        mode: "date",
+        initial: getTodayDateString(),
+        max: getTodayDateString()
+      }
+    });
+
+    // 💡 6. 全部功能說明
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: "💡 全部功能",
+        text: "說明"
       }
     });
 
@@ -6267,7 +6285,7 @@ function setupNativeCameraRichMenu(channelAccessToken, liffId, props) {
       },
       {
         bounds: { x: 833, y: 843, width: 834, height: 843 },
-        action: { type: "message", text: "週報" }
+        action: { type: "message", text: "說明" }
       },
       {
         bounds: { x: 1667, y: 843, width: 833, height: 843 },
