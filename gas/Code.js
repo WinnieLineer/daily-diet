@@ -1383,7 +1383,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
         ...breakdownRows,
         ...(calcNote ? [{
           type: "text",
-          text: `💡 ${isEn ? 'Formula' : '公式'}：${calcNote}`,
+          text: `💡 ${isEn ? 'Calculation Process' : '計算過程'}：${calcNote}`,
           size: "xxs",
           color: "#52525B",
           wrap: true,
@@ -1401,7 +1401,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
       borderWidth: "2.5px",
       paddingAll: "10px",
       contents: [
-        { type: "text", text: `🧮 ${isEn ? 'Calculation' : '估算依據'}：${calcNote}`, size: "xxs", color: "#000000", wrap: true }
+        { type: "text", text: `💡 ${isEn ? 'Calculation Process' : '計算過程'}：${calcNote}`, size: "xxs", color: "#000000", wrap: true }
       ]
     }];
   }
