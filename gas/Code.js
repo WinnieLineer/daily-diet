@@ -581,6 +581,13 @@ function doPost(e) {
           }
 
 
+          // 📸 拍照記帳導引 (例如從 Rich Menu 點擊 "拍照" 或 "拍照辨識")
+          if (userText === '拍照' || userText === '拍照辨識' || userText === '拍照記帳' || userText === '拍餐點') {
+            recordSystemLog('拍照引導', userId, userText, '', '發送拍照指引');
+            replyTextMessage(replyToken, "📸 請點擊下方輸入框左側的【📷 相機】或【🖼️ 相簿】圖示，直接拍照或挑選餐點照片傳給我，AI 熊貓立刻為您分析熱量與營養素！🐼✨", CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
           // 查詢今日總結
           if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結') {
             recordSystemLog('查詢總結', userId, userText, '', '已發送今日總結');
