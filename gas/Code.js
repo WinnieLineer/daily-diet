@@ -375,11 +375,24 @@ function doPost(e) {
           continue;
         }
 
-        // 📋 按下【管理今日紀錄】
+        // 📅 按下【選擇歷史日期】(LINE 原生 datetimepicker 滾輪選擇)
+        if (payload.action === 'pickDate' || (event.postback.params && event.postback.params.date)) {
+          const targetDate = (event.postback.params && event.postback.params.date) || payload.date;
+          if (targetDate) {
+            console.log(`📅 [選擇歷史日期] ${targetDate} 用戶: ${userId}`);
+            recordSystemLog('選擇日期', userId, targetDate, '', `已發送 ${targetDate} 歷史總結`);
+            const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, targetDate);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+        }
+
+        // 📋 按下【管理紀錄】(支援當日與歷史日期)
         if (payload.action === 'manageMeals' || payload.action === 'manage') {
-          console.log(`📋 [管理紀錄] 用戶: ${userId}`);
-          recordSystemLog('管理清單', userId, '點擊管理紀錄', '', '已發送管理面板');
-          const mgmtFlex = generateMealManagementFlex(userId, LIFF_ID, userGistId, props);
+          const targetDate = payload.date || null;
+          console.log(`📋 [管理紀錄] 日期: ${targetDate || '今日'} 用戶: ${userId}`);
+          recordSystemLog('管理清單', userId, targetDate ? `管理 ${targetDate}` : '點擊管理紀錄', '', '已發送管理面板');
+          const mgmtFlex = generateMealManagementFlex(userId, LIFF_ID, userGistId, props, targetDate);
           replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
@@ -451,12 +464,13 @@ function doPost(e) {
           continue;
         }
 
-        // 🗑️ 按下【刪除單筆餐點】
+        // 🗑️ 按下【刪除單筆餐點】(支援當日與歷史日期)
         if (payload.action === 'deleteMeal') {
-          console.log(`🗑️ [刪除單筆餐點] 標識: ${payload.id || payload.index}`);
-          recordSystemLog('刪除餐點', userId, `餐點標識: ${payload.id || payload.index}`, '', '已刪除單筆紀錄');
-          deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props);
-          const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+          const targetDate = payload.date || null;
+          console.log(`🗑️ [刪除單筆餐點] 日期: ${targetDate || '今日'} 標識: ${payload.id || payload.index}`);
+          recordSystemLog('刪除餐點', userId, `餐點標識: ${payload.id || payload.index} (${targetDate || '今日'})`, '', '已刪除單筆紀錄');
+          deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props, targetDate);
+          const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, targetDate);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
@@ -621,6 +635,33 @@ function doPost(e) {
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, dateStr);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
+          }
+
+          // 📅 查詢指定歷史日期 (例如: "2026-09-03", "9/3", "9月3日", "查 9/3", "歷史 9/3")
+          const dateMatch = userText.match(/^(?:查|歷史|紀錄)?\s*(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?$/) ||
+                            userText.match(/^(?:查|歷史|紀錄)?\s*(\d{1,2})[-/.月](\d{1,2})日?$/);
+          if (dateMatch) {
+            const now = new Date();
+            let year = now.getFullYear();
+            let month = 0;
+            let day = 0;
+            if (dateMatch.length === 4) {
+              year = parseInt(dateMatch[1]);
+              month = parseInt(dateMatch[2]);
+              day = parseInt(dateMatch[3]);
+            } else if (dateMatch.length === 3) {
+              month = parseInt(dateMatch[1]);
+              day = parseInt(dateMatch[2]);
+            }
+            if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+              const mm = String(month).padStart(2, '0');
+              const dd = String(day).padStart(2, '0');
+              const targetDateStr = `${year}-${mm}-${dd}`;
+              recordSystemLog('查詢歷史日期', userId, userText, targetDateStr, `發送 ${targetDateStr} 歷史總結`);
+              const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, targetDateStr);
+              replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
           }
 
           // 💧 快速喝水打卡 (例如: "喝水 500", "喝水 250ml", "+500水", "喝水")
@@ -1269,6 +1310,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
 
 function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, props, targetDateStr) {
   const todayStr = targetDateStr || getTodayDateString();
+  const isToday = todayStr === getTodayDateString();
   const allLogs = getTodayLogs(userId, todayStr, props, userGistId);
   const goals = getUserGoals(userId, props, userGistId);
 
@@ -1317,19 +1359,29 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   const calPercent = Math.min(100, Math.round((totalCal / calGoal) * 100));
 
   let coachTip = "飲食紀錄養成中，繼續保持！🐼";
-  if (totalCal > calGoal) {
-    coachTip = "今日熱量已達標，晚點多喝水散步消化喔！🔥";
-  } else if (remainingCal <= 400) {
-    coachTip = "熱量控制得非常剛好，即將完美達標！💪";
+  if (isToday) {
+    if (totalCal > calGoal) {
+      coachTip = "今日熱量已達標，晚點多喝水散步消化喔！🔥";
+    } else if (remainingCal <= 400) {
+      coachTip = "熱量控制得非常剛好，即將完美達標！💪";
+    } else {
+      coachTip = `今天還可以再補充約 ${remainingCal} kcal 的營養餐點！🥗`;
+    }
   } else {
-    coachTip = `今天還可以再補充約 ${remainingCal} kcal 的營養餐點！🥗`;
+    coachTip = `這是 ${todayStr} 的歷史戰報！當天總熱量達成率為 ${calPercent}% 🐼`;
   }
 
   const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?gistId=${userGistId}` : `https://liff.line.me/${liffId}`;
 
+  const headerTitle = isToday
+    ? (justSavedMeal ? "✅ 紀錄成功！今日總結" : "📊 今日飲食進度看板")
+    : `📅 ${todayStr} 歷史總結`;
+
   return {
     type: "flex",
-    altText: `📊 今日飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`,
+    altText: isToday
+      ? `📊 今日飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`
+      : `📅 ${todayStr} 飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`,
     contents: {
       type: "bubble",
       size: "mega",
@@ -1349,7 +1401,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
           },
           {
             type: "text",
-            text: justSavedMeal ? "✅ 紀錄成功！今日總結" : "📊 今日飲食進度看板",
+            text: headerTitle,
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
@@ -1377,7 +1429,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🔥 今日總熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: isToday ? "🔥 今日總熱量" : "🔥 當日總熱量", size: "xxs", color: "#E11D48", weight: "bold" },
                   { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `${calPercent}%`, size: "xxs", color: "#71717A", weight: "bold" }
                 ]
@@ -1391,7 +1443,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🥩 今日蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: isToday ? "🥩 今日蛋白質" : "🥩 當日蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
                   { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
                 ]
@@ -1405,7 +1457,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "💧 今日水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: isToday ? "💧 今日水分" : "💧 當日水分", size: "xxs", color: "#0891B2", weight: "bold" },
                   { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `ml`, size: "xxs", color: "#164E63", weight: "bold" }
                 ]
@@ -1420,8 +1472,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             paddingAll: "10px",
             spacing: "xs",
             contents: [
-              { type: "text", text: `🍱 今日已記 ${allLogs.length} 餐：`, size: "xs", weight: "bold", color: "#000000" },
-              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: "今日尚未有飲食紀錄", size: "xs", color: "#A1A1AA" }])
+              { type: "text", text: isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`, size: "xs", weight: "bold", color: "#000000" },
+              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄", size: "xs", color: "#A1A1AA" }])
             ]
           },
           {
@@ -1449,22 +1501,45 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             color: "#000000",
             action: {
               type: "postback",
-              label: "📋 管理今日紀錄",
-              data: JSON.stringify({ action: 'manageMeals' }),
-              displayText: "📋 管理今日紀錄"
+              label: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`,
+              data: JSON.stringify({ action: 'manageMeals', date: todayStr }),
+              displayText: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`
             }
           },
           {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FEF9C3",
-            action: {
-              type: "postback",
-              label: "📊 查看 7 日趨勢週報",
-              data: JSON.stringify({ action: 'viewWeeklyTrends' }),
-              displayText: "📊 查看 7 日趨勢週報"
-            }
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#EFF6FF",
+                flex: 1,
+                action: {
+                  type: "datetimepicker",
+                  label: "📅 查其他日期",
+                  data: JSON.stringify({ action: 'pickDate' }),
+                  mode: "date",
+                  initial: todayStr,
+                  max: getTodayDateString()
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FEF9C3",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "📊 7 日週報",
+                  data: JSON.stringify({ action: 'viewWeeklyTrends' }),
+                  displayText: "📊 查看 7 日趨勢週報"
+                }
+              }
+            ]
           }
         ]
       }
@@ -2782,8 +2857,9 @@ function syncGoalsToUserGist(goals, gistId, pat) {
 // 📋 6. 今日餐點管理面板 (Neo-Brutalist 視覺設計)
 // ========================================================
 
-function generateMealManagementFlex(userId, liffId, userGistId, props) {
-  const todayStr = getTodayDateString();
+function generateMealManagementFlex(userId, liffId, userGistId, props, targetDateStr) {
+  const todayStr = targetDateStr || getTodayDateString();
+  const isToday = todayStr === getTodayDateString();
   const allLogs = getTodayLogs(userId, todayStr, props, userGistId);
   const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
@@ -2799,7 +2875,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
       paddingAll: "16px",
       alignItems: "center",
       contents: [
-        { type: "text", text: "🍱 今日尚未記錄任何餐點喔！", size: "sm", color: "#713F12", weight: "bold" },
+        { type: "text", text: isToday ? "🍱 今日尚未記錄任何餐點喔！" : `🍱 ${todayStr} 無任何飲食紀錄喔！`, size: "sm", color: "#713F12", weight: "bold" },
         { type: "text", text: "傳送照片或輸入菜名，熊貓教練幫您記錄！🐼", size: "xs", color: "#A16207", margin: "xs" }
       ]
     });
@@ -2913,7 +2989,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
                 action: {
                   type: "postback",
                   label: "🗑️ 刪除",
-                  data: JSON.stringify({ action: 'deleteMeal', id: log.id, index: index }),
+                  data: JSON.stringify({ action: 'deleteMeal', id: log.id, index: index, date: todayStr }),
                   displayText: `🗑️ 刪除餐點：${log.dish_name}`
                 }
               }
@@ -2926,7 +3002,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
 
   return {
     type: "flex",
-    altText: `📋 今日餐點管理清單（共 ${allLogs.length} 餐，累計 ${totalCal} kcal）`,
+    altText: `📋 ${isToday ? '今日' : todayStr} 餐點管理清單（共 ${allLogs.length} 餐，累計 ${totalCal} kcal）`,
     contents: {
       type: "bubble",
       size: "mega",
@@ -2946,7 +3022,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
           },
           {
             type: "text",
-            text: "📋 今日餐點管理清單",
+            text: isToday ? "📋 今日餐點管理清單" : `📋 ${todayStr} 餐點管理清單`,
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
@@ -2954,7 +3030,7 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
           },
           {
             type: "text",
-            text: `今日已記錄 ${allLogs.length} 餐 ｜ 累計攝取 ${totalCal} kcal`,
+            text: `${isToday ? '今日' : '該日'}已記錄 ${allLogs.length} 餐 ｜ 累計攝取 ${totalCal} kcal`,
             color: "#FDE047",
             size: "xxs",
             margin: "xs"
@@ -2982,12 +3058,47 @@ function generateMealManagementFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "postback",
-              label: "📊 查看 7 日趨勢週報",
-              data: JSON.stringify({ action: 'viewWeeklyTrends' }),
-              displayText: "📊 查看 7 日趨勢週報"
+              label: isToday ? "📊 查看今日總結" : `📊 查看 ${todayStr} 總結`,
+              data: JSON.stringify({ action: 'pickDate', date: todayStr }),
+              displayText: isToday ? "📊 查看今日總結" : `📊 查看 ${todayStr} 總結`
             }
           },
-          ...(allLogs.length > 0 ? [{
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#EFF6FF",
+                flex: 1,
+                action: {
+                  type: "datetimepicker",
+                  label: "📅 換其他日期",
+                  data: JSON.stringify({ action: 'pickDate' }),
+                  mode: "date",
+                  initial: todayStr,
+                  max: getTodayDateString()
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FEF9C3",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "📈 7 日週報",
+                  data: JSON.stringify({ action: 'viewWeeklyTrends' }),
+                  displayText: "📊 查看 7 日趨勢週報"
+                }
+              }
+            ]
+          },
+          ...(isToday && allLogs.length > 0 ? [{
             type: "button",
             style: "secondary",
             height: "sm",
@@ -3325,16 +3436,39 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
             }
           },
           {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#F4F4F5",
-            action: {
-              type: "postback",
-              label: "📊 查看今日總結",
-              data: JSON.stringify({ action: 'save' }),
-              displayText: "📊 查看今日總結"
-            }
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#EFF6FF",
+                flex: 1,
+                action: {
+                  type: "datetimepicker",
+                  label: "📅 查指定日期",
+                  data: JSON.stringify({ action: 'pickDate' }),
+                  mode: "date",
+                  initial: getTodayDateString(),
+                  max: getTodayDateString()
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FEF9C3",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: "📊 今日總結",
+                  data: JSON.stringify({ action: 'save' }),
+                  displayText: "📊 查看今日總結"
+                }
+              }
+            ]
           }
         ]
       }
@@ -4166,13 +4300,13 @@ function syncFavoritesToUserGist(favorites, gistId, pat) {
   }
 }
 
-function deleteMealLog(userId, mealIdOrName, userGistId, pat, props) {
+function deleteMealLog(userId, mealIdOrName, userGistId, pat, props, targetDateStr) {
   const lock = LockService.getScriptLock();
   try { lock.waitLock(30000); } catch (e) {}
   try {
-    const todayStr = getTodayDateString();
+    const todayStr = targetDateStr || getTodayDateString();
     const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
-    let logs = getTodayLogs(userId, todayStr, props);
+    let logs = getTodayLogs(userId, todayStr, props, userGistId);
 
     if (logs.length === 0) return false;
 
