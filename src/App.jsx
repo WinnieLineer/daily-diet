@@ -14,7 +14,7 @@ import { syncMealToCloud, syncDeleteMealToCloud } from './lib/syncService';
 import { getPandaAdvice } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
-import { t, getLanguage } from './lib/translations';
+import { t, getLanguage, setLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
 import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
@@ -710,6 +710,26 @@ function App() {
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);
   const [incomingMeal, setIncomingMeal] = useState(null);
+  const [currentLang, setCurrentLang] = useState(() => getLanguage());
+
+  const toggleLanguage = async () => {
+    const nextLang = currentLang === 'en' ? 'zh' : 'en';
+    setLanguage(nextLang);
+    setCurrentLang(nextLang);
+    try {
+      await db.settings.put({ key: 'app_language', value: nextLang });
+    } catch (e) {}
+    setAdvice('');
+    await refreshData('none');
+
+    const effectiveUserId = localStorage.getItem('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
+    if (effectiveUserId) {
+      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+      try {
+        fetch(`${GAS_URL}?action=updateLanguage&userId=${encodeURIComponent(effectiveUserId)}&lang=${nextLang}`, { mode: 'no-cors' });
+      } catch (e) {}
+    }
+  };
 
   useEffect(() => {
     const initLiffAndQueryParams = async () => {
@@ -744,6 +764,15 @@ function App() {
           window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: query.tab } }));
         }, 400);
       }
+
+      // Check stored language preference from local db
+      try {
+        const storedLang = await db.settings.get('app_language');
+        if (storedLang && storedLang.value) {
+          setLanguage(storedLang.value);
+          setCurrentLang(storedLang.value);
+        }
+      } catch (e) {}
 
       // 2. Initialize LINE LIFF
       let profile = null;
@@ -1617,6 +1646,16 @@ function App() {
             )}
           </div>
           <div className="flex items-center gap-1 sm:gap-2">
+            {/* 🌐 Fast 1-Tap Bilingual Language Switcher */}
+            <NeoButton 
+              variant="white"
+              className="h-9 sm:h-10 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 font-black text-[10px] sm:text-xs hover:bg-zinc-100"
+              onClick={toggleLanguage}
+              title={currentLang === 'en' ? "切換至繁體中文 (Switch to Chinese)" : "Switch to English (切換至英文)"}
+            >
+              <span className="text-xs">🌐</span>
+              <span className="font-mono font-black">{currentLang === 'en' ? 'EN' : '中'}</span>
+            </NeoButton>
             <NeoButton 
               variant={new Date().getDay() === 0 ? "accent" : "black"} 
               className={`w-9 h-9 sm:w-10 sm:h-10 p-0 flex items-center justify-center relative shrink-0 ${new Date().getDay() === 0 ? 'bg-accent text-black border-black animate-pulse' : ''}`}
@@ -1636,7 +1675,10 @@ function App() {
                 initialTab={settingsTab} 
                 onGoalsUpdated={refreshData} 
                 onWatchTutorial={() => setShowOnboarding(true)}
-                onLanguageChanged={() => setAdvice('')}
+                onLanguageChanged={() => {
+                  setAdvice('');
+                  setCurrentLang(getLanguage());
+                }}
                 userName={userName}
                 onSetUserName={handleNameSave}
                 onToggleLayoutEdit={() => setIsEditingLayout(!isEditingLayout)}

@@ -189,6 +189,7 @@ function doGet(e) {
     const goals = getUserGoals(userId, props, incomingGist);
     const persona = getUserPersona(userId, props, incomingGist, pat);
 
+    const userLanguage = getUserLanguage(userId, props, incomingGist, pat);
     return ContentService.createTextOutput(JSON.stringify({
       status: 'ok',
       userId,
@@ -196,6 +197,7 @@ function doGet(e) {
       todayLogs,
       goals,
       persona,
+      language: userLanguage,
       favorites: getUserFavorites(userId, props, incomingGist)
     })).setMimeType(ContentService.MimeType.JSON);
   }
@@ -291,6 +293,16 @@ function doGet(e) {
     setUserPersona(userId, persona, userGistId, pat, props);
     recordSystemLog('Web更新性格', userId, persona, '', '已同步更新教練性格');
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', persona }))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // 10. Web App 觸發更新語言偏好 (支援中英雙語)
+  if (action === 'updateLanguage' && userId) {
+    const lang = e?.parameter?.lang || 'zh';
+    const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
+    const updated = setUserLanguage(userId, lang, userGistId, pat, props);
+    recordSystemLog('Web更新語言', userId, updated, '', '已同步更新用戶語言為 ' + updated);
+    return ContentService.createTextOutput(JSON.stringify({ status: 'ok', language: updated }))
       .setMimeType(ContentService.MimeType.JSON);
   }
 
@@ -533,6 +545,24 @@ function doPost(e) {
           continue;
         }
 
+        // 🌐 語言設定 Postback
+        if (payload.action === 'setLanguage') {
+          const chosen = setUserLanguage(userId, payload.lang, userGistId, GITHUB_PAT, props);
+          if (chosen === 'en') {
+            replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, estimate nutrients, and respond in English!\n\n(Type \"中文\" anytime to switch back)", CHANNEL_ACCESS_TOKEN, userId, props);
+          } else {
+            replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練會以繁體中文為您分析餐點與計算營養囉！\n\n（輸入「English」可隨時切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
+          }
+          continue;
+        }
+
+        if (payload.action === 'chooseLanguage') {
+          const curLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
+          const langFlex = generateLanguageSelectionFlex(userId, LIFF_ID, userGistId, curLang);
+          replyFlexMessage(replyToken, langFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 🎭 按下【切換教練性格】
         if (payload.action === 'setPersona') {
           const newPersona = payload.persona || 'tsundere';
@@ -741,6 +771,27 @@ function doPost(e) {
         else if (event.message.type === 'text') {
           const userText = event.message.text.trim();
           console.log(`💬 [收到用戶文字] "${userText}"`);
+
+          // 🌐 雙語切換 (支援中文/英文雙向切換)
+          if (userText === '切換語言' || userText === '換語言' || userText === '語言' || userText === '雙語' || userText.toLowerCase() === 'language' || userText.toLowerCase() === 'switch language') {
+            const curLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
+            recordSystemLog('切換語言', userId, userText, curLang, '發送語言選擇卡片');
+            const langFlex = generateLanguageSelectionFlex(userId, LIFF_ID, userGistId, curLang);
+            replyFlexMessage(replyToken, langFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          if (userText.toLowerCase() === 'english' || userText === '英文' || userText === '切換英文' || userText === '切換成英文') {
+            setUserLanguage(userId, 'en', userGistId, GITHUB_PAT, props);
+            replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, calculate nutrition, and reply in English!\n\n(Tip: Type \"中文\" anytime to switch back to Chinese)", CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          if (userText === '中文' || userText === '繁體中文' || userText.toLowerCase() === 'chinese' || userText === '切換中文' || userText === '切換成中文') {
+            setUserLanguage(userId, 'zh', userGistId, GITHUB_PAT, props);
+            replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練將會以繁體中文為您分析飲食與計算營養囉！\n\n（隨時輸入「English」可切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
 
           // 🎭 切換教練性格 (例如: "切換性格", "換教練", "性格", "溫柔模式", "傲嬌模式", "鐵血模式")
           if (userText === '切換性格' || userText === '換教練' || userText === '教練性格' || userText === '性格' || userText === '教練' || userText === '多重性格') {
@@ -1329,7 +1380,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: isEn ? "🔥 Calories" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
                   { type: "text", text: `${analysis.calories}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: "kcal", size: "xxs", color: "#881337", weight: "bold" }
                 ]
@@ -1343,9 +1394,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
                   { type: "text", text: `${analysis.protein}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: "克", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                  { type: "text", text: isEn ? "grams" : "克", size: "xxs", color: "#1E3A8A", weight: "bold" }
                 ]
               },
               {
@@ -1357,7 +1408,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
                   { type: "text", text: `${analysis.water || 0}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
                 ]
@@ -1975,6 +2026,160 @@ function generateFallbackComment(dishName, calories, protein, persona = 'tsunder
   return `哼，勉強幫你記下「${dishName}」了，下一餐記得多補充點蔬菜跟水分！🐼`;
 }
 
+function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
+  const isEn = curLang === 'en';
+  const appTargetUrl = (liffId ? `https://liff.line.me/${liffId}?tab=profile` : '') + (userGistId ? `&gistId=${userGistId}` : '');
+
+  return {
+    type: "flex",
+    altText: "🌐 語言設定 / Select Language",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: "🌐 LANGUAGE", color: "#A1A1AA", size: "xs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: "🌐 語言設定 / Select Language",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            margin: "xs"
+          },
+          {
+            type: "text",
+            text: "請選擇您偏好的語言模式 / Choose preferred language",
+            color: "#A1A1AA",
+            size: "xxs",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: !isEn ? "#FEF9C3" : "#F8FAFC",
+            borderColor: "#000000",
+            borderWidth: !isEn ? "3px" : "1.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "🇹🇼 繁體中文 (Traditional Chinese)", weight: "bold", size: "sm", color: "#000000", flex: 1 },
+                  ...(!isEn ? [{ type: "text", text: "✓ 使用中", weight: "bold", size: "xs", color: "#854D0E", align: "end" }] : [])
+                ]
+              },
+              {
+                type: "text",
+                text: "適合台灣/港澳使用者，提供貼切的生活化飲食分析與道地教練點評。",
+                size: "xxs",
+                color: "#64748B",
+                wrap: true,
+                margin: "xs"
+              },
+              {
+                type: "button",
+                style: !isEn ? "primary" : "secondary",
+                height: "sm",
+                color: !isEn ? "#FDE047" : "#FFFFFF",
+                margin: "sm",
+                action: {
+                  type: "postback",
+                  label: !isEn ? "✅ 保持繁體中文" : "切換至繁體中文",
+                  data: JSON.stringify({ action: 'setLanguage', lang: 'zh' }),
+                  displayText: "切換成中文"
+                }
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: isEn ? "#FEF9C3" : "#F8FAFC",
+            borderColor: "#000000",
+            borderWidth: isEn ? "3px" : "1.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "🇺🇸 English (Bilingual Mode)", weight: "bold", size: "sm", color: "#000000", flex: 1 },
+                  ...(isEn ? [{ type: "text", text: "✓ Active", weight: "bold", size: "xs", color: "#854D0E", align: "end" }] : [])
+                ]
+              },
+              {
+                type: "text",
+                text: "Food names, portion breakdowns, and coach commentary will be analyzed and delivered in English.",
+                size: "xxs",
+                color: "#64748B",
+                wrap: true,
+                margin: "xs"
+              },
+              {
+                type: "button",
+                style: isEn ? "primary" : "secondary",
+                height: "sm",
+                color: isEn ? "#FDE047" : "#FFFFFF",
+                margin: "sm",
+                action: {
+                  type: "postback",
+                  label: isEn ? "✅ Active (English)" : "Switch to English",
+                  data: JSON.stringify({ action: 'setLanguage', lang: 'en' }),
+                  displayText: "Switch to English"
+                }
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          ...(appTargetUrl ? [{
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "uri",
+              label: "📱 開啟 Web App 完整設定",
+              uri: appTargetUrl
+            }
+          }] : [])
+        ]
+      }
+    }
+  };
+}
+
 function generatePersonaSelectionFlex(userId, liffId, userGistId, props) {
   const currentPersona = getUserPersona(userId, props, userGistId);
   const personas = [
@@ -2260,30 +2465,38 @@ function analyzeMealWithGemini(base64Image, apiKey, userId, props, userGistId, p
 
   const userPersona = getUserPersona(userId, props, userGistId, pat);
   const personaInstruction = getPersonaInstruction(userPersona);
+  const userLang = getUserLanguage(userId, props, userGistId, pat);
+  const isEn = userLang === 'en';
+
+  const langDirective = isEn 
+    ? `LANGUAGE REQUIREMENT: Output strictly in ENGLISH (US English).
+- "dish_name": English name of the meal (e.g. "Crispy Fried Chicken with Rice and Cabbage").
+- "breakdown": item names and portion estimates in English (e.g. "Fried chicken drumstick ~180g", "Steamed white rice ~160g").
+- "calculation_note": full calculation formula in English.
+- "panda_comment": keep strictly under 35 English words, in your designated persona style.`
+    : `LANGUAGE REQUIREMENT: Output strictly in TRADITIONAL CHINESE (繁體中文).
+- "dish_name": 餐點名稱 (繁體中文).
+- "breakdown": 食材名稱與份量估算 (繁體中文).
+- "calculation_note": 計算公式簡述 (繁體中文).
+- "panda_comment": 繁體中文 35 字以內，符合性格設定。`;
 
   const prompt = `You are a professional nutrition expert panda. Analyze this food image. Return STRICTLY a raw JSON object. NO MARKDOWN.
 ${personaInstruction}
+${langDirective}
 
 CRITICAL NUTRITIONAL EVALUATION RULES FOR "panda_comment":
-1. NEVER give generic polite compliments. NEVER say "這餐看起來營養很均衡喔" or "營養很豐富" unless the meal truly contains high dietary fiber/vegetables, lean quality protein, and unprocessed complex carbs in ideal proportion.
+1. NEVER give generic polite compliments. Never say generic "looks balanced" unless the meal truly contains high dietary fiber/vegetables, lean quality protein, and unprocessed complex carbs.
 2. Critically inspect the meal:
    - High oil / deep-fried / greasy / high sodium: roast the grease/sodium in character, warn about excess fat calories, and demand drinking water.
-   - High refined sugar / dessert / sweet beverage / boba tea: roast the blood sugar spike and lack of satiety.
-   - Heavy carbs (white rice, noodles, pastry) with little protein/veg: point out the muscle-wasting protein deficit and lack of fiber.
+   - High refined sugar / dessert / sweet beverage: roast the blood sugar spike and lack of satiety.
+   - Heavy carbs with little protein/veg: point out the muscle-wasting protein deficit and lack of fiber.
    - High protein: acknowledge the good protein intake in character, but check if veggies/fiber are missing.
    - If truly balanced: praise specific good components.
 3. Provide EXACTLY 1 actionable, practical improvement tip for the next meal or rest of the day.
-4. Keep "panda_comment" strictly under 35 Traditional Chinese characters (繁體中文), matching your persona style.
-
-IMPORTANT - NUTRITIONAL BREAKDOWN & CALCULATION PROCESS:
-Itemize every visible food item and ingredient in "breakdown":
-- Provide estimated visual portion size (e.g. "1 塊約 150g", "1 碗約 160g", "1 碟約 80g")
-- Provide estimated calories and protein for each item
-- Provide "calculation_note" explaining the full calculation process in Traditional Chinese (e.g. "炸雞腿(約180g, 380卡) + 白飯(約160g, 220卡) + 炒高麗菜(約80g, 50卡) = 總計 650 kcal")
 
 Required Schema:
 {
-  "dish_name": "餐點名稱 (Traditional Chinese)",
+  "dish_name": "Meal Name (${isEn ? 'English' : 'Traditional Chinese'})",
   "calories": <integer calories in kcal, 0 if unknown>,
   "protein": <integer protein in grams, 0 if unknown>,
   "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
@@ -5006,6 +5219,27 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                       type: "uri",
                       label: "🐛 回報問題 (表單)",
                       uri: userGistId ? `https://liff.line.me/${liffId}?tab=feedback&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=feedback`
+                    }
+                  }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                margin: "xs",
+                contents: [
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#E0F2FE",
+                    flex: 1,
+                    action: {
+                      type: "postback",
+                      label: "🌐 語言 / Language",
+                      data: JSON.stringify({ action: 'chooseLanguage' }),
+                      displayText: "切換語言"
                     }
                   }
                 ]

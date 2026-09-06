@@ -411,10 +411,21 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     setShowCalculator(false);
   };
 
-  const handleLanguageChange = (lang) => {
+  const handleLanguageChange = async (lang) => {
     setLanguage(lang);
+    try {
+      await db.settings.put({ key: 'app_language', value: lang });
+    } catch (e) {}
     if (onLanguageChanged) onLanguageChanged();
     onGoalsUpdated();
+
+    const effectiveUserId = localStorage.getItem('line_user_id');
+    if (effectiveUserId) {
+      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+      try {
+        fetch(`${GAS_URL}?action=updateLanguage&userId=${encodeURIComponent(effectiveUserId)}&lang=${lang}`, { mode: 'no-cors' });
+      } catch (e) {}
+    }
   };
 
   const handleCloudBackup = async () => {
