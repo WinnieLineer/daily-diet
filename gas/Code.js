@@ -479,12 +479,12 @@ function doPost(e) {
           continue;
         }
 
-        // ❌ 按下【取消 / 放棄不記錄】
+        // 🗑️ 按下【撤回這筆紀錄】
         else if (payload.action === 'cancel') {
           if (payload.id || payload.name) {
             deleteMealLog(userId, payload.id || payload.name, userGistId, GITHUB_PAT, props);
-            recordSystemLog('取消紀錄', userId, payload.name || payload.id, '', '已自資料庫刪除此筆餐點');
-            replyTextMessage(replyToken, "👌 已取消並自資料庫刪除此筆餐點。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN, userId, props);
+            recordSystemLog('撤回紀錄', userId, payload.name || payload.id, '', '已自資料庫撤回並刪除此筆餐點');
+            replyTextMessage(replyToken, "👌 已成功為您撤回並刪除此筆餐點紀錄。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             replyTextMessage(replyToken, "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼", CHANNEL_ACCESS_TOKEN, userId, props);
           }
@@ -1048,7 +1048,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
 
           {
             type: "text",
-            text: "請確認營養數值，點擊儲存或微調：",
+            text: "⚡ 餐點已自動入帳！數值有誤差可點擊微調：",
             size: "xxs",
             color: "#71717A",
             align: "center",
@@ -1069,9 +1069,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             color: "#000000",
             action: {
               type: "postback",
-              label: "💾 儲存並看今日總結",
+              label: "📊 查看今日總結",
               data: postbackSaveData,
-              displayText: `💾 儲存餐點：${analysis.dish_name}`
+              displayText: "📊 查看今日總結"
             }
           },
           {
@@ -1087,7 +1087,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 color: "#F4F4F5",
                 action: {
                   type: "postback",
-                  label: "✏️ 填入微調",
+                  label: "✏️ 微調內容",
                   data: JSON.stringify({ action: 'fillEdit' }),
                   inputOption: "openKeyboard",
                   fillInText: `${analysis.dish_name} ${analysis.calories}卡 ${analysis.protein || 0}蛋 ${analysis.water || 0}水`
@@ -1101,9 +1101,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 color: "#FEF9C3",
                 action: {
                   type: "postback",
-                  label: "⭐ 加常用",
+                  label: "⭐ 存為常用",
                   data: postbackFavData,
-                  displayText: `⭐ 收藏至常用：${analysis.dish_name}`
+                  displayText: `⭐ 存為常用：${analysis.dish_name}`
                 }
               }
             ]
@@ -1115,9 +1115,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             color: "#FFF1F2",
             action: {
               type: "postback",
-              label: "❌ 取消不記錄",
+              label: "🗑️ 撤回這筆紀錄",
               data: postbackCancelData,
-              displayText: "❌ 取消紀錄"
+              displayText: "🗑️ 撤回這筆紀錄"
             }
           }
         ]
@@ -2927,7 +2927,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
         contents: [
           {
             type: "text",
-            text: "💡 提示：拍照辨識後點擊「⭐ 加常用」，或點擊下方直接填入自訂指令！",
+            text: "💡 提示：拍照辨識後點擊「⭐ 存為常用」，或點擊下方直接填入自訂指令！",
             size: "xs",
             color: "#71717A",
             wrap: true

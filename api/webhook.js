@@ -145,8 +145,8 @@ export default async function handler(req, res) {
           await replyLineMessage(replyToken, replyText, channelAccessToken);
 
         } else if (payload.a === 'cancel') {
-          // ❌ 用戶取消記錄
-          await replyLineMessage(replyToken, `👌 已取消記錄此餐點。\n您可以隨時再傳送照片或手動輸入飲食！🐼`, channelAccessToken);
+          // 🗑️ 用戶撤回記錄
+          await replyLineMessage(replyToken, `👌 已為您撤回並刪除此筆餐點紀錄。\n您可以隨時再傳送照片或手動輸入飲食！🐼`, channelAccessToken);
         }
       }
 
@@ -278,7 +278,7 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
           },
           {
             type: 'text',
-            text: '請確認營養數值，點擊儲存或直接開啟 App 微調：',
+            text: '⚡ 餐點已自動入帳！數值有誤差可直接開啟 App 微調：',
             size: 'xxs',
             color: '#71717A',
             align: 'center',
@@ -299,21 +299,21 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
             color: '#000000',
             action: {
               type: 'postback',
-              label: '💾 確認儲存並看今日總結',
+              label: '📊 查看今日總結',
               data: postbackData,
-              displayText: `💾 確認儲存餐點：${analysis.dish_name}`
+              displayText: '📊 查看今日總結'
             }
           },
           {
             type: 'button',
             style: 'secondary',
             height: 'sm',
-            color: '#F4F4F5',
+            color: '#FFF1F2',
             action: {
               type: 'postback',
-              label: '❌ 取消',
+              label: '🗑️ 撤回這筆紀錄',
               data: cancelData,
-              displayText: '❌ 取消紀錄'
+              displayText: '🗑️ 撤回這筆紀錄'
             }
           }
         ]
