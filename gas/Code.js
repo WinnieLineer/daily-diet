@@ -703,6 +703,15 @@ function doPost(e) {
             }
           }
 
+          // 🐛 問題回報 / Bug Report / 意見反饋
+          if (userText.startsWith('回報') || userText.startsWith('bug') || userText.startsWith('Bug') || userText.startsWith('BUG') || userText.startsWith('問題') || userText.startsWith('建議') || userText.startsWith('反饋') || userText.startsWith('報錯')) {
+            console.log(`🐛 [收到問題回報] 用戶 ${userId}: ${userText}`);
+            recordSystemLog('問題回報', userId, userText, '', '已成功記錄用戶問題回報');
+            const ackFlex = generateBugReportAckFlex(userText);
+            replyFlexMessage(replyToken, ackFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
           // 💡 說明 / 指令 / 教學 / 歡迎 / 功能清單 / 免責聲明 (呼叫所有功能選項)
           if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
             recordSystemLog('使用說明', userId, userText, '', '發送操作說明與功能手冊卡片');
@@ -4381,6 +4390,87 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props) {
 }
 
 // 🛠️ 操作說明與所有功能手冊清單 (輸入「說明」或「指令」即刻呼叫全部選項)
+
+function generateBugReportAckFlex(userText) {
+  return {
+    type: "flex",
+    altText: "🛠️ 感謝您的問題回報！我們已收到您的寶貴反饋",
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#18181B",
+        paddingAll: "14px",
+        contents: [
+          { type: "text", text: "🛠️ 問題回報已送達！", weight: "bold", size: "md", color: "#FDE047" },
+          { type: "text", text: "工程團隊已即時收到您的反饋 🐼❤️", size: "xxs", color: "#A1A1AA", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "text",
+            text: "感謝您協助讓 Daily Diet 變得更穩定！我們已記錄：",
+            size: "xs",
+            color: "#3F3F46",
+            wrap: true
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF2F2",
+            borderColor: "#FECACA",
+            borderWidth: "1.5px",
+            cornerRadius: "8px",
+            paddingAll: "10px",
+            contents: [
+              {
+                type: "text",
+                text: userText || '無文字詳情',
+                size: "xs",
+                color: "#991B1B",
+                wrap: true,
+                weight: "bold"
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: "開發團隊將會第一時間排查並修復，謝謝您的支持！",
+            size: "xxs",
+            color: "#71717A",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "10px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "message",
+              label: "💡 查看全功能手冊",
+              text: "說明"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
 function generateCommandMenuFlex(userId, liffId, userGistId, props) {
   const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + userId + (userGistId ? '&gistId=' + userGistId : '');
   const todayStr = getTodayDateString();
@@ -4608,6 +4698,19 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
               type: "uri",
               label: "📱 開啟個人飲食日記 (Web App)",
               uri: appTargetUrl
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FEE2E2",
+            action: {
+              type: "postback",
+              label: "🐛 回報問題 / 意見反饋",
+              data: JSON.stringify({ action: 'fillBugReport' }),
+              inputOption: "openKeyboard",
+              fillInText: "回報: "
             }
           }
         ]
