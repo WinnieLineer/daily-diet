@@ -111,4 +111,24 @@ export async function syncPersonaToCloud(persona) {
   } catch (err) {}
 }
 
+/**
+ * 即時同步語言偏好至 LINE 後端與 Gist，並觸發 LINE 圖文選單換檔 (中/英)
+ */
+export async function syncLanguageToCloud(lang) {
+  const { userId, gistId } = getEffectiveIds();
+  const validLang = lang === 'en' ? 'en' : 'zh';
+  const params = new URLSearchParams({
+    action: 'updateLanguage',
+    userId,
+    lang: validLang
+  });
+  if (gistId) params.append('gistId', gistId);
+
+  try {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+    console.log(`🌐 [Web ➔ LINE Sync] 即時同步語言設定: ${validLang} (已向 LINE 後端發出選單與回覆語言切換指令)`);
+  } catch (err) {}
+}
+
+
 

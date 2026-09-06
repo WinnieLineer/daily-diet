@@ -149,19 +149,46 @@ function doGet(e) {
   }
   if (!userId) userId = 'default_user';
 
-  // 🚀 0. 觸發一鍵部署原生相機圖文選單 (LINE Messaging API 官方相機直開)
-  if (action === 'deployRichMenu') {
+  // 🚀 0. 觸發一鍵部署原生相機圖文選單 (支援中英文雙語選單)
+  if (action === 'deployRichMenu' || action === 'setupRichMenu') {
     const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
     const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
     try {
       const richMenuId = setupNativeCameraRichMenu(token, liffId, props);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', richMenuId, message: '原生相機圖文選單已成功部署並設為全域預設！' }))
-        .setMimeType(ContentService.MimeType.JSON);
+      let enRichMenuId = '';
+      try {
+        enRichMenuId = setupEnglishNativeCameraRichMenu(token, liffId, props);
+      } catch (enErr) {
+        console.warn('部署英文選單警告:', enErr);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'ok', 
+        richMenuId, 
+        enRichMenuId, 
+        message: '中英文原生相機圖文選單已成功部署！' 
+      })).setMimeType(ContentService.MimeType.JSON);
     } catch (err) {
       return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
         .setMimeType(ContentService.MimeType.JSON);
     }
   }
+
+  if (action === 'deployEnglishRichMenu') {
+    const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+    const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
+    try {
+      const enRichMenuId = setupEnglishNativeCameraRichMenu(token, liffId, props);
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'ok', 
+        enRichMenuId, 
+        message: '英文原生相機圖文選單已成功部署！' 
+      })).setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
 
   // 1. 查詢/綁定個人 Gist ID
   if (action === 'getGistId' && userId) {
@@ -297,15 +324,17 @@ function doGet(e) {
       .setMimeType(ContentService.MimeType.JSON);
   }
 
-  // 10. Web App 觸發更新語言偏好 (支援中英雙語)
+  // 10. Web App 觸發更新語言偏好 (支援中英雙語，並即時切換用戶 LINE 圖文選單)
   if (action === 'updateLanguage' && userId) {
     const lang = e?.parameter?.lang || 'zh';
     const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
     const updated = setUserLanguage(userId, lang, userGistId, pat, props);
-    recordSystemLog('Web更新語言', userId, updated, '', '已同步更新用戶語言為 ' + updated);
+    switchUserRichMenuByLanguage(userId, updated, props);
+    recordSystemLog('Web更新語言', userId, updated, '', '已同步更新用戶語言為 ' + updated + ' 並切換 LINE 選單');
     return ContentService.createTextOutput(JSON.stringify({ status: 'ok', language: updated }))
       .setMimeType(ContentService.MimeType.JSON);
   }
+
 
 
   // 6. 實時運作日誌 API (提供 JSON)
@@ -572,13 +601,15 @@ function doPost(e) {
         // 🌐 語言設定 Postback
         if (payload.action === 'setLanguage') {
           const chosen = setUserLanguage(userId, payload.lang, userGistId, GITHUB_PAT, props);
+          switchUserRichMenuByLanguage(userId, chosen, props);
           if (chosen === 'en') {
-            replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, estimate nutrients, and respond in English!\n\n(Type \"中文\" anytime to switch back)", CHANNEL_ACCESS_TOKEN, userId, props);
+            replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, estimate nutrients, and respond in English!\nYour Rich Menu has also been updated to English.\n\n(Type \"中文\" anytime to switch back)", CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
-            replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練會以繁體中文為您分析餐點與計算營養囉！\n\n（輸入「English」可隨時切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
+            replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練會以繁體中文為您分析餐點與計算營養囉！\n圖文選單也已為您切換為繁體中文。\n\n（輸入「English」可隨時切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
           }
           continue;
         }
+
 
         if (payload.action === 'chooseLanguage') {
           const curLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
@@ -841,15 +872,18 @@ function doPost(e) {
 
           if (userText.toLowerCase() === 'english' || userText === '英文' || userText === '切換英文' || userText === '切換成英文') {
             setUserLanguage(userId, 'en', userGistId, GITHUB_PAT, props);
-            replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, calculate nutrition, and reply in English!\n\n(Tip: Type \"中文\" anytime to switch back to Chinese)", CHANNEL_ACCESS_TOKEN, userId, props);
+            switchUserRichMenuByLanguage(userId, 'en', props);
+            replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, calculate nutrition, and reply in English!\nYour Rich Menu has also been updated to English.\n\n(Tip: Type \"中文\" anytime to switch back to Chinese)", CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
           if (userText === '中文' || userText === '繁體中文' || userText.toLowerCase() === 'chinese' || userText === '切換中文' || userText === '切換成中文') {
             setUserLanguage(userId, 'zh', userGistId, GITHUB_PAT, props);
-            replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練將會以繁體中文為您分析飲食與計算營養囉！\n\n（隨時輸入「English」可切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
+            switchUserRichMenuByLanguage(userId, 'zh', props);
+            replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練將會以繁體中文為您分析飲食與計算營養囉！\n圖文選單也已為您切換為繁體中文。\n\n（隨時輸入「English」可切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
+
 
           // 🎭 切換教練性格 (例如: "切換性格", "挑選性格", "選擇性格", "挑選教練性格", "換性格", "換教練", "性格", "溫柔模式", "傲嬌模式", "鐵血模式")
           if (userText === '切換性格' || userText === '挑選性格' || userText === '選擇性格' || userText === '挑選教練性格' || userText === '換性格' || userText === '改性格' || userText === '換教練' || userText === '教練性格' || userText === '性格' || userText === '教練' || userText === '多重性格' || userText.toLowerCase() === 'persona') {
@@ -903,7 +937,7 @@ function doPost(e) {
           }
 
           // 💡 說明 / 指令 / 教學 / 歡迎 / 功能清單 / 免責聲明 (呼叫所有功能選項)
-          if (userText === '說明' || userText === 'help' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
+          if (userText === '說明' || userText.toLowerCase() === 'help' || userText.toLowerCase() === 'guide' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
             recordSystemLog('使用說明', userId, userText, '', '發送操作說明與功能手冊卡片');
             const helpFlex = generateCommandMenuFlex(userId, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, helpFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -911,12 +945,18 @@ function doPost(e) {
           }
 
 
-          // 🚀 建立/更新原生相機圖文選單 (點擊直接滑出開相機)
+          // 🚀 建立/更新原生相機圖文選單 (支援中英文雙語選單)
           if (userText === '更新相機選單' || userText === '設定相機選單' || userText === '更新選單' || userText === '部署選單' || userText === '新選單' || userText === '換選單' || userText === '重整選單') {
             recordSystemLog('部署選單', userId, userText, '', '觸發原生相機圖文選單部署');
             try {
               const richMenuId = setupNativeCameraRichMenu(CHANNEL_ACCESS_TOKEN, LIFF_ID, props);
-              replyTextMessage(replyToken, `🎉 【原生相機圖文選單】已成功建立並設為全域預設！\n\n📸 左上角【📸 拍照辨識】已綁定 LINE 原生相機動作，現在點擊會「直接滑出相機」0秒拍照！\n\n💡 若手機尚未更新畫面：\n請關閉並重新打開此 LINE 聊天室即可看見全新選單 🐼✨`, CHANNEL_ACCESS_TOKEN, userId, props);
+              let enRichMenuId = '';
+              try {
+                enRichMenuId = setupEnglishNativeCameraRichMenu(CHANNEL_ACCESS_TOKEN, LIFF_ID, props);
+              } catch (eErr) {
+                console.warn('部署英文選單失敗:', eErr);
+              }
+              replyTextMessage(replyToken, `🎉 【原生相機圖文選單】已成功建立！\n\n🇨🇳 中文選單 ID: ${richMenuId}\n🇺🇸 英文選單 ID: ${enRichMenuId || '已建立'}\n\n📸 左上角已綁定 LINE 原生相機動作，點擊直接開相機！\n當切換語言至 English 時，系統會自動將圖文選單切換至英文版本 🐼✨\n\n💡 若手機尚未更新畫面：請關閉並重新打開此 LINE 聊天室即可！`, CHANNEL_ACCESS_TOKEN, userId, props);
             } catch (err) {
               replyTextMessage(replyToken, `❌ 部署圖文選單失敗：${err.message}`, CHANNEL_ACCESS_TOKEN, userId, props);
             }
@@ -924,19 +964,24 @@ function doPost(e) {
           }
 
           // 📸 拍照記帳導引 (例如從 Rich Menu 點擊 "拍照" 或 "拍照辨識")
-          if (userText === '拍照' || userText === '拍照辨識' || userText === '拍照記帳' || userText === '拍餐點') {
+          if (userText === '拍照' || userText === '拍照辨識' || userText === '拍照記帳' || userText === '拍餐點' || userText.toLowerCase() === 'camera' || userText.toLowerCase() === 'ai camera') {
             recordSystemLog('拍照引導', userId, userText, '', '發送拍照指引');
-            replyTextMessage(replyToken, "📸 請點擊下方輸入框左側的【📷 相機】或【🖼️ 相簿】圖示，直接拍照或挑選餐點照片傳給我，AI 熊貓立刻為您分析熱量與營養素！🐼✨", CHANNEL_ACCESS_TOKEN, userId, props);
+            const curLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
+            const cameraGuideText = curLang === 'en'
+              ? "📸 Please tap the 【📷 Camera】or 【🖼️ Album】icon to the left of the message input box to send a meal photo! AI Panda will analyze calories and nutrients immediately! 🐼✨"
+              : "📸 請點擊下方輸入框左側的【📷 相機】或【🖼️ 相簿】圖示，直接拍照或挑選餐點照片傳給我，AI 熊貓立刻為您分析熱量與營養素！🐼✨";
+            replyTextMessage(replyToken, cameraGuideText, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
           // 查詢今日總結
-          if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結') {
+          if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結' || userText.toLowerCase() === 'summary' || userText.toLowerCase() === 'today' || userText.toLowerCase() === 'daily summary') {
             recordSystemLog('查詢總結', userId, userText, '', '已發送今日總結');
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
+
 
           // 📊 查詢 7 日趨勢與歷史週報
           if (userText === '週報' || userText === '趨勢' || userText === '圖表' || userText === '歷史' || userText === '歷史紀錄' || userText === '戰報' || userText === '7天' || userText === '七天' || userText === '分析') {
@@ -992,20 +1037,27 @@ function doPost(e) {
             }
           }
 
-          // 💧 快速喝水打卡 (例如: "喝水 500", "喝水 250ml", "+500水", "喝水", "500ml水")
+          // 💧 快速喝水打卡 (例如: "喝水 500", "喝水 250ml", "+500水", "喝水", "500ml水", "+500ml Water", "water 500", "water")
           // 🛡️ 嚴格排除 "+1"、"+"、"+2" 等日常符號誤觸
           const waterMatch = userText.match(/^(?:喝水|補水)\s*(\d{2,4})?\s*(?:ml|cc|水)?$/i) 
             || userText.match(/^\+(\d{2,4})\s*(?:ml|cc|水)?$/i) 
-            || userText.match(/^(\d{2,4})\s*(?:ml|cc)\s*(?:水)?$/i);
-          if (waterMatch || userText === '喝水' || userText === '補水') {
+            || userText.match(/^(\d{2,4})\s*(?:ml|cc)\s*(?:水)?$/i)
+            || userText.match(/^(?:water|drink\s*water)\s*(\d{2,4})?\s*(?:ml|cc)?$/i)
+            || userText.match(/^\+?(\d{2,4})\s*(?:ml|cc)?\s*water$/i);
+          if (waterMatch || userText === '喝水' || userText === '補水' || userText.toLowerCase() === 'water') {
             const amount = (waterMatch && waterMatch[1]) ? Number(waterMatch[1]) : 500;
+            const curLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
+            const isEn = curLang === 'en';
 
             // 🛡️ 防連擊防重複：如果 15 秒內已記錄過相同喝水打卡，直接提醒略過
             const lastWaterKey = `LAST_WATER_${userId}`;
             const lastWaterTime = Number(props.getProperty(lastWaterKey) || 0);
             const nowMs = Date.now();
             if (nowMs - lastWaterTime < 15000) {
-              replyTextMessage(replyToken, `💧 剛剛已為您記錄過喝水囉！請稍候再打卡 🐼✨\n（您剛才已補充 ${amount}ml 水分）`, CHANNEL_ACCESS_TOKEN, userId, props);
+              const dupText = isEn
+                ? `💧 Hydration was already logged just now! Please take a sip and log again later 🐼✨\n(You just added ${amount}ml water)`
+                : `💧 剛剛已為您記錄過喝水囉！請稍候再打卡 🐼✨\n（您剛才已補充 ${amount}ml 水分）`;
+              replyTextMessage(replyToken, dupText, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
             }
             props.setProperty(lastWaterKey, String(nowMs));
@@ -1014,11 +1066,11 @@ function doPost(e) {
               id: Date.now(),
               date: getTodayDateString(),
               time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
-              dish_name: `💧 喝水 ${amount}ml`,
+              dish_name: isEn ? `💧 Drink Water ${amount}ml` : `💧 喝水 ${amount}ml`,
               calories: 0,
               protein: 0,
               water: amount,
-              comment: '💧 快速補水打卡'
+              comment: isEn ? '💧 Fast Hydration Log' : '💧 快速補水打卡'
             };
             recordSystemLog('文字喝水', userId, userText, `+${amount}ml 水分`, '已即時記錄至資料庫');
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
@@ -1026,6 +1078,7 @@ function doPost(e) {
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
+
 
           // ☁️ 手動綁定既有的 GitHub Gist ID (跨裝置 / 外面 Web 轉移至 LINE)
           if (userText.startsWith('綁定') || userText.startsWith('連動') || userText.toLowerCase().startsWith('gist')) {
@@ -1089,7 +1142,8 @@ function doPost(e) {
           }
 
           // ⭐ 常用餐點與補水輪播庫 (左右滑動 Carousel)
-          if (userText === '常用' || userText === '快捷' || userText === '收藏' || userText === '常用清單' || userText === '我的常用' || userText === '常用餐點' || userText === '快捷輪播') {
+          if (userText === '常用' || userText === '快捷' || userText === '收藏' || userText === '常用清單' || userText === '我的常用' || userText === '常用餐點' || userText === '快捷輪播' || userText.toLowerCase() === 'favorites' || userText.toLowerCase() === 'favorite' || userText.toLowerCase() === 'fav') {
+
             recordSystemLog('常用輪播', userId, userText, '', '已發送左右滑動常用輪播');
             const favCarousel = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, favCarousel, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -1900,6 +1954,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   const isToday = todayStr === getTodayDateString();
   const allLogs = getTodayLogs(userId, todayStr, props, userGistId);
   const goals = getUserGoals(userId, props, userGistId);
+  const userLang = getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
 
   let totalCal = 0;
   let totalPro = 0;
@@ -1927,7 +1983,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     };
     const catPrefix = log.category && catEmojiMap[log.category] ? `${catEmojiMap[log.category]} ` : '';
     const timePrefix = timeText ? `${timeText} ` : '';
-    const displayName = log.dish_name || '美味餐點';
+    const displayName = log.dish_name || (isEn ? 'Meal' : '美味餐點');
 
     mealItems.push({
       type: "box",
@@ -1945,30 +2001,30 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   const remainingCal = Math.max(0, calGoal - totalCal);
   const calPercent = Math.min(100, Math.round((totalCal / calGoal) * 100));
 
-  let coachTip = "飲食紀錄養成中，繼續保持！🐼";
+  let coachTip = isEn ? "Building your healthy diet habit, keep it up! 🐼" : "飲食紀錄養成中，繼續保持！🐼";
   if (isToday) {
     if (totalCal > calGoal) {
-      coachTip = "今日熱量已達標，晚點多喝水散步消化喔！🔥";
+      coachTip = isEn ? "Daily calorie goal reached! Drink plenty of water and take a walk! 🔥" : "今日熱量已達標，晚點多喝水散步消化喔！🔥";
     } else if (remainingCal <= 400) {
-      coachTip = "熱量控制得非常剛好，即將完美達標！💪";
+      coachTip = isEn ? "Calorie intake is well-balanced, almost hitting your target! 💪" : "熱量控制得非常剛好，即將完美達標！💪";
     } else {
-      coachTip = `今天還可以再補充約 ${remainingCal} kcal 的營養餐點！🥗`;
+      coachTip = isEn ? `You can still enjoy about ${remainingCal} kcal of nutritious food today! 🥗` : `今天還可以再補充約 ${remainingCal} kcal 的營養餐點！🥗`;
     }
   } else {
-    coachTip = `這是 ${todayStr} 的歷史戰報！當天總熱量達成率為 ${calPercent}% 🐼`;
+    coachTip = isEn ? `Summary for ${todayStr}! Calorie target reached: ${calPercent}% 🐼` : `這是 ${todayStr} 的歷史戰報！當天總熱量達成率為 ${calPercent}% 🐼`;
   }
 
   const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?gistId=${userGistId}` : `https://liff.line.me/${liffId}`;
 
   const headerTitle = isToday
-    ? (justSavedMeal ? "✅ 紀錄成功！今日總結" : "📊 今日飲食進度看板")
-    : `📅 ${todayStr} 歷史總結`;
+    ? (justSavedMeal ? (isEn ? "✅ Logged! Today's Summary" : "✅ 紀錄成功！今日總結") : (isEn ? "📊 Daily Diet Dashboard" : "📊 今日飲食進度看板"))
+    : (isEn ? `📅 ${todayStr} Summary` : `📅 ${todayStr} 歷史總結`);
 
   return {
     type: "flex",
     altText: isToday
-      ? `📊 今日飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`
-      : `📅 ${todayStr} 飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`,
+      ? (isEn ? `📊 Today's Summary: ${totalCal} / ${calGoal} kcal` : `📊 今日飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`)
+      : (isEn ? `📅 ${todayStr} Summary: ${totalCal} / ${calGoal} kcal` : `📅 ${todayStr} 飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`),
     contents: {
       type: "bubble",
       size: "mega",
@@ -2018,7 +2074,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isToday ? "🔥 今日總熱量" : "🔥 當日總熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: isEn ? (isToday ? "🔥 Total Calories" : "🔥 Daily Calories") : (isToday ? "🔥 今日總熱量" : "🔥 當日總熱量"), size: "xxs", color: "#E11D48", weight: "bold" },
                   { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold" }
                 ]
@@ -2034,7 +2090,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isToday ? "🥩 今日蛋白質" : "🥩 當日蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: isEn ? (isToday ? "🥩 Total Protein" : "🥩 Daily Protein") : (isToday ? "🥩 今日蛋白質" : "🥩 當日蛋白質"), size: "xxs", color: "#2563EB", weight: "bold" },
                   { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
                 ]
@@ -2050,7 +2106,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isToday ? "💧 今日水分" : "💧 當日水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: isEn ? (isToday ? "💧 Total Water" : "💧 Daily Water") : (isToday ? "💧 今日水分" : "💧 當日水分"), size: "xxs", color: "#0891B2", weight: "bold" },
                   { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `ml`, size: "xxs", color: "#164E63", weight: "bold" }
                 ]
@@ -2067,8 +2123,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             paddingAll: "12px",
             spacing: "xs",
             contents: [
-              { type: "text", text: isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`, size: "xs", weight: "bold", color: "#000000" },
-              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄", size: "xs", color: "#A1A1AA" }])
+              { type: "text", text: isEn ? (isToday ? `🍱 Logged ${allLogs.length} meals today:` : `🍱 Logged ${allLogs.length} meals on this date:`) : (isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`), size: "xs", weight: "bold", color: "#000000" },
+              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isEn ? (isToday ? "No meals logged yet today" : "No meals logged on this date") : (isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄"), size: "xs", color: "#A1A1AA" }])
             ]
           },
           {
@@ -2080,7 +2136,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             cornerRadius: "14px",
             paddingAll: "12px",
             contents: [
-              { type: "text", text: `💬 熊貓教練：${coachTip}`, size: "xs", color: "#000000", weight: "bold", wrap: true }
+              { type: "text", text: `${isEn ? "💬 Panda Coach: " : "💬 熊貓教練："}${coachTip}`, size: "xs", color: "#000000", weight: "bold", wrap: true }
             ]
           }
         ]
@@ -2105,14 +2161,14 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             justifyContent: "center",
             action: {
               type: "postback",
-              label: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`,
+              label: isEn ? (isToday ? "📋 Manage Today's Logs" : `📋 Manage ${todayStr} Logs`) : (isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`),
               data: JSON.stringify({ action: 'manageMeals', date: todayStr }),
-              displayText: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`
+              displayText: isEn ? (isToday ? "📋 Manage Today's Logs" : `📋 Manage ${todayStr} Logs`) : (isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`)
             },
             contents: [
               {
                 type: "text",
-                text: isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`,
+                text: isEn ? (isToday ? "📋 Manage Today's Logs" : `📋 Manage ${todayStr} Logs`) : (isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`),
                 weight: "bold",
                 size: "sm",
                 color: "#000000"
@@ -2138,7 +2194,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 justifyContent: "center",
                 action: {
                   type: "datetimepicker",
-                  label: "📅 查日期",
+                  label: isEn ? "📅 Select Date" : "📅 查日期",
                   data: JSON.stringify({ action: 'pickDate' }),
                   mode: "date",
                   initial: todayStr,
@@ -2147,7 +2203,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 contents: [
                   {
                     type: "text",
-                    text: "📅 查日期",
+                    text: isEn ? "📅 Select Date" : "📅 查日期",
                     weight: "bold",
                     size: "xs",
                     color: "#000000"
@@ -2167,14 +2223,14 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: "📊 7 日週報",
+                  label: isEn ? "📊 7-Day Trend" : "📊 7 日週報",
                   data: JSON.stringify({ action: 'viewWeeklyTrends' }),
-                  displayText: "📊 查看 7 日趨勢週報"
+                  displayText: isEn ? "📊 View 7-day trend report" : "📊 查看 7 日趨勢週報"
                 },
                 contents: [
                   {
                     type: "text",
-                    text: "📊 7 日週報",
+                    text: isEn ? "📊 7-Day Trend" : "📊 7 日週報",
                     weight: "bold",
                     size: "xs",
                     color: "#000000"
@@ -2188,6 +2244,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     }
   };
 }
+
 
 // ========================================================
 // 💾 3. 儲存紀錄至個人專屬 Gist
@@ -2437,6 +2494,10 @@ function setUserLanguage(userId, lang, userGistId, pat, props) {
       console.warn("同步語言至 Gist 失敗:", e);
     }
   }
+
+  // 🔄 同步為該 LINE 用戶切換圖文選單 (中/英)
+  switchUserRichMenuByLanguage(userId, validLang, props);
+
   return validLang;
 }
 
@@ -2451,7 +2512,27 @@ function getPersonaInstruction(persona) {
   return `Persona Style: Tsundere Elite Registered Dietitian (毒舌且傲嬌的菁英營養師熊貓). Witty, professional, sarcastic and tsundere (口嫌體正直，犀利吐槽但給予專家飲食建議與 1 個具體改善叮嚀).`;
 }
 
-function generateFallbackComment(dishName, calories, protein, persona = 'tsundere') {
+function generateFallbackComment(dishName, calories, protein, persona = 'tsundere', lang = 'zh') {
+  if (lang === 'en') {
+    if (persona === 'gentle') {
+      if (calories > 700) return `That was quite a hearty meal! Drink plenty of water and enjoy some greens next meal 🐼💚`;
+      if (protein >= 25) return `Great protein boost! You're taking wonderful care of your body today, keep it up 🐼✨`;
+      if (calories < 300) return `A light meal! Remember to stay hydrated and grab a healthy snack if you feel hungry 🐼🌸`;
+      return `Logged "${dishName}" for you! Enjoy every bite and remember to stay hydrated 🐼`;
+    }
+    if (persona === 'hardcore') {
+      if (calories > 700) return `Over ${calories} kcal! Drop and give me squats to burn that excess energy off! 🔥💪`;
+      if (protein >= 25) return `${protein}g protein! That's what I'm talking about—fueling those muscles! 🏋️‍♂️`;
+      if (calories < 300) return `Eating like a bird won't give you gym power! Fuel up with real protein next meal! 👊`;
+      return `Logged! Now don't just sit on the couch—time to move! 🔥`;
+    }
+    // tsundere
+    if (calories > 700) return `Whoa, ${calories} kcal?! Drink some water and redeem yourself with veggies next meal! 🐼`;
+    if (protein >= 25) return `${protein}g protein... acceptable. But don't think you can slack off on sweets now! 🐼`;
+    if (calories < 300) return `Barely eating? You want to lose muscle? Eat real food next time! 🐼`;
+    return `Fine, I logged "${dishName}" for you. Don't forget your veggies and water! 🐼`;
+  }
+
   if (persona === 'gentle') {
     if (calories > 700) return `這餐份量很充足呢！記得多喝水幫助代謝，下一餐可以多吃點綠色蔬菜喔 🐼💚`;
     if (protein >= 25) return `蛋白質補充得很棒呢！你今天也很用心照顧自己的身體，繼續加油喔 🐼✨`;
@@ -2470,6 +2551,7 @@ function generateFallbackComment(dishName, calories, protein, persona = 'tsunder
   if (calories < 300) return `吃這麼少是想成仙嗎？小心掉肌肉，下一餐給我好好吃正餐！🐼`;
   return `哼，勉強幫你記下「${dishName}」了，下一餐記得多補充點蔬菜跟水分！🐼`;
 }
+
 
 function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
   const isEn = curLang === 'en';
@@ -3010,6 +3092,44 @@ function analyzeMealWithGemini(base64Image, apiKey, userId, props, userGistId, p
 - "calculation_note": 計算公式簡述 (繁體中文).
 - "panda_comment": 繁體中文 35 字以內，符合性格設定。`;
 
+  const schemaBlock = isEn
+    ? `{
+  "dish_name": "Meal Name in English",
+  "calories": <integer calories in kcal, 0 if unknown>,
+  "protein": <integer protein in grams, 0 if unknown>,
+  "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
+  "fat": <integer estimated total fat in grams, 0 if unknown>,
+  "water": <integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food>,
+  "breakdown": [
+    {
+      "name": "Item name in English (e.g. Grilled chicken breast, Steamed broccoli)",
+      "portion": "Estimated portion in English (e.g. 1 breast ~180g, 1 cup ~120g)",
+      "calories": <integer calories in kcal>,
+      "protein": <integer protein in grams>
+    }
+  ],
+  "calculation_note": "Calculation process in English (e.g. Grilled chicken 260 kcal + Broccoli 35 kcal = 295 kcal)",
+  "panda_comment": "<Concise, witty, critical nutritional evaluation matching selected persona in English, max 35 words>"
+}`
+    : `{
+  "dish_name": "餐點名稱 (繁體中文)",
+  "calories": <integer calories in kcal, 0 if unknown>,
+  "protein": <integer protein in grams, 0 if unknown>,
+  "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
+  "fat": <integer estimated total fat in grams, 0 if unknown>,
+  "water": <integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food>,
+  "breakdown": [
+    {
+      "name": "食材/餐點品項名稱 (e.g. 炸雞腿, 白飯, 炒青菜)",
+      "portion": "估計份量 (e.g. 1 支約 180g, 1 碗約 160g)",
+      "calories": <integer calories in kcal>,
+      "protein": <integer protein in grams>
+    }
+  ],
+  "calculation_note": "計算過程簡述 (繁體中文, e.g. 炸雞腿1支約380卡 + 白飯1碗約220卡 + 炒高麗菜約50卡 = 總計650卡)",
+  "panda_comment": "<Concise, witty, critical nutritional evaluation matching selected persona in Traditional Chinese, max 35 characters>"
+}`;
+
   const prompt = `You are a professional nutrition expert panda. Analyze this food image. Return STRICTLY a raw JSON object. NO MARKDOWN.
 ${personaInstruction}
 ${langDirective}
@@ -3025,24 +3145,8 @@ CRITICAL NUTRITIONAL EVALUATION RULES FOR "panda_comment":
 3. Provide EXACTLY 1 actionable, practical improvement tip for the next meal or rest of the day.
 
 Required Schema:
-{
-  "dish_name": "Meal Name (${isEn ? 'English' : 'Traditional Chinese'})",
-  "calories": <integer calories in kcal, 0 if unknown>,
-  "protein": <integer protein in grams, 0 if unknown>,
-  "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
-  "fat": <integer estimated total fat in grams, 0 if unknown>,
-  "water": <integer estimated water/liquid intake in ml, e.g. 500 for soup/beverage, or 0 if dry food>,
-  "breakdown": [
-    {
-      "name": "食材/餐點品項名稱 (e.g. 炸雞腿, 白飯, 炒青菜)",
-      "portion": "估計份量 (e.g. 1 支約 180g, 1 碗約 160g)",
-      "calories": <integer calories in kcal>,
-      "protein": <integer protein in grams>
-    }
-  ],
-  "calculation_note": "計算過程簡述 (Traditional Chinese, e.g. 炸雞腿1支約380卡 + 白飯1碗約220卡 + 炒高麗菜約50卡 = 總計650卡)",
-  "panda_comment": "<Concise, witty, critical nutritional evaluation matching selected persona in Traditional Chinese, max 35 characters>"
-}`;
+${schemaBlock}`;
+
 
   const payload = {
     contents: [{
@@ -3119,9 +3223,60 @@ function parseTextWithGemini(text, apiKey, userId, props, userGistId, pat) {
 
   const userPersona = getUserPersona(userId, props, userGistId, pat);
   const personaInstruction = getPersonaInstruction(userPersona);
+  const userLang = getUserLanguage(userId, props, userGistId, pat);
+  const isEn = userLang === 'en';
 
-  const prompt = `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
+  const langDirective = isEn 
+    ? `LANGUAGE REQUIREMENT: Output strictly in ENGLISH (US English).
+- "dish_name": English name of the meal (e.g. "Steamed Dumplings and Soy Milk").
+- "breakdown": item names and portion estimates in English (e.g. "Steamed dumplings ~8 pcs", "Soy milk ~300ml").
+- "calculation_note": full calculation formula in English (e.g. 8 dumplings ~400 kcal + soy milk ~120 kcal = 520 kcal).
+- "panda_comment": keep strictly under 35 English words, witty nutritional evaluation with 1 actionable tip matching selected persona in English.`
+    : `LANGUAGE REQUIREMENT: Output strictly in TRADITIONAL CHINESE (繁體中文).
+- "dish_name": 餐點名稱 (繁體中文).
+- "breakdown": 食材名稱與份量估算 (繁體中文).
+- "calculation_note": 計算過程簡述 (繁體中文，例如: 陽春麵1碗約350卡 + 滷蛋1顆約75卡 = 總計425卡).
+- "panda_comment": 繁體中文 35 字以內，符合性格設定。`;
+
+  const prompt = isEn
+    ? `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
 ${personaInstruction}
+${langDirective}
+
+Determine if the user is describing food, a drink, or a meal they ate/drank.
+
+If it IS food/meal/drink:
+Return ONLY raw JSON:
+{
+  "is_food": true,
+  "dish_name": "Meal Name in English",
+  "calories": <integer estimated calories in kcal, 0 if unknown>,
+  "protein": <integer estimated protein in grams, 0 if unknown>,
+  "carbs": <integer estimated carbohydrates in grams, 0 if unknown>,
+  "fat": <integer estimated total fat in grams, 0 if unknown>,
+  "water": <integer estimated liquid/water intake in ml, e.g. 500 for coffee/tea/water/soup, or 0 if dry food>,
+  "breakdown": [
+    {
+      "name": "Item name in English",
+      "portion": "Estimated portion in English (e.g. 1 bowl ~200g)",
+      "calories": <integer calories in kcal>,
+      "protein": <integer protein in grams>
+    }
+  ],
+  "calculation_note": "Calculation formula in English (e.g. 1 chicken breast ~220 kcal + salad ~60 kcal = total 280 kcal)",
+  "panda_comment": "<Critical, witty nutritional evaluation with 1 actionable tip matching selected persona in English, max 35 words. DO NOT generically say balanced unless truly balanced with greens and lean protein>"
+}
+
+If it is NOT food (e.g. "XD", laughter, greetings "hello", questions, casual chat):
+Return ONLY raw JSON:
+{
+  "is_food": false,
+  "reply": "A friendly, witty Panda reply in English matching selected persona (${userPersona}), reminding the user they can send food photos or type what they ate to log it 🐼"
+}
+Do NOT wrap in markdown backticks.`
+    : `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
+${personaInstruction}
+${langDirective}
 
 Determine if the user is describing food, a drink, or a meal they ate/drank.
 
@@ -3170,9 +3325,23 @@ Do NOT wrap in markdown backticks.`;
         const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
         const parsed = JSON.parse(cleanJson);
         if (parsed.is_food === false) {
+          let defaultReply = '';
+          if (isEn) {
+            defaultReply = userPersona === 'gentle' 
+              ? "Hello! I'm your healing nutrition panda 🐼🥰 What delicious food did you have today? Send a photo or tell me what you ate anytime!" 
+              : userPersona === 'hardcore' 
+              ? "Hey! I'm your drill sergeant panda 🐼🔥 Confess what you ate right now, don't even think about sneaking junk food!" 
+              : "Hey there! I'm your AI Panda Coach 🐼 Send meal photos or type what you ate, and I'll keep your nutrition on track!";
+          } else {
+            defaultReply = userPersona === 'gentle' 
+              ? "哈囉！我是您的治癒系飲食小幫手 🐼🥰，今天吃了什麼美味好料呢？隨時傳送照片或打字跟我分享喔！" 
+              : userPersona === 'hardcore' 
+              ? "嘿！我是你的魔鬼教練 🐼🔥！吃了什麼趕快老實報上來，別想偷吃垃圾食物！" 
+              : "哈囉！我是您的 AI 傲嬌教練 🐼，隨時傳送餐點照片或打字告訴我吃了什麼，我來幫您嚴格把關！";
+          }
           return {
             is_food: false,
-            reply: parsed.reply || (userPersona === 'gentle' ? "哈囉！我是您的治癒系飲食小幫手 🐼🥰，今天吃了什麼美味好料呢？隨時傳送照片或打字跟我分享喔！" : userPersona === 'hardcore' ? "嘿！我是你的魔鬼教練 🐼🔥！吃了什麼趕快老實報上來，別想偷吃垃圾食物！" : "哈囉！我是您的 AI 傲嬌教練 🐼，隨時傳送餐點照片或打字告訴我吃了什麼，我來幫您嚴格把關！")
+            reply: parsed.reply || defaultReply
           };
         }
 
@@ -3184,7 +3353,7 @@ Do NOT wrap in markdown backticks.`;
         const water = Number(parsed.water) || 0;
         const breakdown = Array.isArray(parsed.breakdown) ? parsed.breakdown : [];
         const calculationNote = parsed.calculation_note || '';
-        const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, userPersona);
+        const comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : generateFallbackComment(dishName, cal, pro, userPersona, userLang);
 
         return {
           is_food: true,
@@ -3203,9 +3372,12 @@ Do NOT wrap in markdown backticks.`;
   }
   return {
     is_food: false,
-    reply: "收到！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來為您分析營養！"
+    reply: isEn
+      ? "Got it! I'm your AI Panda nutrition coach 🐼 Send a food photo or type what you ate anytime, and I'll analyze it for you!"
+      : "收到！我是您的 AI 熊貓飲食教練 🐼，隨時傳送餐點照片或輸入食物名稱，我來為您分析營養！"
   };
 }
+
 
 
 function attachQuickReply(message, userId, props) {
@@ -4686,6 +4858,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props) {
 function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
   const favorites = getUserFavorites(userId, props, userGistId);
   const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
+  const userLang = getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
   const bubbles = [];
 
   // 💧 Bubble 1: 快速補水卡
@@ -4702,13 +4876,13 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF" },
-            { type: "text", text: "一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
+            { type: "text", text: isEn ? "💧 Hydration Station" : "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF" },
+            { type: "text", text: isEn ? "1-Tap Log" : "一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
           ]
         },
         {
           type: "text",
-          text: "點擊下方快速記錄水分",
+          text: isEn ? "Tap below to log water quickly" : "點擊下方快速記錄水分",
           size: "xxs",
           color: "#E0F2FE",
           margin: "xs"
@@ -4729,9 +4903,9 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
           color: "#0891B2",
           action: {
             type: "postback",
-            label: "💧 喝水 +500ml",
+            label: isEn ? "💧 +500ml Water" : "💧 喝水 +500ml",
             data: JSON.stringify({ action: 'quickWater', amount: 500 }),
-            displayText: "💧 喝水 +500ml"
+            displayText: isEn ? "💧 +500ml Water" : "💧 喝水 +500ml"
           }
         },
         {
@@ -4741,9 +4915,9 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
           color: "#CCFBF1",
           action: {
             type: "postback",
-            label: "💧 喝水 +250ml",
+            label: isEn ? "💧 +250ml Water" : "💧 喝水 +250ml",
             data: JSON.stringify({ action: 'quickWater', amount: 250 }),
-            displayText: "💧 喝水 +250ml"
+            displayText: isEn ? "💧 +250ml Water" : "💧 喝水 +250ml"
           }
         },
         {
@@ -4753,9 +4927,9 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
           color: "#CCFBF1",
           action: {
             type: "postback",
-            label: "💧 喝水 +1000ml",
+            label: isEn ? "💧 +1000ml Water" : "💧 喝水 +1000ml",
             data: JSON.stringify({ action: 'quickWater', amount: 1000 }),
-            displayText: "💧 喝水 +1000ml"
+            displayText: isEn ? "💧 +1000ml Water" : "💧 喝水 +1000ml"
           }
         }
       ]
@@ -4773,8 +4947,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
         backgroundColor: "#FEF9C3",
         paddingAll: "14px",
         contents: [
-          { type: "text", text: "⭐ 尚未建立常用餐點", weight: "bold", size: "sm", color: "#713F12" },
-          { type: "text", text: "隨時建立您的專屬美食庫", size: "xxs", color: "#A16207", margin: "xs" }
+          { type: "text", text: isEn ? "⭐ No Favorites Yet" : "⭐ 尚未建立常用餐點", weight: "bold", size: "sm", color: "#713F12" },
+          { type: "text", text: isEn ? "Build your personal favorite list" : "隨時建立您的專屬美食庫", size: "xxs", color: "#A16207", margin: "xs" }
         ]
       },
       body: {
@@ -4785,7 +4959,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
         contents: [
           {
             type: "text",
-            text: "💡 提示：拍照辨識後點擊「⭐ 存為常用」，或點擊下方直接填入自訂指令！",
+            text: isEn ? "💡 Tip: After AI photo recognition tap 「⭐ Favorite」 to save, or tap button below!" : "💡 提示：拍照辨識後點擊「⭐ 存為常用」，或點擊下方直接填入自訂指令！",
             size: "xs",
             color: "#71717A",
             wrap: true
@@ -4804,7 +4978,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "postback",
-              label: "➕ 填入新增指令",
+              label: isEn ? "➕ Add Favorite" : "➕ 填入新增指令",
               data: JSON.stringify({ action: 'fillFav' }),
               inputOption: "openKeyboard",
               fillInText: "加常用 美式咖啡+茶葉蛋 160卡 14蛋 450水"
@@ -4828,8 +5002,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
               type: "box",
               layout: "horizontal",
               contents: [
-                { type: "text", text: "⭐ 常用餐點", weight: "bold", size: "xs", color: "#000000" },
-                { type: "text", text: "左右滑動", size: "xxs", color: "#713F12", align: "end" }
+                { type: "text", text: isEn ? "⭐ Favorite" : "⭐ 常用餐點", weight: "bold", size: "xs", color: "#000000" },
+                { type: "text", text: isEn ? "Swipe ↔" : "左右滑動", size: "xxs", color: "#713F12", align: "end" }
               ]
             },
             {
@@ -4864,7 +5038,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
                   flex: 1,
                   alignItems: "center",
                   contents: [
-                    { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                    { type: "text", text: isEn ? "🔥 Cal" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
                     { type: "text", text: `${fav.calories}`, size: "xs", color: "#000000", weight: "bold" }
                   ]
                 },
@@ -4877,7 +5051,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
                   flex: 1,
                   alignItems: "center",
                   contents: [
-                    { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                    { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
                     { type: "text", text: `${fav.protein}g`, size: "xs", color: "#000000", weight: "bold" }
                   ]
                 },
@@ -4890,7 +5064,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
                   flex: 1,
                   alignItems: "center",
                   contents: [
-                    { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
                     { type: "text", text: `${fav.water || 0}ml`, size: "xs", color: "#000000", weight: "bold" }
                   ]
                 }
@@ -4911,7 +5085,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
               color: "#000000",
               action: {
                 type: "postback",
-                label: "⚡ 一鍵記錄這餐",
+                label: isEn ? "⚡ Quick Log This" : "⚡ 一鍵記錄這餐",
                 data: JSON.stringify({
                   action: 'quickLogFavorite',
                   name: encodeURIComponent(fav.dish_name),
@@ -4919,7 +5093,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
                   pro: fav.protein,
                   wat: fav.water || 0
                 }),
-                displayText: `⚡ 快捷記錄：${fav.dish_name}`
+                displayText: isEn ? `⚡ Quick Log: ${fav.dish_name}` : `⚡ 快捷記錄：${fav.dish_name}`
               }
             },
             {
@@ -4929,9 +5103,9 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
               color: "#FFF1F2",
               action: {
                 type: "postback",
-                label: "🗑️ 移除常用",
+                label: isEn ? "🗑️ Remove" : "🗑️ 移除常用",
                 data: JSON.stringify({ action: 'deleteFavorite', favId: fav.id, name: fav.dish_name }),
-                displayText: `🗑️ 移除常用：${fav.dish_name}`
+                displayText: isEn ? `🗑️ Remove: ${fav.dish_name}` : `🗑️ 移除常用：${fav.dish_name}`
               }
             }
           ]
@@ -4949,8 +5123,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
         backgroundColor: "#18181B",
         paddingAll: "12px",
         contents: [
-          { type: "text", text: "➕ 新增常用餐點", weight: "bold", size: "sm", color: "#FDE047" },
-          { type: "text", text: "自訂常用餐點指令", size: "xxs", color: "#A1A1AA", margin: "xs" }
+          { type: "text", text: isEn ? "➕ Add Favorite" : "➕ 新增常用餐點", weight: "bold", size: "sm", color: "#FDE047" },
+          { type: "text", text: isEn ? "Custom favorite commands" : "自訂常用餐點指令", size: "xxs", color: "#A1A1AA", margin: "xs" }
         ]
       },
       body: {
@@ -4966,7 +5140,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
             color: "#FDE047",
             action: {
               type: "postback",
-              label: "✏️ 填入新增指令",
+              label: isEn ? "✏️ Add Command" : "✏️ 填入新增指令",
               data: JSON.stringify({ action: 'fillFav' }),
               inputOption: "openKeyboard",
               fillInText: "加常用 燕麥奶拿鐵 180卡 6蛋 350水"
@@ -4979,7 +5153,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
             color: "#F4F4F5",
             action: {
               type: "uri",
-              label: "📱 開啟 App 管理",
+              label: isEn ? "📱 Open Web App" : "📱 開啟 App 管理",
               uri: appTargetUrl
             }
           }
@@ -4990,13 +5164,14 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
 
   return {
     type: "flex",
-    altText: `⭐ 常用餐點與補水站（左右滑動選擇）`,
+    altText: isEn ? `⭐ Favorite Meals & Hydration Station` : `⭐ 常用餐點與補水站（左右滑動選擇）`,
     contents: {
       type: "carousel",
       contents: bubbles
     }
   };
 }
+
 
 
 // ========================================================
@@ -5579,10 +5754,12 @@ function generateBugReportAckFlex(userText, liffId, userGistId) {
 function generateCommandMenuFlex(userId, liffId, userGistId, props) {
   const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + userId + (userGistId ? '&gistId=' + userGistId : '');
   const todayStr = getTodayDateString();
+  const userLang = getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
 
   return {
     type: "flex",
-    altText: "🛠️ Daily Diet 操作說明與所有功能指令手冊",
+    altText: isEn ? "🛠️ Daily Diet Guide & Commands" : "🛠️ Daily Diet 操作說明與所有功能指令手冊",
     contents: {
       type: "bubble",
       size: "mega",
@@ -5597,12 +5774,12 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             layout: "horizontal",
             contents: [
               { type: "text", text: "🛠️ DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: "全功能操作手冊", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: isEn ? "Command Manual" : "全功能操作手冊", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
           {
             type: "text",
-            text: "點擊下方任何按鈕，直接執行對應操作 🐼👇",
+            text: isEn ? "Tap any button below to trigger actions 🐼👇" : "點擊下方任何按鈕，直接執行對應操作 🐼👇",
             color: "#FFFFFF",
             weight: "bold",
             size: "xs",
@@ -5616,13 +5793,13 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
         spacing: "md",
         paddingAll: "14px",
         contents: [
-          // 區塊 1: 常用與記錄 (2 欄按鈕，寬度充裕不截斷)
+          // 區塊 1: 常用與記錄
           {
             type: "box",
             layout: "vertical",
             spacing: "xs",
             contents: [
-              { type: "text", text: "⚡ 快速記錄與補水", weight: "bold", size: "xs", color: "#000000" },
+              { type: "text", text: isEn ? "⚡ Quick Log & Hydration" : "⚡ 快速記錄與補水", weight: "bold", size: "xs", color: "#000000" },
               {
                 type: "box",
                 layout: "horizontal",
@@ -5636,9 +5813,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "⭐ 常用餐點",
+                      label: isEn ? "⭐ Favorites" : "⭐ 常用餐點",
                       data: JSON.stringify({ action: 'viewFavorites' }),
-                      displayText: "常用"
+                      displayText: isEn ? "Favorites" : "常用"
                     }
                   },
                   {
@@ -5649,9 +5826,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "📸 拍照指引",
+                      label: isEn ? "📸 Camera Guide" : "📸 拍照指引",
                       data: JSON.stringify({ action: 'guideCamera' }),
-                      displayText: "拍照辨識"
+                      displayText: isEn ? "AI Camera" : "拍照辨識"
                     }
                   }
                 ]
@@ -5670,9 +5847,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "💧 補水 500",
+                      label: isEn ? "💧 +500ml Water" : "💧 補水 500",
                       data: JSON.stringify({ action: 'quickWater', amount: 500 }),
-                      displayText: "💧 喝水 +500ml"
+                      displayText: isEn ? "💧 +500ml Water" : "💧 喝水 +500ml"
                     }
                   },
                   {
@@ -5683,9 +5860,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "📊 今日總結",
+                      label: isEn ? "📊 Daily Summary" : "📊 今日總結",
                       data: JSON.stringify({ action: 'save' }),
-                      displayText: "今日"
+                      displayText: isEn ? "Daily Summary" : "今日"
                     }
                   }
                 ]
@@ -5699,7 +5876,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             layout: "vertical",
             spacing: "xs",
             contents: [
-              { type: "text", text: "📈 歷程與歷史回顧", weight: "bold", size: "xs", color: "#000000" },
+              { type: "text", text: isEn ? "📈 History & Trends" : "📈 歷程與歷史回顧", weight: "bold", size: "xs", color: "#000000" },
               {
                 type: "box",
                 layout: "horizontal",
@@ -5713,9 +5890,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "📈 7 日週報",
+                      label: isEn ? "📈 7-Day Trend" : "📈 7 日週報",
                       data: JSON.stringify({ action: 'viewWeeklyTrends' }),
-                      displayText: "週報"
+                      displayText: isEn ? "7-Day Trend" : "週報"
                     }
                   },
                   {
@@ -5726,7 +5903,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "datetimepicker",
-                      label: "📅 選擇日期",
+                      label: isEn ? "📅 Select Date" : "📅 選擇日期",
                       data: JSON.stringify({ action: 'pickDate' }),
                       mode: "date",
                       initial: todayStr,
@@ -5744,7 +5921,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             layout: "vertical",
             spacing: "xs",
             contents: [
-              { type: "text", text: "⚙️ 目標設定與管理", weight: "bold", size: "xs", color: "#000000" },
+              { type: "text", text: isEn ? "⚙️ Goals & Settings" : "⚙️ 目標設定與管理", weight: "bold", size: "xs", color: "#000000" },
               {
                 type: "box",
                 layout: "horizontal",
@@ -5758,9 +5935,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "🎯 智能目標",
+                      label: isEn ? "🎯 Smart Goals" : "🎯 智能目標",
                       data: JSON.stringify({ action: 'goalGuide' }),
-                      displayText: "設定目標"
+                      displayText: isEn ? "Smart Goals" : "設定目標"
                     }
                   },
                   {
@@ -5771,9 +5948,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "🎭 切換性格",
+                      label: isEn ? "🎭 Coach Persona" : "🎭 切換性格",
                       data: JSON.stringify({ action: 'choosePersona' }),
-                      displayText: "切換性格"
+                      displayText: isEn ? "Coach Persona" : "切換性格"
                     }
                   }
                 ]
@@ -5792,9 +5969,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "📋 管理紀錄",
+                      label: isEn ? "📋 Manage Logs" : "📋 管理紀錄",
                       data: JSON.stringify({ action: 'manageMeals' }),
-                      displayText: "管理"
+                      displayText: isEn ? "Manage Logs" : "管理"
                     }
                   },
                   {
@@ -5805,7 +5982,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "uri",
-                      label: "🐛 問題回報",
+                      label: isEn ? "🐛 Bug Report" : "🐛 問題回報",
                       uri: userGistId ? `https://liff.line.me/${liffId}?tab=feedback&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=feedback`
                     }
                   }
@@ -5825,9 +6002,9 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: "🌐 語言切換",
+                      label: isEn ? "🌐 Switch Language" : "🌐 語言切換",
                       data: JSON.stringify({ action: 'chooseLanguage' }),
-                      displayText: "切換語言"
+                      displayText: isEn ? "Language" : "切換語言"
                     }
                   }
                 ]
@@ -5849,7 +6026,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "uri",
-              label: "📱 開啟個人飲食日記",
+              label: isEn ? "📱 Open Diet Diary App" : "📱 開啟個人飲食日記",
               uri: appTargetUrl
             }
           }
@@ -5858,6 +6035,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
     }
   };
 }
+
 
 function generateFavoritesListFlex(userId, liffId, userGistId, props) {
   return generateFavoritesCarouselFlex(userId, liffId, userGistId, props);
@@ -7613,6 +7791,138 @@ function setupNativeCameraRichMenu(channelAccessToken, liffId, props) {
 
   return richMenuId;
 }
+
+// ========================================================
+// 📸 13. 英文版原生相機圖文選單 API 部署與個人化綁定
+// ========================================================
+
+function setupEnglishNativeCameraRichMenu(channelAccessToken, liffId, props) {
+  if (!channelAccessToken) {
+    throw new Error("缺少 CHANNEL_ACCESS_TOKEN");
+  }
+
+  // 1. 定義英文 6 宮格 Rich Menu 物件 (2500 x 1686)
+  const richMenuPayload = {
+    size: { width: 2500, height: 1686 },
+    selected: true,
+    name: "Daily Diet English 6-Grid Menu",
+    chatBarText: "Diet Menu 🐼",
+    areas: [
+      {
+        bounds: { x: 0, y: 0, width: 833, height: 843 },
+        action: { type: "camera" }
+      },
+      {
+        bounds: { x: 833, y: 0, width: 834, height: 843 },
+        action: { type: "message", text: "Favorites" }
+      },
+      {
+        bounds: { x: 1667, y: 0, width: 833, height: 843 },
+        action: { type: "message", text: "+500ml Water" }
+      },
+      {
+        bounds: { x: 0, y: 843, width: 833, height: 843 },
+        action: { type: "message", text: "Daily Summary" }
+      },
+      {
+        bounds: { x: 833, y: 843, width: 834, height: 843 },
+        action: { type: "message", text: "Guide" }
+      },
+      {
+        bounds: { x: 1667, y: 843, width: 833, height: 843 },
+        action: { type: "uri", uri: `https://liff.line.me/${liffId || '2011098313-nFOisgmf'}` }
+      }
+    ]
+  };
+
+  // 2. 透過 LINE API 建立 Rich Menu
+  const createRes = UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu', {
+    method: 'post',
+    headers: {
+      'Authorization': `Bearer ${channelAccessToken}`,
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify(richMenuPayload),
+    muteHttpExceptions: true
+  });
+
+  const createStatus = createRes.getResponseCode();
+  const createBody = JSON.parse(createRes.getContentText() || '{}');
+  if (createStatus !== 200 || !createBody.richMenuId) {
+    throw new Error(`建立英文選單失敗 (HTTP ${createStatus}): ${createRes.getContentText()}`);
+  }
+  const richMenuId = createBody.richMenuId;
+  console.log(`✅ 英文 Rich Menu 建立成功，ID: ${richMenuId}`);
+
+  // 3. 自 GitHub 下載 2500x1686 英文選單圖片並上傳至 LINE
+  const imageUrl = 'https://raw.githubusercontent.com/WinnieLineer/daily-diet/main/public/richmenu-en-2500x1686.jpg';
+  const imgRes = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true });
+  if (imgRes.getResponseCode() !== 200) {
+    throw new Error(`下載英文選單圖片失敗: HTTP ${imgRes.getResponseCode()}`);
+  }
+  const imageBlob = imgRes.getBlob().setContentType('image/jpeg');
+
+  const uploadRes = UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`, {
+    method: 'post',
+    headers: {
+      'Authorization': `Bearer ${channelAccessToken}`
+    },
+    payload: imageBlob,
+    muteHttpExceptions: true
+  });
+
+  if (uploadRes.getResponseCode() !== 200) {
+    throw new Error(`上傳英文選單圖片至 LINE 失敗: HTTP ${uploadRes.getResponseCode()} - ${uploadRes.getContentText()}`);
+  }
+  console.log(`✅ 英文選單背景圖片上傳成功！`);
+
+  if (props) {
+    props.setProperty('ENGLISH_RICH_MENU_ID', richMenuId);
+  }
+
+  return richMenuId;
+}
+
+/**
+ * 依據用戶語言偏好，即時為該用戶切換專屬 LINE 圖文選單 (中/英)
+ */
+function switchUserRichMenuByLanguage(userId, lang, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('CHANNEL_ACCESS_TOKEN');
+  if (!token || !userId) return;
+
+  // 排除無效或非 LINE 原生用戶 ID
+  if (!userId.startsWith('U') || userId.length < 20) return;
+
+  try {
+    if (lang === 'en') {
+      let enMenuId = props.getProperty('ENGLISH_RICH_MENU_ID');
+      if (!enMenuId) {
+        const liffId = props.getProperty('LIFF_ID');
+        enMenuId = setupEnglishNativeCameraRichMenu(token, liffId, props);
+      }
+      if (enMenuId) {
+        const res = UrlFetchApp.fetch(`https://api.line.me/v2/bot/user/${userId}/richmenu/${enMenuId}`, {
+          method: 'post',
+          headers: { 'Authorization': `Bearer ${token}` },
+          muteHttpExceptions: true
+        });
+        console.log(`🔗 [Rich Menu] 已為用戶 ${userId} 綁定英文圖文選單 (${enMenuId}), HTTP: ${res.getResponseCode()}`);
+      }
+    } else {
+      // 繁體中文：解除專屬綁定，直接退回全局預設 (中文選單)
+      const res = UrlFetchApp.fetch(`https://api.line.me/v2/bot/user/${userId}/richmenu`, {
+        method: 'delete',
+        headers: { 'Authorization': `Bearer ${token}` },
+        muteHttpExceptions: true
+      });
+      console.log(`🔗 [Rich Menu] 已為用戶 ${userId} 解除個人選單綁定 (恢復全局中文預設), HTTP: ${res.getResponseCode()}`);
+    }
+  } catch (err) {
+    console.warn(`切換用戶圖文選單失敗:`, err);
+  }
+}
+
 
 
 

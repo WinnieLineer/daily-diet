@@ -9,7 +9,7 @@ import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
 import { liffService } from '../lib/liffService';
-import { syncPersonaToCloud } from '../lib/syncService';
+import { syncPersonaToCloud, syncLanguageToCloud } from '../lib/syncService';
 
 
 const VERSION_HISTORY = [
@@ -421,13 +421,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     if (onLanguageChanged) onLanguageChanged();
     onGoalsUpdated();
 
-    const effectiveUserId = localStorage.getItem('line_user_id');
-    if (effectiveUserId) {
-      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-      try {
-        fetch(`${GAS_URL}?action=updateLanguage&userId=${encodeURIComponent(effectiveUserId)}&lang=${lang}`, { mode: 'no-cors' });
-      } catch (e) {}
-    }
+    syncLanguageToCloud(lang);
   };
 
   const handleCloudBackup = async () => {

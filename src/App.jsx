@@ -10,7 +10,7 @@ import NeoButton from './components/NeoButton';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { db, getDailySummary, calculateStreak } from './db';
 import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
-import { syncMealToCloud, syncDeleteMealToCloud } from './lib/syncService';
+import { syncMealToCloud, syncDeleteMealToCloud, syncLanguageToCloud } from './lib/syncService';
 import { getPandaAdvice } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
@@ -725,13 +725,7 @@ function App() {
     setAdvice('');
     await refreshData('none');
 
-    const effectiveUserId = localStorage.getItem('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
-    if (effectiveUserId) {
-      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-      try {
-        fetch(`${GAS_URL}?action=updateLanguage&userId=${encodeURIComponent(effectiveUserId)}&lang=${nextLang}`, { mode: 'no-cors' });
-      } catch (e) {}
-    }
+    syncLanguageToCloud(nextLang);
   };
 
   useEffect(() => {
