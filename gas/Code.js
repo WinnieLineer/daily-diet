@@ -4536,7 +4536,8 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                 text: "❓ 請問您是新用戶，還是使用過 Web 版？",
                 weight: "bold",
                 size: "xs",
-                color: "#1E3A8A"
+                color: "#1E3A8A",
+                wrap: true
               },
               {
                 type: "text",
@@ -4547,8 +4548,8 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
               },
               {
                 type: "box",
-                layout: "horizontal",
-                spacing: "sm",
+                layout: "vertical",
+                spacing: "xs",
                 margin: "sm",
                 contents: [
                   {
@@ -4556,10 +4557,9 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                     style: "primary",
                     height: "sm",
                     color: "#2563EB",
-                    flex: 1,
                     action: {
                       type: "postback",
-                      label: "🐣 我是全新用戶",
+                      label: "🐣 我是全新用戶 (快速上手引導)",
                       data: JSON.stringify({ action: 'onboarding', type: 'new' }),
                       displayText: "🐣 我是全新用戶"
                     }
@@ -4569,10 +4569,9 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
                     style: "secondary",
                     height: "sm",
                     color: "#DBEAFE",
-                    flex: 1,
                     action: {
                       type: "postback",
-                      label: "🌐 我用過 Web 版",
+                      label: "🌐 我用過 Web 版 (資料綁定同步)",
                       data: JSON.stringify({ action: 'onboarding', type: 'web_user' }),
                       displayText: "🌐 我用過 Web 版"
                     }
@@ -4596,9 +4595,10 @@ function generateWelcomeFlex(userId, liffId, userGistId) {
               {
                 type: "box",
                 layout: "horizontal",
+                alignItems: "center",
                 contents: [
-                  { type: "text", text: "🛠️ 目前可調整與自訂項目", weight: "bold", size: "xs", color: "#000000" },
-                  { type: "text", text: "完整指令", size: "xxs", color: "#71717A", align: "end" }
+                  { type: "text", text: "🛠️ 目前可調整與自訂項目", weight: "bold", size: "xs", color: "#000000", flex: 4, wrap: true },
+                  { type: "text", text: "完整指令", size: "xxs", color: "#71717A", align: "end", flex: 1 }
                 ]
               },
               {
