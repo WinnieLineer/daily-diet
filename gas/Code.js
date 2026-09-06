@@ -28,6 +28,20 @@ function doGet(e) {
   }
   if (!userId) userId = 'default_user';
 
+  // 🚀 0. 觸發一鍵部署原生相機圖文選單 (LINE Messaging API 官方相機直開)
+  if (action === 'deployRichMenu') {
+    const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+    const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
+    try {
+      const richMenuId = setupNativeCameraRichMenu(token, liffId, props);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', richMenuId, message: '原生相機圖文選單已成功部署並設為全域預設！' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    } catch (err) {
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
   // 1. 查詢/綁定個人 Gist ID
   if (action === 'getGistId' && userId) {
     if (incomingGist) props.setProperty(`USER_GIST_${userId}`, incomingGist);
@@ -594,6 +608,18 @@ function doPost(e) {
             continue;
           }
 
+
+          // 🚀 建立/更新原生相機圖文選單 (點擊直接滑出開相機)
+          if (userText === '更新相機選單' || userText === '設定相機選單' || userText === '更新選單' || userText === '部署選單') {
+            recordSystemLog('部署選單', userId, userText, '', '觸發原生相機圖文選單部署');
+            try {
+              const richMenuId = setupNativeCameraRichMenu(CHANNEL_ACCESS_TOKEN, LIFF_ID, props);
+              replyTextMessage(replyToken, `🎉 【原生相機圖文選單】已成功建立並設為全域預設！\n\n📸 左上角【📸 拍照辨識】已綁定 LINE 原生相機動作，現在點擊會「直接滑出相機」0秒拍照！\n\n💡 若手機尚未更新畫面：\n請關閉並重新打開此 LINE 聊天室即可看見全新選單 🐼✨`, CHANNEL_ACCESS_TOKEN, userId, props);
+            } catch (err) {
+              replyTextMessage(replyToken, `❌ 部署圖文選單失敗：${err.message}`, CHANNEL_ACCESS_TOKEN, userId, props);
+            }
+            continue;
+          }
 
           // 📸 拍照記帳導引 (例如從 Rich Menu 點擊 "拍照" 或 "拍照辨識")
           if (userText === '拍照' || userText === '拍照辨識' || userText === '拍照記帳' || userText === '拍餐點') {
@@ -5558,6 +5584,113 @@ function generateDashboardHtml(initialLogs, sheetUrl) {
 </body>
 </html>`;
 }
+
+// ========================================================
+// 📸 12. 原生相機圖文選單 API 部署核心 (LINE Messaging API)
+// ========================================================
+
+function setupNativeCameraRichMenu(channelAccessToken, liffId, props) {
+  if (!channelAccessToken) {
+    throw new Error("缺少 CHANNEL_ACCESS_TOKEN");
+  }
+
+  // 1. 定義 6 宮格 Rich Menu 物件 (2500 x 1686)
+  // A 格 (左上) 綁定原生 camera 動作，點擊瞬間直接滑出手機相機！
+  const richMenuPayload = {
+    size: { width: 2500, height: 1686 },
+    selected: true,
+    name: "Daily Diet 6-Grid Native Menu",
+    chatBarText: "點我開啟飲食選單 🐼",
+    areas: [
+      {
+        bounds: { x: 0, y: 0, width: 833, height: 843 },
+        action: { type: "camera" }
+      },
+      {
+        bounds: { x: 833, y: 0, width: 834, height: 843 },
+        action: { type: "message", text: "常用" }
+      },
+      {
+        bounds: { x: 1667, y: 0, width: 833, height: 843 },
+        action: { type: "message", text: "喝水 500" }
+      },
+      {
+        bounds: { x: 0, y: 843, width: 833, height: 843 },
+        action: { type: "message", text: "今日總結" }
+      },
+      {
+        bounds: { x: 833, y: 843, width: 834, height: 843 },
+        action: { type: "message", text: "週報" }
+      },
+      {
+        bounds: { x: 1667, y: 843, width: 833, height: 843 },
+        action: { type: "uri", uri: `https://liff.line.me/${liffId || '2011098313-nFOisgmf'}` }
+      }
+    ]
+  };
+
+  // 2. 透過 LINE API 建立 Rich Menu
+  const createRes = UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu', {
+    method: 'post',
+    headers: {
+      'Authorization': `Bearer ${channelAccessToken}`,
+      'Content-Type': 'application/json'
+    },
+    payload: JSON.stringify(richMenuPayload),
+    muteHttpExceptions: true
+  });
+
+  const createStatus = createRes.getResponseCode();
+  const createBody = JSON.parse(createRes.getContentText() || '{}');
+  if (createStatus !== 200 || !createBody.richMenuId) {
+    throw new Error(`建立選單失敗 (HTTP ${createStatus}): ${createRes.getContentText()}`);
+  }
+  const richMenuId = createBody.richMenuId;
+  console.log(`✅ Rich Menu 建立成功，ID: ${richMenuId}`);
+
+  // 3. 自 GitHub 下載 2500x1686 圖片並上傳至 LINE
+  const imageUrl = 'https://raw.githubusercontent.com/WinnieLineer/daily-diet/main/public/richmenu-2500x1686.jpg';
+  const imgRes = UrlFetchApp.fetch(imageUrl, { muteHttpExceptions: true });
+  if (imgRes.getResponseCode() !== 200) {
+    throw new Error(`下載選單圖片失敗: HTTP ${imgRes.getResponseCode()}`);
+  }
+  const imageBlob = imgRes.getBlob().setContentType('image/jpeg');
+
+  const uploadRes = UrlFetchApp.fetch(`https://api-data.line.me/v2/bot/richmenu/${richMenuId}/content`, {
+    method: 'post',
+    headers: {
+      'Authorization': `Bearer ${channelAccessToken}`
+    },
+    payload: imageBlob,
+    muteHttpExceptions: true
+  });
+
+  if (uploadRes.getResponseCode() !== 200) {
+    throw new Error(`上傳選單圖片至 LINE 失敗: HTTP ${uploadRes.getResponseCode()} - ${uploadRes.getContentText()}`);
+  }
+  console.log(`✅ 選單背景圖片上傳成功！`);
+
+  // 4. 設定為所有使用者的全局預設圖文選單
+  const setDefaultRes = UrlFetchApp.fetch(`https://api.line.me/v2/bot/user/all/richmenu/${richMenuId}`, {
+    method: 'post',
+    headers: {
+      'Authorization': `Bearer ${channelAccessToken}`
+    },
+    muteHttpExceptions: true
+  });
+
+  if (setDefaultRes.getResponseCode() !== 200) {
+    throw new Error(`設定預設選單失敗: HTTP ${setDefaultRes.getResponseCode()}`);
+  }
+  console.log(`✅ 已成功將 ${richMenuId} 設定為全局預設圖文選單！`);
+
+  if (props) {
+    props.setProperty('CURRENT_RICH_MENU_ID', richMenuId);
+  }
+
+  return richMenuId;
+}
+
 
 
 
