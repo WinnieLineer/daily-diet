@@ -1132,7 +1132,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                   ...(calcNote ? [{
                     type: "text",
                     text: `💡 公式：${calcNote}`,
-                    size: "xxxs",
+                    size: "xxs",
                     color: "#64748B",
                     wrap: true,
                     margin: "xs"
