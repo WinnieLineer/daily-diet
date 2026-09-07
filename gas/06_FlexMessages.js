@@ -759,13 +759,16 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 borderColor: "#000000",
                 borderWidth: "2.5px",
                 cornerRadius: "14px",
-                paddingAll: "10px",
+                paddingTop: "10px",
+                paddingBottom: "10px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
                 flex: 1,
                 alignItems: "center",
                 justifyContent: "center",
                 action: {
                   type: "datetimepicker",
-                  label: isEn ? "📅 Select Date" : "📅 查日期",
+                  label: isEn ? "Select Date" : "📅 查日期",
                   data: JSON.stringify({ action: 'pickDate' }),
                   mode: "date",
                   initial: todayStr,
@@ -776,8 +779,10 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                     type: "text",
                     text: isEn ? "📅 Select Date" : "📅 查日期",
                     weight: "bold",
-                    size: "xs",
-                    color: "#000000"
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
                   }
                 ]
               },
@@ -788,13 +793,16 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 borderColor: "#000000",
                 borderWidth: "2.5px",
                 cornerRadius: "14px",
-                paddingAll: "10px",
+                paddingTop: "10px",
+                paddingBottom: "10px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
                 flex: 1,
                 alignItems: "center",
                 justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "📊 7-Day Trend" : "📊 7 日週報",
+                  label: isEn ? "7-Day Trend" : "📊 7 日週報",
                   data: JSON.stringify({ action: 'viewWeeklyTrends' }),
                   displayText: isEn ? "7-Day Trend" : "週報"
                 },
@@ -803,8 +811,10 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                     type: "text",
                     text: isEn ? "📊 7-Day Trend" : "📊 7 日週報",
                     weight: "bold",
-                    size: "xs",
-                    color: "#000000"
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
                   }
                 ]
               }
@@ -1096,32 +1106,70 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
             spacing: "sm",
             contents: [
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#DCFCE7",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#DCFCE7",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
                 flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "🏃‍♀️ Female Cut" : "🏃‍♀️ 女生減脂",
+                  label: isEn ? "Female Cut" : "🏃‍♀️ 女生減脂",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
                   fillInText: isEn ? "Set goal 160cm 52kg female fat loss" : "改目標 160cm 52kg 女 減脂"
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "🏃‍♀️ Female Cut" : "🏃‍♀️ 女生減脂",
+                    weight: "bold",
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
+                  }
+                ]
               },
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#FEF08A",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF08A",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
                 flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "🥗 Male Cut" : "🥗 男生減脂",
+                  label: isEn ? "Male Cut" : "🥗 男生減脂",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
                   fillInText: isEn ? "Set goal 175cm 75kg male fat loss" : "改目標 175cm 75kg 男 減脂"
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "🥗 Male Cut" : "🥗 男生減脂",
+                    weight: "bold",
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
+                  }
+                ]
               }
             ]
           },
@@ -1131,32 +1179,70 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
             spacing: "sm",
             contents: [
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#EFF6FF",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EFF6FF",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
                 flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "💪 Male Bulk" : "💪 男生增肌",
+                  label: isEn ? "Male Bulk" : "💪 男生增肌",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
                   fillInText: isEn ? "Set goal 175cm 68kg male muscle gain" : "改目標 175cm 68kg 男 增肌"
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "💪 Male Bulk" : "💪 男生增肌",
+                    weight: "bold",
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
+                  }
+                ]
               },
               {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#F3E8FF",
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F3E8FF",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
                 flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "🧘 Maintenance" : "🧘 維持體態",
+                  label: isEn ? "Maintain" : "🧘 維持體態",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
                   fillInText: isEn ? "Set goal 165cm 55kg female maintenance" : "改目標 165cm 55kg 女 維持體態"
-                }
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "🧘 Maintain" : "🧘 維持體態",
+                    weight: "bold",
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
+                  }
+                ]
               }
             ]
           }
@@ -2154,28 +2240,68 @@ function generateClearConfirmFlex(liffId, userGistId, lang) {
         paddingAll: "12px",
         contents: [
           {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#E11D48",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#E11D48",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            cornerRadius: "12px",
+            paddingTop: "9px",
+            paddingBottom: "9px",
+            paddingStart: "4px",
+            paddingEnd: "4px",
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "postback",
-              label: isEn ? "🗑️ Confirm" : "🗑️ 確定清空",
+              label: isEn ? "Confirm" : "確定清空",
               data: JSON.stringify({ action: 'clearToday' }),
               displayText: isEn ? "🗑️ Confirm clear today" : "🗑️ 確定清空今日所有紀錄"
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "🗑️ Confirm" : "🗑️ 確定清空",
+                weight: "bold",
+                size: isEn ? "xxs" : "xs",
+                color: "#FFFFFF",
+                align: "center",
+                wrap: true
+              }
+            ]
           },
           {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#F4F4F5",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F4F4F5",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            cornerRadius: "12px",
+            paddingTop: "9px",
+            paddingBottom: "9px",
+            paddingStart: "4px",
+            paddingEnd: "4px",
+            flex: 1,
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "postback",
-              label: isEn ? "❌ Cancel" : "❌ 取消",
+              label: isEn ? "Cancel" : "取消",
               data: JSON.stringify({ action: 'cancel' }),
               displayText: isEn ? "❌ Cancel" : "❌ 取消"
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "❌ Cancel" : "❌ 取消",
+                weight: "bold",
+                size: isEn ? "xxs" : "xs",
+                color: "#000000",
+                align: "center",
+                wrap: true
+              }
+            ]
           }
         ]
       }
@@ -2497,6 +2623,36 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
   const userLang = getUserLanguage(userId, props, userGistId);
   const isEn = userLang === 'en';
 
+  function buildMenuBtn(text, action, bgColor, textColor = "#000000") {
+    return {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: bgColor,
+      borderColor: "#000000",
+      borderWidth: "2px",
+      cornerRadius: "12px",
+      paddingTop: "9px",
+      paddingBottom: "9px",
+      paddingStart: "4px",
+      paddingEnd: "4px",
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      action: action,
+      contents: [
+        {
+          type: "text",
+          text: text,
+          weight: "bold",
+          size: isEn ? "xxs" : "xs",
+          color: textColor,
+          align: "center",
+          wrap: true
+        }
+      ]
+    };
+  }
+
   return {
     type: "flex",
     altText: isEn ? "🛠️ Daily Diet Guide & Commands" : "🛠️ Daily Diet 操作說明與所有功能指令手冊",
@@ -2544,32 +2700,26 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 layout: "horizontal",
                 spacing: "sm",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FEF08A",
-                    flex: 1,
-                    action: {
+                  buildMenuBtn(
+                    isEn ? "⭐ Favorites" : "⭐ 常用餐點",
+                    {
                       type: "postback",
-                      label: isEn ? "⭐ Favorites" : "⭐ 常用餐點",
+                      label: isEn ? "Favorites" : "常用餐點",
                       data: JSON.stringify({ action: 'viewFavorites' }),
                       displayText: isEn ? "Favorites" : "常用"
-                    }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FEE2E2",
-                    flex: 1,
-                    action: {
+                    },
+                    "#FEF08A"
+                  ),
+                  buildMenuBtn(
+                    isEn ? "📸 AI Camera" : "📸 拍照指引",
+                    {
                       type: "postback",
-                      label: isEn ? "📸 Camera Guide" : "📸 拍照指引",
+                      label: isEn ? "Camera" : "拍照指引",
                       data: JSON.stringify({ action: 'guideCamera' }),
                       displayText: isEn ? "Camera" : "拍照"
-                    }
-                  }
+                    },
+                    "#FEE2E2"
+                  )
                 ]
               },
               {
@@ -2578,32 +2728,27 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 spacing: "sm",
                 margin: "xs",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#E0F2FE",
-                    flex: 1,
-                    action: {
+                  buildMenuBtn(
+                    isEn ? "💧 +500ml Water" : "💧 補水 500",
+                    {
                       type: "postback",
-                      label: isEn ? "💧 +500ml Water" : "💧 補水 500",
+                      label: isEn ? "Water" : "補水 500",
                       data: JSON.stringify({ action: 'quickWater', amount: 500 }),
                       displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 +500ml"
-                    }
-                  },
-                  {
-                    type: "button",
-                    style: "primary",
-                    height: "sm",
-                    color: "#000000",
-                    flex: 1,
-                    action: {
+                    },
+                    "#E0F2FE"
+                  ),
+                  buildMenuBtn(
+                    isEn ? "📊 Summary" : "📊 今日總結",
+                    {
                       type: "postback",
-                      label: isEn ? "📊 Summary" : "📊 今日總結",
+                      label: isEn ? "Summary" : "今日總結",
                       data: JSON.stringify({ action: 'save' }),
                       displayText: isEn ? "Daily Summary" : "今日"
-                    }
-                  }
+                    },
+                    "#000000",
+                    "#FFFFFF"
+                  )
                 ]
               }
             ]
@@ -2619,34 +2764,28 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 layout: "horizontal",
                 spacing: "sm",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FEF9C3",
-                    flex: 1,
-                    action: {
+                  buildMenuBtn(
+                    isEn ? "📈 7-Day Trend" : "📈 7 日週報",
+                    {
                       type: "postback",
-                      label: isEn ? "📈 7-Day Trend" : "📈 7 日週報",
+                      label: isEn ? "7-Day Trend" : "7 日週報",
                       data: JSON.stringify({ action: 'viewWeeklyTrends' }),
                       displayText: isEn ? "7-Day Trend" : "週報"
-                    }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#EFF6FF",
-                    flex: 1,
-                    action: {
+                    },
+                    "#FEF9C3"
+                  ),
+                  buildMenuBtn(
+                    isEn ? "📅 Select Date" : "📅 選擇日期",
+                    {
                       type: "datetimepicker",
-                      label: isEn ? "📅 Select Date" : "📅 選擇日期",
+                      label: isEn ? "Select Date" : "選擇日期",
                       data: JSON.stringify({ action: 'pickDate' }),
                       mode: "date",
                       initial: todayStr,
                       max: todayStr
-                    }
-                  }
+                    },
+                    "#EFF6FF"
+                  )
                 ]
               }
             ]
@@ -2662,32 +2801,26 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 layout: "horizontal",
                 spacing: "sm",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#DCFCE7",
-                    flex: 1,
-                    action: {
+                  buildMenuBtn(
+                    isEn ? "🎯 Smart Goals" : "🎯 智能目標",
+                    {
                       type: "postback",
-                      label: isEn ? "🎯 Smart Goals" : "🎯 智能目標",
+                      label: isEn ? "Goals" : "智能目標",
                       data: JSON.stringify({ action: 'goalGuide' }),
                       displayText: isEn ? "Smart Goals" : "設定目標"
-                    }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#F3E8FF",
-                    flex: 1,
-                    action: {
+                    },
+                    "#DCFCE7"
+                  ),
+                  buildMenuBtn(
+                    isEn ? "🎭 Coach Persona" : "🎭 切換性格",
+                    {
                       type: "postback",
-                      label: isEn ? "🎭 Coach Persona" : "🎭 切換性格",
+                      label: isEn ? "Persona" : "切換性格",
                       data: JSON.stringify({ action: 'choosePersona' }),
                       displayText: isEn ? "Coach Persona" : "切換性格"
-                    }
-                  }
+                    },
+                    "#F3E8FF"
+                  )
                 ]
               },
               {
@@ -2696,31 +2829,25 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 spacing: "sm",
                 margin: "xs",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FEE2E2",
-                    flex: 1,
-                    action: {
+                  buildMenuBtn(
+                    isEn ? "📋 Manage Logs" : "📋 管理紀錄",
+                    {
                       type: "postback",
-                      label: isEn ? "📋 Manage Logs" : "📋 管理紀錄",
+                      label: isEn ? "Manage Logs" : "管理紀錄",
                       data: JSON.stringify({ action: 'manageMeals' }),
                       displayText: isEn ? "Manage Logs" : "管理"
-                    }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#F1F5F9",
-                    flex: 1,
-                    action: {
+                    },
+                    "#FEE2E2"
+                  ),
+                  buildMenuBtn(
+                    isEn ? "🐛 Bug Report" : "🐛 問題回報",
+                    {
                       type: "uri",
-                      label: isEn ? "🐛 Bug Report" : "🐛 問題回報",
+                      label: isEn ? "Bug Report" : "問題回報",
                       uri: userGistId ? `https://liff.line.me/${liffId}?tab=feedback&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=feedback`
-                    }
-                  }
+                    },
+                    "#F1F5F9"
+                  )
                 ]
               },
               {
@@ -2729,19 +2856,16 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 spacing: "sm",
                 margin: "xs",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#E0F2FE",
-                    flex: 1,
-                    action: {
+                  buildMenuBtn(
+                    isEn ? "🌐 Language" : "🌐 語言切換",
+                    {
                       type: "postback",
-                      label: isEn ? "🌐 Switch Language" : "🌐 語言切換",
+                      label: isEn ? "Language" : "語言切換",
                       data: JSON.stringify({ action: 'chooseLanguage' }),
                       displayText: isEn ? "Language" : "切換語言"
-                    }
-                  }
+                    },
+                    "#E0F2FE"
+                  )
                 ]
               }
             ]
@@ -2755,15 +2879,34 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
         paddingAll: "12px",
         contents: [
           {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#000000",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            cornerRadius: "12px",
+            paddingTop: "11px",
+            paddingBottom: "11px",
+            paddingStart: "8px",
+            paddingEnd: "8px",
+            alignItems: "center",
+            justifyContent: "center",
             action: {
               type: "uri",
-              label: isEn ? "📱 Open Diet Diary App" : "📱 開啟個人飲食日記",
+              label: isEn ? "Open Diet Diary" : "開啟個人飲食日記",
               uri: appTargetUrl
-            }
+            },
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "📱 Open Diet Diary App" : "📱 開啟個人飲食日記",
+                weight: "bold",
+                size: "sm",
+                color: "#FFFFFF",
+                align: "center",
+                wrap: true
+              }
+            ]
           }
         ]
       }
