@@ -410,24 +410,61 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     return () => clearInterval(countdownTimer);
   }, [isAuthenticated, autoRefreshInterval]);
 
-  // Filter Categories
-  const categories = useMemo(() => [
-    { id: 'ALL', label: isEn ? 'All Logs' : '全部日誌' },
-    { id: 'LOGIN', label: isEn ? '🛡️ Logins' : '🛡️ 後台登入' },
-    { id: 'ALERT', label: isEn ? '🚨 Errors' : '🚨 異常通報' },
-    { id: 'PHOTO', label: isEn ? '📸 Photo' : '📸 照片辨識' },
-    { id: 'TEXT', label: isEn ? '💬 Text' : '💬 文字記餐' },
-    { id: 'WATER', label: isEn ? '🚰 Water' : '🚰 喝水記錄' },
-    { id: 'PORTION', label: isEn ? '⚖️ Portion' : '⚖️ 份量調整' },
-    { id: 'SYNC', label: isEn ? '⚡ Web Sync' : '⚡ Web 同步' },
-    { id: 'GOAL', label: isEn ? '🎯 Goals' : '🎯 體態目標' },
-  ], [isEn]);
-
   // Normalized & Filtered Logs
   const normalizedLogs = useMemo(() => {
-    if (!rawLogs || !rawLogs.length) return [];
-    return rawLogs.map(normalizeLog).filter(Boolean);
-  }, [rawLogs]);
+    const list = (!rawLogs || !rawLogs.length) ? [] : rawLogs.map(normalizeLog).filter(Boolean);
+
+    // 整合模型異常與伺服器故障通報至日誌列表，不再另外獨立區塊
+    const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
+    if (recentErrors.length > 0) {
+      recentErrors.forEach((err) => {
+        const errDesc = `[${err.model || 'Gemini'}] ${err.error || 'Request Error'}`;
+        const exists = list.some((l) => l.output && l.output.includes(err.error));
+        if (!exists) {
+          list.unshift({
+            time: err.time || '剛剛',
+            userName: 'API Gateway',
+            userId: 'Gemini-API',
+            type: '模型調用異常',
+            input: `調用模型: ${err.model || 'Gemini'}`,
+            aiResult: 'API 錯誤回傳',
+            output: `⚠️ ${errDesc}`,
+            source: 'Gemini API / GAS',
+            ip: '-',
+            location: '-',
+            device: 'Google AI Studio'
+          });
+        }
+      });
+    }
+
+    return list;
+  }, [rawLogs, aiQuota]);
+
+  // Filter Categories
+  const categories = useMemo(() => {
+    const errorCount = normalizedLogs.filter(log => {
+      const { type = '', output = '' } = log;
+      return type.includes('異常') || type.includes('Alert') || type.includes('錯誤') || output.includes('失敗') || output.includes('異常');
+    }).length;
+
+    return [
+      { id: 'ALL', label: isEn ? 'All Logs' : '全部日誌' },
+      { id: 'LOGIN', label: isEn ? '🛡️ Logins' : '🛡️ 後台登入' },
+      { 
+        id: 'ALERT', 
+        label: isEn 
+          ? `🚨 Errors${errorCount > 0 ? ` (${errorCount})` : ''}` 
+          : `🚨 異常通報${errorCount > 0 ? ` (${errorCount})` : ''}`
+      },
+      { id: 'PHOTO', label: isEn ? '📸 Photo' : '📸 照片辨識' },
+      { id: 'TEXT', label: isEn ? '💬 Text' : '💬 文字記餐' },
+      { id: 'WATER', label: isEn ? '🚰 Water' : '🚰 喝水記錄' },
+      { id: 'PORTION', label: isEn ? '⚖️ Portion' : '⚖️ 份量調整' },
+      { id: 'SYNC', label: isEn ? '⚡ Web Sync' : '⚡ Web 同步' },
+      { id: 'GOAL', label: isEn ? '🎯 Goals' : '🎯 體態目標' },
+    ];
+  }, [isEn, normalizedLogs]);
 
   const filteredLogs = useMemo(() => {
     if (!normalizedLogs || !normalizedLogs.length) return [];
@@ -790,7 +827,11 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         </div>
 
         {/* KPI 3: Success Rate */}
-        <div className="bg-white border-4 border-black rounded-[2rem] p-4 shadow-neo space-y-3 relative overflow-hidden">
+        <div 
+          onClick={() => setSelectedCategory('ALERT')}
+          className="bg-white border-4 border-black rounded-[2rem] p-4 shadow-neo space-y-3 relative overflow-hidden cursor-pointer hover:shadow-neo-lg transition-all"
+          title={isEn ? 'Click to view Error logs' : '點擊查看異常日誌'}
+        >
           <div className="flex items-center justify-between">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
               <CheckCircle2 size={14} className="text-emerald-500" />
@@ -913,29 +954,6 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 </span>
               </span>
             </div>
-          </div>
-        </div>
-      )}
-
-      {/* ⚠️ Recent Errors Alert Panel (if any) */}
-      {recentErrors.length > 0 && (
-        <div className="bg-rose-50 border-4 border-rose-500 rounded-[2rem] p-4 shadow-neo-sm space-y-2">
-          <div className="flex items-center gap-2 text-rose-800 font-black text-xs uppercase tracking-wider">
-            <AlertTriangle size={16} className="text-rose-600" />
-            {isEn ? 'Recent Model Failures & System Alerts' : '近期 API 調用異常與伺服器故障通報'}
-          </div>
-          <div className="space-y-1.5">
-            {recentErrors.slice(0, 3).map((errItem, idx) => (
-              <div key={idx} className="bg-white border-2 border-rose-200 rounded-xl p-2 text-xs font-bold flex flex-wrap items-center justify-between gap-2">
-                <span className="font-mono text-[10px] text-zinc-400">{errItem.time || '剛剛'}</span>
-                <span className="bg-rose-100 text-rose-800 border border-rose-300 px-2 py-0.5 rounded text-[10px] font-mono">
-                  {errItem.model || 'Unknown'}
-                </span>
-                <span className="text-rose-700 truncate max-w-sm flex-1 font-mono text-[11px]">
-                  {errItem.error || 'Request Error'}
-                </span>
-              </div>
-            ))}
           </div>
         </div>
       )}
