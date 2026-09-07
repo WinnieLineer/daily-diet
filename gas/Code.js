@@ -636,6 +636,71 @@ function doPost(e) {
           continue;
         }
 
+        // 🔢 餐點倍數調整 (參考 WEB 邏輯：0.5x, 1x, 1.5x, 2x 及自訂倍數快速回復氣泡)
+        if (payload.action === 'setMultiplier') {
+          const m = Number(payload.m) || 1;
+          const baseCal = Number(payload.baseCal) || 0;
+          const basePro = Number(payload.basePro) || 0;
+          const baseCarb = Number(payload.baseCarb) || 0;
+          const baseFat = Number(payload.baseFat) || 0;
+          const baseWat = Number(payload.baseWat) || 0;
+          const baseName = payload.baseName ? decodeURIComponent(payload.baseName) : '餐點';
+
+          const userLang = getUserLanguage(userId, props, userGistId);
+          const isEn = userLang === 'en';
+
+          const newCal = Math.round(baseCal * m);
+          const newPro = Number((basePro * m).toFixed(1));
+          const newCarb = Number((baseCarb * m).toFixed(1));
+          const newFat = Number((baseFat * m).toFixed(1));
+          const newWat = Math.round(baseWat * m);
+          const newName = m === 1 ? baseName : (isEn ? `${m}x ${baseName}` : `${m}倍的${baseName}`);
+
+          const todayStr = getTodayDateString();
+          const logs = getTodayLogs(userId, todayStr, props, userGistId);
+          let targetMeal = null;
+          if (logs.length > 0) {
+            let targetIndex = logs.length - 1;
+            if (payload.id) {
+              const idx = logs.findIndex(l => String(l.id) === String(payload.id));
+              if (idx !== -1) targetIndex = idx;
+            }
+            targetMeal = logs[targetIndex];
+          }
+
+          const scaledBreakdown = (targetMeal && targetMeal.breakdown && Array.isArray(targetMeal.breakdown))
+            ? targetMeal.breakdown.map(item => ({
+                ...item,
+                calories: Math.round((item.calories || 0) * m),
+                protein: Number(((item.protein || 0) * m).toFixed(1))
+              }))
+            : [];
+
+          const updateFields = {
+            id: payload.id || (targetMeal ? targetMeal.id : Date.now()),
+            dish_name: newName,
+            calories: newCal,
+            protein: newPro,
+            carbs: newCarb,
+            fat: newFat,
+            water: newWat,
+            breakdown: scaledBreakdown.length > 0 ? scaledBreakdown : (targetMeal ? targetMeal.breakdown : []),
+            comment: (targetMeal && targetMeal.comment ? targetMeal.comment.replace(/\s*\(.*倍.*份量\)/g, '') : '') + (m === 1 ? '' : ` (${m}倍份量)`),
+            baseDishName: baseName,
+            baseCalories: baseCal,
+            baseProtein: basePro,
+            baseCarbs: baseCarb,
+            baseFat: baseFat,
+            baseWater: baseWat,
+            multiplier: m
+          };
+
+          const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
+          recordSystemLog('倍數調整', userId, `${baseName} -> x${m}`, `${newCal}卡 / ${newPro}g蛋`, `已調整為 ${m} 倍份量`);
+          replyMealConfirmCard(replyToken, updatedMeal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 🍚 碳水減半 / 飯吃一半 快捷按鈕動作
         if (payload.action === 'halveCarbs') {
           const logs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
@@ -845,7 +910,14 @@ function doPost(e) {
             water: Number(analysis.water) || 0,
             breakdown: analysis.breakdown || [],
             calculation_note: analysis.calculation_note || '',
-            comment: analysis.panda_comment || ''
+            comment: analysis.panda_comment || '',
+            baseDishName: analysis.dish_name || '美味餐點',
+            baseCalories: Number(analysis.calories) || 0,
+            baseProtein: Number(analysis.protein) || 0,
+            baseCarbs: Number(analysis.carbs) || 0,
+            baseFat: Number(analysis.fat) || 0,
+            baseWater: Number(analysis.water) || 0,
+            multiplier: 1
           };
 
           // ⚡ 即時秒寫入資料庫（無時間差 GAP）
@@ -1290,6 +1362,73 @@ function doPost(e) {
             continue;
           }
 
+          // 🔢 直接輸入或修改倍數 (例如: "改 0.5倍", "改 1.5倍", "0.5倍", "1.5倍", "2倍", "x0.5", "x1.5", "半份", "雙倍")
+          const multTextMatch = userText.match(/^(?:改|修改|改成)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:倍|x|X)(?:的)?(?:份量)?$/i)
+            || userText.match(/^(?:改|修改|改成)?\s*(半份|雙倍|大份|加大)$/);
+
+          if (multTextMatch) {
+            let m = 1;
+            if (multTextMatch[1] === '半份') m = 0.5;
+            else if (multTextMatch[1] === '雙倍' || multTextMatch[1] === '大份' || multTextMatch[1] === '加大') m = 2.0;
+            else m = parseFloat(multTextMatch[1]);
+
+            if (!isNaN(m) && m > 0 && m <= 10) {
+              const todayStr = getTodayDateString();
+              const logs = getTodayLogs(userId, todayStr, props, userGistId);
+              if (logs.length > 0) {
+                const lastMeal = logs[logs.length - 1];
+                const baseCal = Number(lastMeal.baseCalories) || Number(lastMeal.calories) || 0;
+                const basePro = Number(lastMeal.baseProtein) || Number(lastMeal.protein) || 0;
+                const baseCarb = Number(lastMeal.baseCarbs) || Number(lastMeal.carbs) || 0;
+                const baseFat = Number(lastMeal.baseFat) || Number(lastMeal.fat) || 0;
+                const baseWat = Number(lastMeal.baseWater) || Number(lastMeal.water) || 0;
+                const baseName = (lastMeal.baseDishName || lastMeal.dish_name || '餐點').replace(/^[0-9]+(?:\.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '');
+
+                const userLang = getUserLanguage(userId, props, userGistId);
+                const isEn = userLang === 'en';
+
+                const newCal = Math.round(baseCal * m);
+                const newPro = Number((basePro * m).toFixed(1));
+                const newCarb = Number((baseCarb * m).toFixed(1));
+                const newFat = Number((baseFat * m).toFixed(1));
+                const newWat = Math.round(baseWat * m);
+                const newName = m === 1 ? baseName : (isEn ? `${m}x ${baseName}` : `${m}倍的${baseName}`);
+
+                const scaledBreakdown = (lastMeal.breakdown && Array.isArray(lastMeal.breakdown))
+                  ? lastMeal.breakdown.map(item => ({
+                      ...item,
+                      calories: Math.round((item.calories || 0) * m),
+                      protein: Number(((item.protein || 0) * m).toFixed(1))
+                    }))
+                  : [];
+
+                const updateFields = {
+                  id: lastMeal.id,
+                  dish_name: newName,
+                  calories: newCal,
+                  protein: newPro,
+                  carbs: newCarb,
+                  fat: newFat,
+                  water: newWat,
+                  breakdown: scaledBreakdown.length > 0 ? scaledBreakdown : lastMeal.breakdown,
+                  comment: (lastMeal.comment ? lastMeal.comment.replace(/\s*\(.*倍.*份量\)/g, '') : '') + (m === 1 ? '' : ` (${m}倍份量)`),
+                  baseDishName: baseName,
+                  baseCalories: baseCal,
+                  baseProtein: basePro,
+                  baseCarbs: baseCarb,
+                  baseFat: baseFat,
+                  baseWater: baseWat,
+                  multiplier: m
+                };
+
+                const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
+                recordSystemLog('文字倍數調整', userId, userText, `${newName} (${newCal}卡 / ${newPro}g蛋)`, `已調整為 ${m} 倍份量`);
+                replyMealConfirmCard(replyToken, updatedMeal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
+                continue;
+              }
+            }
+          }
+
           // ✏️ 直接在 LINE 文字修改餐點數值 (例如: "改 600卡 30蛋 500水" 或 "改 35蛋 40碳 15脂" 或 "改 碳水減半")
           if (userText.startsWith('改') || userText.startsWith('修改') || userText.startsWith('改成')) {
             const isHalveCarbs = userText.includes('碳水減半') || userText.includes('飯減半') || userText.includes('飯吃一半') || userText.includes('半碗飯');
@@ -1377,7 +1516,14 @@ function doPost(e) {
               water: Number(analysis.water) || 0,
               breakdown: analysis.breakdown || [],
               calculation_note: analysis.calculation_note || '',
-              comment: analysis.panda_comment || ''
+              comment: analysis.panda_comment || '',
+              baseDishName: analysis.dish_name || '美味餐點',
+              baseCalories: Number(analysis.calories) || 0,
+              baseProtein: Number(analysis.protein) || 0,
+              baseCarbs: Number(analysis.carbs) || 0,
+              baseFat: Number(analysis.fat) || 0,
+              baseWater: Number(analysis.water) || 0,
+              multiplier: 1
             };
 
             // ⚡ 即時秒寫入資料庫（無時間差 GAP）
@@ -1649,6 +1795,11 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     }];
   }
 
+  const curM = Number(analysis.multiplier) || 1;
+  const subtitleText = curM !== 1
+    ? (isEn ? `✅ Updated to ${curM}x portion!` : `✅ 已更新為 ${curM} 倍份量！`)
+    : (isEn ? "✅ Logged to your Diary!" : "✅ 已即時記錄至資料庫！");
+
   const flexMessage = {
     type: "flex",
     altText: `🍱 AI 已記錄：${analysis.dish_name} (${analysis.calories} kcal)`,
@@ -1671,10 +1822,10 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           },
           {
             type: "text",
-            text: isEn ? "✅ Logged to your Diary!" : "✅ 已即時記錄至資料庫！",
+            text: subtitleText,
             weight: "bold",
             size: "md",
-            color: "#000000",
+            color: curM !== 1 ? "#B45309" : "#000000",
             margin: "xs"
           }
         ]
@@ -1687,12 +1838,40 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
         backgroundColor: "#FFFFFF",
         contents: [
           {
-            type: "text",
-            text: analysis.dish_name || (isEn ? "Delicious Meal" : "美味餐點"),
-            weight: "bold",
-            size: "xl",
-            color: "#000000",
-            wrap: true
+            type: "box",
+            layout: "horizontal",
+            alignItems: "center",
+            contents: [
+              {
+                type: "text",
+                text: analysis.dish_name || (isEn ? "Delicious Meal" : "美味餐點"),
+                weight: "bold",
+                size: "xl",
+                color: "#000000",
+                wrap: true,
+                flex: 1
+              },
+              ...(curM !== 1 ? [{
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF08A",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "8px",
+                paddingAll: "4px",
+                paddingStart: "8px",
+                paddingEnd: "8px",
+                contents: [
+                  {
+                    type: "text",
+                    text: `x${curM}`,
+                    weight: "bold",
+                    size: "xs",
+                    color: "#854D0E"
+                  }
+                ]
+              }] : [])
+            ]
           },
           // 3 大營養素粗黑框卡片
           {
@@ -1942,6 +2121,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     }
   };
 
+  attachMealMultiplierQuickReply(flexMessage, analysis, userId, props);
   replyFlexMessage(replyToken, flexMessage, accessToken, userId, props);
 }
 
@@ -2968,7 +3148,10 @@ function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
   let targetMeal = null;
   if (logs.length > 0) {
     let targetIndex = logs.length - 1;
-    if (updateFields.dish_name) {
+    if (updateFields.id) {
+      const foundIdx = logs.findIndex(l => String(l.id) === String(updateFields.id));
+      if (foundIdx !== -1) targetIndex = foundIdx;
+    } else if (updateFields.dish_name) {
       const foundIdx = logs.findIndex(l => l.dish_name && (l.dish_name.includes(updateFields.dish_name) || updateFields.dish_name.includes(l.dish_name)));
       if (foundIdx !== -1) targetIndex = foundIdx;
     }
@@ -2983,6 +3166,14 @@ function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
     if (updateFields.fat !== undefined) targetMeal.fat = Number(updateFields.fat);
     if (updateFields.water !== undefined) targetMeal.water = Number(updateFields.water);
     if (updateFields.comment !== undefined) targetMeal.comment = updateFields.comment;
+    if (updateFields.breakdown !== undefined) targetMeal.breakdown = updateFields.breakdown;
+    if (updateFields.baseDishName !== undefined) targetMeal.baseDishName = updateFields.baseDishName;
+    if (updateFields.baseCalories !== undefined) targetMeal.baseCalories = updateFields.baseCalories;
+    if (updateFields.baseProtein !== undefined) targetMeal.baseProtein = updateFields.baseProtein;
+    if (updateFields.baseCarbs !== undefined) targetMeal.baseCarbs = updateFields.baseCarbs;
+    if (updateFields.baseFat !== undefined) targetMeal.baseFat = updateFields.baseFat;
+    if (updateFields.baseWater !== undefined) targetMeal.baseWater = updateFields.baseWater;
+    if (updateFields.multiplier !== undefined) targetMeal.multiplier = updateFields.multiplier;
 
     logs[targetIndex] = targetMeal;
     props.setProperty(todayKey, JSON.stringify(logs));
@@ -2996,7 +3187,7 @@ function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
     }
   } else {
     targetMeal = {
-      id: Date.now(),
+      id: updateFields.id || Date.now(),
       date: todayStr,
       time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
       dish_name: updateFields.dish_name || '餐點',
@@ -3005,7 +3196,15 @@ function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
       carbs: Number(updateFields.carbs) || 0,
       fat: Number(updateFields.fat) || 0,
       water: Number(updateFields.water) || 0,
-      comment: updateFields.comment || ''
+      breakdown: updateFields.breakdown || [],
+      comment: updateFields.comment || '',
+      baseDishName: updateFields.baseDishName || updateFields.dish_name || '餐點',
+      baseCalories: updateFields.baseCalories !== undefined ? updateFields.baseCalories : Number(updateFields.calories) || 0,
+      baseProtein: updateFields.baseProtein !== undefined ? updateFields.baseProtein : Number(updateFields.protein) || 0,
+      baseCarbs: updateFields.baseCarbs !== undefined ? updateFields.baseCarbs : Number(updateFields.carbs) || 0,
+      baseFat: updateFields.baseFat !== undefined ? updateFields.baseFat : Number(updateFields.fat) || 0,
+      baseWater: updateFields.baseWater !== undefined ? updateFields.baseWater : Number(updateFields.water) || 0,
+      multiplier: updateFields.multiplier || 1
     };
     saveMealLog(userId, targetMeal, userGistId, pat, props);
   }
@@ -3380,9 +3579,148 @@ Do NOT wrap in markdown backticks.`;
 
 
 
+// 🔢 餐點記錄當下：專屬倍數調整快速回復氣泡 (參考 WEB 邏輯：0.5x, 1x, 1.5x, 2x, 自訂倍數, 飯減半, 總結, 常用, 喝水, 撤回)
+function attachMealMultiplierQuickReply(message, meal, userId, props) {
+  if (!message) return message;
+  try {
+    const userLang = getUserLanguage(userId, props);
+    const isEn = userLang === 'en';
+
+    const baseCal = meal.baseCalories !== undefined ? meal.baseCalories : (Number(meal.calories) || 0);
+    const basePro = meal.baseProtein !== undefined ? meal.baseProtein : (Number(meal.protein) || 0);
+    const baseCarb = meal.baseCarbs !== undefined ? meal.baseCarbs : (Number(meal.carbs) || 0);
+    const baseFat = meal.baseFat !== undefined ? meal.baseFat : (Number(meal.fat) || 0);
+    const baseWat = meal.baseWater !== undefined ? meal.baseWater : (Number(meal.water) || 0);
+    const rawDishName = (meal.baseDishName || meal.dish_name || (isEn ? 'Meal' : '餐點'));
+    const cleanBaseName = rawDishName.replace(/^[0-9]+(?:\.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').slice(0, 25);
+    const mealId = meal.id;
+    const curM = Number(meal.multiplier) || 1;
+
+    const multipliers = [
+      { m: 0.5, labelZh: "x0.5 (半份)", labelEn: "x0.5 Half" },
+      { m: 1.0, labelZh: "x1.0 (原份)", labelEn: "x1.0 Normal" },
+      { m: 1.5, labelZh: "x1.5 (1.5倍)", labelEn: "x1.5 (1.5x)" },
+      { m: 2.0, labelZh: "x2.0 (雙倍)", labelEn: "x2.0 Double" }
+    ];
+
+    const items = [];
+
+    // 1. 四顆倍數氣泡 (0.5x, 1.0x, 1.5x, 2.0x)
+    multipliers.forEach(opt => {
+      const isCurrent = Math.abs(curM - opt.m) < 0.01;
+      const displayLabel = (isEn ? opt.labelEn : opt.labelZh) + (isCurrent ? ' ✔' : '');
+      items.push({
+        type: "action",
+        action: {
+          type: "postback",
+          label: displayLabel.slice(0, 20),
+          data: JSON.stringify({
+            action: "setMultiplier",
+            id: mealId,
+            m: opt.m,
+            baseCal: baseCal,
+            basePro: basePro,
+            baseCarb: baseCarb,
+            baseFat: baseFat,
+            baseWat: baseWat,
+            baseName: encodeURIComponent(cleanBaseName)
+          }),
+          displayText: isEn ? `Adjust portion to ${opt.m}x` : `調整份量為 ${opt.m} 倍`
+        }
+      });
+    });
+
+    // 2. 自訂倍數 (開鍵盤引導 "改 1.2倍")
+    items.push({
+      type: "action",
+      action: {
+        type: "postback",
+        label: isEn ? "✏️ Custom Portion" : "✏️ 自訂倍數",
+        data: JSON.stringify({ action: "fillCustomMult", id: mealId }),
+        inputOption: "openKeyboard",
+        fillInText: isEn ? "改 1.2x" : "改 1.2倍"
+      }
+    });
+
+    // 3. 🍚 飯吃一半 (便當/米飯/麵類或碳水>=20)
+    if (baseCarb >= 20 || (cleanBaseName && (cleanBaseName.includes('便當') || cleanBaseName.includes('飯') || cleanBaseName.includes('麵')))) {
+      items.push({
+        type: "action",
+        action: {
+          type: "postback",
+          label: isEn ? "🍚 Halve Rice (-50%)" : "🍚 飯吃一半 (-50%)",
+          data: JSON.stringify({ action: "halveCarbs", id: mealId, name: cleanBaseName }),
+          displayText: isEn ? "🍚 Halve rice/carbs (-50%)" : "🍚 飯吃一半 (碳水減半)"
+        }
+      });
+    }
+
+    // 4. ⭐ 存為常用
+    items.push({
+      type: "action",
+      action: {
+        type: "postback",
+        label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
+        data: JSON.stringify({
+          action: "saveFavorite",
+          name: cleanBaseName.slice(0, 30),
+          cal: Number(meal.calories) || 0,
+          pro: Number(meal.protein) || 0,
+          wat: Number(meal.water) || 0
+        }),
+        displayText: isEn ? `⭐ Favorite: ${cleanBaseName}` : `⭐ 存為常用：${cleanBaseName}`
+      }
+    });
+
+    // 5. 📊 查看今日總結
+    items.push({
+      type: "action",
+      action: {
+        type: "postback",
+        label: isEn ? "📊 Daily Summary" : "📊 今日總結",
+        data: JSON.stringify({ action: "save", id: mealId }),
+        displayText: isEn ? "📊 Daily Summary" : "📊 查看今日總結"
+      }
+    });
+
+    // 6. 💧 補水 500
+    items.push({
+      type: "action",
+      action: {
+        type: "postback",
+        label: isEn ? "💧 +500ml Water" : "💧 喝水 500",
+        data: JSON.stringify({ action: "quickWater", amount: 500 }),
+        displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 500ml"
+      }
+    });
+
+    // 7. 🗑️ 撤回這筆紀錄
+    items.push({
+      type: "action",
+      action: {
+        type: "postback",
+        label: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回紀錄",
+        data: JSON.stringify({ action: "cancel", id: mealId, name: cleanBaseName.slice(0, 30) }),
+        displayText: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄"
+      }
+    });
+
+    message.quickReply = { items: items.slice(0, 13) };
+  } catch (err) {
+    console.error("attachMealMultiplierQuickReply error:", err);
+  }
+  return message;
+}
+
 function attachQuickReply(message, userId, props) {
   if (!userId || !props) return message;
+  // 若訊息本身已經掛載了專屬的快速回復氣泡（例如餐點倍數調整氣泡），直接保留不覆蓋！
+  if (message.quickReply && message.quickReply.items && message.quickReply.items.length > 0) {
+    return message;
+  }
   try {
+    const userLang = getUserLanguage(userId, props);
+    const isEn = userLang === 'en';
     const favorites = getUserFavorites(userId, props);
     const items = [];
 
@@ -3391,8 +3729,8 @@ function attachQuickReply(message, userId, props) {
       type: "action",
       action: {
         type: "message",
-        label: "⭐ 常用餐點",
-        text: "常用"
+        label: isEn ? "⭐ Favorites" : "⭐ 常用餐點",
+        text: isEn ? "favorites" : "常用"
       }
     });
 
@@ -3403,7 +3741,7 @@ function attachQuickReply(message, userId, props) {
           type: "action",
           action: {
             type: "postback",
-            label: `⭐ ${(fav.dish_name || '常用').slice(0, 8)}`,
+            label: `⭐ ${(fav.dish_name || (isEn ? 'Fav' : '常用')).slice(0, 8)}`,
             data: JSON.stringify({
               action: 'quickLogFavorite',
               name: encodeURIComponent(fav.dish_name),
@@ -3411,7 +3749,7 @@ function attachQuickReply(message, userId, props) {
               pro: fav.protein,
               wat: fav.water || 0
             }),
-            displayText: `⚡ 快捷記錄：${fav.dish_name}`
+            displayText: isEn ? `⚡ Quick Log: ${fav.dish_name}` : `⚡ 快捷記錄：${fav.dish_name}`
           }
         });
       });
@@ -3422,9 +3760,9 @@ function attachQuickReply(message, userId, props) {
       type: "action",
       action: {
         type: "postback",
-        label: "💧 補水 500",
+        label: isEn ? "💧 +500ml Water" : "💧 補水 500",
         data: JSON.stringify({ action: 'quickWater', amount: 500 }),
-        displayText: "💧 喝水 500ml"
+        displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 500ml"
       }
     });
 
@@ -3433,8 +3771,8 @@ function attachQuickReply(message, userId, props) {
       type: "action",
       action: {
         type: "message",
-        label: "📊 今日總結",
-        text: "今日"
+        label: isEn ? "📊 Daily Summary" : "📊 今日總結",
+        text: isEn ? "summary" : "今日"
       }
     });
 
@@ -3443,7 +3781,7 @@ function attachQuickReply(message, userId, props) {
       type: "action",
       action: {
         type: "datetimepicker",
-        label: "📅 查日期",
+        label: isEn ? "📅 Pick Date" : "📅 查日期",
         data: JSON.stringify({ action: 'pickDate' }),
         mode: "date",
         initial: getTodayDateString(),
@@ -3456,8 +3794,8 @@ function attachQuickReply(message, userId, props) {
       type: "action",
       action: {
         type: "message",
-        label: "💡 全部功能",
-        text: "說明"
+        label: isEn ? "💡 Guide" : "💡 全部功能",
+        text: isEn ? "guide" : "說明"
       }
     });
 
@@ -6634,55 +6972,7 @@ function purgeAllUserData(userId, userGistId, pat, props) {
   }
 }
 
-function getOrCreateUserGist(userId, pat, props) {
-  if (!props) props = PropertiesService.getScriptProperties();
-  const gistKey = `USER_GIST_${userId}`;
-  let gistId = props.getProperty(gistKey);
-  if (gistId) return gistId;
-  if (!pat) return '';
 
-  try {
-    const payload = {
-      description: `Daily Diet User Cloud Backup - ${userId}`,
-      public: false,
-      files: {
-        'daily-diet-backup.json': {
-          content: JSON.stringify({
-            version: '3.0.0',
-            updatedAt: new Date().toISOString(),
-            userId: userId,
-            dietLogs: [],
-            weightLogs: [],
-            settings: [],
-            favorites: []
-          }, null, 2)
-        }
-      }
-    };
-
-    const res = UrlFetchApp.fetch('https://api.github.com/gists', {
-      method: 'post',
-      headers: {
-        'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json'
-      },
-      payload: JSON.stringify(payload),
-      muteHttpExceptions: true
-    });
-
-    if (res.getResponseCode() === 201) {
-      const data = JSON.parse(res.getContentText());
-      gistId = data.id;
-      props.setProperty(gistKey, gistId);
-      console.log(`🎉 成功為用戶 ${userId} 建立專屬 Gist 備份庫: ${gistId}`);
-      return gistId;
-    }
-  } catch (e) {
-    console.error("建立 Gist 備份失敗:", e);
-  }
-  return '';
-}
 
 function analyzeMealWithGeminiFull(base64Image, apiKey, context, language) {
   const models = [
