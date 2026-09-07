@@ -254,10 +254,12 @@ function doGet(e) {
       const browser = e?.parameter?.browser || '';
       const os = e?.parameter?.os || '';
       const token = e?.parameter?.token || '';
+      const userName = e?.parameter?.userName || e?.parameter?.user || '系統維護者';
       const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
 
       const auditRecord = {
         time: timeStr,
+        userName: userName,
         ip: ip,
         location: location,
         device: device,
@@ -267,15 +269,23 @@ function doGet(e) {
       };
 
       props.setProperty('LAST_MAINTAINER_LOGIN', JSON.stringify(auditRecord));
-      recordSystemLog('維護者登入', 'Maintainer', `${ip} · ${location}`, `${os} · ${browser} · ${device}`, `永久通行證已核發 (${timeStr})`);
+      recordSystemLog(
+        '維護者登入', 
+        'Maintainer', 
+        `IP: ${ip} · 位置: ${location}`, 
+        `OS: ${os} · 瀏覽器: ${browser} · 螢幕: ${device}`, 
+        `✅ 永久通行證已核發 (${timeStr})`, 
+        userName,
+        { ip: ip, location: location, device: `${os} · ${browser}` }
+      );
 
       try {
         sendErrorAlertToWeb3Forms({
-          error: { message: `【維護者登入安全通知】IP: ${ip} (${location}) 於 ${timeStr} 成功登入監控中心` },
+          error: { message: `【維護者登入安全通知】維護者: ${userName} | IP: ${ip} (${location}) 於 ${timeStr} 成功登入監控中心` },
           userId: 'Maintainer',
-          userName: '系統維護者',
+          userName: userName,
           operation: '維護者後台登入',
-          userInput: `IP: ${ip} | 地理位置: ${location} | 作業系統: ${os} | 瀏覽器: ${browser} | 螢幕規格: ${device}`,
+          userInput: `維護者: ${userName} | IP: ${ip} | 地理位置: ${location} | 作業系統: ${os} | 瀏覽器: ${browser} | 螢幕規格: ${device}`,
           source: 'Web 維護者後台 (#/admin)'
         });
       } catch (mailErr) {

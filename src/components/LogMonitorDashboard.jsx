@@ -28,7 +28,16 @@ import {
   Server,
   Globe,
   Smartphone,
-  Laptop
+  Laptop,
+  ChevronRight,
+  ChevronDown,
+  Table as TableIcon,
+  LayoutList,
+  Terminal,
+  Code,
+  MapPin,
+  ShieldAlert,
+  Download
 } from 'lucide-react';
 import NeoButton from './NeoButton';
 
@@ -36,43 +45,88 @@ const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTS
 const DEFAULT_MAINTAINER_PASS = 'panda888';
 const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_permanent_token';
 const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
+const MAINTAINER_NAME_KEY = 'daily_diet_maintainer_name';
 
 // Helper to safely normalize log records (Supports both Object format and Array format from GAS)
 const normalizeLog = (item) => {
   if (!item) return null;
   if (Array.isArray(item)) {
+    const time = String(item[0] || '');
+    const userName = String(item[1] || item[2] || 'LINE 用戶');
+    const userId = String(item[2] || item[1] || 'user');
+    const type = String(item[3] || item[1] || '系統操作');
+    const input = String(item[4] || '');
+    const aiResult = String(item[5] || '');
+    const output = String(item[6] || '');
+    const ip = String(item[7] || '');
+    const location = String(item[8] || '');
     return {
-      time: String(item[0] || ''),
-      userName: String(item[1] || item[2] || 'LINE 用戶'),
-      userId: String(item[2] || item[1] || 'user'),
-      type: String(item[3] || item[1] || '系統操作'),
-      input: String(item[4] || ''),
-      aiResult: String(item[5] || ''),
-      output: String(item[6] || ''),
-      source: String(item[7] || '')
+      time,
+      userName,
+      userId,
+      type,
+      input,
+      aiResult,
+      output,
+      source: 'LINE / GAS',
+      ip,
+      location,
+      device: ''
     };
   }
+
+  const inputStr = String(item.input || item.query || '');
+  const aiResultStr = String(item.aiResult || item.nutrients || '');
+  const outputStr = String(item.output || item.result || '');
+
+  // Extract ip and location if embedded in input / output
+  let ip = item.ip || '';
+  let location = item.location || '';
+  let device = item.device || '';
+
+  if (!ip && inputStr.includes('IP:')) {
+    const ipMatch = inputStr.match(/IP:\s*([^\s·|,]+)/);
+    if (ipMatch) ip = ipMatch[1];
+  }
+  if (!location && inputStr.includes('位置:')) {
+    const locMatch = inputStr.match(/位置:\s*([^·|]+)/);
+    if (locMatch) location = locMatch[1].trim();
+  }
+  if (!device && inputStr.includes('OS:')) {
+    const devMatch = inputStr.match(/(?:OS:[^|]+)/);
+    if (devMatch) device = devMatch[0].trim();
+  }
+
   return {
     time: String(item.time || ''),
-    userName: String(item.userId || item.userName || 'LINE 用戶'),
+    userName: String(item.userName || item.userId || 'LINE 用戶'),
     userId: String(item.rawUserId || item.userId || 'user'),
     type: String(item.type || item.op || '系統操作'),
-    input: String(item.input || item.query || ''),
-    aiResult: String(item.aiResult || item.nutrients || ''),
-    output: String(item.output || item.result || ''),
-    source: String(item.source || '')
+    input: inputStr,
+    aiResult: aiResultStr,
+    output: outputStr,
+    source: String(item.source || (item.type?.includes('維護者') ? 'Web 維護者後台' : 'LINE Bot')),
+    ip,
+    location,
+    device
   };
 };
 
 export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const isEn = lang === 'en';
 
-  // 🔐 Permanent Pass Authentication State (localStorage persists forever)
+  // 🔐 Permanent Pass Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
     return Boolean(localStorage.getItem(PERMANENT_TOKEN_KEY));
   });
   const [permanentToken, setPermanentToken] = useState(() => {
     return localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
+  });
+  const [maintainerName, setMaintainerName] = useState(() => {
+    return localStorage.getItem(MAINTAINER_NAME_KEY) || localStorage.getItem('user_name') || 'Winnie';
+  });
+  const [maintainerNameInput, setMaintainerNameInput] = useState(() => {
+    return localStorage.getItem(MAINTAINER_NAME_KEY) || localStorage.getItem('user_name') || 'Winnie';
   });
   const [clientInfo, setClientInfo] = useState(() => {
     try {
@@ -98,12 +152,30 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [lastFetchedAt, setLastFetchedAt] = useState(null);
   const [fetchError, setFetchError] = useState(null);
 
-  // ⚙️ Filtering & Auto-Refresh States
+  // ⚙️ View & Filtering States
+  const [viewMode, setViewMode] = useState('kibana'); // 'kibana' (table) or 'cards' (stream)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10); // seconds (0 = off)
   const [countdown, setCountdown] = useState(10);
   const [copiedId, setCopiedId] = useState(null);
+
+  // 📑 Kibana Row Expansion & Inspector States
+  const [expandedRowIds, setExpandedRowIds] = useState(new Set([0])); // default expand 1st row
+  const [rowInspectorTab, setRowInspectorTab] = useState({}); // { [rowId]: 'table' | 'json' }
+
+  const toggleRowExpansion = (rowId) => {
+    setExpandedRowIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(rowId)) next.delete(rowId);
+      else next.add(rowId);
+      return next;
+    });
+  };
+
+  const setRowTab = (rowId, tab) => {
+    setRowInspectorTab((prev) => ({ ...prev, [rowId]: tab }));
+  };
 
   // 🕵️ Collect Device, IP & Geo Location Info
   const collectDeviceInfo = async () => {
@@ -146,15 +218,25 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
     const device = `${window.screen.width}x${window.screen.height} (${window.devicePixelRatio || 1}x)`;
 
-    return { ip, location, os, browser, device, timestamp: new Date().toISOString() };
+    return { 
+      ip, 
+      location, 
+      os, 
+      browser, 
+      device, 
+      userName: maintainerName || 'Winnie',
+      timestamp: new Date().toISOString() 
+    };
   };
 
   // 📡 Send Maintainer Login Audit to GAS Backend
-  const recordMaintainerAuditToBackend = async (info, token) => {
+  const recordMaintainerAuditToBackend = async (info, token, userNameOverride) => {
     try {
       setIsRegisteringAudit(true);
+      const name = userNameOverride || maintainerName || info.userName || 'Winnie';
       const params = new URLSearchParams({
         action: 'recordMaintainerLogin',
+        userName: name,
         ip: info.ip || '',
         location: info.location || '',
         device: info.device || '',
@@ -163,7 +245,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         token: token || ''
       });
       await fetch(`${GAS_API_URL}?${params.toString()}`, { method: 'GET', mode: 'no-cors' });
-      console.log('✅ [Maintainer Audit] 登入設備與 IP 資訊已成功記錄至雲端伺服器');
+      console.log('✅ [Maintainer Audit] 登入日誌已記錄 (含使用者名字、位置與 IP)');
     } catch (err) {
       console.warn('⚠️ 記錄維護者登入日誌失敗:', err);
     } finally {
@@ -175,21 +257,44 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     const cleanInput = passwordInput.trim();
+    const cleanName = maintainerNameInput.trim() || 'Winnie';
     const customPass = localStorage.getItem('maintainer_custom_pass') || DEFAULT_MAINTAINER_PASS;
 
     if (cleanInput === customPass || cleanInput === DEFAULT_MAINTAINER_PASS) {
       // Generate permanent pass token
       const newToken = `PANDA_PASS_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       localStorage.setItem(PERMANENT_TOKEN_KEY, newToken);
+      localStorage.setItem(MAINTAINER_NAME_KEY, cleanName);
       setPermanentToken(newToken);
+      setMaintainerName(cleanName);
       setIsAuthenticated(true);
       setAuthError('');
 
       // Collect device & IP info and record to backend
       const info = await collectDeviceInfo();
+      info.userName = cleanName;
       localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
       setClientInfo(info);
-      recordMaintainerAuditToBackend(info, newToken);
+
+      // Instantly inject a local login record so user immediately sees their own login log
+      const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
+      const instantLoginLog = {
+        time: nowStr,
+        userName: cleanName,
+        userId: 'Maintainer',
+        type: '維護者登入',
+        input: `IP: ${info.ip} · 位置: ${info.location}`,
+        aiResult: `OS: ${info.os} · 瀏覽器: ${info.browser} · 螢幕: ${info.device}`,
+        output: `✅ 永久通行證已核發 (${nowStr})`,
+        source: 'Web 維護者後台 (#/admin)',
+        ip: info.ip,
+        location: info.location,
+        device: `${info.os} · ${info.browser}`
+      };
+      setRawLogs((prev) => [instantLoginLog, ...prev]);
+
+      // Report to GAS
+      recordMaintainerAuditToBackend(info, newToken, cleanName);
     } else {
       setAuthError(isEn ? 'Incorrect password. Access denied.' : '維護者密碼不正確，存取被拒絕。');
       setIsShaking(true);
@@ -218,10 +323,37 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
       const data = await res.json();
       if (data.status === 'ok') {
-        setRawLogs(Array.isArray(data.logs) ? data.logs : []);
+        const fetchedLogs = Array.isArray(data.logs) ? data.logs : [];
+
+        // If backend returned lastMaintainerLogin, ensure it exists in the log list
+        if (data.lastMaintainerLogin && data.lastMaintainerLogin.ip) {
+          const lml = data.lastMaintainerLogin;
+          setLastMaintainerLogin(lml);
+          const hasLoginInLogs = fetchedLogs.some((l) => {
+            const lType = String(l.type || l[3] || '');
+            const lInput = String(l.input || l[4] || '');
+            return (lType.includes('登入') || lType.includes('Login')) && (lInput.includes(lml.ip) || lInput.includes(lml.location));
+          });
+          if (!hasLoginInLogs) {
+            fetchedLogs.unshift({
+              time: lml.time || new Date().toLocaleString(),
+              userName: lml.userName || '系統維護者',
+              userId: 'Maintainer',
+              type: '維護者登入',
+              input: `IP: ${lml.ip} · 位置: ${lml.location}`,
+              aiResult: `OS: ${lml.os} · 瀏覽器: ${lml.browser} · 螢幕: ${lml.device}`,
+              output: `✅ 永久通行證已核發 (Token: ${lml.tokenPrefix})`,
+              source: 'Web 維護者後台 (#/admin)',
+              ip: lml.ip,
+              location: lml.location,
+              device: `${lml.os} · ${lml.browser}`
+            });
+          }
+        }
+
+        setRawLogs(fetchedLogs);
         setAiQuota(data.aiQuota || null);
         if (data.sheetUrl) setSheetUrl(data.sheetUrl);
-        if (data.lastMaintainerLogin) setLastMaintainerLogin(data.lastMaintainerLogin);
         setLastFetchedAt(new Date());
       } else {
         throw new Error(data.message || 'Failed to fetch logs');
@@ -271,13 +403,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // Filter Categories
   const categories = useMemo(() => [
     { id: 'ALL', label: isEn ? 'All Logs' : '全部日誌' },
+    { id: 'LOGIN', label: isEn ? '🛡️ Logins' : '🛡️ 後台登入' },
+    { id: 'ALERT', label: isEn ? '🚨 Errors' : '🚨 異常通報' },
     { id: 'PHOTO', label: isEn ? '📸 Photo' : '📸 照片辨識' },
     { id: 'TEXT', label: isEn ? '💬 Text' : '💬 文字記餐' },
     { id: 'WATER', label: isEn ? '🚰 Water' : '🚰 喝水記錄' },
     { id: 'PORTION', label: isEn ? '⚖️ Portion' : '⚖️ 份量調整' },
-    { id: 'GOAL', label: isEn ? '🎯 Goals' : '🎯 體態目標' },
     { id: 'SYNC', label: isEn ? '⚡ Web Sync' : '⚡ Web 同步' },
-    { id: 'ALERT', label: isEn ? '🚨 Alerts' : '🚨 異常通報' },
+    { id: 'GOAL', label: isEn ? '🎯 Goals' : '🎯 體態目標' },
   ], [isEn]);
 
   // Normalized & Filtered Logs
@@ -289,9 +422,13 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const filteredLogs = useMemo(() => {
     if (!normalizedLogs || !normalizedLogs.length) return [];
     return normalizedLogs.filter((log) => {
-      const { time, userName, userId, type, input, aiResult, output, source } = log;
+      const { time, userName, userId, type, input, aiResult, output, source, ip, location } = log;
 
       // Category matching
+      if (selectedCategory === 'LOGIN') {
+        const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer' || input.includes('IP:');
+        if (!isLogin) return false;
+      }
       if (selectedCategory === 'PHOTO' && !type.includes('照片') && !type.includes('Photo') && !type.includes('Vision')) return false;
       if (selectedCategory === 'TEXT' && !type.includes('文字') && !type.includes('Text') && !type.includes('對話') && !type.includes('語意')) return false;
       if (selectedCategory === 'WATER' && !type.includes('水') && !type.includes('Water') && !input.includes('水') && !aiResult.includes('水')) return false;
@@ -300,10 +437,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       if (selectedCategory === 'SYNC' && !type.includes('Web') && !type.includes('同步')) return false;
       if (selectedCategory === 'ALERT' && !type.includes('異常') && !type.includes('Alert') && !type.includes('錯誤') && !output.includes('失敗')) return false;
 
-      // Text Search matching
+      // Text Search matching (includes userName, location, ip, type, etc.)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const fullContent = `${time} ${userName} ${userId} ${type} ${input} ${aiResult} ${output} ${source}`.toLowerCase();
+        const fullContent = `${time} ${userName} ${userId} ${type} ${input} ${aiResult} ${output} ${source} ${ip} ${location}`.toLowerCase();
         if (!fullContent.includes(q)) return false;
       }
 
@@ -315,6 +452,17 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
     setTimeout(() => setCopiedId(null), 1800);
+  };
+
+  // Export visible logs as JSON
+  const exportLogsAsJson = () => {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(filteredLogs, null, 2));
+    const downloadAnchor = document.createElement('a');
+    downloadAnchor.setAttribute("href", dataStr);
+    downloadAnchor.setAttribute("download", `daily-diet-logs-${Date.now()}.json`);
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    downloadAnchor.remove();
   };
 
   // ==========================================
@@ -343,14 +491,32 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 </h2>
                 <p className="text-xs font-bold text-zinc-500 mt-1 leading-relaxed">
                   {isEn 
-                    ? 'Enter the password once to issue a permanent maintainer pass on this device. Device info & IP will be securely logged.'
-                    : '驗證通過後將為此裝置永久核發維護者通行證（免重複輸入）。系統將同步記錄本次登入之 IP 與裝置資訊。'}
+                    ? 'Enter your maintainer name and password to issue a permanent pass on this device. Device info & IP will be logged.'
+                    : '請輸入維護者名稱與密碼，驗證通過後將為此裝置永久核發通行證。系統將同步記錄本次登入之 IP 與位置資訊。'}
                 </p>
               </div>
             </div>
 
             {/* Password Form */}
             <form onSubmit={handleLogin} className="space-y-4">
+              {/* Maintainer Name Field */}
+              <div className="space-y-1.5">
+                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
+                  {isEn ? 'Maintainer Name / Operator' : '維護者名稱 / 代號'}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    value={maintainerNameInput}
+                    onChange={(e) => setMaintainerNameInput(e.target.value)}
+                    placeholder={isEn ? 'Your Name (e.g. Winnie)' : '您的名字 (例: Winnie)'}
+                    className="w-full bg-zinc-50 border-4 border-black p-3.5 pl-10 rounded-2xl font-bold text-sm outline-none focus:bg-white shadow-neo-xs transition-colors"
+                  />
+                  <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                </div>
+              </div>
+
+              {/* Security Password Field */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
                   {isEn ? 'Maintainer Security Password' : '維護者身分驗證密碼'}
@@ -361,9 +527,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
                     placeholder={isEn ? 'Enter password (default: panda888)' : '請輸入密碼（預設: panda888）'}
-                    className="w-full bg-zinc-50 border-4 border-black p-3.5 pr-12 rounded-2xl font-mono font-bold text-base outline-none focus:bg-white shadow-neo-xs transition-colors"
+                    className="w-full bg-zinc-50 border-4 border-black p-3.5 pr-12 pl-10 rounded-2xl font-mono font-bold text-base outline-none focus:bg-white shadow-neo-xs transition-colors"
                     autoFocus
                   />
+                  <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
@@ -424,7 +591,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
 
   return (
-    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 max-w-5xl mx-auto space-y-5">
+    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 max-w-6xl mx-auto space-y-5">
       {/* 🏷️ Top Permanent Pass Status Badge */}
       <div className="bg-emerald-50 border-3 border-black rounded-2xl px-4 py-2.5 shadow-neo-xs flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-emerald-950">
         <div className="flex items-center gap-2 flex-wrap">
@@ -434,9 +601,12 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           <span className="font-black">
             {isEn ? 'Permanent Maintainer Pass Active' : '已核發本機永久維護者通行證'}
           </span>
+          <span className="font-black bg-black text-white px-2 py-0.5 rounded-lg text-[10px]">
+            👤 {maintainerName}
+          </span>
           {clientInfo && (
-            <span className="font-mono text-[11px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-lg border border-emerald-300">
-              📍 {clientInfo.ip} ({clientInfo.location}) · {clientInfo.os} ({clientInfo.browser})
+            <span className="font-mono text-[11px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-lg border border-emerald-300 flex items-center gap-1">
+              <MapPin size={11} /> {clientInfo.location} · 🌐 {clientInfo.ip} · 💻 {clientInfo.os} ({clientInfo.browser})
             </span>
           )}
         </div>
@@ -467,7 +637,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 </h1>
                 <span className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-400 px-2 py-0.5 rounded-full text-[9px] font-black uppercase">
                   <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping inline-block" />
-                  LIVE
+                  KIBANA DISCOVER
                 </span>
               </div>
               <p className="text-[10px] sm:text-xs font-bold text-zinc-500 mt-1">
@@ -520,6 +690,16 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 <ExternalLink size={12} />
               </a>
             )}
+
+            {/* Export JSON */}
+            <button
+              onClick={exportLogsAsJson}
+              className="h-10 px-3 bg-zinc-100 hover:bg-zinc-200 border-2 border-black rounded-2xl flex items-center gap-1.5 text-xs font-black text-black transition-colors shadow-neo-xs"
+              title="匯出篩選日誌 JSON"
+            >
+              <Download size={14} />
+              <span className="hidden sm:inline">JSON</span>
+            </button>
           </div>
         </div>
       </header>
@@ -661,6 +841,72 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         </div>
       </div>
 
+      {/* 🛡️ Latest Maintainer Login Session Widget */}
+      {(lastMaintainerLogin || clientInfo) && (
+        <div className="bg-gradient-to-r from-purple-50 via-indigo-50 to-pink-50 border-4 border-black rounded-[2rem] p-4 sm:p-5 shadow-neo space-y-2 relative overflow-hidden">
+          <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-dashed border-purple-200 pb-2">
+            <div className="flex items-center gap-2">
+              <span className="p-1.5 bg-black text-white rounded-xl text-xs">
+                🛡️
+              </span>
+              <h3 className="font-black text-sm italic tracking-tight text-purple-950">
+                {isEn ? 'Latest Maintainer Login Session (Audited)' : '最新後台維護者登入日誌審核'}
+              </h3>
+              <span className="bg-purple-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase">
+                SECURITY LOG
+              </span>
+            </div>
+            <span className="font-mono text-xs font-black text-purple-800">
+              🕒 {lastMaintainerLogin?.time || clientInfo?.timestamp?.replace('T', ' ').slice(0, 19) || '剛剛'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-1">
+            <div className="bg-white/80 border-2 border-purple-200 rounded-xl p-2.5">
+              <span className="text-[10px] font-black uppercase text-purple-400 block">
+                {isEn ? 'Maintainer Name' : '使用者名字'}
+              </span>
+              <span className="font-black text-xs text-black flex items-center gap-1 mt-0.5">
+                <User size={12} className="text-purple-600" />
+                {lastMaintainerLogin?.userName || maintainerName || '系統維護者'}
+              </span>
+            </div>
+
+            <div className="bg-white/80 border-2 border-purple-200 rounded-xl p-2.5">
+              <span className="text-[10px] font-black uppercase text-purple-400 block">
+                {isEn ? 'IP Address' : '來源 IP 地址'}
+              </span>
+              <span className="font-mono font-black text-xs text-purple-900 flex items-center gap-1 mt-0.5">
+                <Globe size={12} className="text-purple-600" />
+                {lastMaintainerLogin?.ip || clientInfo?.ip || '未知 IP'}
+              </span>
+            </div>
+
+            <div className="bg-white/80 border-2 border-purple-200 rounded-xl p-2.5">
+              <span className="text-[10px] font-black uppercase text-purple-400 block">
+                {isEn ? 'Location' : '地理登入位置'}
+              </span>
+              <span className="font-black text-xs text-zinc-900 flex items-center gap-1 mt-0.5 truncate">
+                <MapPin size={12} className="text-rose-500 shrink-0" />
+                <span className="truncate">{lastMaintainerLogin?.location || clientInfo?.location || 'Direct / Local'}</span>
+              </span>
+            </div>
+
+            <div className="bg-white/80 border-2 border-purple-200 rounded-xl p-2.5">
+              <span className="text-[10px] font-black uppercase text-purple-400 block">
+                {isEn ? 'OS & Browser' : '系統與瀏覽器'}
+              </span>
+              <span className="font-mono text-xs font-bold text-zinc-700 flex items-center gap-1 mt-0.5 truncate">
+                <Laptop size={12} className="text-indigo-600 shrink-0" />
+                <span className="truncate">
+                  {lastMaintainerLogin?.os || clientInfo?.os || 'OS'} · {lastMaintainerLogin?.browser || clientInfo?.browser || 'Browser'}
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* ⚠️ Recent Errors Alert Panel (if any) */}
       {recentErrors.length > 0 && (
         <div className="bg-rose-50 border-4 border-rose-500 rounded-[2rem] p-4 shadow-neo-sm space-y-2">
@@ -684,9 +930,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         </div>
       )}
 
-      {/* 🔍 Search & Category Filter Toolbar */}
+      {/* 🔍 Search & Category Filter & View Mode Toolbar (Kibana Discover Bar) */}
       <div className="bg-white border-4 border-black rounded-[2rem] p-4 shadow-neo space-y-3">
-        <div className="flex flex-col sm:flex-row gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
           {/* Search Bar */}
           <div className="relative flex-1">
             <Search size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
@@ -694,7 +940,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isEn ? 'Search user, food, comment, raw input...' : '搜尋用戶名稱、餐點品項、AI 回覆或輸入文字...'}
+              placeholder={isEn ? 'Search user name, IP, location, action, message, food...' : '搜尋使用者名稱、IP、位置、日誌類型、餐點品項或輸入內容...'}
               className="w-full bg-zinc-50 border-2 border-black rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold outline-none focus:bg-white transition-colors"
             />
             {searchQuery && (
@@ -707,9 +953,35 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             )}
           </div>
 
+          {/* View Mode Switcher (Kibana Table vs Stream Cards) */}
+          <div className="flex items-center gap-1 bg-zinc-100 border-2 border-black rounded-2xl p-1 shrink-0">
+            <button
+              onClick={() => setViewMode('kibana')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                viewMode === 'kibana'
+                  ? 'bg-black text-white shadow-neo-xs'
+                  : 'text-zinc-600 hover:text-black'
+              }`}
+            >
+              <TableIcon size={14} />
+              <span>{isEn ? 'Kibana List' : 'Kibana 列表'}</span>
+            </button>
+            <button
+              onClick={() => setViewMode('cards')}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-black transition-all ${
+                viewMode === 'cards'
+                  ? 'bg-black text-white shadow-neo-xs'
+                  : 'text-zinc-600 hover:text-black'
+              }`}
+            >
+              <LayoutList size={14} />
+              <span>{isEn ? 'Cards Stream' : '卡片流'}</span>
+            </button>
+          </div>
+
           {/* Records Counter */}
           <div className="bg-zinc-100 border-2 border-black rounded-2xl px-4 py-2 flex items-center justify-between sm:justify-center gap-2 shrink-0 font-bold text-xs">
-            <span className="text-zinc-500">{isEn ? 'Showing:' : '目前筆數：'}</span>
+            <span className="text-zinc-500">{isEn ? 'Hits:' : '符合筆數：'}</span>
             <span className="font-mono font-black text-sm bg-black text-white px-2 py-0.5 rounded-lg">
               {filteredLogs.length} / {normalizedLogs.length}
             </span>
@@ -717,7 +989,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         </div>
 
         {/* Category Filter Pills */}
-        <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1">
+        <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-1">
           {categories.map((cat) => (
             <button
               key={cat.id}
@@ -734,118 +1006,421 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         </div>
       </div>
 
-      {/* 📜 Log Stream Cards Section */}
-      <div className="space-y-3">
-        {filteredLogs.length === 0 ? (
-          <div className="bg-white border-4 border-black rounded-[2.5rem] p-12 text-center shadow-neo space-y-3">
-            <div className="text-5xl mb-2">🔍</div>
-            <h3 className="text-lg font-black italic">{isEn ? 'No Matching Logs Found' : '查無符合條件的運作日誌'}</h3>
-            <p className="text-xs font-bold text-zinc-400 max-w-sm mx-auto">
-              {isEn ? 'Try adjusting your search keywords or switching category filters.' : '請嘗試更換搜尋關鍵字或點選「全部日誌」分類。'}
-            </p>
-          </div>
-        ) : (
-          filteredLogs.map((item, index) => {
-            const { time, userName, userId, type, input, aiResult, output, source } = item;
-            const isAlert = type.includes('異常') || output.includes('失敗') || type.includes('報警');
-            const isPhoto = type.includes('照片') || type.includes('Photo');
-            const isText = type.includes('文字') || type.includes('Text') || type.includes('對話');
-            const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
-            const isPortion = type.includes('倍') || type.includes('半') || type.includes('份量');
-            const isGoal = type.includes('目標');
-            const isSync = type.includes('Web') || type.includes('同步');
-
-            // Distinct Operation Badge Color
-            let badgeBg = 'bg-zinc-100 text-zinc-800 border-zinc-300';
-            if (isAlert) badgeBg = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
-            else if (isPhoto) badgeBg = 'bg-purple-100 text-purple-800 border-purple-300 font-black';
-            else if (isText) badgeBg = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
-            else if (isWater) badgeBg = 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
-            else if (isPortion) badgeBg = 'bg-amber-100 text-amber-900 border-amber-300 font-black';
-            else if (isGoal) badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
-            else if (isSync) badgeBg = 'bg-teal-100 text-teal-800 border-teal-300 font-black';
-
-            return (
-              <motion.div
-                key={index}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className={`bg-white border-4 border-black rounded-[2rem] p-4 sm:p-5 shadow-neo hover:shadow-neo-lg transition-all space-y-3 ${isAlert ? 'border-l-8 border-l-rose-500' : ''}`}
-              >
-                {/* Header Row: Time + Op Badge + User Name/ID + Source */}
-                <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-dashed border-zinc-100 pb-2">
-                  <div className="flex flex-wrap items-center gap-2">
-                    {/* Time */}
-                    <span className="text-[11px] font-mono font-black text-zinc-600 flex items-center gap-1 bg-zinc-100 px-2 py-0.5 rounded-lg border border-black/10">
-                      <Clock size={12} />
-                      {time}
-                    </span>
-
-                    {/* Operation Badge */}
-                    <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded-full border ${badgeBg}`}>
-                      {type || '系統操作'}
-                    </span>
-
-                    {/* Source Tag */}
-                    {source && (
-                      <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-md">
-                        {source}
+      {/* ==========================================
+          📋 1. KIBANA DISCOVER LIST TABLE VIEW (Default)
+          ========================================== */}
+      {viewMode === 'kibana' && (
+        <div className="bg-white border-4 border-black rounded-[2.5rem] overflow-hidden shadow-neo">
+          {filteredLogs.length === 0 ? (
+            <div className="p-12 text-center space-y-3">
+              <div className="text-5xl mb-2">🔍</div>
+              <h3 className="text-lg font-black italic">{isEn ? 'No Matching Logs Found' : '查無符合條件的運作日誌'}</h3>
+              <p className="text-xs font-bold text-zinc-400 max-w-sm mx-auto">
+                {isEn ? 'Try adjusting your search keywords or switching category filters.' : '請嘗試更換搜尋關鍵字或點選「全部日誌」分類。'}
+              </p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto custom-scrollbar">
+              <table className="w-full text-left border-collapse">
+                <thead>
+                  <tr className="bg-zinc-900 text-white font-mono text-[11px] font-black uppercase tracking-wider select-none">
+                    <th className="py-3 px-3 w-10 text-center">#</th>
+                    <th className="py-3 px-3 min-w-[140px]">
+                      <span className="flex items-center gap-1">
+                        <Clock size={12} className="text-accent" />
+                        Time (@timestamp)
                       </span>
-                    )}
-                  </div>
-
-                  {/* User Identifier */}
-                  <div className="flex items-center gap-1.5">
-                    <span className="text-xs font-black text-black bg-accent/30 border border-black/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <User size={12} />
-                      {userName}
-                    </span>
-                    {userId && userId !== 'user' && (
-                      <span className="text-[10px] font-mono text-zinc-400 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded">
-                        {userId.length > 10 ? `${userId.slice(0, 4)}...${userId.slice(-4)}` : userId}
+                    </th>
+                    <th className="py-3 px-3 min-w-[120px]">
+                      <span>Action (Type)</span>
+                    </th>
+                    <th className="py-3 px-3 min-w-[140px]">
+                      <span className="flex items-center gap-1">
+                        <User size={12} className="text-accent" />
+                        User / Name
                       </span>
-                    )}
-                  </div>
-                </div>
+                    </th>
+                    <th className="py-3 px-3 min-w-[180px]">
+                      <span className="flex items-center gap-1">
+                        <MapPin size={12} className="text-rose-400" />
+                        Location / IP
+                      </span>
+                    </th>
+                    <th className="py-3 px-4 min-w-[280px]">
+                      <span>Message / Payload Preview</span>
+                    </th>
+                    <th className="py-3 px-3 w-16 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 font-sans text-xs">
+                  {filteredLogs.map((log, index) => {
+                    const { time, userName, userId, type, input, aiResult, output, source, ip, location, device } = log;
+                    const isExpanded = expandedRowIds.has(index);
+                    const currentTab = rowInspectorTab[index] || 'table';
 
-                {/* Body Content Grid */}
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
-                  {/* Left: Input / Query */}
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
-                      {isEn ? 'User Input / Trigger' : '用戶輸入 / 傳送內容'}
-                    </span>
-                    <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-3 font-mono text-xs font-bold text-zinc-800 break-words leading-relaxed">
-                      {input || '—'}
+                    const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer';
+                    const isAlert = type.includes('異常') || output.includes('失敗') || type.includes('報警');
+                    const isPhoto = type.includes('照片') || type.includes('Photo');
+                    const isText = type.includes('文字') || type.includes('Text');
+                    const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
+                    const isPortion = type.includes('倍') || type.includes('半') || type.includes('份量');
+                    const isGoal = type.includes('目標');
+                    const isSync = type.includes('Web') || type.includes('同步');
+
+                    // Badge Styling
+                    let badgeClass = 'bg-zinc-100 text-zinc-800 border-zinc-300';
+                    if (isLogin) badgeClass = 'bg-purple-100 text-purple-900 border-purple-400 font-black';
+                    else if (isAlert) badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
+                    else if (isPhoto) badgeClass = 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300 font-black';
+                    else if (isText) badgeClass = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+                    else if (isWater) badgeClass = 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
+                    else if (isPortion) badgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-black';
+                    else if (isGoal) badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+                    else if (isSync) badgeClass = 'bg-teal-100 text-teal-800 border-teal-300 font-black';
+
+                    // Row Background
+                    let rowBg = 'hover:bg-amber-50/40';
+                    if (isLogin) rowBg = 'bg-purple-50/40 hover:bg-purple-100/50';
+                    else if (isAlert) rowBg = 'bg-rose-50/40 hover:bg-rose-100/50';
+
+                    // Prepare document object for JSON tab
+                    const docJson = {
+                      "@timestamp": time,
+                      "event": { "action": type, "source": source },
+                      "user": { "name": userName, "id": userId },
+                      "client": { "ip": ip || null, "geo": { "location": location || null }, "device": device || null },
+                      "message": { "input": input || null, "analysis": aiResult || null, "output": output || null }
+                    };
+
+                    return (
+                      <React.Fragment key={index}>
+                        <tr 
+                          onClick={() => toggleRowExpansion(index)}
+                          className={`cursor-pointer transition-colors ${rowBg} ${isExpanded ? 'bg-zinc-100/80 font-medium' : ''}`}
+                        >
+                          {/* Expand Toggle */}
+                          <td className="py-3 px-3 text-center text-zinc-400">
+                            {isExpanded ? (
+                              <ChevronDown size={16} className="text-black font-black mx-auto" />
+                            ) : (
+                              <ChevronRight size={16} className="text-zinc-400 mx-auto" />
+                            )}
+                          </td>
+
+                          {/* Time */}
+                          <td className="py-3 px-3 font-mono text-[11px] font-bold text-zinc-700 whitespace-nowrap">
+                            {time}
+                          </td>
+
+                          {/* Action Badge */}
+                          <td className="py-3 px-3 whitespace-nowrap">
+                            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${badgeClass}`}>
+                              {isLogin && '🛡️'}
+                              {isAlert && '🚨'}
+                              {isPhoto && '📸'}
+                              {isText && '💬'}
+                              {isWater && '🚰'}
+                              {isPortion && '⚖️'}
+                              {isSync && '⚡'}
+                              {type || '系統操作'}
+                            </span>
+                          </td>
+
+                          {/* User Name */}
+                          <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
+                            <div className="flex items-center gap-1">
+                              <span className="truncate max-w-[120px] font-black">{userName}</span>
+                              {userId && userId !== 'user' && (
+                                <span className="font-mono text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.2 rounded border border-zinc-200">
+                                  {userId.length > 8 ? userId.slice(-4) : userId}
+                                </span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Location / IP */}
+                          <td className="py-3 px-3 font-mono text-[11px] text-zinc-700 whitespace-nowrap">
+                            {ip || location ? (
+                              <div className="space-y-0.5">
+                                {location && (
+                                  <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-800">
+                                    <MapPin size={10} className="text-rose-500 shrink-0" />
+                                    <span className="truncate max-w-[140px]">{location}</span>
+                                  </div>
+                                )}
+                                {ip && (
+                                  <div className="flex items-center gap-1 text-[10px] text-zinc-500">
+                                    <Globe size={10} className="text-purple-600 shrink-0" />
+                                    <span>{ip}</span>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <span className="text-zinc-400 italic text-[10px]">— (LINE Bot / Cloud)</span>
+                            )}
+                          </td>
+
+                          {/* Message Preview */}
+                          <td className="py-3 px-4 max-w-md">
+                            <div className="font-mono text-[11px] text-zinc-800 truncate">
+                              {input ? (
+                                <span><strong className="text-black">{input}</strong></span>
+                              ) : null}
+                              {aiResult ? (
+                                <span className="text-purple-700 ml-1">➔ {aiResult}</span>
+                              ) : null}
+                              {output && !aiResult ? (
+                                <span className="text-zinc-500 ml-1">➔ {output}</span>
+                              ) : null}
+                              {!input && !aiResult && !output && (
+                                <span className="text-zinc-400 italic">—</span>
+                              )}
+                            </div>
+                          </td>
+
+                          {/* Actions */}
+                          <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                            <button
+                              onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `row-${index}`)}
+                              className="p-1.5 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-600 transition-colors text-xs font-mono inline-flex items-center"
+                              title="複製 JSON 格式"
+                            >
+                              {copiedId === `row-${index}` ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                            </button>
+                          </td>
+                        </tr>
+
+                        {/* 📑 Kibana Expanded Document Inspector */}
+                        {isExpanded && (
+                          <tr className="bg-zinc-50/90 border-b-2 border-black">
+                            <td colSpan={7} className="p-4 sm:p-6">
+                              <div className="bg-white border-2 border-black rounded-2xl shadow-neo-sm overflow-hidden space-y-3">
+                                {/* Inspector Header Tabs */}
+                                <div className="bg-zinc-100 border-b-2 border-black px-4 py-2 flex items-center justify-between gap-2">
+                                  <div className="flex items-center gap-2">
+                                    <span className="font-black text-xs uppercase tracking-wider text-black flex items-center gap-1">
+                                      <Terminal size={14} className="text-accent" />
+                                      Document Inspector
+                                    </span>
+                                    <div className="flex items-center bg-zinc-200 border border-black rounded-xl p-0.5 text-xs">
+                                      <button
+                                        onClick={() => setRowTab(index, 'table')}
+                                        className={`px-2.5 py-1 rounded-lg font-black text-[11px] transition-all ${
+                                          currentTab === 'table'
+                                            ? 'bg-black text-white'
+                                            : 'text-zinc-600 hover:text-black'
+                                        }`}
+                                      >
+                                        Table (欄位)
+                                      </button>
+                                      <button
+                                        onClick={() => setRowTab(index, 'json')}
+                                        className={`px-2.5 py-1 rounded-lg font-black text-[11px] transition-all ${
+                                          currentTab === 'json'
+                                            ? 'bg-black text-white'
+                                            : 'text-zinc-600 hover:text-black'
+                                        }`}
+                                      >
+                                        JSON (原始)
+                                      </button>
+                                    </div>
+                                  </div>
+
+                                  <button
+                                    onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
+                                    className="bg-black text-white text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-neo-xs hover:bg-accent hover:text-black transition-all"
+                                  >
+                                    {copiedId === `doc-${index}` ? <Check size={12} /> : <Copy size={12} />}
+                                    {copiedId === `doc-${index}` ? 'Copied' : 'Copy JSON'}
+                                  </button>
+                                </div>
+
+                                {/* Inspector Content */}
+                                <div className="p-4">
+                                  {currentTab === 'table' ? (
+                                    <div className="overflow-x-auto">
+                                      <table className="w-full text-left font-mono text-xs border border-zinc-200 rounded-xl overflow-hidden">
+                                        <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 text-[10px] uppercase">
+                                          <tr>
+                                            <th className="py-1.5 px-3 w-48">Field</th>
+                                            <th className="py-1.5 px-3">Value</th>
+                                            <th className="py-1.5 px-3 w-16 text-right">Action</th>
+                                          </tr>
+                                        </thead>
+                                        <tbody className="divide-y divide-zinc-100">
+                                          {[
+                                            { key: '@timestamp', val: time },
+                                            { key: 'event.action', val: type },
+                                            { key: 'user.name', val: userName },
+                                            { key: 'user.id', val: userId },
+                                            { key: 'client.ip', val: ip || '—' },
+                                            { key: 'client.geo.location', val: location || '—' },
+                                            { key: 'client.device', val: device || '—' },
+                                            { key: 'message.input', val: input || '—' },
+                                            { key: 'message.analysis', val: aiResult || '—' },
+                                            { key: 'message.output', val: output || '—' },
+                                            { key: 'source', val: source || 'LINE Bot' }
+                                          ].map((field) => (
+                                            <tr key={field.key} className="hover:bg-zinc-50">
+                                              <td className="py-2 px-3 font-bold text-zinc-500 whitespace-nowrap">{field.key}</td>
+                                              <td className="py-2 px-3 font-medium text-black break-words max-w-xl">{field.val}</td>
+                                              <td className="py-2 px-3 text-right">
+                                                {field.val && field.val !== '—' && (
+                                                  <button
+                                                    onClick={() => copyToClipboard(field.val, `${index}-${field.key}`)}
+                                                    className="p-1 text-zinc-400 hover:text-black transition-colors"
+                                                    title="複製此欄位"
+                                                  >
+                                                    {copiedId === `${index}-${field.key}` ? (
+                                                      <Check size={12} className="text-emerald-500" />
+                                                    ) : (
+                                                      <Copy size={12} />
+                                                    )}
+                                                  </button>
+                                                )}
+                                              </td>
+                                            </tr>
+                                          ))}
+                                        </tbody>
+                                      </table>
+                                    </div>
+                                  ) : (
+                                    <div className="bg-zinc-950 text-emerald-400 p-4 rounded-xl font-mono text-xs overflow-x-auto border-2 border-black max-h-80 custom-scrollbar">
+                                      <pre>{JSON.stringify(docJson, null, 2)}</pre>
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </td>
+                          </tr>
+                        )}
+                      </React.Fragment>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ==========================================
+          🗂️ 2. CARDS STREAM VIEW (Alternative View)
+          ========================================== */}
+      {viewMode === 'cards' && (
+        <div className="space-y-3">
+          {filteredLogs.length === 0 ? (
+            <div className="bg-white border-4 border-black rounded-[2.5rem] p-12 text-center shadow-neo space-y-3">
+              <div className="text-5xl mb-2">🔍</div>
+              <h3 className="text-lg font-black italic">{isEn ? 'No Matching Logs Found' : '查無符合條件的運作日誌'}</h3>
+              <p className="text-xs font-bold text-zinc-400 max-w-sm mx-auto">
+                {isEn ? 'Try adjusting your search keywords or switching category filters.' : '請嘗試更換搜尋關鍵字或點選「全部日誌」分類。'}
+              </p>
+            </div>
+          ) : (
+            filteredLogs.map((item, index) => {
+              const { time, userName, userId, type, input, aiResult, output, source, ip, location } = item;
+              const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer';
+              const isAlert = type.includes('異常') || output.includes('失敗') || type.includes('報警');
+              const isPhoto = type.includes('照片') || type.includes('Photo');
+              const isText = type.includes('文字') || type.includes('Text') || type.includes('對話');
+              const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
+              const isPortion = type.includes('倍') || type.includes('半') || type.includes('份量');
+              const isGoal = type.includes('目標');
+              const isSync = type.includes('Web') || type.includes('同步');
+
+              // Distinct Operation Badge Color
+              let badgeBg = 'bg-zinc-100 text-zinc-800 border-zinc-300';
+              if (isLogin) badgeBg = 'bg-purple-100 text-purple-900 border-purple-400 font-black';
+              else if (isAlert) badgeBg = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
+              else if (isPhoto) badgeBg = 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300 font-black';
+              else if (isText) badgeBg = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+              else if (isWater) badgeBg = 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
+              else if (isPortion) badgeBg = 'bg-amber-100 text-amber-900 border-amber-300 font-black';
+              else if (isGoal) badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+              else if (isSync) badgeBg = 'bg-teal-100 text-teal-800 border-teal-300 font-black';
+
+              return (
+                <motion.div
+                  key={index}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  className={`bg-white border-4 border-black rounded-[2rem] p-4 sm:p-5 shadow-neo hover:shadow-neo-lg transition-all space-y-3 ${isAlert ? 'border-l-8 border-l-rose-500' : ''} ${isLogin ? 'border-l-8 border-l-purple-600' : ''}`}
+                >
+                  {/* Header Row */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-dashed border-zinc-100 pb-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[11px] font-mono font-black text-zinc-600 flex items-center gap-1 bg-zinc-100 px-2 py-0.5 rounded-lg border border-black/10">
+                        <Clock size={12} />
+                        {time}
+                      </span>
+                      <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded-full border ${badgeBg}`}>
+                        {isLogin && '🛡️ '}
+                        {type || '系統操作'}
+                      </span>
+                      {source && (
+                        <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-md">
+                          {source}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* User Identifier + Location */}
+                    <div className="flex flex-wrap items-center gap-1.5">
+                      <span className="text-xs font-black text-black bg-accent/30 border border-black/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                        <User size={12} />
+                        {userName}
+                      </span>
+                      {location && (
+                        <span className="text-[10px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded flex items-center gap-1">
+                          <MapPin size={10} /> {location}
+                        </span>
+                      )}
+                      {ip && (
+                        <span className="text-[10px] font-mono text-purple-800 bg-purple-50 border border-purple-200 px-1.5 py-0.5 rounded">
+                          🌐 {ip}
+                        </span>
+                      )}
                     </div>
                   </div>
 
-                  {/* Right: Response / Result */}
-                  <div className="space-y-1">
-                    <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
-                      {isEn ? 'AI Analysis / Coach Response' : 'AI 辨識結果 / 教練處理狀態'}
-                    </span>
-                    <div className="bg-accent/10 border-2 border-black/10 rounded-xl p-3 text-xs font-bold text-zinc-900 break-words leading-relaxed">
-                      {aiResult && (
-                        <div className="font-mono font-black text-xs text-black mb-1">
-                          {aiResult}
-                        </div>
-                      )}
-                      {output ? (
-                        <div className="text-zinc-700 italic">
-                          {output}
-                        </div>
-                      ) : (
-                        !aiResult && <span className="text-zinc-400 italic font-normal">—</span>
-                      )}
+                  {/* Body Content Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1">
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
+                        {isEn ? 'User Input / Trigger' : '用戶輸入 / 觸發事件'}
+                      </span>
+                      <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-3 font-mono text-xs font-bold text-zinc-800 break-words leading-relaxed">
+                        {input || '—'}
+                      </div>
+                    </div>
+
+                    <div className="space-y-1">
+                      <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
+                        {isEn ? 'AI Analysis / Output' : 'AI 辨識結果 / 處理輸出'}
+                      </span>
+                      <div className="bg-accent/10 border-2 border-black/10 rounded-xl p-3 text-xs font-bold text-zinc-900 break-words leading-relaxed">
+                        {aiResult && (
+                          <div className="font-mono font-black text-xs text-black mb-1">
+                            {aiResult}
+                          </div>
+                        )}
+                        {output ? (
+                          <div className="text-zinc-700 italic">
+                            {output}
+                          </div>
+                        ) : (
+                          !aiResult && <span className="text-zinc-400 italic font-normal">—</span>
+                        )}
+                      </div>
                     </div>
                   </div>
-                </div>
-              </motion.div>
-            );
-          })
-        )}
-      </div>
+                </motion.div>
+              );
+            })
+          )}
+        </div>
+      )}
 
       {/* Footer Spacer */}
       <div className="h-12" />

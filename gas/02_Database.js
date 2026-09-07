@@ -975,7 +975,7 @@ function getUserDisplayName(userId, channelAccessToken, props) {
   return userId.length > 8 ? `用戶 (${userId.slice(-4)})` : userId;
 }
 
-function recordSystemLog(type, userId, input, aiResult, output, userName) {
+function recordSystemLog(type, userId, input, aiResult, output, userName, extra) {
   const props = PropertiesService.getScriptProperties();
   const time = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
 
@@ -993,23 +993,27 @@ function recordSystemLog(type, userId, input, aiResult, output, userName) {
 
   const logItem = {
     time: time,
+    userName: displayName,
     userId: displayName,
     rawUserId: (userId || 'unknown').slice(-6),
     type: type,
     input: typeof input === 'object' ? JSON.stringify(input) : String(input || ''),
     aiResult: typeof aiResult === 'object' ? JSON.stringify(aiResult) : String(aiResult || ''),
-    output: typeof output === 'object' ? JSON.stringify(output) : String(output || '')
+    output: typeof output === 'object' ? JSON.stringify(output) : String(output || ''),
+    ip: (extra && extra.ip) ? String(extra.ip) : '',
+    location: (extra && extra.location) ? String(extra.location) : '',
+    device: (extra && extra.device) ? String(extra.device) : ''
   };
 
   Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
-  // 1. 高速暫存快取 (保留最新 100 筆)
+  // 1. 高速暫存快取 (保留最新 200 筆)
   try {
     let recentLogs = [];
     const raw = props.getProperty('SYSTEM_RECENT_LOGS');
     if (raw) recentLogs = JSON.parse(raw);
     recentLogs.unshift(logItem);
-    if (recentLogs.length > 100) recentLogs = recentLogs.slice(0, 100);
+    if (recentLogs.length > 200) recentLogs = recentLogs.slice(0, 200);
     props.setProperty('SYSTEM_RECENT_LOGS', JSON.stringify(recentLogs));
   } catch (e) {
     console.error("儲存實時日誌失敗:", e);
@@ -1020,7 +1024,17 @@ function recordSystemLog(type, userId, input, aiResult, output, userName) {
     const ss = getOrCreateLogSheet(props);
     if (ss) {
       const sheet = ss.getSheets()[0];
-      sheet.appendRow([logItem.time, displayName, userId, logItem.type, logItem.input, logItem.aiResult, logItem.output]);
+      sheet.appendRow([
+        logItem.time, 
+        displayName, 
+        userId, 
+        logItem.type, 
+        logItem.input, 
+        logItem.aiResult, 
+        logItem.output,
+        logItem.ip,
+        logItem.location
+      ]);
     }
   } catch (sheetErr) {
     console.error("寫入 Google Sheet 日誌失敗:", sheetErr);
