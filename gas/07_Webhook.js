@@ -234,14 +234,10 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 12. 實時運作日誌儀表板 (直接在瀏覽器查看所有用戶傳入的訊息與 AI 回應)
+    // 12. 實時運作日誌儀表板 (已全面遷移至 Web 前端專屬維護者密碼保護端點，自動轉導)
     if (action === 'logs' || action === 'viewLogs' || action === 'log') {
-      const initialLogs = getRecentLogsData(300);
-      const sheetId = props.getProperty('LOG_SHEET_ID');
-      const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
-      const aiQuota = getAiQuotaStats(props);
-      return HtmlService.createHtmlOutput(generateDashboardHtml(initialLogs, sheetUrl, aiQuota))
-        .setTitle("🐼 Daily Diet 實時對話與運作日誌")
+      return HtmlService.createHtmlOutput(generateDashboardHtml())
+        .setTitle("🛡️ 轉導至維護者監控中心")
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
