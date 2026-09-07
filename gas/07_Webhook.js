@@ -230,7 +230,12 @@ function doGet(e) {
       const sheetId = props.getProperty('LOG_SHEET_ID');
       const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
       const aiQuota = getAiQuotaStats(props);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs, sheetUrl, aiQuota }))
+      let lastMaintainerLogin = null;
+      try {
+        const rawLogin = props.getProperty('LAST_MAINTAINER_LOGIN');
+        if (rawLogin) lastMaintainerLogin = JSON.parse(rawLogin);
+      } catch (e) {}
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs, sheetUrl, aiQuota, lastMaintainerLogin }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -239,6 +244,49 @@ function doGet(e) {
       return HtmlService.createHtmlOutput(generateDashboardHtml())
         .setTitle("🛡️ 轉導至維護者監控中心")
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
+    }
+
+    // 13. 維護者登入安全遙測與裝置資訊登記 (核發永久通行證)
+    if (action === 'recordMaintainerLogin') {
+      const ip = e?.parameter?.ip || '未知 IP';
+      const location = e?.parameter?.location || '未知位置';
+      const device = e?.parameter?.device || '未知裝置';
+      const browser = e?.parameter?.browser || '';
+      const os = e?.parameter?.os || '';
+      const token = e?.parameter?.token || '';
+      const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+
+      const auditRecord = {
+        time: timeStr,
+        ip: ip,
+        location: location,
+        device: device,
+        browser: browser,
+        os: os,
+        tokenPrefix: token ? token.substring(0, 12) + '...' : 'none'
+      };
+
+      props.setProperty('LAST_MAINTAINER_LOGIN', JSON.stringify(auditRecord));
+      recordSystemLog('維護者登入', 'Maintainer', `${ip} · ${location}`, `${os} · ${browser} · ${device}`, `永久通行證已核發 (${timeStr})`);
+
+      try {
+        sendErrorAlertToWeb3Forms({
+          error: { message: `【維護者登入安全通知】IP: ${ip} (${location}) 於 ${timeStr} 成功登入監控中心` },
+          userId: 'Maintainer',
+          userName: '系統維護者',
+          operation: '維護者後台登入',
+          userInput: `IP: ${ip} | 地理位置: ${location} | 作業系統: ${os} | 瀏覽器: ${browser} | 螢幕規格: ${device}`,
+          source: 'Web 維護者後台 (#/admin)'
+        });
+      } catch (mailErr) {
+        console.warn('發送登入通知失敗:', mailErr);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'ok', 
+        message: '維護者登入日誌已記錄', 
+        audit: auditRecord 
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     return ContentService.createTextOutput("Daily Diet LINE Bot is running! 🐼");

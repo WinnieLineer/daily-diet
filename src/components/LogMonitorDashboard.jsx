@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ShieldCheck, 
@@ -25,30 +25,75 @@ import {
   Check, 
   Filter,
   BarChart3,
-  Server
+  Server,
+  Globe,
+  Smartphone,
+  Laptop
 } from 'lucide-react';
-import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 const DEFAULT_MAINTAINER_PASS = 'panda888';
+const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_permanent_token';
+const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
+
+// Helper to safely normalize log records (Supports both Object format and Array format from GAS)
+const normalizeLog = (item) => {
+  if (!item) return null;
+  if (Array.isArray(item)) {
+    return {
+      time: String(item[0] || ''),
+      userName: String(item[1] || item[2] || 'LINE 用戶'),
+      userId: String(item[2] || item[1] || 'user'),
+      type: String(item[3] || item[1] || '系統操作'),
+      input: String(item[4] || ''),
+      aiResult: String(item[5] || ''),
+      output: String(item[6] || ''),
+      source: String(item[7] || '')
+    };
+  }
+  return {
+    time: String(item.time || ''),
+    userName: String(item.userId || item.userName || 'LINE 用戶'),
+    userId: String(item.rawUserId || item.userId || 'user'),
+    type: String(item.type || item.op || '系統操作'),
+    input: String(item.input || item.query || ''),
+    aiResult: String(item.aiResult || item.nutrients || ''),
+    output: String(item.output || item.result || ''),
+    source: String(item.source || '')
+  };
+};
 
 export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const isEn = lang === 'en';
 
-  // 🔐 Maintainer Authentication State
+  // 🔐 Permanent Pass Authentication State (localStorage persists forever)
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return sessionStorage.getItem('maintainer_auth') === 'true';
+    return Boolean(localStorage.getItem(PERMANENT_TOKEN_KEY));
   });
+  const [permanentToken, setPermanentToken] = useState(() => {
+    return localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
+  });
+  const [clientInfo, setClientInfo] = useState(() => {
+    try {
+      const raw = localStorage.getItem(CLIENT_INFO_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch (e) {
+      return null;
+    }
+  });
+
   const [passwordInput, setPasswordInput] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [authError, setAuthError] = useState('');
   const [isShaking, setIsShaking] = useState(false);
+  const [isRegisteringAudit, setIsRegisteringAudit] = useState(false);
 
   // 📊 Dashboard Data States
-  const [logs, setLogs] = useState([]);
+  const [rawLogs, setRawLogs] = useState([]);
   const [aiQuota, setAiQuota] = useState(null);
   const [sheetUrl, setSheetUrl] = useState('');
+  const [lastMaintainerLogin, setLastMaintainerLogin] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [lastFetchedAt, setLastFetchedAt] = useState(null);
   const [fetchError, setFetchError] = useState(null);
@@ -56,20 +101,95 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // ⚙️ Filtering & Auto-Refresh States
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState(10); // in seconds (0 = off)
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(10); // seconds (0 = off)
   const [countdown, setCountdown] = useState(10);
   const [copiedId, setCopiedId] = useState(null);
 
-  // Handle Maintainer Login
-  const handleLogin = (e) => {
+  // 🕵️ Collect Device, IP & Geo Location Info
+  const collectDeviceInfo = async () => {
+    let ip = 'Unknown IP';
+    let location = 'Local / Direct';
+
+    try {
+      const ipRes = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3500) });
+      if (ipRes.ok) {
+        const ipData = await ipRes.json();
+        if (ipData.ip) ip = ipData.ip;
+      }
+    } catch (e) {}
+
+    try {
+      if (ip !== 'Unknown IP') {
+        const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3500) });
+        if (geoRes.ok) {
+          const geo = await geoRes.json();
+          const parts = [geo.city, geo.region, geo.country_name].filter(Boolean);
+          if (parts.length > 0) location = parts.join(', ');
+        }
+      }
+    } catch (e) {}
+
+    const ua = navigator.userAgent;
+    let os = 'Unknown OS';
+    if (ua.includes('Win')) os = 'Windows';
+    else if (ua.includes('Mac')) os = 'macOS';
+    else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+    else if (ua.includes('Android')) os = 'Android';
+    else if (ua.includes('Linux')) os = 'Linux';
+
+    let browser = 'Unknown Browser';
+    if (ua.includes('Line')) browser = 'LINE in-app';
+    else if (ua.includes('Edg')) browser = 'Edge';
+    else if (ua.includes('Chrome')) browser = 'Chrome';
+    else if (ua.includes('Safari')) browser = 'Safari';
+    else if (ua.includes('Firefox')) browser = 'Firefox';
+
+    const device = `${window.screen.width}x${window.screen.height} (${window.devicePixelRatio || 1}x)`;
+
+    return { ip, location, os, browser, device, timestamp: new Date().toISOString() };
+  };
+
+  // 📡 Send Maintainer Login Audit to GAS Backend
+  const recordMaintainerAuditToBackend = async (info, token) => {
+    try {
+      setIsRegisteringAudit(true);
+      const params = new URLSearchParams({
+        action: 'recordMaintainerLogin',
+        ip: info.ip || '',
+        location: info.location || '',
+        device: info.device || '',
+        browser: info.browser || '',
+        os: info.os || '',
+        token: token || ''
+      });
+      await fetch(`${GAS_API_URL}?${params.toString()}`, { method: 'GET', mode: 'no-cors' });
+      console.log('✅ [Maintainer Audit] 登入設備與 IP 資訊已成功記錄至雲端伺服器');
+    } catch (err) {
+      console.warn('⚠️ 記錄維護者登入日誌失敗:', err);
+    } finally {
+      setIsRegisteringAudit(false);
+    }
+  };
+
+  // Handle Login & Issue Permanent Pass
+  const handleLogin = async (e) => {
     if (e) e.preventDefault();
     const cleanInput = passwordInput.trim();
     const customPass = localStorage.getItem('maintainer_custom_pass') || DEFAULT_MAINTAINER_PASS;
 
     if (cleanInput === customPass || cleanInput === DEFAULT_MAINTAINER_PASS) {
-      sessionStorage.setItem('maintainer_auth', 'true');
+      // Generate permanent pass token
+      const newToken = `PANDA_PASS_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
+      localStorage.setItem(PERMANENT_TOKEN_KEY, newToken);
+      setPermanentToken(newToken);
       setIsAuthenticated(true);
       setAuthError('');
+
+      // Collect device & IP info and record to backend
+      const info = await collectDeviceInfo();
+      localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
+      setClientInfo(info);
+      recordMaintainerAuditToBackend(info, newToken);
     } else {
       setAuthError(isEn ? 'Incorrect password. Access denied.' : '維護者密碼不正確，存取被拒絕。');
       setIsShaking(true);
@@ -77,13 +197,18 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     }
   };
 
-  const handleLogout = () => {
+  // Revoke Permanent Pass (Sign out)
+  const handleRevokePermanentPass = () => {
+    localStorage.removeItem(PERMANENT_TOKEN_KEY);
+    localStorage.removeItem(CLIENT_INFO_KEY);
     sessionStorage.removeItem('maintainer_auth');
     setIsAuthenticated(false);
+    setPermanentToken('');
+    setClientInfo(null);
     setPasswordInput('');
   };
 
-  // Fetch Logs and Quota from GAS
+  // Fetch Dashboard Logs and Quota from GAS
   const fetchDashboardData = async (silent = false) => {
     if (!silent) setIsLoading(true);
     setFetchError(null);
@@ -93,9 +218,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
       const data = await res.json();
       if (data.status === 'ok') {
-        setLogs(Array.isArray(data.logs) ? data.logs : []);
+        setRawLogs(Array.isArray(data.logs) ? data.logs : []);
         setAiQuota(data.aiQuota || null);
         if (data.sheetUrl) setSheetUrl(data.sheetUrl);
+        if (data.lastMaintainerLogin) setLastMaintainerLogin(data.lastMaintainerLogin);
         setLastFetchedAt(new Date());
       } else {
         throw new Error(data.message || 'Failed to fetch logs');
@@ -112,6 +238,15 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   useEffect(() => {
     if (isAuthenticated) {
       fetchDashboardData();
+
+      // If permanent token exists but client info is missing, populate it
+      if (!clientInfo) {
+        collectDeviceInfo().then((info) => {
+          localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
+          setClientInfo(info);
+          recordMaintainerAuditToBackend(info, permanentToken);
+        });
+      }
     }
   }, [isAuthenticated]);
 
@@ -136,46 +271,45 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // Filter Categories
   const categories = useMemo(() => [
     { id: 'ALL', label: isEn ? 'All Logs' : '全部日誌' },
-    { id: 'PHOTO', label: isEn ? '📸 Photo AI' : '📸 照片辨識' },
-    { id: 'TEXT', label: isEn ? '💬 Text AI' : '💬 文字辨識' },
+    { id: 'PHOTO', label: isEn ? '📸 Photo' : '📸 照片辨識' },
+    { id: 'TEXT', label: isEn ? '💬 Text' : '💬 文字記餐' },
     { id: 'WATER', label: isEn ? '🚰 Water' : '🚰 喝水記錄' },
     { id: 'PORTION', label: isEn ? '⚖️ Portion' : '⚖️ 份量調整' },
-    { id: 'FAV', label: isEn ? '⭐ Favorites' : '⭐ 常用庫' },
-    { id: 'GOAL', label: isEn ? '🎯 Goals' : '🎯 目標' },
+    { id: 'GOAL', label: isEn ? '🎯 Goals' : '🎯 體態目標' },
+    { id: 'SYNC', label: isEn ? '⚡ Web Sync' : '⚡ Web 同步' },
     { id: 'ALERT', label: isEn ? '🚨 Alerts' : '🚨 異常通報' },
   ], [isEn]);
 
-  // Filtered Logs
+  // Normalized & Filtered Logs
+  const normalizedLogs = useMemo(() => {
+    if (!rawLogs || !rawLogs.length) return [];
+    return rawLogs.map(normalizeLog).filter(Boolean);
+  }, [rawLogs]);
+
   const filteredLogs = useMemo(() => {
-    if (!logs || !logs.length) return [];
-    return logs.filter((log) => {
-      // log is array: [time, operation, userId, dish/query, nutrients/calc, comment/result, source]
-      const [time = '', op = '', uId = '', query = '', nutrients = '', result = '', src = ''] = Array.isArray(log) ? log : [];
-      const opStr = String(op);
-      const uIdStr = String(uId);
-      const queryStr = String(query);
-      const nutrientsStr = String(nutrients);
-      const resultStr = String(result);
+    if (!normalizedLogs || !normalizedLogs.length) return [];
+    return normalizedLogs.filter((log) => {
+      const { time, userName, userId, type, input, aiResult, output, source } = log;
 
       // Category matching
-      if (selectedCategory === 'PHOTO' && !opStr.includes('照片') && !opStr.includes('Photo') && !opStr.includes('Vision')) return false;
-      if (selectedCategory === 'TEXT' && !opStr.includes('文字') && !opStr.includes('Text') && !opStr.includes('語意')) return false;
-      if (selectedCategory === 'WATER' && !opStr.includes('水') && !opStr.includes('Water')) return false;
-      if (selectedCategory === 'PORTION' && !opStr.includes('倍') && !opStr.includes('半') && !opStr.includes('份量') && !opStr.includes('Portion')) return false;
-      if (selectedCategory === 'FAV' && !opStr.includes('常用') && !opStr.includes('Favorite')) return false;
-      if (selectedCategory === 'GOAL' && !opStr.includes('目標') && !opStr.includes('Goal')) return false;
-      if (selectedCategory === 'ALERT' && !opStr.includes('異常') && !opStr.includes('Alert') && !opStr.includes('Error') && !resultStr.includes('失敗')) return false;
+      if (selectedCategory === 'PHOTO' && !type.includes('照片') && !type.includes('Photo') && !type.includes('Vision')) return false;
+      if (selectedCategory === 'TEXT' && !type.includes('文字') && !type.includes('Text') && !type.includes('對話') && !type.includes('語意')) return false;
+      if (selectedCategory === 'WATER' && !type.includes('水') && !type.includes('Water') && !input.includes('水') && !aiResult.includes('水')) return false;
+      if (selectedCategory === 'PORTION' && !type.includes('倍') && !type.includes('半') && !type.includes('份量') && !type.includes('碳水減半')) return false;
+      if (selectedCategory === 'GOAL' && !type.includes('目標') && !type.includes('Goal')) return false;
+      if (selectedCategory === 'SYNC' && !type.includes('Web') && !type.includes('同步')) return false;
+      if (selectedCategory === 'ALERT' && !type.includes('異常') && !type.includes('Alert') && !type.includes('錯誤') && !output.includes('失敗')) return false;
 
-      // Search Query matching
+      // Text Search matching
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
-        const combined = `${time} ${opStr} ${uIdStr} ${queryStr} ${nutrientsStr} ${resultStr} ${src}`.toLowerCase();
-        if (!combined.includes(q)) return false;
+        const fullContent = `${time} ${userName} ${userId} ${type} ${input} ${aiResult} ${output} ${source}`.toLowerCase();
+        if (!fullContent.includes(q)) return false;
       }
 
       return true;
     });
-  }, [logs, selectedCategory, searchQuery]);
+  }, [normalizedLogs, selectedCategory, searchQuery]);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -184,7 +318,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   };
 
   // ==========================================
-  // 🔒 Render Password Gate Screen
+  // 🔒 Render Password Gate Screen (If no permanent pass)
   // ==========================================
   if (!isAuthenticated) {
     return (
@@ -202,15 +336,15 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               </div>
               <div>
                 <span className="bg-black text-white px-3 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase">
-                  Maintainer Only
+                  Maintainer Access
                 </span>
                 <h2 className="text-2xl font-black italic tracking-tight mt-2">
                   {isEn ? 'System Log & API Monitor' : '雲端運作日誌與 API 監控中心'}
                 </h2>
                 <p className="text-xs font-bold text-zinc-500 mt-1 leading-relaxed">
                   {isEn 
-                    ? 'Enter the maintainer security password to access live server logs and API quota statistics.'
-                    : '此端點為維護者專用，請輸入維護者驗證密碼以檢視即時流量與系統運作日誌。'}
+                    ? 'Enter the password once to issue a permanent maintainer pass on this device. Device info & IP will be securely logged.'
+                    : '驗證通過後將為此裝置永久核發維護者通行證（免重複輸入）。系統將同步記錄本次登入之 IP 與裝置資訊。'}
                 </p>
               </div>
             </div>
@@ -219,7 +353,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             <form onSubmit={handleLogin} className="space-y-4">
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
-                  {isEn ? 'Maintainer Password' : '維護者驗證密碼'}
+                  {isEn ? 'Maintainer Security Password' : '維護者身分驗證密碼'}
                 </label>
                 <div className="relative">
                   <input
@@ -252,7 +386,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 className="w-full h-14 text-base font-black italic shadow-neo-sm active:scale-95"
               >
                 <ShieldCheck size={20} className="mr-2 text-accent" />
-                {isEn ? 'Unlock Dashboard' : '解鎖維護者儀表板'}
+                {isEn ? 'Unlock & Issue Permanent Pass' : '解鎖並永久核發通行證'}
               </NeoButton>
             </form>
 
@@ -264,7 +398,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 className="w-full flex items-center justify-center gap-2 py-3 rounded-xl font-black text-xs text-zinc-500 hover:text-black hover:bg-zinc-100 transition-all"
               >
                 <ArrowLeft size={16} />
-                {isEn ? 'Back to Daily Diet Tracker' : '返回飲食紀錄主畫面'}
+                {isEn ? 'Back to Daily Diet' : '返回飲食紀錄主畫面'}
               </button>
             </div>
           </div>
@@ -290,7 +424,30 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
 
   return (
-    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 max-w-6xl mx-auto space-y-6">
+    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 max-w-5xl mx-auto space-y-5">
+      {/* 🏷️ Top Permanent Pass Status Badge */}
+      <div className="bg-emerald-50 border-3 border-black rounded-2xl px-4 py-2.5 shadow-neo-xs flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-emerald-950">
+        <div className="flex items-center gap-2 flex-wrap">
+          <span className="bg-emerald-500 text-white p-1 rounded-lg">
+            <Check size={14} strokeWidth={3} />
+          </span>
+          <span className="font-black">
+            {isEn ? 'Permanent Maintainer Pass Active' : '已核發本機永久維護者通行證'}
+          </span>
+          {clientInfo && (
+            <span className="font-mono text-[11px] text-emerald-800 bg-emerald-100/80 px-2 py-0.5 rounded-lg border border-emerald-300">
+              📍 {clientInfo.ip} ({clientInfo.location}) · {clientInfo.os} ({clientInfo.browser})
+            </span>
+          )}
+        </div>
+        <button
+          onClick={handleRevokePermanentPass}
+          className="text-[11px] font-black text-rose-600 hover:text-rose-800 underline decoration-2 underline-offset-2 ml-auto"
+        >
+          {isEn ? 'Revoke Pass & Lock' : '註銷永久通行證並鎖定'}
+        </button>
+      </div>
+
       {/* Navigation & Header */}
       <header className="bg-white border-4 border-black rounded-[2.5rem] p-4 sm:p-6 shadow-neo space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-3">
@@ -298,14 +455,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           <div className="flex items-center gap-3">
             <button
               onClick={onBack}
-              className="bg-black text-white p-2.5 rounded-2xl hover:bg-accent hover:text-black transition-colors border-2 border-black active:scale-95 shadow-neo-xs"
+              className="bg-black text-white p-2.5 rounded-2xl hover:bg-accent hover:text-black transition-colors border-2 border-black active:scale-95 shadow-neo-xs shrink-0"
               title={isEn ? 'Back to Tracker' : '返回主畫面'}
             >
               <ArrowLeft size={20} />
             </button>
             <div>
-              <div className="flex items-center gap-2">
-                <h1 className="text-xl sm:text-2xl font-black italic tracking-tight leading-none">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h1 className="text-lg sm:text-2xl font-black italic tracking-tight leading-none">
                   🐼 {isEn ? 'Live System & API Monitor' : '實時系統運作與 API 流量監控'}
                 </h1>
                 <span className="flex items-center gap-1 bg-emerald-100 text-emerald-800 border border-emerald-400 px-2 py-0.5 rounded-full text-[9px] font-black uppercase">
@@ -315,7 +472,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               </div>
               <p className="text-[10px] sm:text-xs font-bold text-zinc-500 mt-1">
                 {lastFetchedAt 
-                  ? `${isEn ? 'Last updated:' : '最後更新：'} ${lastFetchedAt.toLocaleTimeString()}`
+                  ? `${isEn ? 'Last updated:' : '最後同步：'} ${lastFetchedAt.toLocaleTimeString()}`
                   : (isEn ? 'Connecting...' : '連線同步中...')}
                 {autoRefreshInterval > 0 && ` · ${countdown}s ${isEn ? 'next refresh' : '後自動更新'}`}
               </p>
@@ -347,7 +504,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               className="h-10 px-3 text-xs font-black flex items-center gap-1.5 shadow-neo-xs"
             >
               <RefreshCw size={14} className={isLoading ? 'animate-spin' : ''} />
-              {isLoading ? (isEn ? 'Updating...' : '讀取中...') : (isEn ? 'Refresh' : '重新整理')}
+              {isLoading ? (isEn ? 'Syncing...' : '讀取中...') : (isEn ? 'Refresh' : '重新整理')}
             </NeoButton>
 
             {/* Google Sheets Link */}
@@ -359,20 +516,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 className="h-10 px-3 bg-emerald-50 border-2 border-black rounded-2xl flex items-center gap-1.5 text-xs font-black text-emerald-900 hover:bg-emerald-100 transition-colors shadow-neo-xs"
               >
                 <FileSpreadsheet size={14} />
-                {isEn ? 'Open Sheet' : '檢視雲端試算表'}
+                <span className="hidden sm:inline">{isEn ? 'Google Sheet' : '雲端試算表'}</span>
                 <ExternalLink size={12} />
               </a>
             )}
-
-            {/* Logout / Lock */}
-            <button
-              onClick={handleLogout}
-              className="h-10 px-3 bg-rose-50 border-2 border-black rounded-2xl flex items-center gap-1 text-xs font-black text-rose-700 hover:bg-rose-100 transition-colors shadow-neo-xs"
-              title={isEn ? 'Lock Dashboard' : '鎖定維護者'}
-            >
-              <Lock size={14} />
-              {isEn ? 'Lock' : '鎖定'}
-            </button>
           </div>
         </div>
       </header>
@@ -547,7 +694,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isEn ? 'Search user ID, food name, comment, or query...' : '搜尋用戶 ID、餐點名稱、AI 評語或原始對話...'}
+              placeholder={isEn ? 'Search user, food, comment, raw input...' : '搜尋用戶名稱、餐點品項、AI 回覆或輸入文字...'}
               className="w-full bg-zinc-50 border-2 border-black rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold outline-none focus:bg-white transition-colors"
             />
             {searchQuery && (
@@ -562,9 +709,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
           {/* Records Counter */}
           <div className="bg-zinc-100 border-2 border-black rounded-2xl px-4 py-2 flex items-center justify-between sm:justify-center gap-2 shrink-0 font-bold text-xs">
-            <span className="text-zinc-500">{isEn ? 'Showing:' : '目前顯示：'}</span>
+            <span className="text-zinc-500">{isEn ? 'Showing:' : '目前筆數：'}</span>
             <span className="font-mono font-black text-sm bg-black text-white px-2 py-0.5 rounded-lg">
-              {filteredLogs.length} / {logs.length}
+              {filteredLogs.length} / {normalizedLogs.length}
             </span>
           </div>
         </div>
@@ -587,7 +734,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         </div>
       </div>
 
-      {/* 📜 Log Stream / Table Section */}
+      {/* 📜 Log Stream Cards Section */}
       <div className="space-y-3">
         {filteredLogs.length === 0 ? (
           <div className="bg-white border-4 border-black rounded-[2.5rem] p-12 text-center shadow-neo space-y-3">
@@ -599,68 +746,64 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           </div>
         ) : (
           filteredLogs.map((item, index) => {
-            const [time = '', op = '', uId = '', query = '', nutrients = '', result = '', src = ''] = Array.isArray(item) ? item : [];
-            const isAlert = String(op).includes('異常') || String(result).includes('失敗') || String(op).includes('報警');
-            const isPhoto = String(op).includes('照片') || String(op).includes('Photo');
-            const isText = String(op).includes('文字') || String(op).includes('Text');
-            const isWater = String(op).includes('水') || String(op).includes('Water');
-            const isPortion = String(op).includes('倍') || String(op).includes('半') || String(op).includes('份量');
-            const isGoal = String(op).includes('目標');
-            const isFav = String(op).includes('常用');
+            const { time, userName, userId, type, input, aiResult, output, source } = item;
+            const isAlert = type.includes('異常') || output.includes('失敗') || type.includes('報警');
+            const isPhoto = type.includes('照片') || type.includes('Photo');
+            const isText = type.includes('文字') || type.includes('Text') || type.includes('對話');
+            const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
+            const isPortion = type.includes('倍') || type.includes('半') || type.includes('份量');
+            const isGoal = type.includes('目標');
+            const isSync = type.includes('Web') || type.includes('同步');
 
             // Distinct Operation Badge Color
             let badgeBg = 'bg-zinc-100 text-zinc-800 border-zinc-300';
-            if (isAlert) badgeBg = 'bg-rose-100 text-rose-800 border-rose-300';
-            else if (isPhoto) badgeBg = 'bg-indigo-100 text-indigo-800 border-indigo-300';
-            else if (isText) badgeBg = 'bg-blue-100 text-blue-800 border-blue-300';
-            else if (isWater) badgeBg = 'bg-cyan-100 text-cyan-800 border-cyan-300';
-            else if (isPortion) badgeBg = 'bg-amber-100 text-amber-900 border-amber-300';
-            else if (isGoal) badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-300';
-            else if (isFav) badgeBg = 'bg-pink-100 text-pink-800 border-pink-300';
+            if (isAlert) badgeBg = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
+            else if (isPhoto) badgeBg = 'bg-purple-100 text-purple-800 border-purple-300 font-black';
+            else if (isText) badgeBg = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+            else if (isWater) badgeBg = 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
+            else if (isPortion) badgeBg = 'bg-amber-100 text-amber-900 border-amber-300 font-black';
+            else if (isGoal) badgeBg = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+            else if (isSync) badgeBg = 'bg-teal-100 text-teal-800 border-teal-300 font-black';
 
             return (
               <motion.div
                 key={index}
-                initial={{ opacity: 0, y: 10 }}
+                initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
                 className={`bg-white border-4 border-black rounded-[2rem] p-4 sm:p-5 shadow-neo hover:shadow-neo-lg transition-all space-y-3 ${isAlert ? 'border-l-8 border-l-rose-500' : ''}`}
               >
-                {/* Header Row: Time + Op Badge + User + Source */}
+                {/* Header Row: Time + Op Badge + User Name/ID + Source */}
                 <div className="flex flex-wrap items-center justify-between gap-2 border-b-2 border-dashed border-zinc-100 pb-2">
                   <div className="flex flex-wrap items-center gap-2">
                     {/* Time */}
-                    <span className="text-[11px] font-mono font-black text-zinc-500 flex items-center gap-1 bg-zinc-100 px-2 py-0.5 rounded-lg">
+                    <span className="text-[11px] font-mono font-black text-zinc-600 flex items-center gap-1 bg-zinc-100 px-2 py-0.5 rounded-lg border border-black/10">
                       <Clock size={12} />
                       {time}
                     </span>
 
                     {/* Operation Badge */}
-                    <span className={`text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full border ${badgeBg}`}>
-                      {op || 'System Action'}
+                    <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded-full border ${badgeBg}`}>
+                      {type || '系統操作'}
                     </span>
 
                     {/* Source Tag */}
-                    {src && (
+                    {source && (
                       <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-md">
-                        {src}
+                        {source}
                       </span>
                     )}
                   </div>
 
                   {/* User Identifier */}
-                  <div className="flex items-center gap-1">
-                    <span className="text-[10px] font-mono text-zinc-400 bg-zinc-50 border border-zinc-200 px-2 py-0.5 rounded-lg flex items-center gap-1">
-                      <User size={10} />
-                      {uId ? (uId.length > 12 ? `${uId.slice(0, 6)}...${uId.slice(-4)}` : uId) : 'System'}
+                  <div className="flex items-center gap-1.5">
+                    <span className="text-xs font-black text-black bg-accent/30 border border-black/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                      <User size={12} />
+                      {userName}
                     </span>
-                    {uId && (
-                      <button
-                        onClick={() => copyToClipboard(uId, `uid-${index}`)}
-                        className="p-1 text-zinc-400 hover:text-black transition-colors"
-                        title={isEn ? 'Copy User ID' : '複製完整 User ID'}
-                      >
-                        {copiedId === `uid-${index}` ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                      </button>
+                    {userId && userId !== 'user' && (
+                      <span className="text-[10px] font-mono text-zinc-400 bg-zinc-50 border border-zinc-200 px-1.5 py-0.5 rounded">
+                        {userId.length > 10 ? `${userId.slice(0, 4)}...${userId.slice(-4)}` : userId}
+                      </span>
                     )}
                   </div>
                 </div>
@@ -670,30 +813,30 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                   {/* Left: Input / Query */}
                   <div className="space-y-1">
                     <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
-                      {isEn ? 'Input / Trigger' : '用戶輸入 / 觸發事件'}
+                      {isEn ? 'User Input / Trigger' : '用戶輸入 / 傳送內容'}
                     </span>
-                    <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-2.5 font-mono text-xs font-bold text-zinc-800 break-words leading-relaxed">
-                      {query || '—'}
+                    <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-3 font-mono text-xs font-bold text-zinc-800 break-words leading-relaxed">
+                      {input || '—'}
                     </div>
                   </div>
 
                   {/* Right: Response / Result */}
                   <div className="space-y-1">
                     <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
-                      {isEn ? 'Nutrients / Coach Response' : '營養數值 / 教練回應'}
+                      {isEn ? 'AI Analysis / Coach Response' : 'AI 辨識結果 / 教練處理狀態'}
                     </span>
-                    <div className="bg-accent/10 border-2 border-black/10 rounded-xl p-2.5 text-xs font-bold text-zinc-900 break-words leading-relaxed">
-                      {nutrients && (
+                    <div className="bg-accent/10 border-2 border-black/10 rounded-xl p-3 text-xs font-bold text-zinc-900 break-words leading-relaxed">
+                      {aiResult && (
                         <div className="font-mono font-black text-xs text-black mb-1">
-                          {nutrients}
+                          {aiResult}
                         </div>
                       )}
-                      {result ? (
+                      {output ? (
                         <div className="text-zinc-700 italic">
-                          {result}
+                          {output}
                         </div>
                       ) : (
-                        !nutrients && <span className="text-zinc-400 italic font-normal">—</span>
+                        !aiResult && <span className="text-zinc-400 italic font-normal">—</span>
                       )}
                     </div>
                   </div>
