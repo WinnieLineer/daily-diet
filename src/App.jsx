@@ -26,6 +26,7 @@ const WhatsNew = lazy(() => import('./components/WhatsNew'));
 const Onboarding = lazy(() => import('./components/Onboarding'));
 const WeeklyReportCard = lazy(() => import('./components/WeeklyReportCard'));
 const Theme520 = lazy(() => import('./components/Theme520'));
+const LogMonitorDashboard = lazy(() => import('./components/LogMonitorDashboard'));
 
 export const isNewer = (newVer, oldVer) => {
   if (!oldVer) return true;
@@ -83,6 +84,8 @@ function getAppQueryParams() {
     gistId: getParam('gistId'),
     user: getParam('user') || getParam('userName'),
     tab: getParam('tab'),
+    view: getParam('view'),
+    page: getParam('page'),
   };
 }
 
@@ -714,6 +717,35 @@ function App() {
   const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);
   const [incomingMeal, setIncomingMeal] = useState(null);
   const [currentLang, setCurrentLang] = useState(() => getLanguage());
+
+  const checkIsLogRoute = () => {
+    const hash = window.location.hash || '';
+    const search = window.location.search || '';
+    const pathname = window.location.pathname || '';
+    const query = getAppQueryParams();
+    return (
+      query.view === 'admin' || query.view === 'logs' || query.page === 'admin' || query.page === 'logs' ||
+      hash === '#/admin' || hash === '#/logs' || hash.startsWith('#/admin') || hash.startsWith('#/logs') ||
+      search.includes('view=admin') || search.includes('view=logs') || search.includes('page=admin') || search.includes('page=logs') ||
+      pathname.endsWith('/admin') || pathname.endsWith('/logs')
+    );
+  };
+
+  const [currentView, setCurrentView] = useState(() => checkIsLogRoute() ? 'logs' : 'main');
+
+  useEffect(() => {
+    const handleRouteChange = () => {
+      setCurrentView(checkIsLogRoute() ? 'logs' : 'main');
+    };
+    window.addEventListener('hashchange', handleRouteChange);
+    window.addEventListener('popstate', handleRouteChange);
+    window.addEventListener('open-admin-logs', () => setCurrentView('logs'));
+    return () => {
+      window.removeEventListener('hashchange', handleRouteChange);
+      window.removeEventListener('popstate', handleRouteChange);
+      window.removeEventListener('open-admin-logs', () => setCurrentView('logs'));
+    };
+  }, []);
 
   const toggleLanguage = async () => {
     const nextLang = currentLang === 'en' ? 'zh' : 'en';
@@ -1545,6 +1577,30 @@ function App() {
       end: isEating ? goals.fasting_end : goals.fasting_start 
     };
   };
+
+  if (currentView === 'logs') {
+    return (
+      <Suspense fallback={<div className="min-h-screen bg-[#FFFDF5] flex items-center justify-center font-black">🐼 載入監控儀表板中...</div>}>
+        <LogMonitorDashboard 
+          lang={currentLang} 
+          onBack={() => {
+            if (window.location.hash.startsWith('#/admin') || window.location.hash.startsWith('#/logs')) {
+              window.location.hash = '';
+            }
+            if (window.location.search.includes('view=') || window.location.search.includes('page=')) {
+              try {
+                const url = new URL(window.location.href);
+                url.searchParams.delete('view');
+                url.searchParams.delete('page');
+                window.history.replaceState(null, '', url.pathname + (url.search ? url.search : '') + url.hash);
+              } catch (e) {}
+            }
+            setCurrentView('main');
+          }} 
+        />
+      </Suspense>
+    );
+  }
 
   const fasting = getFastingStatus();
   return (

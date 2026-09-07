@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db, calculateStreak } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION } from '../lib/constants';
@@ -78,6 +78,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [copiedGist, setCopiedGist] = useState(false);
   const [isEditingGist, setIsEditingGist] = useState(false);
   const [manualGistInput, setManualGistInput] = useState('');
+
+  // 🕵️ 維護者隱藏彩蛋：連續快速點擊版本號 5 次無聲進入監控儀表板 (一般用戶完全看不出入口)
+  const secretTapCount = useRef(0);
+  const secretTapTimeout = useRef(null);
+  const handleSecretVersionTap = () => {
+    secretTapCount.current += 1;
+    if (secretTapTimeout.current) clearTimeout(secretTapTimeout.current);
+    secretTapTimeout.current = setTimeout(() => {
+      secretTapCount.current = 0;
+    }, 2000);
+
+    if (secretTapCount.current >= 5) {
+      secretTapCount.current = 0;
+      setIsOpen(false);
+      window.location.hash = '#/admin';
+      window.dispatchEvent(new CustomEvent('open-admin-logs'));
+    }
+  };
 
   const handleSelectTitle = (title) => {
     if (activeTitle === title) {
@@ -1740,7 +1758,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                 {activeTab === 'appinfo' && (
                   <div className="space-y-6">
                     <div className="p-4 bg-zinc-50 border-4 border-black rounded-2xl shadow-neo-sm text-center">
-                      <h4 className="font-black italic mb-1">Daily Diet v{APP_VERSION}</h4>
+                      <h4 
+                        onClick={handleSecretVersionTap}
+                        className="font-black italic mb-1 select-none active:scale-95 transition-transform"
+                        title=""
+                      >
+                        Daily Diet v{APP_VERSION}
+                      </h4>
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">© 2026 Winnie Lin Space</p>
                     </div>
                     <div className="space-y-3">
