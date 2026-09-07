@@ -591,7 +591,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
 
   return (
-    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 max-w-6xl mx-auto space-y-5">
+    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 lg:p-8 w-full space-y-5">
       {/* 🏷️ Top Permanent Pass Status Badge */}
       <div className="bg-emerald-50 border-3 border-black rounded-2xl px-4 py-2.5 shadow-neo-xs flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-emerald-950">
         <div className="flex items-center gap-2 flex-wrap">
@@ -1161,7 +1161,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                           </td>
 
                           {/* Message Preview */}
-                          <td className="py-3 px-4 max-w-md">
+                          <td className="py-3 px-4 max-w-md xl:max-w-2xl 2xl:max-w-4xl">
                             <div className="font-mono text-[11px] text-zinc-800 truncate">
                               {input ? (
                                 <span><strong className="text-black">{input}</strong></span>
@@ -1263,7 +1263,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                                           ].map((field) => (
                                             <tr key={field.key} className="hover:bg-zinc-50">
                                               <td className="py-2 px-3 font-bold text-zinc-500 whitespace-nowrap">{field.key}</td>
-                                              <td className="py-2 px-3 font-medium text-black break-words max-w-xl">{field.val}</td>
+                                              <td className="py-2 px-3 font-medium text-black break-words max-w-xl xl:max-w-4xl">{field.val}</td>
                                               <td className="py-2 px-3 text-right">
                                                 {field.val && field.val !== '—' && (
                                                   <button
