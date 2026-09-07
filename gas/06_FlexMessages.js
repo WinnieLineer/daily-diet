@@ -2842,9 +2842,11 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                   buildMenuBtn(
                     isEn ? "🐛 Bug Report" : "🐛 問題回報",
                     {
-                      type: "uri",
-                      label: isEn ? "Bug Report" : "問題回報",
-                      uri: userGistId ? `https://liff.line.me/${liffId}?tab=feedback&gistId=${userGistId}` : `https://liff.line.me/${liffId}?tab=feedback`
+                      type: "postback",
+                      label: isEn ? "Report" : "問題回報",
+                      data: JSON.stringify({ action: 'bugReport' }),
+                      inputOption: "openKeyboard",
+                      fillInText: isEn ? "Bug: " : "回報 "
                     },
                     "#F1F5F9"
                   )
@@ -3139,13 +3141,18 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props, lang) {
   };
 }
 
-function generateBugReportAckFlex(userText, liffId, userGistId, lang) {
+function generateBugReportAckFlex(userText, isSuccess, lang) {
+  // 保持向後相容：若傳入 (userText, liffId, userGistId, lang)
+  if (typeof isSuccess === 'string' && typeof lang === 'string') {
+    lang = arguments[3] || 'zh-TW';
+    isSuccess = true;
+  }
   const isEn = lang === 'en';
-  const feedbackUrl = (liffId ? `https://liff.line.me/${liffId}?tab=feedback` : '') + (userGistId ? `&gistId=${userGistId}` : '');
+  const success = isSuccess !== false;
 
   return {
     type: "flex",
-    altText: isEn ? "🛠️ Thank you for your feedback! Submitted to team" : "🛠️ 感謝您的問題回報！已同步以表單提交至開發團隊",
+    altText: isEn ? "🛠️ Thank you for your feedback! Submitted to team" : "🛠️ 感謝您的問題回報！已同步送交開發團隊",
     contents: {
       type: "bubble",
       size: "kilo",
@@ -3155,8 +3162,25 @@ function generateBugReportAckFlex(userText, liffId, userGistId, lang) {
         backgroundColor: "#18181B",
         paddingAll: "14px",
         contents: [
-          { type: "text", text: isEn ? "🛠️ Feedback Received!" : "🛠️ 問題回報已送達！", weight: "bold", size: "md", color: "#FDE047" },
-          { type: "text", text: isEn ? "Submitted to the engineering team 🐼❤️" : "已同步表單提交至工程團隊信箱 🐼❤️", size: "xxs", color: "#A1A1AA", margin: "xs" }
+          {
+            type: "text",
+            text: success
+              ? (isEn ? "🛠️ Feedback Received!" : "🛠️ 問題回報已送達！")
+              : (isEn ? "🛠️ Report Recorded!" : "🛠️ 問題回報已記錄！"),
+            weight: "bold",
+            size: "md",
+            color: "#FDE047"
+          },
+          {
+            type: "text",
+            text: success
+              ? (isEn ? "Submitted to the engineering team 🐼❤️" : "已同步表單提交至工程團隊信箱 🐼❤️")
+              : (isEn ? "Logged locally, team will review 🐼❤️" : "已為您留存紀錄，團隊將儘速處理 🐼❤️"),
+            size: "xxs",
+            color: "#A1A1AA",
+            margin: "xs",
+            wrap: true
+          }
         ]
       },
       body: {
@@ -3167,10 +3191,13 @@ function generateBugReportAckFlex(userText, liffId, userGistId, lang) {
         contents: [
           {
             type: "text",
-            text: isEn ? "✅ Submitted via Web3Forms:" : "✅ 已同步透過 Web3Forms 表單提交：",
+            text: success
+              ? (isEn ? "✅ Submitted via Web3Forms:" : "✅ 已同步透過 Web3Forms 表單提交：")
+              : (isEn ? "📋 Recorded Content:" : "📋 已記錄之問題內容："),
             size: "xs",
-            color: "#15803D",
-            weight: "bold"
+            color: success ? "#15803D" : "#D97706",
+            weight: "bold",
+            wrap: true
           },
           {
             type: "box",
@@ -3190,6 +3217,16 @@ function generateBugReportAckFlex(userText, liffId, userGistId, lang) {
                 weight: "bold"
               }
             ]
+          },
+          {
+            type: "text",
+            text: isEn
+              ? "Your feedback is vital to making Daily Diet better. Thank you!"
+              : "您的每一則回報都是讓 Daily Diet 變得更好的動力，感謝您！",
+            size: "xxs",
+            color: "#71717A",
+            wrap: true,
+            margin: "sm"
           }
         ]
       },
@@ -3199,27 +3236,76 @@ function generateBugReportAckFlex(userText, liffId, userGistId, lang) {
         spacing: "sm",
         paddingAll: "10px",
         contents: [
-          ...(feedbackUrl ? [{
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#FDE047",
-            action: {
-              type: "uri",
-              label: isEn ? "📝 Open Web Feedback Form" : "📝 開啟 Web 完整回報表單",
-              uri: feedbackUrl
-            }
-          }] : []),
           {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#F4F4F5",
-            action: {
-              type: "message",
-              label: isEn ? "💡 Guide & Commands" : "💡 查看全功能手冊",
-              text: isEn ? "Guide" : "說明"
-            }
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F4F4F5",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "10px",
+                paddingTop: "8px",
+                paddingBottom: "8px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                action: {
+                  type: "message",
+                  label: isEn ? "Guide" : "手冊",
+                  text: isEn ? "Guide" : "說明"
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "💡 Guide" : "💡 全功能手冊",
+                    weight: "bold",
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
+                  }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEE2E2",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "10px",
+                paddingTop: "8px",
+                paddingBottom: "8px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                action: {
+                  type: "postback",
+                  label: isEn ? "Report" : "回報",
+                  data: JSON.stringify({ action: 'bugReport' }),
+                  inputOption: "openKeyboard",
+                  fillInText: isEn ? "Bug: " : "回報 "
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "🐛 Report More" : "🐛 再次回報",
+                    weight: "bold",
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
+                  }
+                ]
+              }
+            ]
           }
         ]
       }

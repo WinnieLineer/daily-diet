@@ -520,6 +520,16 @@ function doPost(e) {
           continue;
         }
 
+        // 🐛 問題回報引導 Postback
+        if (payload.action === 'bugReport') {
+          recordSystemLog('問題回報指引', userId, '點擊問題回報按鈕', '', '發送問題回報指引提示');
+          const promptMsg = isEn
+            ? "🐛 【Bug Report】\nPlease reply directly with your issue description starting with 'Bug: '!\nExample:\n`Bug: The protein calculation seems off` 🐼"
+            : "🐛 【問題與建議回報】\n請直接在下方對話框輸入「回報」加上您的問題內容喔！\n例如：\n`回報 照片辨識蛋白質有誤` 🐼";
+          replyTextMessage(replyToken, promptMsg, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 🎭 挑選教練性格
         if (payload.action === 'choosePersona') {
           recordSystemLog('切換性格', userId, '點擊切換教練性格', '', '發送教練性格選擇卡片');
@@ -908,29 +918,49 @@ function doPost(e) {
             }
           }
 
-          // 🐛 問題回報 / Bug Report / 意見反饋 (透過 Web3Forms 提交表單)
-          if (userText.startsWith('回報') || userText.startsWith('bug') || userText.startsWith('Bug') || userText.startsWith('BUG') || userText.startsWith('問題') || userText.startsWith('建議') || userText.startsWith('反饋') || userText.startsWith('報錯')) {
-            console.log(`🐛 [收到問題回報] 用戶 ${userId}: ${userText}`);
-            recordSystemLog('問題回報', userId, userText, '', '已成功記錄用戶問題回報並提交 Web3Forms');
+          // 🐛 問題回報 / Bug Report / 意見反饋 (直接在 LINE 聊天室回報，並透過 Web3Forms 提交)
+          const reportPrefixRegex = /^(?:問題回報|bug\s*report|回報|bug|問題|建議|反饋|報錯)[\s:：、,]*(.*)$/is;
+          const reportMatch = userText.match(reportPrefixRegex);
+          if (reportMatch) {
+            const issueDetails = (reportMatch[1] || '').trim();
+            if (!issueDetails) {
+              const promptMsg = isEn
+                ? "🐛 【Bug Report】\nPlease include your issue or suggestion after 'Bug:'!\nExample: `Bug: The protein count seems off` 🐼"
+                : "🐛 【問題與建議回報】\n請在「回報」後方加上您的問題或建議說明喔！\n例如：`回報 雞胸肉蛋白質計算有誤差` 🐼";
+              replyTextMessage(replyToken, promptMsg, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
 
+            console.log(`🐛 [收到問題回報] 用戶 ${userId}: ${issueDetails}`);
+            recordSystemLog('問題回報', userId, issueDetails, '', '已成功記錄用戶問題回報並提交 Web3Forms');
+
+            let isSuccess = false;
             try {
-              UrlFetchApp.fetch('https://api.web3forms.com/submit', {
+              const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
+              const web3Res = UrlFetchApp.fetch('https://api.web3forms.com/submit', {
                 method: 'post',
                 contentType: 'application/json',
                 payload: JSON.stringify({
                   access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
-                  subject: `[Daily-Diet LINE] 問題回報 (${userId.slice(-6)})`,
-                  message: userText,
-                  from_name: `LINE Bot User (${userId.slice(-6)})`,
-                  device: 'LINE Messaging API'
+                  subject: `[Daily-Diet LINE] ${isEn ? 'Bug Report' : '問題回報'} (${userId.slice(-6)})`,
+                  message: `【回報內容 / Content】\n${issueDetails}\n\n【用戶環境 / Context】\n• User ID: ${userId}\n• Language: ${userLang}\n• Coach Persona: ${persona || 'tsundere'}\n• Gist Bound: ${userGistId ? 'Yes (' + userGistId.slice(0, 8) + '...)' : 'No'}`,
+                  from_name: `Daily Diet LINE User (${userId.slice(-6)})`,
+                  device: 'LINE Messaging API / Chat'
                 }),
                 muteHttpExceptions: true
               });
+              const resCode = web3Res.getResponseCode();
+              let resJson = {};
+              try {
+                resJson = JSON.parse(web3Res.getContentText());
+              } catch (parseErr) {}
+              isSuccess = (resCode === 200 && resJson.success === true);
             } catch (web3Err) {
               console.warn('Web3Forms 提交失敗:', web3Err);
+              isSuccess = false;
             }
 
-            const ackFlex = generateBugReportAckFlex(userText, LIFF_ID, userGistId, userLang);
+            const ackFlex = generateBugReportAckFlex(issueDetails, isSuccess, userLang);
             replyFlexMessage(replyToken, ackFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
