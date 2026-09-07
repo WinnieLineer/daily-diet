@@ -62,7 +62,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
         size: "xxs",
         color: "#18181B",
         weight: "bold",
-        flex: 6,
+        flex: 5,
         wrap: true
       },
       {
@@ -72,7 +72,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
         color: "#E11D48",
         weight: "bold",
         align: "end",
-        flex: 4
+        flex: 6,
+        wrap: true
       }
     ]
   }));
@@ -87,15 +88,15 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
       cornerRadius: "14px",
       borderColor: "#000000",
       borderWidth: "2.5px",
-      paddingAll: "12px",
+      paddingAll: "10px",
       spacing: "xs",
       contents: [
         {
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: isEn ? "🧮 Nutrient Breakdown" : "🧮 估算拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 1 },
-            { type: "text", text: isEn ? "Calories / Protein" : "估算熱量 / 蛋白質", size: "xxs", color: "#71717A", align: "end" }
+            { type: "text", text: isEn ? "🧮 Nutrient Breakdown" : "🧮 估算拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 5 },
+            { type: "text", text: isEn ? "Calories / Protein" : "估算熱量 / 蛋白質", size: "xxs", color: "#71717A", align: "end", flex: 6, wrap: true }
           ]
         },
         ...breakdownRows,
@@ -423,13 +424,16 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 borderColor: "#000000",
                 borderWidth: "2.5px",
                 cornerRadius: "14px",
-                paddingAll: "10px",
-                flex: 1,
+                paddingTop: "10px",
+                paddingBottom: "10px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
+                flex: isEn ? 6 : 5,
                 alignItems: "center",
                 justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "📊 Daily Summary" : "📊 查看今日總結",
+                  label: isEn ? "Daily Summary" : "今日總結",
                   data: postbackSaveData,
                   displayText: isEn ? "Daily Summary" : "今日總結"
                 },
@@ -438,8 +442,10 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                     type: "text",
                     text: isEn ? "📊 Daily Summary" : "📊 查看今日總結",
                     weight: "bold",
-                    size: "xs",
-                    color: "#FFFFFF"
+                    size: isEn ? "xxs" : "xs",
+                    color: "#FFFFFF",
+                    align: "center",
+                    wrap: true
                   }
                 ]
               },
@@ -450,8 +456,11 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 borderColor: "#000000",
                 borderWidth: "2.5px",
                 cornerRadius: "14px",
-                paddingAll: "10px",
-                flex: 1,
+                paddingTop: "10px",
+                paddingBottom: "10px",
+                paddingStart: "4px",
+                paddingEnd: "4px",
+                flex: isEn ? 5 : 5,
                 alignItems: "center",
                 justifyContent: "center",
                 action: {
@@ -465,8 +474,10 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                     type: "text",
                     text: isEn ? "⭐ Favorite" : "⭐ 存為常用",
                     weight: "bold",
-                    size: "xs",
-                    color: "#000000"
+                    size: isEn ? "xxs" : "xs",
+                    color: "#000000",
+                    align: "center",
+                    wrap: true
                   }
                 ]
               }
@@ -652,7 +663,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? (isToday ? "🥩 Protein" : "🥩 Daily Protein") : (isToday ? "🥩 今日蛋白質" : "🥩 當日蛋白質"), size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: isEn ? (isToday ? "🥩 Protein" : "🥩 Daily Pro") : (isToday ? "🥩 今日蛋白質" : "🥩 當日蛋白質"), size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
                   { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
                 ]
@@ -2588,7 +2599,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     flex: 1,
                     action: {
                       type: "postback",
-                      label: isEn ? "📊 Daily Summary" : "📊 今日總結",
+                      label: isEn ? "📊 Summary" : "📊 今日總結",
                       data: JSON.stringify({ action: 'save' }),
                       displayText: isEn ? "Daily Summary" : "今日"
                     }
