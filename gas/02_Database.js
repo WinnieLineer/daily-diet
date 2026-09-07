@@ -1094,7 +1094,7 @@ function getRecentLogsData(limit) {
   return [];
 }
 
-function recordAiUsage(model, isSuccess, props, errorMsg) {
+function recordAiUsage(model, isSuccess, props, errorMsg, callerInfo) {
   try {
     const p = props || PropertiesService.getScriptProperties();
     const cache = CacheService.getScriptCache();
@@ -1137,12 +1137,28 @@ function recordAiUsage(model, isSuccess, props, errorMsg) {
     } else {
       stats.fail = (stats.fail || 0) + 1;
       if (errorMsg) {
+        let callerName = '';
+        let callerId = '';
+        let callerOp = 'AI 模型運算';
+        if (callerInfo) {
+          if (typeof callerInfo === 'string') {
+            callerId = callerInfo;
+            callerName = p.getProperty(`USER_NAME_${callerInfo}`) || `用戶 (${callerInfo.slice(-4)})`;
+          } else if (typeof callerInfo === 'object') {
+            callerId = callerInfo.userId || '';
+            callerName = callerInfo.userName || (callerId ? p.getProperty(`USER_NAME_${callerId}`) : '') || callerInfo.caller || 'LINE 用戶';
+            callerOp = callerInfo.operation || callerOp;
+          }
+        }
         stats.recentErrors.unshift({
-          time: Utilities.formatDate(new Date(), "Asia/Taipei", "HH:mm:ss"),
+          time: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
           model: String(model || 'unknown'),
-          error: String(errorMsg).slice(0, 150)
+          error: String(errorMsg).slice(0, 200),
+          caller: callerName || '系統服務',
+          userId: callerId || 'API-Gateway',
+          operation: callerOp
         });
-        if (stats.recentErrors.length > 10) stats.recentErrors = stats.recentErrors.slice(0, 10);
+        if (stats.recentErrors.length > 20) stats.recentErrors = stats.recentErrors.slice(0, 20);
       }
     }
 

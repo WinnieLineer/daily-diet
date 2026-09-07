@@ -175,7 +175,7 @@ ${schemaBlock}`;
       });
 
       if (res.getResponseCode() !== 200) {
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`);
+        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`, { userId: userId, operation: '照片辨識' });
         throw new Error(res.getContentText());
       }
 
@@ -218,7 +218,7 @@ ${schemaBlock}`;
       };
     } catch (err) {
       lastError = err;
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, err.message);
+      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, err.message, { userId: userId, operation: '照片辨識' });
     }
   }
   throw new Error(`Gemini 辨識失敗：${lastError?.message || '未知錯誤'}`);
@@ -401,10 +401,10 @@ Do NOT wrap in markdown backticks.`;
           panda_comment: comment
         };
       } else {
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`);
+        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`, { userId: userId, operation: '文字記餐' });
       }
     } catch (e) {
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, e.message);
+      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, e.message, { userId: userId, operation: '文字記餐' });
       console.warn("文字辨識解析失敗:", e);
     }
   }
@@ -546,10 +546,10 @@ Do NOT wrap in markdown backticks.`;
         replyFlexMessage(replyToken, goalFlex, channelAccessToken, userId, props);
         return true;
       } else {
-        if (typeof recordAiUsage === 'function') recordAiUsage(models[i], false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`);
+        if (typeof recordAiUsage === 'function') recordAiUsage(models[i], false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`, { userId: userId, operation: '目標推薦' });
       }
     } catch (e) {
-      if (typeof recordAiUsage === 'function') recordAiUsage(models[i], false, props, e.message);
+      if (typeof recordAiUsage === 'function') recordAiUsage(models[i], false, props, e.message, { userId: userId, operation: '目標推薦' });
       console.error("設定目標失敗:", e);
     }
   }

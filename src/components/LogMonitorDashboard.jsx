@@ -48,11 +48,49 @@ const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_token_v2';
 const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
 const MAINTAINER_NAME_KEY = 'daily_diet_maintainer_name';
 
+// 統一時間戳記格式化工具：保證所有日誌一律為 YYYY-MM-DD HH:mm:ss
+const formatUnifiedTimestamp = (rawTime) => {
+  if (!rawTime) return '';
+  const str = String(rawTime).trim();
+  // 若已經是標準 YYYY-MM-DD HH:mm:ss
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}$/.test(str)) {
+    return str;
+  }
+  // 若缺少秒數 YYYY-MM-DD HH:mm
+  if (/^\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}$/.test(str)) {
+    return `${str}:00`;
+  }
+  // 若僅有時間 HH:mm:ss 或 HH:mm（如 GAS recentErrors）
+  if (/^\d{1,2}:\d{2}(:\d{2})?$/.test(str)) {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    const parts = str.split(':');
+    const hh = parts[0].padStart(2, '0');
+    const min = parts[1].padStart(2, '0');
+    const ss = (parts[2] || '00').padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+  }
+  // 若為 ISO 8601 或可解析字串
+  const d = new Date(str);
+  if (!isNaN(d.getTime())) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const ss = String(d.getSeconds()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd} ${hh}:${min}:${ss}`;
+  }
+  return str;
+};
+
 // Helper to safely normalize log records (Supports both Object format and Array format from GAS)
 const normalizeLog = (item) => {
   if (!item) return null;
   if (Array.isArray(item)) {
-    const time = String(item[0] || '');
+    const time = formatUnifiedTimestamp(item[0]);
     const userName = String(item[1] || item[2] || 'LINE 用戶');
     const userId = String(item[2] || item[1] || 'user');
     const type = String(item[3] || item[1] || '系統操作');
@@ -69,7 +107,7 @@ const normalizeLog = (item) => {
       input,
       aiResult,
       output,
-      source: 'LINE / GAS',
+      source: 'LINE Bot / Cloud',
       ip,
       location,
       device: ''
@@ -99,14 +137,14 @@ const normalizeLog = (item) => {
   }
 
   return {
-    time: String(item.time || ''),
+    time: formatUnifiedTimestamp(item.time),
     userName: String(item.userName || item.userId || 'LINE 用戶'),
     userId: String(item.rawUserId || item.userId || 'user'),
     type: String(item.type || item.op || '系統操作'),
     input: inputStr,
     aiResult: aiResultStr,
     output: outputStr,
-    source: String(item.source || (item.type?.includes('維護者') ? 'Web 維護者後台' : 'LINE Bot')),
+    source: String(item.source || (item.type?.includes('維護者') ? 'Web 維護者後台' : 'LINE Bot / Cloud')),
     ip,
     location,
     device
@@ -414,29 +452,39 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const normalizedLogs = useMemo(() => {
     const list = (!rawLogs || !rawLogs.length) ? [] : rawLogs.map(normalizeLog).filter(Boolean);
 
-    // 整合模型異常與伺服器故障通報至日誌列表，不再另外獨立區塊
+    // 整合模型異常與伺服器故障通報至日誌列表，保證格式、調用者與時間格式完全統一
     const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
     if (recentErrors.length > 0) {
       recentErrors.forEach((err) => {
+        const fullTime = formatUnifiedTimestamp(err.time);
         const errDesc = `[${err.model || 'Gemini'}] ${err.error || 'Request Error'}`;
         const exists = list.some((l) => l.output && l.output.includes(err.error));
         if (!exists) {
+          const callerName = err.caller || (err.userId ? `用戶 (${err.userId.slice(-4)})` : '系統服務 (AI Gateway)');
+          const callerId = err.userId || 'API-Gateway';
+          const opName = err.operation || '模型運算';
           list.unshift({
-            time: err.time || '剛剛',
-            userName: 'API Gateway',
-            userId: 'Gemini-API',
+            time: fullTime,
+            userName: callerName,
+            userId: callerId,
             type: '模型調用異常',
-            input: `調用模型: ${err.model || 'Gemini'}`,
-            aiResult: 'API 錯誤回傳',
-            output: `⚠️ ${errDesc}`,
-            source: 'Gemini API / GAS',
-            ip: '-',
-            location: '-',
-            device: 'Google AI Studio'
+            input: `調用操作: ${opName} (${err.model || 'Gemini'})`,
+            aiResult: '',
+            output: `⚠️ 錯誤詳情: ${errDesc}`,
+            source: 'Gemini API / Cloud',
+            ip: '',
+            location: 'Google AI Studio',
+            device: 'Cloud Function'
           });
         }
       });
     }
+
+    // 依統一時間戳記倒序排序（最新時間排在最上方）
+    list.sort((a, b) => {
+      if (!a.time || !b.time) return 0;
+      return String(b.time).localeCompare(String(a.time));
+    });
 
     return list;
   }, [rawLogs, aiQuota]);
@@ -1053,29 +1101,29 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 <thead>
                   <tr className="bg-zinc-900 text-white font-mono text-[11px] font-black uppercase tracking-wider select-none">
                     <th className="py-3 px-3 w-10 text-center">#</th>
-                    <th className="py-3 px-3 min-w-[140px]">
+                    <th className="py-3 px-3 min-w-[155px]">
                       <span className="flex items-center gap-1">
                         <Clock size={12} className="text-accent" />
-                        Time (@timestamp)
+                        {isEn ? 'Time (@timestamp)' : '時間 (@timestamp)'}
                       </span>
                     </th>
-                    <th className="py-3 px-3 min-w-[120px]">
-                      <span>Action (Type)</span>
+                    <th className="py-3 px-3 min-w-[130px]">
+                      <span>{isEn ? 'Action (Type)' : '操作類型 (Action)'}</span>
                     </th>
-                    <th className="py-3 px-3 min-w-[140px]">
+                    <th className="py-3 px-3 min-w-[145px]">
                       <span className="flex items-center gap-1">
                         <User size={12} className="text-accent" />
-                        User / Name
+                        {isEn ? 'Caller / User' : '調用者 / 用戶'}
                       </span>
                     </th>
-                    <th className="py-3 px-3 min-w-[180px]">
+                    <th className="py-3 px-3 min-w-[170px]">
                       <span className="flex items-center gap-1">
                         <MapPin size={12} className="text-rose-400" />
-                        Location / IP
+                        {isEn ? 'Location / Source' : '來源 / IP 位置'}
                       </span>
                     </th>
                     <th className="py-3 px-4 min-w-[280px]">
-                      <span>Message / Payload Preview</span>
+                      <span>{isEn ? 'Payload / Result Preview' : '訊息與執行結果預覽'}</span>
                     </th>
                     <th className="py-3 px-3 w-16 text-right">Actions</th>
                   </tr>
@@ -1087,7 +1135,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     const currentTab = rowInspectorTab[index] || 'table';
 
                     const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer';
-                    const isAlert = type.includes('異常') || output.includes('失敗') || type.includes('報警');
+                    const isAlert = type.includes('異常') || output.includes('失敗') || type.includes('報警') || output.includes('錯誤');
                     const isPhoto = type.includes('照片') || type.includes('Photo');
                     const isText = type.includes('文字') || type.includes('Text');
                     const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
@@ -1154,13 +1202,29 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                             </span>
                           </td>
 
-                          {/* User Name */}
+                          {/* User Name / Caller */}
                           <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
-                            <div className="flex items-center gap-1">
-                              <span className="truncate max-w-[120px] font-black">{userName}</span>
-                              {userId && userId !== 'user' && (
-                                <span className="font-mono text-[9px] text-zinc-400 bg-zinc-100 px-1 py-0.2 rounded border border-zinc-200">
-                                  {userId.length > 8 ? userId.slice(-4) : userId}
+                            <div className="flex items-center gap-1.5">
+                              <span className="truncate max-w-[130px] font-black">{userName}</span>
+                              {userId && (
+                                <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
+                                  userId === 'Maintainer'
+                                    ? 'bg-purple-100 text-purple-800 border-purple-300 font-black'
+                                    : userId.startsWith('U') && userId.length > 8
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
+                                    : userId === 'API-Gateway' || userId === 'Gemini-API'
+                                    ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold'
+                                    : 'bg-zinc-100 text-zinc-600 border-zinc-200'
+                                }`}>
+                                  {userId === 'Maintainer'
+                                    ? 'ADMIN'
+                                    : userId.startsWith('U') && userId.length > 8
+                                    ? `#${userId.slice(-6)}`
+                                    : userId === 'API-Gateway' || userId === 'Gemini-API'
+                                    ? 'API'
+                                    : userId === userName
+                                    ? 'USER'
+                                    : userId}
                                 </span>
                               )}
                             </div>
@@ -1168,15 +1232,15 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                           {/* Location / IP */}
                           <td className="py-3 px-3 font-mono text-[11px] text-zinc-700 whitespace-nowrap">
-                            {ip || location ? (
+                            {ip || (location && location !== '-') ? (
                               <div className="space-y-0.5">
-                                {location && (
+                                {location && location !== '-' && (
                                   <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-800">
                                     <MapPin size={10} className="text-rose-500 shrink-0" />
                                     <span className="truncate max-w-[140px]">{location}</span>
                                   </div>
                                 )}
-                                {ip && (
+                                {ip && ip !== '-' && (
                                   <div className="flex items-center gap-1 text-[10px] text-zinc-500">
                                     <Globe size={10} className="text-purple-600 shrink-0" />
                                     <span>{ip}</span>
@@ -1184,24 +1248,34 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                                 )}
                               </div>
                             ) : (
-                              <span className="text-zinc-400 italic text-[10px]">— (LINE Bot / Cloud)</span>
+                              <span className="text-zinc-500 font-medium text-[10px] bg-zinc-100/90 px-1.5 py-0.5 rounded border border-zinc-200">
+                                ☁️ {source || 'LINE Cloud'}
+                              </span>
                             )}
                           </td>
 
                           {/* Message Preview */}
                           <td className="py-3 px-4 max-w-md xl:max-w-2xl 2xl:max-w-4xl">
                             <div className="font-mono text-[11px] text-zinc-800 truncate">
-                              {input ? (
-                                <span><strong className="text-black">{input}</strong></span>
-                              ) : null}
-                              {aiResult ? (
-                                <span className="text-purple-700 ml-1">➔ {aiResult}</span>
-                              ) : null}
-                              {output && !aiResult ? (
-                                <span className="text-zinc-500 ml-1">➔ {output}</span>
-                              ) : null}
-                              {!input && !aiResult && !output && (
-                                <span className="text-zinc-400 italic">—</span>
+                              {isAlert ? (
+                                <span className="text-rose-700 font-bold">
+                                  {output || aiResult || input || '⚠️ 系統異常通報'}
+                                </span>
+                              ) : (
+                                <>
+                                  {input ? (
+                                    <span><strong className="text-black">{input}</strong></span>
+                                  ) : null}
+                                  {aiResult ? (
+                                    <span className="text-purple-700 ml-1">➔ {aiResult}</span>
+                                  ) : null}
+                                  {output && !aiResult ? (
+                                    <span className="text-zinc-500 ml-1">➔ {output}</span>
+                                  ) : null}
+                                  {!input && !aiResult && !output && (
+                                    <span className="text-zinc-400 italic">—</span>
+                                  )}
+                                </>
                               )}
                             </div>
                           </td>
