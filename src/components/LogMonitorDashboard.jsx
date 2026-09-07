@@ -42,8 +42,9 @@ import {
 import NeoButton from './NeoButton';
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-const DEFAULT_MAINTAINER_PASS = 'panda888';
-const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_permanent_token';
+const REQUIRED_MAINTAINER_USER = 'Winnie';
+const REQUIRED_MAINTAINER_PASS = '1qaZXCVBNM<>?';
+const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_token_v2';
 const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
 const MAINTAINER_NAME_KEY = 'daily_diet_maintainer_name';
 
@@ -257,22 +258,24 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     const cleanInput = passwordInput.trim();
-    const cleanName = maintainerNameInput.trim() || 'Winnie';
-    const customPass = localStorage.getItem('maintainer_custom_pass') || DEFAULT_MAINTAINER_PASS;
+    const cleanName = maintainerNameInput.trim();
 
-    if (cleanInput === customPass || cleanInput === DEFAULT_MAINTAINER_PASS) {
+    const isUserValid = cleanName.toLowerCase() === REQUIRED_MAINTAINER_USER.toLowerCase();
+    const isPassValid = cleanInput === REQUIRED_MAINTAINER_PASS;
+
+    if (isUserValid && isPassValid) {
       // Generate permanent pass token
       const newToken = `PANDA_PASS_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
       localStorage.setItem(PERMANENT_TOKEN_KEY, newToken);
-      localStorage.setItem(MAINTAINER_NAME_KEY, cleanName);
+      localStorage.setItem(MAINTAINER_NAME_KEY, REQUIRED_MAINTAINER_USER);
       setPermanentToken(newToken);
-      setMaintainerName(cleanName);
+      setMaintainerName(REQUIRED_MAINTAINER_USER);
       setIsAuthenticated(true);
       setAuthError('');
 
       // Collect device & IP info and record to backend
       const info = await collectDeviceInfo();
-      info.userName = cleanName;
+      info.userName = REQUIRED_MAINTAINER_USER;
       localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
       setClientInfo(info);
 
@@ -280,7 +283,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
       const instantLoginLog = {
         time: nowStr,
-        userName: cleanName,
+        userName: REQUIRED_MAINTAINER_USER,
         userId: 'Maintainer',
         type: '維護者登入',
         input: `IP: ${info.ip} · 位置: ${info.location}`,
@@ -294,9 +297,13 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       setRawLogs((prev) => [instantLoginLog, ...prev]);
 
       // Report to GAS
-      recordMaintainerAuditToBackend(info, newToken, cleanName);
+      recordMaintainerAuditToBackend(info, newToken, REQUIRED_MAINTAINER_USER);
     } else {
-      setAuthError(isEn ? 'Incorrect password. Access denied.' : '維護者密碼不正確，存取被拒絕。');
+      if (!isUserValid && isPassValid) {
+        setAuthError(isEn ? 'Maintainer account must be Winnie.' : '維護者帳號必須為 Winnie。');
+      } else {
+        setAuthError(isEn ? 'Incorrect account or password. Access denied.' : '帳號或密碼不正確，存取被拒絕。');
+      }
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 600);
     }
@@ -306,6 +313,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const handleRevokePermanentPass = () => {
     localStorage.removeItem(PERMANENT_TOKEN_KEY);
     localStorage.removeItem(CLIENT_INFO_KEY);
+    localStorage.removeItem(MAINTAINER_NAME_KEY);
+    localStorage.removeItem('maintainer_custom_pass');
+    localStorage.removeItem('daily_diet_maintainer_permanent_token');
     sessionStorage.removeItem('maintainer_auth');
     setIsAuthenticated(false);
     setPermanentToken('');
@@ -502,14 +512,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               {/* Maintainer Name Field */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
-                  {isEn ? 'Maintainer Name / Operator' : '維護者名稱 / 代號'}
+                  {isEn ? 'Maintainer Account' : '維護者帳號'}
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     value={maintainerNameInput}
                     onChange={(e) => setMaintainerNameInput(e.target.value)}
-                    placeholder={isEn ? 'Your Name (e.g. Winnie)' : '您的名字 (例: Winnie)'}
+                    placeholder="Winnie"
                     className="w-full bg-zinc-50 border-4 border-black p-3.5 pl-10 rounded-2xl font-bold text-sm outline-none focus:bg-white shadow-neo-xs transition-colors"
                   />
                   <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
