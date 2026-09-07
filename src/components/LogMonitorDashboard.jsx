@@ -526,7 +526,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     type={showPassword ? 'text' : 'password'}
                     value={passwordInput}
                     onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder={isEn ? 'Enter password (default: panda888)' : '請輸入密碼（預設: panda888）'}
+                    placeholder={isEn ? 'Enter password' : '請輸入密碼'}
                     className="w-full bg-zinc-50 border-4 border-black p-3.5 pr-12 pl-10 rounded-2xl font-mono font-bold text-base outline-none focus:bg-white shadow-neo-xs transition-colors"
                     autoFocus
                   />
