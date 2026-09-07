@@ -918,7 +918,7 @@ function doPost(e) {
             }
           }
 
-          // 🐛 問題回報 / Bug Report / 意見反饋 (直接在 LINE 聊天室回報，並透過 Web3Forms 提交)
+          // 🐛 問題回報 / Bug Report / 意見反饋 (直接在 LINE 聊天室回報，並發送信件給開發團隊)
           const reportPrefixRegex = /^(?:問題回報|bug\s*report|回報|bug|問題|建議|反饋|報錯)[\s:：、,]*(.*)$/is;
           const reportMatch = userText.match(reportPrefixRegex);
           if (reportMatch) {
@@ -932,33 +932,21 @@ function doPost(e) {
             }
 
             console.log(`🐛 [收到問題回報] 用戶 ${userId}: ${issueDetails}`);
-            recordSystemLog('問題回報', userId, issueDetails, '', '已成功記錄用戶問題回報並提交 Web3Forms');
+            recordSystemLog('問題回報', userId, issueDetails, '', '已成功記錄用戶問題回報並發送郵件通報');
 
-            let isSuccess = false;
-            try {
-              const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
-              const web3Res = UrlFetchApp.fetch('https://api.web3forms.com/submit', {
-                method: 'post',
-                contentType: 'application/json',
-                payload: JSON.stringify({
-                  access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
-                  subject: `[Daily-Diet LINE] ${isEn ? 'Bug Report' : '問題回報'} (${userId.slice(-6)})`,
-                  message: `【回報內容 / Content】\n${issueDetails}\n\n【用戶環境 / Context】\n• User ID: ${userId}\n• Language: ${userLang}\n• Coach Persona: ${persona || 'tsundere'}\n• Gist Bound: ${userGistId ? 'Yes (' + userGistId.slice(0, 8) + '...)' : 'No'}`,
-                  from_name: `Daily Diet LINE User (${userId.slice(-6)})`,
-                  device: 'LINE Messaging API / Chat'
-                }),
-                muteHttpExceptions: true
-              });
-              const resCode = web3Res.getResponseCode();
-              let resJson = {};
-              try {
-                resJson = JSON.parse(web3Res.getContentText());
-              } catch (parseErr) {}
-              isSuccess = (resCode === 200 && resJson.success === true);
-            } catch (web3Err) {
-              console.warn('Web3Forms 提交失敗:', web3Err);
-              isSuccess = false;
-            }
+            const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
+            const userDisplayName = getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || `LINE用戶 (${userId.slice(-6)})`;
+
+            // 🚀 發送郵件通報 (雙重機制：GAS 原生 MailApp 直送 + Web3Forms 備援)
+            const isSuccess = sendBugReportNotification({
+              userId,
+              userName: userDisplayName,
+              issueDetails,
+              userLang,
+              persona,
+              userGistId,
+              props
+            });
 
             const ackFlex = generateBugReportAckFlex(issueDetails, isSuccess, userLang);
             replyFlexMessage(replyToken, ackFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -1511,8 +1499,92 @@ function doPost(e) {
 }
 
 // ========================================================
-// 🚨 4. Web3Forms 系統異常自動通報模組
+// 🚨 4. 系統異常與問題回報自動郵件通報模組
 // ========================================================
+
+/**
+ * 📧 發送用戶問題回報通知 (優先使用 Google Apps Script 原生 MailApp 直送信箱，突破 Web3Forms 免費版伺服端限制)
+ */
+function sendBugReportNotification(params) {
+  const { userId, userName, issueDetails, userLang, persona, userGistId, props } = params;
+  const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+  const isEn = (userLang === 'en');
+  const subject = `[Daily-Diet LINE] ${isEn ? 'Bug Report' : '問題回報'} - ${userName} (${userId ? userId.slice(-6) : 'User'})`;
+
+  const textBody = [
+    `【Daily-Diet 熊貓教練 用戶問題與反饋回報】`,
+    `========================================`,
+    `⏰ 回報時間：${timeStr} (台灣時間 UTC+8)`,
+    `👤 用戶暱稱：${userName}`,
+    `🆔 用戶 ID：${userId}`,
+    `🌐 語言環境：${userLang}`,
+    `🎭 教練性格：${persona || 'tsundere'}`,
+    `📂 Gist 綁定：${userGistId ? '已綁定 (' + userGistId.slice(0, 8) + '...)' : '未綁定'}`,
+    `========================================`,
+    `📝 問題與建議內容：`,
+    `${issueDetails}`,
+    `========================================`,
+    `本信件由 Daily-Diet LINE Bot 自動發送。`
+  ].join('\n');
+
+  let mailSuccess = false;
+
+  // 1. Google Apps Script 原生 MailApp.sendEmail (100% 穩定直送信箱，不擋伺服端 IP)
+  try {
+    const candidateEmails = [
+      props && props.getProperty('ADMIN_EMAIL'),
+      props && props.getProperty('DEVELOPER_EMAIL'),
+      'winnie.lin@btse.com'
+    ];
+    try {
+      const effectiveUser = Session.getEffectiveUser().getEmail();
+      if (effectiveUser && effectiveUser.includes('@')) {
+        candidateEmails.push(effectiveUser);
+      }
+    } catch (e) {}
+
+    const validEmails = [...new Set(candidateEmails.filter(Boolean))];
+    if (validEmails.length > 0) {
+      const targetEmail = validEmails.join(',');
+      MailApp.sendEmail({
+        to: targetEmail,
+        subject: subject,
+        body: textBody
+      });
+      console.log(`📧 [MailApp] 已成功將問題回報寄送至開發者信箱: ${targetEmail}`);
+      mailSuccess = true;
+    }
+  } catch (mailErr) {
+    console.warn(`⚠️ [MailApp] 郵件發送失敗:`, mailErr);
+  }
+
+  // 2. 備援：嘗試 Web3Forms (若日後升級 Pro 或支援時亦可接收)
+  try {
+    const web3Res = UrlFetchApp.fetch('https://api.web3forms.com/submit', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+        subject: subject,
+        message: textBody,
+        from_name: `Daily Diet LINE User (${userName})`,
+        device: 'LINE Messaging API / Chat'
+      }),
+      muteHttpExceptions: true
+    });
+    const resCode = web3Res.getResponseCode();
+    let resJson = {};
+    try { resJson = JSON.parse(web3Res.getContentText()); } catch (pErr) {}
+    if (resCode === 200 && resJson.success === true) {
+      mailSuccess = true;
+      console.log(`📧 [Web3Forms] 成功透過 Web3Forms 提交問題回報`);
+    }
+  } catch (web3Err) {
+    console.warn('Web3Forms 提交失敗 (免費版限制伺服端呼叫):', web3Err);
+  }
+
+  return mailSuccess;
+}
 
 function sendErrorAlertToWeb3Forms(info) {
   try {
@@ -1530,7 +1602,7 @@ function sendErrorAlertToWeb3Forms(info) {
     const lastAlertTime = Number(props.getProperty(lastAlertKey) || 0);
     const nowMs = Date.now();
     if (nowMs - lastAlertTime < 60000) {
-      console.log(`⏳ 60秒內已通報過相同異常，略過 Web3Forms 發送: ${errMessage}`);
+      console.log(`⏳ 60秒內已通報過相同異常，略過發送: ${errMessage}`);
       return;
     }
     props.setProperty(lastAlertKey, String(nowMs));
@@ -1563,26 +1635,53 @@ function sendErrorAlertToWeb3Forms(info) {
       errStack ? `\n📜 呼叫堆疊 (Stack Trace)：\n${errStack}` : ''
     ].join('\n');
 
-    UrlFetchApp.fetch('https://api.web3forms.com/submit', {
-      method: 'post',
-      contentType: 'application/json',
-      payload: JSON.stringify({
-        access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
-        subject: subject,
-        from_name: '🐼 Daily-Diet 異常監控小幫手',
-        time: timeStr,
-        user_name: userName,
-        user_id: userId,
-        operation: operation,
-        error_message: errMessage,
-        message: messageContent
-      }),
-      muteHttpExceptions: true
-    });
+    // 1. Google 原生 MailApp 直送開發者信箱
+    try {
+      const candidateEmails = [
+        props && props.getProperty('ADMIN_EMAIL'),
+        props && props.getProperty('DEVELOPER_EMAIL'),
+        'winnie.lin@btse.com'
+      ];
+      try {
+        const effectiveUser = Session.getEffectiveUser().getEmail();
+        if (effectiveUser && effectiveUser.includes('@')) candidateEmails.push(effectiveUser);
+      } catch (e) {}
+      const validEmails = [...new Set(candidateEmails.filter(Boolean))];
+      if (validEmails.length > 0) {
+        MailApp.sendEmail({
+          to: validEmails.join(','),
+          subject: subject,
+          body: messageContent
+        });
+        console.log(`📧 [MailApp] 成功寄送異常報告至開發者信箱: ${validEmails.join(',')}`);
+      }
+    } catch (mailErr) {
+      console.warn("⚠️ [MailApp] 發送異常郵件失敗:", mailErr);
+    }
 
-    console.log(`📧 [Web3Forms] 成功寄送異常報告信件至開發者信箱: ${subject}`);
-  } catch (alertErr) {
-    console.warn("⚠️ 發送 Web3Forms 錯誤回報失敗:", alertErr);
+    // 2. Web3Forms 備援
+    try {
+      UrlFetchApp.fetch('https://api.web3forms.com/submit', {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({
+          access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+          subject: subject,
+          from_name: '🐼 Daily-Diet 異常監控小幫手',
+          time: timeStr,
+          user_name: userName,
+          user_id: userId,
+          operation: operation,
+          error_message: errMessage,
+          message: messageContent
+        }),
+        muteHttpExceptions: true
+      });
+    } catch (alertErr) {
+      console.warn("⚠️ 發送 Web3Forms 錯誤回報失敗:", alertErr);
+    }
+  } catch (err) {
+    console.warn("⚠️ 處理異常通報失敗:", err);
   }
 }
 

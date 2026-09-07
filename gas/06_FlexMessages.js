@@ -3174,7 +3174,7 @@ function generateBugReportAckFlex(userText, isSuccess, lang) {
           {
             type: "text",
             text: success
-              ? (isEn ? "Submitted to the engineering team 🐼❤️" : "已同步表單提交至工程團隊信箱 🐼❤️")
+              ? (isEn ? "Submitted to engineering team 🐼❤️" : "已即時發送至工程團隊信箱 🐼❤️")
               : (isEn ? "Logged locally, team will review 🐼❤️" : "已為您留存紀錄，團隊將儘速處理 🐼❤️"),
             size: "xxs",
             color: "#A1A1AA",
@@ -3192,7 +3192,7 @@ function generateBugReportAckFlex(userText, isSuccess, lang) {
           {
             type: "text",
             text: success
-              ? (isEn ? "✅ Submitted via Web3Forms:" : "✅ 已同步透過 Web3Forms 表單提交：")
+              ? (isEn ? "✅ Dispatched to Team Email:" : "✅ 已即時發送郵件通報至工程團隊：")
               : (isEn ? "📋 Recorded Content:" : "📋 已記錄之問題內容："),
             size: "xs",
             color: success ? "#15803D" : "#D97706",
