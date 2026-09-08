@@ -145,8 +145,11 @@ window.addEventListener('unhandledrejection', (event) => {
     reasonStr.includes('AbortError') ||
     reasonStr.includes('Failed to fetch') ||
     reasonStr.includes('NetworkError') ||
+    reasonStr.includes('cannot be updated') ||
+    reasonStr.includes('Failed to upload to Gist') ||
     stack.includes('registerSW') ||
-    stack.includes('ServiceWorker')
+    stack.includes('ServiceWorker') ||
+    stack.includes('gistService')
   ) {
     console.debug('Suppressed benign unhandled promise rejection:', reason);
     return;

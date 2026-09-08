@@ -1543,14 +1543,14 @@ function App() {
       } catch (e) {}
 
       if (currentGist) {
-        try {
-          uploadToGist({
-            dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
-            weightLogs: await db.weightLogs.toArray(),
-            settings: await db.settings.toArray(),
-            favorites: await db.favorites.toArray()
-          }, currentGist);
-        } catch (e) {}
+        uploadToGist({
+          dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
+          weightLogs: await db.weightLogs.toArray(),
+          settings: await db.settings.toArray(),
+          favorites: await db.favorites.toArray()
+        }, currentGist).catch((e) => {
+          console.warn("[Gist] Background favorite sync skipped:", e?.message);
+        });
       }
     }
   };

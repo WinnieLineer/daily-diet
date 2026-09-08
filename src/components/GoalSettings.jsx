@@ -361,15 +361,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         } catch (e) {}
 
         if (currentGist) {
-          try {
-            const allSettings = await db.settings.toArray();
-            uploadToGist({
-              dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
-              weightLogs: await db.weightLogs.toArray(),
+          db.settings.toArray().then((allSettings) => {
+            return uploadToGist({
+              dietLogs: [],
+              weightLogs: [],
               settings: allSettings,
-              favorites: await db.favorites.toArray()
+              favorites: []
             }, currentGist);
-          } catch (e) {}
+          }).catch((e) => {
+            console.warn("[Gist] Background goal sync skipped:", e?.message);
+          });
         }
       }
       

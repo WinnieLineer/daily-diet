@@ -1442,14 +1442,21 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                               } catch (e) {}
 
                               if (currentGist) {
-                                try {
-                                  uploadToGist({
-                                    dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
-                                    weightLogs: await db.weightLogs.toArray(),
-                                    settings: await db.settings.toArray(),
-                                    favorites: await db.favorites.toArray()
+                                Promise.all([
+                                  db.dietLogs.toArray(),
+                                  db.weightLogs.toArray(),
+                                  db.settings.toArray(),
+                                  db.favorites.toArray()
+                                ]).then(([dietLogs, weightLogs, settings, favorites]) => {
+                                  return uploadToGist({
+                                    dietLogs: dietLogs.map(({ image, ...rest }) => rest),
+                                    weightLogs,
+                                    settings,
+                                    favorites
                                   }, currentGist);
-                                } catch (e) {}
+                                }).catch((e) => {
+                                  console.warn("[Gist] Background favorite delete sync skipped:", e?.message);
+                                });
                               }
                             }
                           }}

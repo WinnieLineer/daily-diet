@@ -86,12 +86,12 @@ export async function getBackupInfo() {
 /**
  * Upload backup to GitHub Gist (create or update)
  */
-export async function uploadToGist(jsonData) {
+export async function uploadToGist(jsonData, explicitGistId = null) {
   const token = getGistToken();
   if (!token) throw new Error("Missing GitHub PAT. Please configure in settings or environment.");
 
   const fileContent = JSON.stringify(jsonData, null, 0);
-  const gistId = getStoredGistId();
+  const gistId = explicitGistId || getStoredGistId();
 
   const gistPayload = {
     description: `Daily Diet Backup - ${new Date().toISOString().split('T')[0]}`,
@@ -126,25 +126,28 @@ export async function uploadToGist(jsonData) {
 
   if (!res.ok) {
     const errData = await res.json().catch(() => ({}));
+    const errMsg = String(errData.message || '');
 
-    // If PATCH 404, gist was deleted — try creating a new one
-    if (res.status === 404 && method === 'PATCH') {
-      console.warn("[Gist] Stored gist not found, creating new one...");
+    // 🛡️ Auto-Recovery: If PATCH fails because Gist is deleted (404), unmodifiable (422), forbidden (403), or "cannot be updated"
+    if (method === 'PATCH' && (res.status === 404 || res.status === 422 || res.status === 403 || errMsg.includes('cannot be updated') || errMsg.includes('Not Found'))) {
+      console.warn(`[Gist] Stored gist ${gistId} cannot be updated (${errMsg || res.status}), self-healing by creating a fresh backup gist...`);
       localStorage.removeItem('gist_backup_id');
-      return uploadToGist(jsonData);
+      return uploadToGist(jsonData, null);
     }
 
-    throw new Error(errData.message || `Failed to upload to Gist (${res.status})`);
+    throw new Error(errMsg || `Failed to upload to Gist (${res.status})`);
   }
 
   const data = await res.json();
 
   // Store the gist ID for future updates
-  if (!gistId) {
+  if (data?.id) {
     setStoredGistId(data.id);
-    console.log(`✅ [Gist] Created new backup gist: ${data.id}`);
-  } else {
-    console.log(`✅ [Gist] Updated backup gist: ${data.id}`);
+    if (!gistId) {
+      console.log(`✅ [Gist] Created new backup gist: ${data.id}`);
+    } else {
+      console.log(`✅ [Gist] Updated backup gist: ${data.id}`);
+    }
   }
 
   return data;
