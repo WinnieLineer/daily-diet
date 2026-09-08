@@ -1622,6 +1622,7 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
   const allLogs = getTodayLogs(userId, todayStr, props, userGistId);
   const userLang = lang || getUserLanguage(userId, props, userGistId);
   const isEn = userLang === 'en';
+  const favorites = getUserFavorites(userId, props, userGistId);
 
   let totalCal = 0;
   const mealBoxes = [];
@@ -1650,6 +1651,11 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
         } catch (e) {}
       }
       const dishName = log.dish_name || (isEn ? 'Meal' : '餐點');
+      const cleanDishName = dishName.replace(/^[0-9]+(?:\.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim();
+      const isFav = favorites.some(f => {
+        const fName = String(f.dish_name || '').trim();
+        return fName === cleanDishName || fName === dishName;
+      });
 
       mealBoxes.push({
         type: "box",
@@ -1712,9 +1718,30 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
           {
             type: "box",
             layout: "horizontal",
-            spacing: "sm",
+            spacing: "xs",
             margin: "xs",
             contents: [
+              ...(isFav ? [] : [
+                {
+                  type: "button",
+                  style: "secondary",
+                  height: "sm",
+                  color: "#FEF08A",
+                  flex: 1,
+                  action: {
+                    type: "postback",
+                    label: isEn ? "⭐ Fav" : "⭐ 加常用",
+                    data: JSON.stringify({
+                      action: 'saveFavorite',
+                      name: cleanDishName,
+                      cal: Number(log.calories) || 0,
+                      pro: Number(log.protein) || 0,
+                      wat: Number(log.water) || 0
+                    }),
+                    displayText: isEn ? `⭐ Favorite: ${cleanDishName}` : `⭐ 存為常用：${cleanDishName}`
+                  }
+                }
+              ]),
               {
                 type: "button",
                 style: "secondary",
@@ -2198,14 +2225,21 @@ function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang) {
     altText: isEn ? `⭐ Saved to favorites: ${favItem.dish_name}` : `⭐ 已成功存為常用餐點：${favItem.dish_name}`,
     contents: {
       type: "bubble",
-      size: "kilo",
+      size: "mega",
       header: {
         type: "box",
         layout: "vertical",
         backgroundColor: "#FDE047",
         paddingAll: "14px",
         contents: [
-          { type: "text", text: isEn ? "⭐ Added to Favorites!" : "⭐ 成功存入常用餐點！", weight: "bold", size: "md", color: "#000000" }
+          { 
+            type: "text", 
+            text: isEn ? "⭐ Added to Favorites!" : "⭐ 成功存入常用餐點！", 
+            weight: "bold", 
+            size: "md", 
+            color: "#000000",
+            wrap: true 
+          }
         ]
       },
       body: {
@@ -2214,7 +2248,14 @@ function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang) {
         spacing: "sm",
         paddingAll: "14px",
         contents: [
-          { type: "text", text: favItem.dish_name, weight: "bold", size: "md", color: "#000000" },
+          { 
+            type: "text", 
+            text: favItem.dish_name, 
+            weight: "bold", 
+            size: "md", 
+            color: "#000000",
+            wrap: true 
+          },
           {
             type: "box",
             layout: "horizontal",
@@ -2257,9 +2298,10 @@ function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang) {
           },
           {
             type: "text",
-            text: isEn ? "Type 「Favorites」 anytime for 1-tap fast logging! 🐼" : "隨時在對話框輸入「常用」即可一鍵快捷記錄！🐼",
-            size: "xxs",
-            color: "#71717A",
+            text: isEn ? "💡 Tip: Type 「Favorites」 anytime for 1-tap fast logging or adjustment! 🐼" : "💡 提示：隨時在對話框輸入「常用」即可一鍵快捷記錄或直接調整！🐼",
+            size: "xs",
+            color: "#6B7280",
+            wrap: true,
             margin: "sm"
           }
         ]
