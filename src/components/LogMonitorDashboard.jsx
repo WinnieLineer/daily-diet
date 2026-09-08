@@ -236,6 +236,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedActionType, setSelectedActionType] = useState('ALL');
+  const [selectedUser, setSelectedUser] = useState('ALL');
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10); // seconds (0 = off)
   const [countdown, setCountdown] = useState(10);
   const [copiedId, setCopiedId] = useState(null);
@@ -610,10 +611,27 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     return Object.entries(countMap).sort((a, b) => b[1] - a[1]);
   }, [normalizedLogs]);
 
+  // 👥 動態統計所有日誌中的具體用戶及其計數 (支援依用戶/人名精準篩選)
+  const allUsers = useMemo(() => {
+    if (!normalizedLogs || !normalizedLogs.length) return [];
+    const countMap = {};
+    normalizedLogs.forEach((log) => {
+      const u = (log.userName || log.userId || (isEn ? 'Unknown' : '未知用戶')).trim();
+      countMap[u] = (countMap[u] || 0) + 1;
+    });
+    return Object.entries(countMap).sort((a, b) => b[1] - a[1]);
+  }, [normalizedLogs, isEn]);
+
   const filteredLogs = useMemo(() => {
     if (!normalizedLogs || !normalizedLogs.length) return [];
     return normalizedLogs.filter((log) => {
       const { time, userName, userId, type, input, aiResult, output, source, ip, location } = log;
+
+      // 0. 用戶人員篩選 (User / Caller Filter)
+      if (selectedUser !== 'ALL') {
+        const u = (userName || userId || '').trim();
+        if (u !== selectedUser) return false;
+      }
 
       // 1. 精確操作類型篩選 (Action Type Filter - 支援全量操作類型)
       if (selectedActionType !== 'ALL') {
@@ -634,7 +652,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       if (selectedCategory === 'SYNC' && !type.includes('Web') && !type.includes('同步')) return false;
       if (selectedCategory === 'ALERT' && !type.includes('異常') && !type.includes('Alert') && !type.includes('錯誤') && !output.includes('失敗')) return false;
 
-      // 3. 關鍵字全文搜尋
+      // 3. 關鍵字全文搜尋 (包含日誌內容、對話輸入、AI分析結果、回傳內容、餐點名稱、使用者等)
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const fullContent = `${time} ${userName} ${userId} ${type} ${input} ${aiResult} ${output} ${source} ${ip} ${location}`.toLowerCase();
@@ -643,7 +661,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
       return true;
     });
-  }, [normalizedLogs, selectedCategory, selectedActionType, searchQuery]);
+  }, [normalizedLogs, selectedCategory, selectedActionType, selectedUser, searchQuery]);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -1159,13 +1177,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder={isEn ? 'Search user name, IP, location, action, message, food...' : '搜尋使用者名稱、IP、位置、日誌類型、餐點品項或輸入內容...'}
-              className="w-full bg-zinc-50 border-2 border-black rounded-2xl pl-10 pr-4 py-2.5 text-xs font-bold outline-none focus:bg-white transition-colors"
+              placeholder={isEn ? 'Search log content (food name, prompt, AI analysis, output, user, IP)...' : '搜尋日誌內容（輸入內容、餐點名稱、AI分析、回覆訊息、用戶名、IP...）'}
+              className="w-full bg-zinc-50 border-2 border-black rounded-2xl pl-10 pr-8 py-2.5 text-xs font-bold outline-none focus:bg-white transition-colors shadow-neo-xs"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-black font-black"
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-zinc-400 hover:text-black font-black p-1"
+                title={isEn ? 'Clear search' : '清除搜尋'}
               >
                 ✕
               </button>
@@ -1207,15 +1226,45 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           </div>
         </div>
 
-        {/* Category Filter Pills & Action Type Selector */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pt-1 border-t-2 border-dashed border-zinc-100">
+        {/* 內容搜尋熱門捷徑列 */}
+        <div className="flex items-center gap-1.5 flex-wrap pt-0.5 text-[11px] font-bold">
+          <span className="text-zinc-400 font-black text-[10px] uppercase flex items-center gap-1">
+            <Search size={11} />
+            {isEn ? 'Content Quick Search:' : '日誌內容搜尋快捷：'}
+          </span>
+          {['雞胸肉', '蛋', '水', '目標', '減脂', '增肌', '倍', '常用', '異常', '成功'].map((tag) => (
+            <button
+              key={tag}
+              onClick={() => setSearchQuery(searchQuery === tag ? '' : tag)}
+              className={`px-2 py-0.5 rounded-lg border transition-all text-[11px] cursor-pointer ${
+                searchQuery === tag 
+                  ? 'bg-black text-white border-black font-black shadow-neo-xs' 
+                  : 'bg-zinc-100/80 text-zinc-600 border-zinc-200 hover:border-black'
+              }`}
+            >
+              {tag}
+            </button>
+          ))}
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery('')}
+              className="text-rose-600 hover:underline text-[10px] font-black ml-1 cursor-pointer flex items-center gap-0.5"
+            >
+              <X size={10} />
+              {isEn ? 'Reset content search' : '重設搜尋內容'}
+            </button>
+          )}
+        </div>
+
+        {/* Category Filter Pills & User / Action Selectors */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pt-1.5 border-t-2 border-dashed border-zinc-100">
           {/* 大類別標籤列 */}
           <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-1 flex-1">
             {categories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => handleSelectCategory(cat.id)}
-                className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${
+                className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 cursor-pointer ${
                   selectedCategory === cat.id && selectedActionType === 'ALL'
                     ? 'bg-black text-white border-black shadow-neo-xs'
                     : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-black'
@@ -1226,37 +1275,91 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             ))}
           </div>
 
-          {/* ⚡ 全量操作類型精確下拉篩選 (支援全部自訂 action/type) */}
-          <div className="flex items-center gap-1.5 bg-zinc-50 border-2 border-black rounded-xl px-2.5 py-1 shadow-neo-xs shrink-0 self-start md:self-auto">
-            <Filter size={13} className="text-zinc-600 shrink-0" />
-            <span className="text-[11px] font-black text-zinc-600 whitespace-nowrap hidden sm:inline">
-              {isEn ? 'Action Type:' : '操作類型:'}
-            </span>
-            <select
-              value={selectedActionType}
-              onChange={(e) => handleSelectActionType(e.target.value)}
-              className="bg-transparent text-xs font-black text-black outline-none cursor-pointer pr-1 max-w-[180px] sm:max-w-none"
-            >
-              <option value="ALL">
-                {isEn ? `⚡ All Action Types (${normalizedLogs.length})` : `⚡ 全部操作類型 (${normalizedLogs.length})`}
-              </option>
-              {allActionTypes.map(([actType, count]) => (
-                <option key={actType} value={actType}>
-                  {actType} ({count})
-                </option>
-              ))}
-            </select>
-            {selectedActionType !== 'ALL' && (
-              <button
-                onClick={() => handleSelectActionType('ALL')}
-                className="text-zinc-400 hover:text-black p-0.5 rounded hover:bg-zinc-200 transition-colors"
-                title={isEn ? 'Reset action type filter' : '重設操作類型篩選'}
+          {/* 下拉篩選群組：用戶篩選 + 操作類型篩選 */}
+          <div className="flex flex-wrap items-center gap-2 shrink-0 self-start md:self-auto">
+            {/* 👥 用戶人員篩選 */}
+            <div className="flex items-center gap-1.5 bg-zinc-50 border-2 border-black rounded-xl px-2.5 py-1 shadow-neo-xs">
+              <User size={13} className="text-blue-600 shrink-0" />
+              <span className="text-[11px] font-black text-zinc-600 whitespace-nowrap hidden sm:inline">
+                {isEn ? 'User:' : '用戶:'}
+              </span>
+              <select
+                value={selectedUser}
+                onChange={(e) => setSelectedUser(e.target.value)}
+                className="bg-transparent text-xs font-black text-black outline-none cursor-pointer pr-1 max-w-[150px] sm:max-w-none"
               >
-                <X size={13} />
-              </button>
-            )}
+                <option value="ALL">
+                  {isEn ? `👥 All Users (${allUsers.length})` : `👥 全部用戶 (${allUsers.length} 人)`}
+                </option>
+                {allUsers.map(([uName, count]) => (
+                  <option key={uName} value={uName}>
+                    {uName} ({count} 筆)
+                  </option>
+                ))}
+              </select>
+              {selectedUser !== 'ALL' && (
+                <button
+                  onClick={() => setSelectedUser('ALL')}
+                  className="text-zinc-400 hover:text-black p-0.5 rounded hover:bg-zinc-200 transition-colors cursor-pointer"
+                  title={isEn ? 'Reset user filter' : '重設用戶篩選'}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
+
+            {/* ⚡ 全量操作類型精確下拉篩選 */}
+            <div className="flex items-center gap-1.5 bg-zinc-50 border-2 border-black rounded-xl px-2.5 py-1 shadow-neo-xs">
+              <Filter size={13} className="text-zinc-600 shrink-0" />
+              <span className="text-[11px] font-black text-zinc-600 whitespace-nowrap hidden sm:inline">
+                {isEn ? 'Action:' : '操作:'}
+              </span>
+              <select
+                value={selectedActionType}
+                onChange={(e) => handleSelectActionType(e.target.value)}
+                className="bg-transparent text-xs font-black text-black outline-none cursor-pointer pr-1 max-w-[150px] sm:max-w-none"
+              >
+                <option value="ALL">
+                  {isEn ? `⚡ All Actions (${normalizedLogs.length})` : `⚡ 全部操作 (${normalizedLogs.length})`}
+                </option>
+                {allActionTypes.map(([actType, count]) => (
+                  <option key={actType} value={actType}>
+                    {actType} ({count})
+                  </option>
+                ))}
+              </select>
+              {selectedActionType !== 'ALL' && (
+                <button
+                  onClick={() => handleSelectActionType('ALL')}
+                  className="text-zinc-400 hover:text-black p-0.5 rounded hover:bg-zinc-200 transition-colors cursor-pointer"
+                  title={isEn ? 'Reset action filter' : '重設操作類型篩選'}
+                >
+                  <X size={13} />
+                </button>
+              )}
+            </div>
           </div>
         </div>
+
+        {/* 作用中的用戶篩選提示條 */}
+        {selectedUser !== 'ALL' && (
+          <div className="flex flex-wrap items-center gap-2 bg-blue-50 border-2 border-blue-300 rounded-xl px-3 py-1.5 text-xs font-bold text-blue-900">
+            <span>👤 {isEn ? 'Filtering specific user:' : '目前僅篩選用戶：'}</span>
+            <span className="bg-black text-white px-2.5 py-0.5 rounded-md font-mono font-black text-[11px] flex items-center gap-1">
+              {selectedUser}
+            </span>
+            <span className="text-zinc-500 font-normal">
+              ({filteredLogs.length} {isEn ? 'records' : '筆符合'})
+            </span>
+            <button
+              onClick={() => setSelectedUser('ALL')}
+              className="ml-auto text-xs underline hover:text-black font-black flex items-center gap-1 cursor-pointer"
+            >
+              <X size={12} />
+              {isEn ? 'Clear User Filter' : '清除用戶篩選'}
+            </button>
+          </div>
+        )}
 
         {/* 作用中的操作類型篩選提示條 */}
         {selectedActionType !== 'ALL' && (
@@ -1273,7 +1376,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               className="ml-auto text-xs underline hover:text-black font-black flex items-center gap-1 cursor-pointer"
             >
               <X size={12} />
-              {isEn ? 'Clear Filter' : '清除篩選'}
+              {isEn ? 'Clear Action Filter' : '清除操作篩選'}
             </button>
           </div>
         )}
@@ -1412,7 +1515,18 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                           {/* User Name / Caller */}
                           <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
                             <div className="flex items-center gap-1.5">
-                              <span className="truncate max-w-[130px] font-black">{userName}</span>
+                              <span 
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setSelectedUser(selectedUser === userName ? 'ALL' : userName);
+                                }}
+                                className={`truncate max-w-[130px] font-black cursor-pointer hover:underline transition-colors ${
+                                  selectedUser === userName ? 'text-blue-600 underline' : 'hover:text-blue-600'
+                                }`}
+                                title={isEn ? `Click to filter logs by ${userName}` : `點擊僅篩選【${userName}】的日誌`}
+                              >
+                                {userName}
+                              </span>
                               {userId && (
                                 <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
                                   userId === 'Maintainer'
@@ -1694,7 +1808,15 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                     {/* User Identifier + Location */}
                     <div className="flex flex-wrap items-center gap-1.5">
-                      <span className="text-xs font-black text-black bg-accent/30 border border-black/20 px-2 py-0.5 rounded-lg flex items-center gap-1">
+                      <span 
+                        onClick={() => setSelectedUser(selectedUser === userName ? 'ALL' : userName)}
+                        className={`text-xs font-black px-2 py-0.5 rounded-lg flex items-center gap-1 cursor-pointer border transition-all ${
+                          selectedUser === userName 
+                            ? 'bg-blue-600 text-white border-black ring-2 ring-black shadow-neo-xs' 
+                            : 'text-black bg-accent/30 border-black/20 hover:ring-2 hover:ring-black'
+                        }`}
+                        title={isEn ? `Click to filter logs by ${userName}` : `點擊僅篩選【${userName}】的日誌`}
+                      >
                         <User size={12} />
                         {userName}
                       </span>
