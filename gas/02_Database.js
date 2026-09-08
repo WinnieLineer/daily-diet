@@ -865,7 +865,15 @@ function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
   try {
     const favKey = `FAVORITES_${userId}`;
     let favorites = getUserFavorites(userId, props);
-    favorites = favorites.filter(f => f.id != favIdentifier && f.dish_name !== favIdentifier);
+    const cleanId = String(favIdentifier || '').trim();
+    let decodedId = cleanId;
+    try { decodedId = decodeURIComponent(cleanId).trim(); } catch (e) {}
+
+    favorites = favorites.filter(f => {
+      const fId = String(f.id || '').trim();
+      const fName = String(f.dish_name || '').trim();
+      return fId !== cleanId && fId !== decodedId && fName !== cleanId && fName !== decodedId;
+    });
     props.setProperty(favKey, JSON.stringify(favorites));
 
     const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');

@@ -844,6 +844,7 @@ function doPost(e) {
           recordSystemLog('快捷記錄', userId, meal.dish_name, `${meal.calories}卡 / ${meal.protein}g蛋 / ${meal.water}ml水`, `回傳總結卡片：已快捷記錄【${meal.dish_name}】(${meal.calories} kcal)`);
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
+          attachMealMultiplierQuickReply(summaryFlex, meal, userId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
@@ -1341,9 +1342,21 @@ function doPost(e) {
             continue;
           }
 
-          // ⭐ 新增常用餐點 (例如: "加常用 拿鐵 150卡 8蛋 350水" 或 "Add fav Latte 150cal 8pro 350water")
-          if (userText.startsWith('加常用') || userText.startsWith('新增常用') || userText.startsWith('加入常用') || userText.startsWith('收藏常用') || userText.toLowerCase().startsWith('add fav')) {
-            const cleanStr = userText.replace(/^(?:加常用|新增常用|加入常用|收藏常用|add\s*fav(?:orite)?)\s*/i, '');
+          // ⭐ 新增或調整常用餐點 (例如: "加常用 拿鐵 150卡 8蛋 350水", "改常用 拿鐵 180卡 10蛋", "調整常用 ...")
+          if (
+            userText.startsWith('加常用') || 
+            userText.startsWith('新增常用') || 
+            userText.startsWith('加入常用') || 
+            userText.startsWith('收藏常用') || 
+            userText.startsWith('改常用') || 
+            userText.startsWith('調整常用') || 
+            userText.startsWith('修改常用') || 
+            userText.startsWith('編輯常用') || 
+            userText.toLowerCase().startsWith('add fav') ||
+            userText.toLowerCase().startsWith('edit fav') ||
+            userText.toLowerCase().startsWith('update fav')
+          ) {
+            const cleanStr = userText.replace(/^(?:加常用|新增常用|加入常用|收藏常用|改常用|調整常用|修改常用|編輯常用|add\s*fav(?:orite)?|edit\s*fav(?:orite)?|update\s*fav(?:orite)?)\s*/i, '');
             const calMatch = cleanStr.match(/(\d+)\s*(?:kcal|cal|卡|大卡)/i) || (cleanStr.includes('熱量') ? cleanStr.match(/熱量\s*(\d+)/i) : null);
             const proMatch = cleanStr.match(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質|pro(?:tein)?)/i) || (cleanStr.includes('蛋白質') ? cleanStr.match(/蛋白質\s*(\d+(?:\.\d+)?)/i) : null);
             const watMatch = cleanStr.match(/(\d+)\s*(?:ml|cc|水|水分|wat(?:er)?)/i) || (cleanStr.includes('水分') ? cleanStr.match(/水分\s*(\d+)/i) : null);
@@ -1363,11 +1376,31 @@ function doPost(e) {
               water: watMatch ? Number(watMatch[1]) : 0
             };
 
-            recordSystemLog('文字加常用', userId, userText, `${favItem.dish_name} (${favItem.calories}卡 / ${favItem.protein}g蛋)`, `回傳常用收藏卡片：【${favItem.dish_name}】(${favItem.calories} kcal) 已加入常用庫`);
+            const isEdit = userText.startsWith('改') || userText.startsWith('調') || userText.startsWith('編') || userText.startsWith('修') || userText.toLowerCase().startsWith('edit') || userText.toLowerCase().startsWith('update');
+            recordSystemLog(isEdit ? '調整常用' : '文字加常用', userId, userText, `${favItem.dish_name} (${favItem.calories}卡 / ${favItem.protein}g蛋)`, `回傳常用收藏卡片：【${favItem.dish_name}】(${favItem.calories} kcal) ${isEdit ? '已成功調整數值' : '已加入常用庫'}`);
             saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
             const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId, userLang);
             replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
+          }
+
+          // 🗑️ 文字指令：刪除/移除常用餐點 (例如: "刪除常用 美式咖啡" 或 "移除常用 拿鐵")
+          if (
+            userText.startsWith('刪除常用') || 
+            userText.startsWith('移除常用') || 
+            userText.startsWith('丟棄常用') || 
+            userText.toLowerCase().startsWith('del fav') || 
+            userText.toLowerCase().startsWith('delete fav') ||
+            userText.toLowerCase().startsWith('remove fav')
+          ) {
+            const targetName = userText.replace(/^(?:刪除常用|移除常用|丟棄常用|del\s*fav(?:orite)?|delete\s*fav(?:orite)?|remove\s*fav(?:orite)?)\s*/i, '').trim();
+            if (targetName) {
+              recordSystemLog('文字移除常用', userId, userText, targetName, `回傳常用輪播：已自常用庫移除「${targetName}」`);
+              deleteUserFavorite(userId, targetName, userGistId, GITHUB_PAT, props);
+              const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+              replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
           }
 
           // 🚨 徹底銷毀所有個人資料

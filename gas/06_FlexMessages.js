@@ -1839,7 +1839,6 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
 function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
   if (!props) props = PropertiesService.getScriptProperties();
   const favorites = getUserFavorites(userId, props, userGistId);
-  const appTargetUrl = `https://liff.line.me/${liffId}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
   const userLang = getUserLanguage(userId, props, userGistId);
   const isEn = userLang === 'en';
   const bubbles = [];
@@ -1918,7 +1917,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
     }
   });
 
-  // ⭐ Bubbles 2..N: 常用餐點
+  // ⭐ Bubbles 2..N: 常用餐點 (支援直接在 LINE 快捷記錄、調整數值、直接移除)
   if (favorites.length === 0) {
     bubbles.push({
       type: "bubble",
@@ -1941,7 +1940,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
         contents: [
           {
             type: "text",
-            text: isEn ? "💡 Tip: After AI photo recognition tap 「⭐ Favorite」 to save, or tap button below!" : "💡 提示：拍照辨識後點擊「⭐ 存為常用」，或點擊下方直接填入自訂指令！",
+            text: isEn ? "💡 Tip: After AI photo recognition tap 「⭐ Favorite」 to save, or tap button below to add right in LINE!" : "💡 提示：拍照辨識後點擊「⭐ 存為常用」，或點擊下方直接在 LINE 建立常用餐點！",
             size: "xs",
             color: "#71717A",
             wrap: true
@@ -1960,7 +1959,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
             color: "#000000",
             action: {
               type: "postback",
-              label: isEn ? "➕ Add Favorite" : "➕ 填入新增指令",
+              label: isEn ? "➕ Add Favorite" : "➕ 新增常用餐點",
               data: JSON.stringify({ action: 'fillFav' }),
               inputOption: "openKeyboard",
               fillInText: isEn ? "Add fav Black Coffee+Egg 160cal 14pro 450water" : "加常用 美式咖啡+茶葉蛋 160卡 14蛋 450水"
@@ -2079,19 +2078,102 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
               }
             },
             {
-              type: "button",
-              style: "secondary",
-              height: "sm",
-              color: "#F4F4F5",
-              action: {
-                type: "uri",
-                label: isEn ? "📱 Open Web App" : "📱 開啟 App 管理",
-                uri: appTargetUrl
-              }
+              type: "box",
+              layout: "horizontal",
+              spacing: "xs",
+              contents: [
+                {
+                  type: "button",
+                  style: "secondary",
+                  height: "sm",
+                  color: "#F4F4F5",
+                  flex: 1,
+                  action: {
+                    type: "postback",
+                    label: isEn ? "✏️ Adjust" : "✏️ 調整數值",
+                    data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(fav.dish_name) }),
+                    inputOption: "openKeyboard",
+                    fillInText: isEn 
+                      ? `Add fav ${fav.dish_name} ${fav.calories}cal ${fav.protein}pro ${fav.water || 0}water`
+                      : `加常用 ${fav.dish_name} ${fav.calories}卡 ${fav.protein}蛋 ${fav.water || 0}水`
+                  }
+                },
+                {
+                  type: "button",
+                  style: "secondary",
+                  height: "sm",
+                  color: "#FEE2E2",
+                  flex: 1,
+                  action: {
+                    type: "postback",
+                    label: isEn ? "🗑️ Delete" : "🗑️ 移除",
+                    data: JSON.stringify({
+                      action: 'deleteFavorite',
+                      favId: fav.id || fav.dish_name,
+                      name: fav.dish_name
+                    }),
+                    displayText: isEn ? `🗑️ Remove from favorites: ${fav.dish_name}` : `🗑️ 移除常用：${fav.dish_name}`
+                  }
+                }
+              ]
             }
           ]
         }
       });
+    });
+
+    // ➕ Tail Bubble: 常用庫管理與新增 (完全在 LINE 本身調整)
+    bubbles.push({
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#E5E7EB",
+        paddingAll: "12px",
+        contents: [
+          { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用庫管理", weight: "bold", size: "sm", color: "#111827" },
+          { type: "text", text: isEn ? `${favorites.length} items in list` : `目前已建立 ${favorites.length} 道專屬常用餐點`, size: "xxs", color: "#4B5563", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "12px",
+        backgroundColor: "#FFFFFF",
+        contents: [
+          {
+            type: "text",
+            text: isEn 
+              ? "💡 Tip: Tap 「✏️ Adjust」 to edit calories/protein, or 「🗑️ Delete」 to remove. Tap below to add a new favorite meal anytime!"
+              : "💡 提示：在任一張常用卡片點「✏️ 調整數值」即可直接修改熱量與營養素；點「🗑️ 移除」即可刪除。點擊下方可隨時新增！",
+            size: "xs",
+            color: "#6B7280",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        paddingAll: "10px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "postback",
+              label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
+              data: JSON.stringify({ action: 'fillFav' }),
+              inputOption: "openKeyboard",
+              fillInText: isEn ? "Add fav Oatmeal+Latte 220cal 8pro 300water" : "加常用 燕麥奶拿鐵 150卡 5蛋 300水"
+            }
+          }
+        ]
+      }
     });
   }
 
