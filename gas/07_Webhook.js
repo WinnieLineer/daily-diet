@@ -246,7 +246,44 @@ function doGet(e) {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
-    // 13. 維護者登入安全遙測與裝置資訊登記 (核發永久通行證)
+    // 13. 測試郵件發送診斷端點 (方便開發者直接透過瀏覽器驗證 MailApp 權限與連線)
+    if (action === 'testMail' || action === 'testEmail') {
+      const targetEmail = e?.parameter?.email || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space';
+      const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+      const testSub = `🐼 Daily-Diet 郵件發送診斷測試 (${timeNow})`;
+      const testBody = `這是一封來自 Daily-Diet LINE Bot 的測試郵件！\n\n⏰ 測試時間：${timeNow} (UTC+8)\n📬 收件信箱：${targetEmail}\n\n若您收到此信，代表 Google Apps Script 郵件發送服務（MailApp）運作 100% 正常！`;
+
+      let isSent = false;
+      let errDetail = '';
+      try {
+        MailApp.sendEmail({ to: targetEmail, subject: testSub, body: testBody });
+        isSent = true;
+      } catch (mErr) {
+        errDetail = mErr.message || String(mErr);
+        try {
+          GmailApp.sendEmail(targetEmail, testSub, testBody);
+          isSent = true;
+          errDetail = '';
+        } catch (gErr) {
+          errDetail = `MailApp: ${errDetail} | GmailApp: ${gErr.message || String(gErr)}`;
+        }
+      }
+
+      if (isSent) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'ok',
+          message: `✅ 測試信件已成功寄送至 ${targetEmail}！請檢查您的收件匣或垃圾郵件。`
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          error: errDetail,
+          hint: '若出現權限錯誤，代表 Apps Script 需要進行一次性授權：請在 Google Apps Script 編輯器中選擇 testMailAuthorization 函式並點擊「執行 (Run)」完成 Google 帳號授權。'
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // 14. 維護者登入安全遙測與裝置資訊登記 (核發永久通行證)
     if (action === 'recordMaintainerLogin') {
       const ip = e?.parameter?.ip || '未知 IP';
       const location = e?.parameter?.location || '未知位置';
@@ -932,13 +969,12 @@ function doPost(e) {
             }
 
             console.log(`🐛 [收到問題回報] 用戶 ${userId}: ${issueDetails}`);
-            recordSystemLog('問題回報', userId, issueDetails, '', '已成功記錄用戶問題回報並發送郵件通報');
 
             const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
             const userDisplayName = getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || `LINE用戶 (${userId.slice(-6)})`;
 
             // 🚀 發送郵件通報 (雙重機制：GAS 原生 MailApp 直送 + Web3Forms 備援)
-            const isSuccess = sendBugReportNotification({
+            const sendResult = sendBugReportNotification({
               userId,
               userName: userDisplayName,
               issueDetails,
@@ -947,6 +983,13 @@ function doPost(e) {
               userGistId,
               props
             });
+
+            const isSuccess = sendResult.success;
+            const logNote = isSuccess 
+              ? `已成功記錄用戶問題回報並寄出通知信件 (${sendResult.recipients || 'hi@winnie-lin.space'})` 
+              : `已記錄用戶問題回報，但郵件寄送失敗: ${sendResult.error || '未授權或阻擋'}`;
+
+            recordSystemLog('問題回報', userId, issueDetails, '', logNote);
 
             const ackFlex = generateBugReportAckFlex(issueDetails, isSuccess, userLang);
             replyFlexMessage(replyToken, ackFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -1528,8 +1571,10 @@ function sendBugReportNotification(params) {
   ].join('\n');
 
   let mailSuccess = false;
+  let errorDetail = '';
+  let targetEmailStr = '';
 
-  // 1. Google Apps Script 原生 MailApp.sendEmail (100% 穩定直送信箱，不擋伺服端 IP)
+  // 1. Google Apps Script 原生 MailApp / GmailApp 直送信箱
   try {
     const candidateEmails = [
       props && props.getProperty('ADMIN_EMAIL'),
@@ -1545,17 +1590,32 @@ function sendBugReportNotification(params) {
 
     const validEmails = [...new Set(candidateEmails.filter(Boolean))];
     if (validEmails.length > 0) {
-      const targetEmail = validEmails.join(',');
-      MailApp.sendEmail({
-        to: targetEmail,
-        subject: subject,
-        body: textBody
-      });
-      console.log(`📧 [MailApp] 已成功將問題回報寄送至開發者信箱: ${targetEmail}`);
-      mailSuccess = true;
+      targetEmailStr = validEmails.join(',');
+      try {
+        MailApp.sendEmail({
+          to: targetEmailStr,
+          subject: subject,
+          body: textBody
+        });
+        console.log(`📧 [MailApp] 已成功將問題回報寄送至開發者信箱: ${targetEmailStr}`);
+        mailSuccess = true;
+      } catch (mailErr) {
+        console.warn(`⚠️ [MailApp] 失敗，嘗試 GmailApp 備援:`, mailErr);
+        errorDetail = mailErr.message || String(mailErr);
+        try {
+          GmailApp.sendEmail(targetEmailStr, subject, textBody);
+          console.log(`📧 [GmailApp] 已成功將問題回報寄送至開發者信箱: ${targetEmailStr}`);
+          mailSuccess = true;
+          errorDetail = '';
+        } catch (gErr) {
+          console.warn(`⚠️ [GmailApp] 亦失敗:`, gErr);
+          errorDetail = `MailApp: ${errorDetail} | GmailApp: ${gErr.message || String(gErr)}`;
+        }
+      }
     }
-  } catch (mailErr) {
-    console.warn(`⚠️ [MailApp] 郵件發送失敗:`, mailErr);
+  } catch (err) {
+    errorDetail = err.message || String(err);
+    console.warn(`⚠️ [郵件模組異常]:`, err);
   }
 
   // 2. 備援：嘗試 Web3Forms (若日後升級 Pro 或支援時亦可接收)
@@ -1583,7 +1643,11 @@ function sendBugReportNotification(params) {
     console.warn('Web3Forms 提交失敗 (免費版限制伺服端呼叫):', web3Err);
   }
 
-  return mailSuccess;
+  return {
+    success: mailSuccess,
+    error: errorDetail,
+    recipients: targetEmailStr
+  };
 }
 
 function sendErrorAlertToWeb3Forms(info) {
@@ -1695,4 +1759,18 @@ function verifyLineSignature(rawBody, signature, channelSecret) {
     console.error("🚨 [簽章校驗例外]:", err);
     return false;
   }
+}
+
+/**
+ * 🧪 在 Google Apps Script 編輯器手動執行此函式以完成一次性郵件發送權限授權
+ */
+function testMailAuthorization() {
+  const testEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space';
+  MailApp.sendEmail({
+    to: testEmail,
+    subject: '🐼 Daily-Diet 郵件權限授權測試信',
+    body: '恭喜！若您收到這封信，代表 Google Apps Script 的 MailApp 寄信權限已完全授權成功！'
+  });
+  console.log('✅ 測試信已寄出至: ' + testEmail);
+  return 'SUCCESS';
 }
