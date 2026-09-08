@@ -1863,89 +1863,505 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
 // ⭐ 6. 常用餐點輪播卡片 (Favorites Carousel)
 // ========================================================
 
-function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
+function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) {
   if (!props) props = PropertiesService.getScriptProperties();
   const favorites = getUserFavorites(userId, props, userGistId);
   const userLang = getUserLanguage(userId, props, userGistId);
   const isEn = userLang === 'en';
   const bubbles = [];
+  const totalFavs = favorites.length;
 
-  // 💧 Bubble 1: 快速補水站
-  bubbles.push({
-    type: "bubble",
-    size: "kilo",
-    header: {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: "#06B6D4",
-      paddingAll: "14px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          contents: [
-            { type: "text", text: isEn ? "💧 Hydration Station" : "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF" },
-            { type: "text", text: isEn ? "1-Tap Log" : "一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
-          ]
-        },
-        {
-          type: "text",
-          text: isEn ? "Tap below to log water quickly" : "點擊下方快速記錄水分",
-          size: "xxs",
-          color: "#E0F2FE",
-          margin: "xs"
-        }
-      ]
-    },
-    body: {
-      type: "box",
-      layout: "vertical",
-      spacing: "sm",
-      paddingAll: "14px",
-      backgroundColor: "#F0FDFA",
-      contents: [
-        {
-          type: "button",
-          style: "primary",
-          height: "sm",
-          color: "#0891B2",
-          action: {
-            type: "postback",
-            label: isEn ? "💧 +500ml Water" : "💧 喝水 +500ml",
-            data: JSON.stringify({ action: 'quickWater', amount: 500 }),
-            displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 +500ml"
+  // 💧 輔助函式：快速補水站卡片
+  function createWaterBubble() {
+    return {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#06B6D4",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: isEn ? "💧 Hydration Station" : "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF" },
+              { type: "text", text: isEn ? "1-Tap Log" : "一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: isEn ? "Tap below to log water quickly" : "點擊下方快速記錄水分",
+            size: "xxs",
+            color: "#E0F2FE",
+            margin: "xs"
           }
-        },
-        {
-          type: "button",
-          style: "secondary",
-          height: "sm",
-          color: "#CCFBF1",
-          action: {
-            type: "postback",
-            label: isEn ? "💧 +250ml Water" : "💧 喝水 +250ml",
-            data: JSON.stringify({ action: 'quickWater', amount: 250 }),
-            displayText: isEn ? "💧 Drink 250ml water" : "💧 喝水 +250ml"
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        backgroundColor: "#F0FDFA",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#0891B2",
+            action: {
+              type: "postback",
+              label: isEn ? "💧 +500ml Water" : "💧 喝水 +500ml",
+              data: JSON.stringify({ action: 'quickWater', amount: 500 }),
+              displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 +500ml"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#CCFBF1",
+            action: {
+              type: "postback",
+              label: isEn ? "💧 +250ml Water" : "💧 喝水 +250ml",
+              data: JSON.stringify({ action: 'quickWater', amount: 250 }),
+              displayText: isEn ? "💧 Drink 250ml water" : "💧 喝水 +250ml"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#CCFBF1",
+            action: {
+              type: "postback",
+              label: isEn ? "💧 +1000ml Water" : "💧 喝水 +1000ml",
+              data: JSON.stringify({ action: 'quickWater', amount: 1000 }),
+              displayText: isEn ? "💧 Drink 1000ml water" : "💧 喝水 +1000ml"
+            }
           }
-        },
-        {
-          type: "button",
-          style: "secondary",
-          height: "sm",
-          color: "#CCFBF1",
-          action: {
-            type: "postback",
-            label: isEn ? "💧 +1000ml Water" : "💧 喝水 +1000ml",
-            data: JSON.stringify({ action: 'quickWater', amount: 1000 }),
-            displayText: isEn ? "💧 Drink 1000ml water" : "💧 喝水 +1000ml"
-          }
-        }
-      ]
-    }
-  });
+        ]
+      }
+    };
+  }
 
-  // ⭐ Bubbles 2..N: 常用餐點 (支援直接在 LINE 快捷記錄、調整數值、直接移除)
-  if (favorites.length === 0) {
+  // ⭐ 輔助函式：單一常用餐點卡片
+  function createFavoriteBubble(fav, globalIdx, totalCount, curPage) {
+    const dishName = fav.dish_name || (isEn ? 'Favorite Meal' : '常用餐點');
+    return {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FDE047",
+        paddingAll: "12px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: isEn ? "⭐ Favorite" : "⭐ 常用餐點", weight: "bold", size: "xs", color: "#000000" },
+              { type: "text", text: `#${globalIdx + 1} / ${totalCount}`, weight: "bold", size: "xxs", color: "#713F12", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: dishName,
+            weight: "bold",
+            size: "md",
+            color: "#000000",
+            wrap: true,
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        paddingAll: "12px",
+        backgroundColor: "#FFFFFF",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "6px",
+                paddingAll: "6px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "🔥 Cal" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: `${fav.calories || 0}`, size: "xs", color: "#000000", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "6px",
+                paddingAll: "6px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: `${fav.protein || 0}g`, size: "xs", color: "#000000", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "6px",
+                paddingAll: "6px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: `${fav.water || 0}ml`, size: "xs", color: "#000000", weight: "bold" }
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "xs",
+        paddingAll: "10px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "postback",
+              label: isEn ? "⚡ Quick Log This" : "⚡ 一鍵記錄這餐",
+              data: JSON.stringify({
+                action: 'quickLogFavorite',
+                name: encodeURIComponent(dishName),
+                cal: fav.calories || 0,
+                pro: fav.protein || 0,
+                wat: fav.water || 0
+              }),
+              displayText: isEn ? `⚡ Quick Log: ${dishName}` : `⚡ 快捷記錄：${dishName}`
+            }
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              globalIdx > 0 ? {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FEF9C3",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "🔝 Top" : "🔝 置頂",
+                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'top', returnView: 'carousel', page: curPage }),
+                  displayText: isEn ? `🔝 Pin to front: ${dishName}` : `🔝 將「${dishName}」置頂排在第一位`
+                }
+              } : null,
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#F4F4F5",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "✏️ Adjust" : "✏️ 調整",
+                  data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(dishName) }),
+                  inputOption: "openKeyboard",
+                  fillInText: isEn 
+                    ? `Edit fav ${dishName} ${fav.calories || 0}cal ${fav.protein || 0}pro ${fav.water || 0}water`
+                    : `調整常用 ${dishName} ${fav.calories || 0}卡 ${fav.protein || 0}蛋 ${fav.water || 0}水`
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FEE2E2",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "🗑️ Delete" : "🗑️ 移除",
+                  data: JSON.stringify({
+                    action: 'deleteFavorite',
+                    favId: fav.id || dishName,
+                    name: dishName,
+                    page: curPage
+                  }),
+                  displayText: isEn ? `🗑️ Remove from favorites: ${dishName}` : `🗑️ 移除常用：${dishName}`
+                }
+              }
+            ].filter(Boolean)
+          }
+        ]
+      }
+    };
+  }
+
+  // ➡️ 輔助函式：下一頁卡片
+  function createNextPageBubble(curPage, totalP, remaining) {
+    return {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#3B82F6",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: isEn ? "➡️ Next Page" : "➡️ 下一頁常用", weight: "bold", size: "sm", color: "#FFFFFF" },
+              { type: "text", text: `${curPage}/${totalP}`, weight: "bold", size: "xs", color: "#DBEAFE", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: isEn ? `More favorites (${remaining} items left)` : `還有 ${remaining} 道常用餐點`,
+            size: "xxs",
+            color: "#EFF6FF",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        backgroundColor: "#EFF6FF",
+        contents: [
+          {
+            type: "text",
+            text: isEn 
+              ? `You have ${totalFavs} favorites in total. Tap below to view Page ${curPage + 1}!`
+              : `您目前共有 ${totalFavs} 道常用餐點。\n點擊下方即可切換至第 ${curPage + 1} 頁繼續挑選！`,
+            size: "xs",
+            color: "#1E40AF",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "10px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#2563EB",
+            action: {
+              type: "postback",
+              label: isEn ? `➡️ View Page ${curPage + 1}` : `➡️ 前往第 ${curPage + 1} 頁`,
+              data: JSON.stringify({ action: 'favPage', page: curPage + 1 }),
+              displayText: isEn ? `➡️ View Page ${curPage + 1}` : `➡️ 前往第 ${curPage + 1} 頁常用`
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#DBEAFE",
+            action: {
+              type: "postback",
+              label: isEn ? "📋 All Favorites List" : "📋 常用管理面板 (全部)",
+              data: JSON.stringify({ action: 'manageFavorites' }),
+              displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
+            }
+          }
+        ]
+      }
+    };
+  }
+
+  // ⬅️ 輔助函式：上一頁卡片
+  function createPrevPageBubble(curPage, totalP, startItemIdx) {
+    return {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#64748B",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: isEn ? "⬅️ Previous Page" : "⬅️ 上一頁常用", weight: "bold", size: "sm", color: "#FFFFFF" },
+              { type: "text", text: `${curPage}/${totalP}`, weight: "bold", size: "xs", color: "#F1F5F9", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: isEn ? `Back to items 1..${startItemIdx}` : `返回前 ${startItemIdx} 道餐點與補水`,
+            size: "xxs",
+            color: "#E2E8F0",
+            margin: "xs"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        backgroundColor: "#F8FAFC",
+        contents: [
+          {
+            type: "text",
+            text: isEn 
+              ? `Currently viewing page ${curPage} of ${totalP}. Tap below to return to the previous page.`
+              : `目前正在瀏覽第 ${curPage} / ${totalP} 頁。\n點擊下方可返回上一頁餐點或補水站。`,
+            size: "xs",
+            color: "#334155",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "10px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#475569",
+            action: {
+              type: "postback",
+              label: isEn ? `⬅️ Back to Page ${curPage - 1}` : `⬅️ 返回第 ${curPage - 1} 頁`,
+              data: JSON.stringify({ action: 'favPage', page: curPage - 1 }),
+              displayText: isEn ? `⬅️ Back to Page ${curPage - 1}` : `⬅️ 返回第 ${curPage - 1} 頁常用`
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#E2E8F0",
+            action: {
+              type: "postback",
+              label: isEn ? "💧 First Page & Water" : "💧 返回首頁與補水站",
+              data: JSON.stringify({ action: 'favPage', page: 1 }),
+              displayText: isEn ? "💧 Back to page 1" : "💧 返回第 1 頁與補水站"
+            }
+          }
+        ]
+      }
+    };
+  }
+
+  // ➕ 輔助函式：常用庫管理卡片 (尾卡)
+  function createManagerBubble(totalCount, curPage, totalP) {
+    return {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#E5E7EB",
+        paddingAll: "12px",
+        contents: [
+          { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用庫管理", weight: "bold", size: "sm", color: "#111827" },
+          { type: "text", text: isEn ? `${totalCount} items in list` : `目前已建立 ${totalCount} 道專屬常用餐點`, size: "xxs", color: "#4B5563", margin: "xs" }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "12px",
+        backgroundColor: "#FFFFFF",
+        contents: [
+          {
+            type: "text",
+            text: isEn 
+              ? "💡 Tip: Tap 「✏️ Adjust」 to edit calories/protein, or 「🗑️ Delete」 to remove. Tap below to add a new favorite meal anytime!"
+              : "💡 提示：在任一張常用卡片點「✏️ 調整」可修改熱量；點「🗑️ 移除」可刪除；點「🔝 置頂」排在最前！",
+            size: "xs",
+            color: "#6B7280",
+            wrap: true
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "10px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "postback",
+              label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
+              data: JSON.stringify({ action: 'fillFav' }),
+              inputOption: "openKeyboard",
+              fillInText: isEn ? "Add fav Oatmeal+Latte 220cal 8pro 300water" : "加常用 燕麥奶拿鐵 150卡 5蛋 300水"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FEE2E2",
+            action: {
+              type: "postback",
+              label: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理面板",
+              data: JSON.stringify({ action: 'manageFavorites' }),
+              displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
+            }
+          },
+          totalP > 1 && curPage > 1 ? {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#E5E7EB",
+            action: {
+              type: "postback",
+              label: isEn ? "⏮️ Back to First Page" : "⏮️ 返回第一頁",
+              data: JSON.stringify({ action: 'favPage', page: 1 }),
+              displayText: isEn ? "⏮️ Back to first page" : "⏮️ 返回第一頁常用"
+            }
+          } : null
+        ].filter(Boolean)
+      }
+    };
+  }
+
+  // 1️⃣ 常用清單為空時
+  if (totalFavs === 0) {
+    bubbles.push(createWaterBubble());
     bubbles.push({
       type: "bubble",
       size: "kilo",
@@ -1995,247 +2411,69 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
         ]
       }
     });
-  } else {
-    favorites.slice(0, 10).forEach(fav => {
-      bubbles.push({
-        type: "bubble",
-        size: "kilo",
-        header: {
-          type: "box",
-          layout: "vertical",
-          backgroundColor: "#FDE047",
-          paddingAll: "12px",
-          contents: [
-            {
-              type: "box",
-              layout: "horizontal",
-              contents: [
-                { type: "text", text: isEn ? "⭐ Favorite" : "⭐ 常用餐點", weight: "bold", size: "xs", color: "#000000" },
-                { type: "text", text: isEn ? "Swipe ↔" : "左右滑動", size: "xxs", color: "#713F12", align: "end" }
-              ]
-            },
-            {
-              type: "text",
-              text: fav.dish_name,
-              weight: "bold",
-              size: "md",
-              color: "#000000",
-              wrap: true,
-              margin: "xs"
-            }
-          ]
-        },
-        body: {
-          type: "box",
-          layout: "vertical",
-          spacing: "xs",
-          paddingAll: "12px",
-          backgroundColor: "#FFFFFF",
-          contents: [
-            {
-              type: "box",
-              layout: "horizontal",
-              spacing: "xs",
-              contents: [
-                {
-                  type: "box",
-                  layout: "vertical",
-                  backgroundColor: "#FFF1F2",
-                  cornerRadius: "6px",
-                  paddingAll: "6px",
-                  flex: 1,
-                  alignItems: "center",
-                  contents: [
-                    { type: "text", text: isEn ? "🔥 Cal" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
-                    { type: "text", text: `${fav.calories}`, size: "xs", color: "#000000", weight: "bold" }
-                  ]
-                },
-                {
-                  type: "box",
-                  layout: "vertical",
-                  backgroundColor: "#EFF6FF",
-                  cornerRadius: "6px",
-                  paddingAll: "6px",
-                  flex: 1,
-                  alignItems: "center",
-                  contents: [
-                    { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
-                    { type: "text", text: `${fav.protein}g`, size: "xs", color: "#000000", weight: "bold" }
-                  ]
-                },
-                {
-                  type: "box",
-                  layout: "vertical",
-                  backgroundColor: "#ECFEFF",
-                  cornerRadius: "6px",
-                  paddingAll: "6px",
-                  flex: 1,
-                  alignItems: "center",
-                  contents: [
-                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
-                    { type: "text", text: `${fav.water || 0}ml`, size: "xs", color: "#000000", weight: "bold" }
-                  ]
-                }
-              ]
-            }
-          ]
-        },
-        footer: {
-          type: "box",
-          layout: "vertical",
-          spacing: "xs",
-          paddingAll: "10px",
-          contents: [
-            {
-              type: "button",
-              style: "primary",
-              height: "sm",
-              color: "#000000",
-              action: {
-                type: "postback",
-                label: isEn ? "⚡ Quick Log This" : "⚡ 一鍵記錄這餐",
-                data: JSON.stringify({
-                  action: 'quickLogFavorite',
-                  name: encodeURIComponent(fav.dish_name),
-                  cal: fav.calories,
-                  pro: fav.protein,
-                  wat: fav.water || 0
-                }),
-                displayText: isEn ? `⚡ Quick Log: ${fav.dish_name}` : `⚡ 快捷記錄：${fav.dish_name}`
-              }
-            },
-            {
-              type: "box",
-              layout: "horizontal",
-              spacing: "xs",
-              contents: [
-                index > 0 ? {
-                  type: "button",
-                  style: "secondary",
-                  height: "sm",
-                  color: "#FEF9C3",
-                  flex: 1,
-                  action: {
-                    type: "postback",
-                    label: isEn ? "🔝 Top" : "🔝 置頂",
-                    data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || fav.dish_name, dir: 'top', returnView: 'carousel' }),
-                    displayText: isEn ? `🔝 Pin to front: ${fav.dish_name}` : `🔝 將「${fav.dish_name}」置頂排在第一位`
-                  }
-                } : null,
-                {
-                  type: "button",
-                  style: "secondary",
-                  height: "sm",
-                  color: "#F4F4F5",
-                  flex: 1,
-                  action: {
-                    type: "postback",
-                    label: isEn ? "✏️ Adjust" : "✏️ 調整",
-                    data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(fav.dish_name) }),
-                    inputOption: "openKeyboard",
-                    fillInText: isEn 
-                      ? `Edit fav ${fav.dish_name} ${fav.calories}cal ${fav.protein}pro ${fav.water || 0}water`
-                      : `調整常用 ${fav.dish_name} ${fav.calories}卡 ${fav.protein}蛋 ${fav.water || 0}水`
-                  }
-                },
-                {
-                  type: "button",
-                  style: "secondary",
-                  height: "sm",
-                  color: "#FEE2E2",
-                  flex: 1,
-                  action: {
-                    type: "postback",
-                    label: isEn ? "🗑️ Delete" : "🗑️ 移除",
-                    data: JSON.stringify({
-                      action: 'deleteFavorite',
-                      favId: fav.id || fav.dish_name,
-                      name: fav.dish_name
-                    }),
-                    displayText: isEn ? `🗑️ Remove from favorites: ${fav.dish_name}` : `🗑️ 移除常用：${fav.dish_name}`
-                  }
-                }
-              ].filter(Boolean)
-            }
-          ]
-        }
-      });
-    });
 
-    // ➕ Tail Bubble: 常用庫管理與新增 (完全在 LINE 本身調整)
-    bubbles.push({
-      type: "bubble",
-      size: "kilo",
-      header: {
-        type: "box",
-        layout: "vertical",
-        backgroundColor: "#E5E7EB",
-        paddingAll: "12px",
-        contents: [
-          { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用庫管理", weight: "bold", size: "sm", color: "#111827" },
-          { type: "text", text: isEn ? `${favorites.length} items in list` : `目前已建立 ${favorites.length} 道專屬常用餐點`, size: "xxs", color: "#4B5563", margin: "xs" }
-        ]
-      },
-      body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "sm",
-        paddingAll: "12px",
-        backgroundColor: "#FFFFFF",
-        contents: [
-          {
-            type: "text",
-            text: isEn 
-              ? "💡 Tip: Tap 「✏️ Adjust」 to edit calories/protein, or 「🗑️ Delete」 to remove. Tap below to add a new favorite meal anytime!"
-              : "💡 提示：在任一張常用卡片點「✏️ 調整數值」即可直接修改熱量與營養素；點「🗑️ 移除」即可刪除。點擊下方可隨時新增！",
-            size: "xs",
-            color: "#6B7280",
-            wrap: true
-          }
-        ]
-      },
-      footer: {
-        type: "box",
-        layout: "vertical",
-        spacing: "sm",
-        paddingAll: "10px",
-        contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
-            action: {
-              type: "postback",
-              label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
-              data: JSON.stringify({ action: 'fillFav' }),
-              inputOption: "openKeyboard",
-              fillInText: isEn ? "Add fav Oatmeal+Latte 220cal 8pro 300water" : "加常用 燕麥奶拿鐵 150卡 5蛋 300水"
-            }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FEE2E2",
-            action: {
-              type: "postback",
-              label: isEn ? "🗑️ Manage & Delete Favorites" : "🗑️ 清單管理與刪除常用",
-              data: JSON.stringify({ action: 'manageFavorites' }),
-              displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
-            }
-          }
-        ]
+    return {
+      type: "flex",
+      altText: isEn ? `⭐ Favorite Meals & Hydration Station` : `⭐ 常用餐點與補水站（左右滑動選擇）`,
+      contents: {
+        type: "carousel",
+        contents: bubbles
       }
+    };
+  }
+
+  // 2️⃣ 常用餐點 <= 10 道：單頁完全呈現 (1 補水站 + 所有常用 + 1 管理卡，總數 <= 12)
+  if (totalFavs <= 10) {
+    bubbles.push(createWaterBubble());
+    favorites.forEach((fav, index) => {
+      bubbles.push(createFavoriteBubble(fav, index, totalFavs, 1));
     });
+    bubbles.push(createManagerBubble(totalFavs, 1, 1));
+
+    return {
+      type: "flex",
+      altText: isEn ? `⭐ Favorite Meals (${totalFavs})` : `⭐ 常用餐點（共 ${totalFavs} 道，左右滑動）`,
+      contents: {
+        type: "carousel",
+        contents: bubbles.slice(0, 12)
+      }
+    };
+  }
+
+  // 3️⃣ 常用餐點 > 10 道：啟用動態分頁 (每頁 8 道，嚴格確保在 LINE 12 個 Bubble 限制內)
+  const PAGE_SIZE = 8;
+  const totalPages = Math.ceil(totalFavs / PAGE_SIZE);
+  const currentPage = Math.max(1, Math.min(parseInt(page, 10) || 1, totalPages));
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const endIdx = Math.min(startIdx + PAGE_SIZE, totalFavs);
+  const pageFavs = favorites.slice(startIdx, endIdx);
+
+  // 首張 Bubble：首頁放「快速補水站」，後續頁放「上一頁卡片」
+  if (currentPage === 1) {
+    bubbles.push(createWaterBubble());
+  } else {
+    bubbles.push(createPrevPageBubble(currentPage, totalPages, startIdx));
+  }
+
+  // 中間 Bubbles：當頁常用餐點
+  pageFavs.forEach((fav, pIdx) => {
+    const globalIdx = startIdx + pIdx;
+    bubbles.push(createFavoriteBubble(fav, globalIdx, totalFavs, currentPage));
+  });
+
+  // 尾張 Bubble：若有下一頁放「下一頁卡片」，最後一頁放「常用庫管理卡片」
+  if (currentPage < totalPages) {
+    bubbles.push(createNextPageBubble(currentPage, totalPages, totalFavs - endIdx));
+  } else {
+    bubbles.push(createManagerBubble(totalFavs, currentPage, totalPages));
   }
 
   return {
     type: "flex",
-    altText: isEn ? `⭐ Favorite Meals & Hydration Station` : `⭐ 常用餐點與補水站（左右滑動選擇）`,
+    altText: isEn ? `⭐ Favorite Meals (Page ${currentPage}/${totalPages})` : `⭐ 常用餐點（第 ${currentPage}/${totalPages} 頁，共 ${totalFavs} 道）`,
     contents: {
       type: "carousel",
-      contents: bubbles
+      contents: bubbles.slice(0, 12)
     }
   };
 }

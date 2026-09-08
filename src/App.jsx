@@ -907,10 +907,11 @@ function App() {
               console.log(`📥 [Goals Sync] 成功從 LINE/雲端同步體態目標: ${cal}卡 / ${pro}g蛋 / ${wat}ml水`);
             }
 
-            // ⭐ 常用餐點同步
-            if (gasData.favorites && Array.isArray(gasData.favorites) && gasData.favorites.length > 0) {
+            // ⭐ 常用餐點雙向同步
+            if (gasData.favorites && Array.isArray(gasData.favorites)) {
               const localFavs = await db.favorites.toArray();
               const localFavNames = new Set(localFavs.map(f => f.dish_name));
+              let addedCount = 0;
               for (const fav of gasData.favorites) {
                 if (fav.dish_name && !localFavNames.has(fav.dish_name)) {
                   await db.favorites.add({
@@ -920,10 +921,28 @@ function App() {
                     water: Number(fav.water) || 0
                   });
                   localFavNames.add(fav.dish_name);
+                  addedCount++;
                 }
               }
-              setFavoriteUpdateTrigger(prev => prev + 1);
-              console.log(`⭐ [Favorites Sync] 成功自 LINE 同步 ${gasData.favorites.length} 筆常用餐點！`);
+
+              // 雙向反向同步：若本機 IndexedDB 有遠端缺失的常用餐點，自動補齊至 LINE / GAS 雲端
+              const remoteFavNames = new Set(gasData.favorites.map(f => f.dish_name));
+              const missingInRemote = localFavs.filter(f => f.dish_name && !remoteFavNames.has(f.dish_name));
+              if (missingInRemote.length > 0 && effectiveUserId && effectiveUserId !== 'default_user') {
+                for (const mFav of missingInRemote) {
+                  try {
+                    fetch(`${GAS_URL}?action=addFavorite&userId=${encodeURIComponent(effectiveUserId)}&name=${encodeURIComponent(mFav.dish_name)}&cal=${mFav.calories || 0}&pro=${mFav.protein || 0}&wat=${mFav.water || 0}`, { mode: 'no-cors' });
+                    console.log(`📤 [Favorites Reverse Sync] 自動補齊本地常用至 LINE/GAS: ${mFav.dish_name}`);
+                  } catch (e) {
+                    console.warn("常用餐點雙向同步失敗:", e);
+                  }
+                }
+              }
+
+              if (addedCount > 0) {
+                setFavoriteUpdateTrigger(prev => prev + 1);
+              }
+              console.log(`⭐ [Favorites Sync] 常用餐點同步完成（遠端 ${gasData.favorites.length} 筆，本機補入 ${addedCount} 筆，補齊至遠端 ${missingInRemote.length} 筆）`);
             }
 
             if (gasData.status === 'ok' && Array.isArray(gasData.todayLogs)) {

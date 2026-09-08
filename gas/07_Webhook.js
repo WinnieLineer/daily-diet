@@ -888,7 +888,8 @@ function doPost(e) {
             const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
             replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
-            const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+            const page = Number(payload.page) || 1;
+            const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props, page);
             replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           }
           continue;
@@ -902,12 +903,23 @@ function doPost(e) {
           reorderUserFavorites(userId, favId, dir, userGistId, GITHUB_PAT, props);
           recordSystemLog('常用換順序', userId, `${favId} (${dir})`, '', `已更新常用餐點排列順序 (${dir})`);
           if (payload.returnView === 'carousel') {
-            const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+            const page = Number(payload.page) || 1;
+            const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props, page);
             replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
             replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           }
+          continue;
+        }
+
+        // 📄 常用餐點輪播翻頁
+        if (payload.action === 'favPage' || payload.action === 'favCarousel' || payload.action === 'openFavorites') {
+          const page = Number(payload.page) || 1;
+          console.log(`📄 [常用翻頁] 用戶: ${userId}, 頁碼: ${page}`);
+          recordSystemLog('常用翻頁', userId, `第 ${page} 頁`, '', `回傳常用餐點輪播卡片 (第 ${page} 頁)`);
+          const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props, page);
+          replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
