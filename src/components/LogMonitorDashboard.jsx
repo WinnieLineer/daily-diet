@@ -193,6 +193,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [fetchError, setFetchError] = useState(null);
 
   // ⚙️ View & Filtering States
+  const [retentionDays, setRetentionDays] = useState(30); // 預設留存 30 天 (1個月)
+  const [logLimit, setLogLimit] = useState(1000); // 預設讀取上限 1000 筆
   const [viewMode, setViewMode] = useState('kibana'); // 'kibana' (table) or 'cards' (stream)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
@@ -378,12 +380,12 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     setPasswordInput('');
   };
 
-  // Fetch Dashboard Logs and Quota from GAS
-  const fetchDashboardData = async (silent = false) => {
+  // Fetch Dashboard Logs and Quota from GAS (支援自訂留存天數與筆數)
+  const fetchDashboardData = async (silent = false, customDays = retentionDays, customLimit = logLimit) => {
     if (!silent) setIsLoading(true);
     setFetchError(null);
     try {
-      const targetUrl = `${GAS_API_URL}?action=getRecentLogs&limit=250&_t=${Date.now()}`;
+      const targetUrl = `${GAS_API_URL}?action=getRecentLogs&limit=${customLimit}&days=${customDays}&_t=${Date.now()}`;
       const res = await fetch(targetUrl);
       if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
       const data = await res.json();
@@ -775,11 +777,41 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                   : (isEn ? 'Connecting...' : '連線同步中...')}
                 {autoRefreshInterval > 0 && ` · ${countdown}s ${isEn ? 'next refresh' : '後自動更新'}`}
               </p>
+              <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                <span className="bg-emerald-100 text-emerald-900 border border-emerald-400 px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-neo-xs">
+                  <span>🛡️</span> {isEn ? 'Google Sheets Archive: 30+ Days Guaranteed Retention' : '試算表永久存檔 · 保證留存 30 天以上'}
+                </span>
+                <span className="text-[10px] font-bold text-zinc-400">
+                  ({isEn ? `Loaded ${normalizedLogs.length} logs (${retentionDays ? `past ${retentionDays} days` : 'all history'})` : `已載入過去 ${retentionDays ? `${retentionDays} 天` : '全量'} 共 ${normalizedLogs.length} 筆日誌`})
+                </span>
+              </div>
             </div>
           </div>
 
           {/* Action Buttons */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* Retention Range Selector */}
+            <div className="flex items-center gap-1 bg-amber-50 border-2 border-black rounded-xl p-1 text-xs font-bold shadow-neo-xs">
+              <Database size={14} className="text-amber-700 ml-1" />
+              <span className="text-[11px] font-black text-amber-900 hidden sm:inline">{isEn ? 'Range:' : '範圍:'}</span>
+              <select
+                value={retentionDays}
+                onChange={(e) => {
+                  const d = Number(e.target.value);
+                  setRetentionDays(d);
+                  fetchDashboardData(false, d, logLimit);
+                }}
+                className="bg-transparent font-black text-xs outline-none cursor-pointer pr-1 text-amber-950"
+              >
+                <option value={1}>{isEn ? 'Last 24 Hours' : '最近 24 小時'}</option>
+                <option value={7}>{isEn ? 'Last 7 Days' : '最近 7 天'}</option>
+                <option value={30}>{isEn ? 'Last 30 Days (1 Month) ⭐' : '最近 30 天 (1個月) ⭐'}</option>
+                <option value={60}>{isEn ? 'Last 60 Days (2 Months)' : '最近 60 天 (2個月)'}</option>
+                <option value={90}>{isEn ? 'Last 90 Days (3 Months)' : '最近 90 天 (3個月)'}</option>
+                <option value={0}>{isEn ? 'All Historical' : '全部歷史紀錄'}</option>
+              </select>
+            </div>
+
             {/* Auto Refresh Select */}
             <div className="flex items-center gap-1 bg-zinc-100 border-2 border-black rounded-xl p-1 text-xs font-bold">
               <Clock size={14} className="text-zinc-500 ml-1" />

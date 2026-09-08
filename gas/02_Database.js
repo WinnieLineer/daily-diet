@@ -1007,22 +1007,34 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
 
   Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
-  // 1. 高速暫存快取 (動態維持在 GAS Properties 9KB 安全容量內)
+  // 1. 高速暫存快取 (精簡巨大欄位，確保在 GAS 9KB 限制內可容納更多秒級即時日誌)
   try {
     let recentLogs = [];
     const raw = props.getProperty('SYSTEM_RECENT_LOGS');
     if (raw) recentLogs = JSON.parse(raw);
-    recentLogs.unshift(logItem);
+
+    const cacheItem = {
+      time: logItem.time,
+      userName: logItem.userName,
+      userId: logItem.userId,
+      type: logItem.type,
+      input: logItem.input ? logItem.input.slice(0, 300) : '',
+      aiResult: logItem.aiResult ? logItem.aiResult.slice(0, 300) : '',
+      output: logItem.output ? logItem.output.slice(0, 300) : '',
+      ip: logItem.ip,
+      location: logItem.location
+    };
+    recentLogs.unshift(cacheItem);
     while (recentLogs.length > 0 && JSON.stringify(recentLogs).length > 8000) {
       recentLogs.pop();
     }
-    if (recentLogs.length > 100) recentLogs = recentLogs.slice(0, 100);
+    if (recentLogs.length > 60) recentLogs = recentLogs.slice(0, 60);
     props.setProperty('SYSTEM_RECENT_LOGS', JSON.stringify(recentLogs));
   } catch (e) {
-    console.error("儲存實時日誌失敗:", e);
+    console.error("儲存實時日誌快取失敗:", e);
   }
 
-  // 2. Google 試算表存檔
+  // 2. Google 試算表存檔 (全量無損永久存檔，保證至少留存一個月以上歷史)
   try {
     const ss = getOrCreateLogSheet(props);
     if (ss) {
@@ -1085,17 +1097,100 @@ function getOrCreateLogSheet(props) {
   }
 }
 
-function getRecentLogsData(limit) {
+/**
+ * 取得完整運作日誌：預設從 Google 試算表（永久存檔）載入至少 30 天之完整歷史紀錄
+ * @param {number} limit 最大回傳筆數 (預設 500，上限 1000)
+ * @param {number} days 回溯天數 (預設 30 天)
+ */
+function getRecentLogsData(limit, days) {
+  const targetLimit = limit ? Number(limit) : 500;
+  const targetDays = (typeof days !== 'undefined' && days !== null) ? Number(days) : 30; // 預設 30 天
+  let logsFromSheet = [];
+
+  // 1. 優先從 Google 試算表讀取（永久保存，至少保留一個月以上歷史）
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const ss = getOrCreateLogSheet(props);
+    if (ss) {
+      const sheet = ss.getSheets()[0];
+      const lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
+        // 最多抓取 1000 筆或試算表所有現有列
+        const maxFetch = Math.min(lastRow - 1, targetLimit > 0 ? Math.min(targetLimit, 1000) : 1000);
+        const startRow = lastRow - maxFetch + 1;
+        const rawValues = sheet.getRange(startRow, 1, maxFetch, 9).getValues();
+
+        const now = Date.now();
+        const cutoff = targetDays > 0 ? now - (targetDays * 24 * 60 * 60 * 1000) : 0;
+
+        // 倒序排列（最新排在最上面）
+        for (let i = rawValues.length - 1; i >= 0; i--) {
+          const row = rawValues[i];
+          const timeStr = String(row[0] || '').trim();
+          if (!timeStr) continue;
+
+          // 若有設定天數過濾 (預設 30 天留存)
+          if (cutoff > 0) {
+            const rowTime = new Date(timeStr).getTime();
+            if (!isNaN(rowTime) && rowTime < cutoff) {
+              continue; // 略過早於設定天數的舊資料
+            }
+          }
+
+          logsFromSheet.push({
+            time: timeStr,
+            userName: String(row[1] || '用戶'),
+            userId: String(row[2] || ''),
+            type: String(row[3] || '系統操作'),
+            input: String(row[4] || ''),
+            aiResult: String(row[5] || ''),
+            output: String(row[6] || ''),
+            ip: String(row[7] || ''),
+            location: String(row[8] || '')
+          });
+
+          if (targetLimit > 0 && logsFromSheet.length >= targetLimit) {
+            break;
+          }
+        }
+      }
+    }
+  } catch (sheetErr) {
+    console.warn("從 Google Sheet 讀取全量日誌失敗，將降級讀取快取:", sheetErr);
+  }
+
+  // 2. 雙向合併快取：確保最新幾秒內產生的快取亦無縫呈現在最上方
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const raw = props.getProperty('SYSTEM_RECENT_LOGS');
+    if (raw) {
+      const cacheLogs = JSON.parse(raw);
+      if (Array.isArray(cacheLogs) && cacheLogs.length > 0) {
+        const existingKeys = new Set(logsFromSheet.map(function(l) { return `${l.time}_${l.userId}_${l.type}`; }));
+        const newUnsynced = cacheLogs.filter(function(l) { return !existingKeys.has(`${l.time}_${l.userId}_${l.type}`); });
+        if (newUnsynced.length > 0) {
+          logsFromSheet = newUnsynced.concat(logsFromSheet);
+        }
+      }
+    }
+  } catch (e) {}
+
+  if (logsFromSheet && logsFromSheet.length > 0) {
+    return targetLimit > 0 ? logsFromSheet.slice(0, targetLimit) : logsFromSheet;
+  }
+
+  // 3. 備援降級：若 Google Sheet 空白或出錯，返回 Properties 快取
   try {
     const props = PropertiesService.getScriptProperties();
     const raw = props.getProperty('SYSTEM_RECENT_LOGS');
     if (raw) {
       const parsed = JSON.parse(raw);
       if (Array.isArray(parsed)) {
-        return limit ? parsed.slice(0, limit) : parsed;
+        return targetLimit ? parsed.slice(0, targetLimit) : parsed;
       }
     }
   } catch (e) {}
+
   return [];
 }
 

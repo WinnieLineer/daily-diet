@@ -224,9 +224,11 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 11. 實時運作日誌 API (提供 JSON)
+    // 11. 實時運作日誌 API (提供 JSON，預設回傳至少 30 天/最多 1000 筆紀錄)
     if (action === 'getRecentLogs') {
-      const logs = getRecentLogsData(Number(e?.parameter?.limit) || 300);
+      const limit = Number(e?.parameter?.limit) || 1000;
+      const days = typeof e?.parameter?.days !== 'undefined' ? Number(e?.parameter?.days) : 30;
+      const logs = getRecentLogsData(limit, days);
       const sheetId = props.getProperty('LOG_SHEET_ID');
       const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
       const aiQuota = getAiQuotaStats(props);
@@ -235,8 +237,16 @@ function doGet(e) {
         const rawLogin = props.getProperty('LAST_MAINTAINER_LOGIN');
         if (rawLogin) lastMaintainerLogin = JSON.parse(rawLogin);
       } catch (e) {}
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', logs, sheetUrl, aiQuota, lastMaintainerLogin }))
-        .setMimeType(ContentService.MimeType.JSON);
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'ok', 
+        logs, 
+        sheetUrl, 
+        aiQuota, 
+        lastMaintainerLogin,
+        retentionPolicy: 'Google Sheets 永久存檔 (最少留存 30 天以上)',
+        daysRequested: days,
+        totalLogsReturned: logs.length 
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // 12. 實時運作日誌儀表板 (已全面遷移至 Web 前端專屬維護者密碼保護端點，自動轉導)
