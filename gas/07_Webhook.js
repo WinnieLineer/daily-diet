@@ -128,7 +128,7 @@ function doGet(e) {
       const meal = { id, date, time, dish_name: dishName, calories, protein, carbs, fat, water, category, comment, source: 'WEB_APP' };
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       saveMealLog(userId, meal, userGistId, pat, props);
-      recordSystemLog('Web同步餐點', userId, dishName, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, '已即時寫入 LINE 與 Gist');
+      recordSystemLog('Web同步餐點', userId, dishName, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, `已同步儲存：【${dishName}】${calories} kcal · ${protein}g 蛋 · ${water}ml 水`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', meal }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -139,7 +139,7 @@ function doGet(e) {
       const targetId = e?.parameter?.id;
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       deleteMealLog(userId, targetId || dishName, userGistId, pat, props);
-      recordSystemLog('Web刪除餐點', userId, dishName || targetId, '', '已自雲端刪除');
+      recordSystemLog('Web刪除餐點', userId, dishName || targetId, '', `已自雲端資料庫刪除紀錄：${dishName || targetId}`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -148,7 +148,7 @@ function doGet(e) {
     if (action === 'clearToday' && userId) {
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       clearTodayLogs(userId, userGistId, pat, props);
-      recordSystemLog('Web清空今日', userId, '清空今日餐點', '', '已清空今日');
+      recordSystemLog('Web清空今日', userId, '清空今日餐點', '', '已清空今日所有餐點與補水紀錄');
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -162,7 +162,7 @@ function doGet(e) {
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       const favItem = { id: Date.now(), dish_name: dishName, calories, protein, water };
       saveUserFavorite(userId, favItem, userGistId, pat, props);
-      recordSystemLog('Web加常用', userId, dishName, `${calories}卡 / ${protein}g蛋`, '已同步常用庫');
+      recordSystemLog('Web加常用', userId, dishName, `${calories}卡 / ${protein}g蛋`, `已新增至常用清單：【${dishName}】${calories} kcal · ${protein}g 蛋`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -172,7 +172,7 @@ function doGet(e) {
       const favId = e?.parameter?.id || e?.parameter?.favId || e?.parameter?.dishName || e?.parameter?.name;
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       deleteUserFavorite(userId, favId, userGistId, pat, props);
-      recordSystemLog('Web刪除常用', userId, favId, '', '已自常用庫移除');
+      recordSystemLog('Web刪除常用', userId, favId, '', `已自常用庫移除標識：${favId}`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -189,7 +189,7 @@ function doGet(e) {
       if (pat && userGistId) {
         syncGoalsToUserGist({ calories, protein, water }, userGistId, pat);
       }
-      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, '', '已同步更新');
+      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, '', `已更新體態目標：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -199,7 +199,7 @@ function doGet(e) {
       const persona = e?.parameter?.persona || 'tsundere';
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       setUserPersona(userId, persona, userGistId, pat, props);
-      recordSystemLog('Web更新性格', userId, persona, '', '已同步更新教練性格');
+      recordSystemLog('Web更新性格', userId, persona, '', `已更新教練性格為「${persona}」`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', persona }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -219,7 +219,7 @@ function doGet(e) {
         console.log(`🌐 [Web 語言切換] 同步為最後活躍 LINE 用戶 ${lastLineUser} 切換語系與 Rich Menu 至 ${updated}`);
       }
 
-      recordSystemLog('Web更新語言', rawUserId || lastLineUser || 'unknown', updated, '', '已同步更新用戶語言為 ' + updated + ' 並切換 LINE 選單');
+      recordSystemLog('Web更新語言', rawUserId || lastLineUser || 'unknown', updated, '', `已更新用戶語言為「${updated}」並同步切換 LINE 選單`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', language: updated, lineUserId: lastLineUser }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -393,18 +393,45 @@ function doPost(e) {
       if (action === 'analyzeMeal' || action === 'analyzeFoodImage') {
         const base64 = data?.image || data?.base64Image || e.parameter?.image;
         const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language);
+        if (result && typeof recordSystemLog === 'function') {
+          recordSystemLog(
+            'Web照片辨識', 
+            data?.userId || 'web_user', 
+            '上傳餐點照片辨識', 
+            `${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
+            `回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
+          );
+        }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
           .setMimeType(ContentService.MimeType.JSON);
       }
       if (action === 'analyzeText' || action === 'analyzeFoodText') {
         const text = data?.text || data?.textInstruction || e.parameter?.text;
         const result = parseTextWithGeminiFull(text, GEMINI_API_KEY, data?.context, data?.language);
+        if (result && typeof recordSystemLog === 'function') {
+          recordSystemLog(
+            'Web文字辨識', 
+            data?.userId || 'web_user', 
+            text || '輸入餐點文字辨識', 
+            `${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
+            `回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
+          );
+        }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
           .setMimeType(ContentService.MimeType.JSON);
       }
       if (action === 'completeText' || action === 'getPandaAdvice') {
         const prompt = data?.prompt || e.parameter?.prompt;
         const result = generateGeminiText(prompt, GEMINI_API_KEY);
+        if (typeof recordSystemLog === 'function') {
+          recordSystemLog(
+            'Web教練諮詢', 
+            data?.userId || 'web_user', 
+            typeof prompt === 'string' ? prompt.slice(0, 100) : '教練諮詢', 
+            '', 
+            `回傳教練建議：${typeof result === 'string' ? result.slice(0, 150) : ''}`
+          );
+        }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))
           .setMimeType(ContentService.MimeType.JSON);
       }
@@ -496,7 +523,7 @@ function doPost(e) {
       if (event.type === 'follow') {
         currentOperation = '首次加入好友 (Follow)';
         currentUserInput = '加入好友';
-        recordSystemLog('新用戶加入', userId, '加入好友', '', '發送精美圖文歡迎卡片與免責聲明');
+        recordSystemLog('新用戶加入', userId, '加入好友', '', '回傳精美圖文歡迎卡片、新手30秒引導與免責聲明');
         const welcomeFlex = generateWelcomeFlex(userId, LIFF_ID, userGistId, userLang);
         replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
         continue;
@@ -519,12 +546,12 @@ function doPost(e) {
         // 🐣 / 🌐 新舊用戶分流引導
         if (payload.action === 'onboarding') {
           if (payload.type === 'new') {
-            recordSystemLog('新手引導', userId, '點擊全新用戶', '', '發送新手30秒引導卡片');
+            recordSystemLog('新手引導', userId, '點擊全新用戶', '', '回傳新手30秒操作引導卡片');
             const newGuideFlex = generateCommandMenuFlex(userId, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, newGuideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           } else if (payload.type === 'web_user') {
-            recordSystemLog('老用戶連動', userId, '點擊Web舊用戶', '', '發送Web綁定引導卡片');
+            recordSystemLog('老用戶連動', userId, '點擊Web舊用戶', '', '回傳Web舊用戶資料連動引導卡片');
             const webGuideFlex = generateWebUserGuideFlex(userId, LIFF_ID, userGistId, props, userLang);
             replyFlexMessage(replyToken, webGuideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -533,7 +560,7 @@ function doPost(e) {
 
         // 🎯 體態目標推薦導引
         if (payload.action === 'goalGuide') {
-          recordSystemLog('目標推薦導引', userId, '點擊目標推薦', '', '發送 AI 體態目標推薦導引卡片');
+          recordSystemLog('目標推薦導引', userId, '點擊目標推薦', '', '回傳 AI 體態目標推薦導引卡片');
           const guideFlex = generateGoalGuideFlex(userId, LIFF_ID, userGistId, userLang);
           replyFlexMessage(replyToken, guideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -541,7 +568,7 @@ function doPost(e) {
 
         // 📖 查看完整操作指令手冊
         if (payload.action === 'showHelp' || payload.action === 'help') {
-          recordSystemLog('指令手冊', userId, '點擊查看指令手冊', '', '發送操作指令手冊卡片');
+          recordSystemLog('指令手冊', userId, '點擊查看指令手冊', '', '回傳完整操作指令手冊卡片');
           const helpFlex = generateCommandMenuFlex(userId, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, helpFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -551,16 +578,17 @@ function doPost(e) {
         if (payload.action === 'setLanguage') {
           const chosen = setUserLanguage(userId, payload.lang, userGistId, GITHUB_PAT, props);
           switchUserRichMenuByLanguage(userId, chosen, props);
-          if (chosen === 'en') {
-            replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, estimate nutrients, and respond in English!\nYour Rich Menu has also been updated to English.\n\n(Type \"中文\" anytime to switch back)", CHANNEL_ACCESS_TOKEN, userId, props);
-          } else {
-            replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練會以繁體中文為您分析餐點與計算營養囉！\n圖文選單也已為您切換為繁體中文。\n\n（輸入「English」可隨時切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
-          }
+          const langReply = (chosen === 'en')
+            ? "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, estimate nutrients, and respond in English!\nYour Rich Menu has also been updated to English.\n\n(Type \"中文\" anytime to switch back)"
+            : "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練會以繁體中文為您分析餐點與計算營養囉！\n圖文選單也已為您切換為繁體中文。\n\n（輸入「English」可隨時切換為英文）";
+          recordSystemLog('切換語言', userId, `點擊切換為 ${chosen}`, chosen, `回傳提示：${langReply.slice(0, 120)}`);
+          replyTextMessage(replyToken, langReply, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
         if (payload.action === 'chooseLanguage') {
           const curLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
+          recordSystemLog('切換語言', userId, '點擊切換語言', curLang, '回傳語言選擇卡片 (繁體中文/English)');
           const langFlex = generateLanguageSelectionFlex(userId, LIFF_ID, userGistId, curLang);
           replyFlexMessage(replyToken, langFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -568,17 +596,17 @@ function doPost(e) {
 
         // 🐛 問題回報引導 Postback
         if (payload.action === 'bugReport') {
-          recordSystemLog('問題回報指引', userId, '點擊問題回報按鈕', '', '發送問題回報指引提示');
           const promptMsg = isEn
             ? "🐛 【Bug Report】\nPlease reply directly with your issue description starting with 'Bug: '!\nExample:\n`Bug: The protein calculation seems off` 🐼"
             : "🐛 【問題與建議回報】\n請直接在下方對話框輸入「回報」加上您的問題內容喔！\n例如：\n`回報 照片辨識蛋白質有誤` 🐼";
+          recordSystemLog('問題回報指引', userId, '點擊問題回報按鈕', '', `回傳指引提示：${promptMsg.slice(0, 100)}`);
           replyTextMessage(replyToken, promptMsg, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
         // 🎭 挑選教練性格
         if (payload.action === 'choosePersona') {
-          recordSystemLog('切換性格', userId, '點擊切換教練性格', '', '發送教練性格選擇卡片');
+          recordSystemLog('切換性格', userId, '點擊切換教練性格', '', '回傳教練性格選擇卡片 (傲嬌/溫柔/魔鬼)');
           const personaFlex = generatePersonaSelectionFlex(userId, LIFF_ID, userGistId, props, userLang);
           replyFlexMessage(replyToken, personaFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -591,11 +619,11 @@ function doPost(e) {
           const personaNamesZh = { tsundere: '傲嬌毒舌教練 🐼😡', gentle: '治癒天使 🐼🥰', hardcore: '魔鬼士官長 🐼🔥' };
           const personaNamesEn = { tsundere: 'Tsundere Coach 🐼😡', gentle: 'Healing Angel 🐼🥰', hardcore: 'Drill Sergeant 🐼🔥' };
           const pName = isEn ? (personaNamesEn[newPersona] || newPersona) : (personaNamesZh[newPersona] || newPersona);
-          recordSystemLog('切換性格', userId, newPersona, '', `已切換為 ${pName}`);
           
           const replyMsg = isEn
             ? `🎭 Successfully switched Panda Coach persona to 【${pName}】!\nSend a meal photo or food name to see your coach's unique critique 🐼✨`
             : `🎭 已成功將熊貓教練性格切換為【${pName}】！\n現在傳送餐點照片或輸入食物，教練就會以全新性格為您專業分析與吐槽囉 🐼✨`;
+          recordSystemLog('切換性格', userId, newPersona, '', `回傳確認：${replyMsg.slice(0, 120)}`);
           replyTextMessage(replyToken, replyMsg, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
@@ -662,7 +690,7 @@ function doPost(e) {
           };
 
           const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
-          recordSystemLog('倍數調整', userId, `${baseName} -> x${m}`, `${newCal}卡 / ${newPro}g蛋`, `已調整為 ${m} 倍份量`);
+          recordSystemLog('倍數調整', userId, `${baseName} -> x${m}`, `${newCal}卡 / ${newPro}g蛋`, `回傳調整卡片：【${newName}】${newCal} kcal · ${newPro}g 蛋 (${m}倍份量)`);
           replyMealConfirmCard(replyToken, updatedMeal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
@@ -691,7 +719,7 @@ function doPost(e) {
               comment: (lastMeal.comment || '') + (isEn ? ' (🍚 Halved rice / -50% carbs)' : ' (🍚 飯量已減半 -50% 碳水)')
             };
             const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
-            recordSystemLog('碳水減半', userId, payload.name || lastMeal.dish_name, `碳水 ${oldCarbs}g ➔ ${newCarbs}g (-${savedCals} kcal)`, '已將碳水減半並扣除熱量');
+            recordSystemLog('碳水減半', userId, payload.name || lastMeal.dish_name, `碳水 ${oldCarbs}g ➔ ${newCarbs}g (-${savedCals} kcal)`, `回傳今日總結卡片：已將【${lastMeal.dish_name}】碳水減半扣除 ${savedCals} kcal`);
             const summaryFlex = generateDailySummaryFlex(userId, updatedMeal, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -701,7 +729,10 @@ function doPost(e) {
         // 💾 查看今日總結
         if (payload.action === 'save') {
           console.log(`💾 [查看今日總結] 用戶: ${userId}`);
-          recordSystemLog('查看總結', userId, payload.name || '今日總結', '', '已發送總結卡片');
+          const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+          let totCal = 0, totPro = 0, totWat = 0;
+          todayLogs.forEach(l => { totCal += Number(l.calories)||0; totPro += Number(l.protein)||0; totWat += Number(l.water)||0; });
+          recordSystemLog('查看總結', userId, payload.name || '今日總結', `累計: ${totCal}卡 / ${totPro}g蛋 / ${totWat}ml水`, `回傳今日總結卡片 (共 ${todayLogs.length} 餐 · 累計 ${totCal} kcal · ${totPro}g 蛋 · ${totWat}ml 水)`);
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -712,7 +743,7 @@ function doPost(e) {
           const targetDate = (event.postback.params && event.postback.params.date) || payload.date;
           if (targetDate) {
             console.log(`📅 [選擇歷史日期] ${targetDate} 用戶: ${userId}`);
-            recordSystemLog('選擇日期', userId, targetDate, '', `已發送 ${targetDate} 歷史總結`);
+            recordSystemLog('選擇日期', userId, targetDate, '', `回傳 ${targetDate} 歷史飲食總結卡片`);
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, targetDate);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -723,7 +754,7 @@ function doPost(e) {
         if (payload.action === 'manageMeals' || payload.action === 'manage') {
           const targetDate = payload.date || null;
           console.log(`📋 [管理紀錄] 日期: ${targetDate || '今日'} 用戶: ${userId}`);
-          recordSystemLog('管理清單', userId, targetDate ? `管理 ${targetDate}` : '點擊管理紀錄', '', '已發送管理面板');
+          recordSystemLog('管理清單', userId, targetDate ? `管理 ${targetDate}` : '點擊管理紀錄', '', `回傳餐點管理面板卡片 (${targetDate || '今日'})`);
           const mgmtFlex = generateManageMealsFlex(userId, targetDate, LIFF_ID, userGistId, props, userLang);
           replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -732,7 +763,7 @@ function doPost(e) {
         // 📈 查看 7 日趨勢週報
         if (payload.action === 'viewWeeklyTrends' || payload.action === 'weeklyTrends') {
           console.log(`📈 [查看週報] 用戶: ${userId}`);
-          recordSystemLog('週報趨勢', userId, '點擊7日週報', '', '已發送7日趨勢週報');
+          recordSystemLog('週報趨勢', userId, '點擊7日週報', '', '回傳近 7 日飲食趨勢與熱量分析卡片');
           const weeklyFlex = generateWeeklyTrendsFlex(userId, LIFF_ID, userGistId, props, userLang);
           replyFlexMessage(replyToken, weeklyFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -752,8 +783,11 @@ function doPost(e) {
             comment: isEn ? '💧 Fast Hydration Log' : '💧 快速補水打卡'
           };
           console.log(`💧 [快速補水] +${amount}ml 用戶: ${userId}`);
-          recordSystemLog('快速喝水', userId, `喝水 ${amount}ml`, `+${amount}ml`, '已即時記錄至資料庫');
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+          const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+          let totWat = 0;
+          todayLogs.forEach(l => { totWat += Number(l.water)||0; });
+          recordSystemLog('快速喝水', userId, `喝水 ${amount}ml`, `+${amount}ml`, `回傳補水卡片：已記錄補水 +${amount}ml (今日累計 ${totWat}ml)`);
           const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -769,7 +803,7 @@ function doPost(e) {
             water: Number(payload.wat) || 0
           };
           console.log(`⭐ [加入常用] ${favItem.dish_name} | ${favItem.calories} kcal`);
-          recordSystemLog('加入常用', userId, favItem.dish_name, `${favItem.calories}卡 / ${favItem.protein}g蛋`, '已收藏至常用庫');
+          recordSystemLog('加入常用', userId, favItem.dish_name, `${favItem.calories}卡 / ${favItem.protein}g蛋`, `回傳收藏卡片：【${favItem.dish_name}】(${favItem.calories} kcal) 已加入常用清單`);
           saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
           const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId, userLang);
           replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -789,7 +823,7 @@ function doPost(e) {
             comment: isEn ? '⭐ Favorite Quick Log' : '⭐ 常用快捷記錄'
           };
           console.log(`⚡ [一鍵記錄常用] ${meal.dish_name} | ${meal.calories} kcal`);
-          recordSystemLog('快捷記錄', userId, meal.dish_name, `${meal.calories}卡 / ${meal.protein}g蛋 / ${meal.water}ml水`, '已快捷記錄並回傳總結');
+          recordSystemLog('快捷記錄', userId, meal.dish_name, `${meal.calories}卡 / ${meal.protein}g蛋 / ${meal.water}ml水`, `回傳總結卡片：已快捷記錄【${meal.dish_name}】(${meal.calories} kcal)`);
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -800,7 +834,7 @@ function doPost(e) {
         if (payload.action === 'deleteMeal') {
           const targetDate = payload.date || null;
           console.log(`🗑️ [刪除單筆餐點] 日期: ${targetDate || '今日'} 標識: ${payload.id || payload.index}`);
-          recordSystemLog('刪除餐點', userId, `餐點標識: ${payload.id || payload.index} (${targetDate || '今日'})`, '', '已刪除單筆紀錄');
+          recordSystemLog('刪除餐點', userId, `餐點標識: ${payload.id || payload.index} (${targetDate || '今日'})`, '', `回傳總結卡片：已刪除指定紀錄 (${payload.id || payload.index})`);
           deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props, targetDate);
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, targetDate);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -810,7 +844,7 @@ function doPost(e) {
         // 🗑️ 移除常用餐點
         if (payload.action === 'deleteFavorite') {
           console.log(`🗑️ [移除常用] 標識: ${payload.favId || payload.name}`);
-          recordSystemLog('移除常用', userId, `標識: ${payload.favId || payload.name}`, '', '已自常用庫移除');
+          recordSystemLog('移除常用', userId, `標識: ${payload.favId || payload.name}`, '', `回傳常用輪播：已自常用庫移除「${payload.favId || payload.name}」`);
           deleteUserFavorite(userId, payload.favId || payload.name, userGistId, GITHUB_PAT, props);
           const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -827,7 +861,7 @@ function doPost(e) {
         // 🗑️ 確定清空今日
         if (payload.action === 'clearToday') {
           console.log(`🗑️ [清空今日] 用戶: ${userId}`);
-          recordSystemLog('清空今日', userId, '清空今日所有紀錄', '', '已清空今日紀錄');
+          recordSystemLog('清空今日', userId, '清空今日所有紀錄', '', '回傳總結卡片：已清空今日所有餐點紀錄');
           clearTodayLogs(userId, userGistId, GITHUB_PAT, props);
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -837,11 +871,11 @@ function doPost(e) {
         // 🚨 徹底銷毀所有個人資料
         if (payload.action === 'destroyAllData') {
           console.log(`🚨 [徹底銷毀帳號資料] 用戶: ${userId}`);
-          recordSystemLog('銷毀所有資料', userId, '使用者要求徹底銷毀所有資料', '', '已銷毀全部數據');
           purgeAllUserData(userId, userGistId, GITHUB_PAT, props);
           const purgeReply = isEn
             ? "🗑️ All your meal logs, body targets, favorite items and private cloud Gist have been permanently deleted and unlinked.\nThank you for using Daily Diet! You can restart anytime by sending a photo or text message! 🐼"
             : "🗑️ 您的所有飲食紀錄、體態目標、常用餐點庫及專屬雲端 Gist 已徹底銷毀並解除綁定。\n\n感謝您的使用，若未來需重新記錄，隨時傳送照片或訊息即可重新啟用！🐼";
+          recordSystemLog('銷毀所有資料', userId, '使用者要求徹底銷毀所有資料', '', `回傳訊息：${purgeReply.slice(0, 100)}`);
           replyTextMessage(replyToken, purgeReply, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
@@ -850,13 +884,14 @@ function doPost(e) {
         if (payload.action === 'cancel') {
           if (payload.id || payload.name) {
             deleteMealLog(userId, payload.id || payload.name, userGistId, GITHUB_PAT, props);
-            recordSystemLog('撤回紀錄', userId, payload.name || payload.id, '', '已自資料庫撤回並刪除此筆餐點');
             const cancelMsg = isEn
               ? "👌 Successfully cancelled and removed this meal record. Feel free to send new photos or text anytime! 🐼"
               : "👌 已成功為您撤回並刪除此筆餐點紀錄。您可以隨時再傳送照片或文字！🐼";
+            recordSystemLog('撤回紀錄', userId, payload.name || payload.id, '', `回傳訊息：${cancelMsg}`);
             replyTextMessage(replyToken, cancelMsg, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             const cancelMsg = isEn ? "👌 Cancelled. You can send photos or messages anytime! 🐼" : "👌 已取消此操作。您可以隨時再傳送照片或文字！🐼";
+            recordSystemLog('撤回紀錄', userId, '取消操作', '', `回傳訊息：${cancelMsg}`);
             replyTextMessage(replyToken, cancelMsg, CHANNEL_ACCESS_TOKEN, userId, props);
           }
           continue;
@@ -901,7 +936,13 @@ function doPost(e) {
           };
 
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
-          recordSystemLog('照片辨識', userId, `傳送照片 (ID: ${messageId})`, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已即時寫入資料庫並發送卡片');
+          recordSystemLog(
+            '照片辨識', 
+            userId, 
+            `傳送照片 (ID: ${messageId})`, 
+            `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
+            `回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
+          );
           replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
@@ -916,7 +957,7 @@ function doPost(e) {
           // 🌐 雙語切換 (支援中文/英文雙向切換)
           if (userText === '切換語言' || userText === '換語言' || userText === '語言' || userText === '雙語' || userText.toLowerCase() === 'language' || userText.toLowerCase() === 'switch language') {
             const curLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
-            recordSystemLog('切換語言', userId, userText, curLang, '發送語言選擇卡片');
+            recordSystemLog('切換語言', userId, userText, curLang, '回傳語言選擇卡片 (繁體中文/English)');
             const langFlex = generateLanguageSelectionFlex(userId, LIFF_ID, userGistId, curLang);
             replyFlexMessage(replyToken, langFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -925,6 +966,7 @@ function doPost(e) {
           if (userText.toLowerCase() === 'english' || userText === '英文' || userText === '切換英文' || userText === '切換成英文') {
             setUserLanguage(userId, 'en', userGistId, GITHUB_PAT, props);
             switchUserRichMenuByLanguage(userId, 'en', props);
+            recordSystemLog('切換語言', userId, userText, 'en', '回傳提示：已成功切換為英文，並更新圖文選單');
             replyTextMessage(replyToken, "🌐 Language switched to English! 🐼✨\nFrom now on, Panda Coach will analyze your meals, calculate nutrition, and reply in English!\nYour Rich Menu has also been updated to English.\n\n(Tip: Type \"中文\" anytime to switch back to Chinese)", CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
@@ -932,13 +974,14 @@ function doPost(e) {
           if (userText === '中文' || userText === '繁體中文' || userText.toLowerCase() === 'chinese' || userText === '切換中文' || userText === '切換成中文') {
             setUserLanguage(userId, 'zh', userGistId, GITHUB_PAT, props);
             switchUserRichMenuByLanguage(userId, 'zh', props);
+            recordSystemLog('切換語言', userId, userText, 'zh', '回傳提示：已成功切換為繁體中文，並更新圖文選單');
             replyTextMessage(replyToken, "🌐 語言已成功切換為繁體中文！ 🐼✨\n熊貓教練將會以繁體中文為您分析飲食與計算營養囉！\n圖文選單也已為您切換為繁體中文。\n\n（隨時輸入「English」可切換為英文）", CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
           // 🎭 切換教練性格
           if (userText === '切換性格' || userText === '挑選性格' || userText === '選擇性格' || userText === '挑選教練性格' || userText === '換性格' || userText === '改性格' || userText === '換教練' || userText === '教練性格' || userText === '性格' || userText === '教練' || userText === '多重性格' || userText.toLowerCase() === 'persona') {
-            recordSystemLog('切換性格', userId, userText, '', '發送教練性格選擇卡片');
+            recordSystemLog('切換性格', userId, userText, '', '回傳教練性格選擇卡片 (傲嬌/溫柔/魔鬼)');
             const personaFlex = generatePersonaSelectionFlex(userId, LIFF_ID, userGistId, props, userLang);
             replyFlexMessage(replyToken, personaFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -955,10 +998,10 @@ function doPost(e) {
               const personaNamesZh = { tsundere: '傲嬌毒舌教練 🐼😡', gentle: '治癒天使 🐼🥰', hardcore: '魔鬼士官長 🐼🔥' };
               const personaNamesEn = { tsundere: 'Tsundere Coach 🐼😡', gentle: 'Healing Angel 🐼🥰', hardcore: 'Drill Sergeant 🐼🔥' };
               const pName = isEn ? (personaNamesEn[targetPersona] || targetPersona) : (personaNamesZh[targetPersona] || targetPersona);
-              recordSystemLog('切換性格', userId, targetPersona, '', `已切換為 ${pName}`);
               const replyMsg = isEn
                 ? `🎭 Successfully switched Panda Coach persona to 【${pName}】!\nSend a meal photo or food name to test it out 🐼✨`
                 : `🎭 已成功將教練性格切換為【${pName}】！\n快傳送照片或打字測試看看吧 🐼✨`;
+              recordSystemLog('切換性格', userId, targetPersona, '', `回傳提示：${replyMsg.slice(0, 100)}`);
               replyTextMessage(replyToken, replyMsg, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
             }
@@ -1008,7 +1051,7 @@ function doPost(e) {
               ? `已成功記錄用戶問題回報並寄出通知信件 (${sendResult.recipients || 'hi@winnie-lin.space'})` 
               : `已記錄用戶問題回報，但郵件寄送失敗: ${sendResult.error || '未授權或阻擋'}`;
 
-            recordSystemLog('問題回報', userId, issueDetails, '', logNote);
+            recordSystemLog('問題回報', userId, issueDetails, '', `回傳確認卡片：${logNote}`);
 
             const ackFlex = generateBugReportAckFlex(issueDetails, isSuccess, userLang);
             replyFlexMessage(replyToken, ackFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -1017,7 +1060,7 @@ function doPost(e) {
 
           // 💡 說明 / 指令 / 教學 / 歡迎 / 功能清單
           if (userText === '說明' || userText.toLowerCase() === 'help' || userText.toLowerCase() === 'guide' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
-            recordSystemLog('使用說明', userId, userText, '', '發送操作說明與功能手冊卡片');
+            recordSystemLog('使用說明', userId, userText, '', '回傳操作說明與功能手冊卡片');
             const helpFlex = generateCommandMenuFlex(userId, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, helpFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1025,7 +1068,7 @@ function doPost(e) {
 
           // 🚀 建立/更新原生相機圖文選單
           if (userText === '更新相機選單' || userText === '設定相機選單' || userText === '更新選單' || userText === '部署選單' || userText === '新選單' || userText === '換選單' || userText === '重整選單') {
-            recordSystemLog('部署選單', userId, userText, '', '觸發原生相機圖文選單部署');
+            recordSystemLog('部署選單', userId, userText, '', '觸發原生相機圖文選單部署並回傳通知');
             try {
               const richMenuId = setupNativeCameraRichMenu(CHANNEL_ACCESS_TOKEN, LIFF_ID, props);
               let enRichMenuId = '';
@@ -1046,17 +1089,20 @@ function doPost(e) {
 
           // 📸 拍照記帳導引
           if (userText === '拍照' || userText === '拍照辨識' || userText === '拍照記帳' || userText === '拍餐點' || userText.toLowerCase() === 'camera' || userText.toLowerCase() === 'ai camera') {
-            recordSystemLog('拍照引導', userId, userText, '', '發送拍照指引');
             const cameraGuideText = isEn
               ? "📸 Please tap the 【📷 Camera】or 【🖼️ Album】icon to the left of the message input box to send a meal photo! AI Panda will analyze calories and nutrients immediately! 🐼✨"
               : "📸 請點擊下方輸入框左側的【📷 相機】或【🖼️ 相簿】圖示，直接拍照或挑選餐點照片傳給我，AI 熊貓立刻為您分析熱量與營養素！🐼✨";
+            recordSystemLog('拍照引導', userId, userText, '', `回傳指引提示：${cameraGuideText.slice(0, 100)}`);
             replyTextMessage(replyToken, cameraGuideText, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
           // 查詢今日總結
           if (userText === '今天' || userText === '總結' || userText === '統計' || userText === '今日' || userText === '今日總結' || userText.toLowerCase() === 'summary' || userText.toLowerCase() === 'today' || userText.toLowerCase() === 'daily summary') {
-            recordSystemLog('查詢總結', userId, userText, '', '已發送今日總結');
+            const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+            let totCal = 0, totPro = 0, totWat = 0;
+            todayLogs.forEach(l => { totCal += Number(l.calories)||0; totPro += Number(l.protein)||0; totWat += Number(l.water)||0; });
+            recordSystemLog('查詢總結', userId, userText, `累計: ${totCal}卡 / ${totPro}g蛋 / ${totWat}ml水`, `回傳今日總結卡片 (共 ${todayLogs.length} 餐 · 累計 ${totCal} kcal · ${totPro}g 蛋 · ${totWat}ml 水)`);
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1064,7 +1110,7 @@ function doPost(e) {
 
           // 📊 查詢 7 日趨勢與歷史週報
           if (userText === '週報' || userText === '趨勢' || userText === '圖表' || userText === '歷史' || userText === '歷史紀錄' || userText === '戰報' || userText === '7天' || userText === '七天' || userText === '分析' || userText.toLowerCase() === 'weekly' || userText.toLowerCase() === 'trend') {
-            recordSystemLog('週報趨勢', userId, userText, '', '已發送7日趨勢週報');
+            recordSystemLog('週報趨勢', userId, userText, '', '回傳近 7 日趨勢歷史週報與熱量統計卡片');
             const weeklyFlex = generateWeeklyTrendsFlex(userId, LIFF_ID, userGistId, props, userLang);
             replyFlexMessage(replyToken, weeklyFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1074,7 +1120,7 @@ function doPost(e) {
           if (userText === '昨天' || userText === '昨日' || userText.toLowerCase() === 'yesterday') {
             const yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
             const dateStr = Utilities.formatDate(yesterday, "Asia/Taipei", "yyyy-MM-dd");
-            recordSystemLog('查詢歷史', userId, userText, dateStr, '已發送昨天總結');
+            recordSystemLog('查詢歷史', userId, userText, dateStr, `回傳昨日 (${dateStr}) 歷史飲食總結卡片`);
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, dateStr);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1083,7 +1129,7 @@ function doPost(e) {
           if (userText === '前天') {
             const dayBefore = new Date(Date.now() - 48 * 60 * 60 * 1000);
             const dateStr = Utilities.formatDate(dayBefore, "Asia/Taipei", "yyyy-MM-dd");
-            recordSystemLog('查詢歷史', userId, userText, dateStr, '已發送前天總結');
+            recordSystemLog('查詢歷史', userId, userText, dateStr, `回傳前天 (${dateStr}) 歷史飲食總結卡片`);
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, dateStr);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1109,7 +1155,7 @@ function doPost(e) {
               const mm = String(month).padStart(2, '0');
               const dd = String(day).padStart(2, '0');
               const targetDateStr = `${year}-${mm}-${dd}`;
-              recordSystemLog('查詢歷史日期', userId, userText, targetDateStr, `發送 ${targetDateStr} 歷史總結`);
+              recordSystemLog('查詢歷史日期', userId, userText, targetDateStr, `回傳指定日期 (${targetDateStr}) 歷史飲食總結卡片`);
               const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, targetDateStr);
               replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
@@ -1147,8 +1193,11 @@ function doPost(e) {
               water: amount,
               comment: isEn ? '💧 Fast Hydration Log' : '💧 快速補水打卡'
             };
-            recordSystemLog('文字喝水', userId, userText, `+${amount}ml 水分`, '已即時記錄至資料庫');
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+            const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+            let totWat = 0;
+            todayLogs.forEach(l => { totWat += Number(l.water)||0; });
+            recordSystemLog('文字喝水', userId, userText, `+${amount}ml 水分`, `回傳補水卡片：已記錄補水 +${amount}ml (今日累計 ${totWat}ml)`);
             const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1159,7 +1208,7 @@ function doPost(e) {
             const cleanGistId = userText.replace(/^(?:綁定|連動|gist|bind)\s*/i, '').replace(/^(?:id)?[:：\s]*/i, '').trim();
             if (cleanGistId && cleanGistId.length >= 8) {
               props.setProperty(`USER_GIST_${userId}`, cleanGistId);
-              recordSystemLog('綁定Gist', userId, userText, cleanGistId, '已成功綁定個人 Gist ID');
+              recordSystemLog('綁定Gist', userId, userText, cleanGistId, `回傳綁定成功訊息：已成功連動個人 Gist 雲端庫 (${cleanGistId})`);
               
               let extraMsg = '';
               let favCount = 0;
@@ -1207,7 +1256,7 @@ function doPost(e) {
           // 開啟選單 (帶個人專屬 Gist ID)
           if (userText === '選單' || userText === 'App' || userText === '主選單' || userText === '日記' || userText.toLowerCase() === 'menu' || userText.toLowerCase() === 'app') {
             const appUrl = `https://liff.line.me/${LIFF_ID}?userId=${userId}${userGistId ? `&gistId=${userGistId}` : ''}`;
-            recordSystemLog('開啟App', userId, userText, '', '已發送 App 連結');
+            recordSystemLog('開啟App', userId, userText, '', `回傳 App 連結訊息：${appUrl}`);
             const appReply = isEn
               ? `🐼 Tap to open your Personal Diet Diary (auto-synced with cloud):\n${appUrl}`
               : `🐼 點擊開啟您的個人飲食日記（已自動連動個人雲端）：\n${appUrl}`;
@@ -1217,7 +1266,7 @@ function doPost(e) {
 
           // 📋 管理今日紀錄
           if (userText === '管理' || userText === '管理紀錄' || userText === '紀錄管理' || userText === '清單' || userText === '今日清單' || userText === '紀錄' || userText.toLowerCase() === 'manage') {
-            recordSystemLog('管理清單', userId, userText, '', '已發送管理面板');
+            recordSystemLog('管理清單', userId, userText, '', '回傳餐點管理面板卡片 (今日)');
             const mgmtFlex = generateManageMealsFlex(userId, getTodayDateString(), LIFF_ID, userGistId, props, userLang);
             replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1225,7 +1274,7 @@ function doPost(e) {
 
           // ⭐ 常用餐點與補水輪播庫 (Carousel)
           if (userText === '常用' || userText === '快捷' || userText === '收藏' || userText === '常用清單' || userText === '我的常用' || userText === '常用餐點' || userText === '快捷輪播' || userText.toLowerCase() === 'favorites' || userText.toLowerCase() === 'favorite' || userText.toLowerCase() === 'fav') {
-            recordSystemLog('常用輪播', userId, userText, '', '已發送左右滑動常用輪播');
+            recordSystemLog('常用輪播', userId, userText, '', '回傳常用餐點與補水快捷輪播卡片');
             const favCarousel = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, favCarousel, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1253,7 +1302,7 @@ function doPost(e) {
               water: watMatch ? Number(watMatch[1]) : 0
             };
 
-            recordSystemLog('文字加常用', userId, userText, `${favItem.dish_name} (${favItem.calories}卡 / ${favItem.protein}g蛋)`, '已收藏至常用庫');
+            recordSystemLog('文字加常用', userId, userText, `${favItem.dish_name} (${favItem.calories}卡 / ${favItem.protein}g蛋)`, `回傳常用收藏卡片：【${favItem.dish_name}】(${favItem.calories} kcal) 已加入常用庫`);
             saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
             const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId, userLang);
             replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN, userId, props);
@@ -1270,12 +1319,12 @@ function doPost(e) {
           // 🗑️ 刪除最後一筆 / 刪除指定餐點
           if (userText === '刪除最後一筆' || userText === '刪除上一筆' || userText === '刪除最後' || userText === '復原' || userText === '撤銷' || userText === '刪除' || userText.toLowerCase() === 'undo' || userText.toLowerCase() === 'delete last') {
             const deleted = deleteMealLog(userId, 'last', userGistId, GITHUB_PAT, props);
-            recordSystemLog('文字刪除', userId, userText, '', deleted ? '已刪除最後一筆' : '無紀錄可刪');
+            const noLogMsg = isEn ? "🐼 No meal logs recorded today to delete!" : "🐼 今天目前沒有任何飲食紀錄可以刪除喔！";
+            recordSystemLog('文字刪除', userId, userText, '', deleted ? '回傳今日總結卡片 (已刪除最後一筆紀錄)' : `回傳提示：${noLogMsg}`);
             if (deleted) {
               const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
               replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             } else {
-              const noLogMsg = isEn ? "🐼 No meal logs recorded today to delete!" : "🐼 今天目前沒有任何飲食紀錄可以刪除喔！";
               replyTextMessage(replyToken, noLogMsg, CHANNEL_ACCESS_TOKEN, userId, props);
             }
             continue;
@@ -1285,12 +1334,12 @@ function doPost(e) {
             const targetName = userText.replace(/^(?:刪除|移除|delete)\s*/i, '').trim();
             if (targetName) {
               const deleted = deleteMealLog(userId, targetName, userGistId, GITHUB_PAT, props);
-              recordSystemLog('文字刪除', userId, userText, `目標: ${targetName}`, deleted ? '已成功刪除' : '找不到餐點');
+              const notFoundMsg = isEn ? `🐼 Cannot find any meal log named "${targetName}" today.` : `🐼 找不到今日名稱為「${targetName}」的餐點紀錄。`;
+              recordSystemLog('文字刪除', userId, userText, `目標: ${targetName}`, deleted ? `回傳今日總結卡片 (已刪除「${targetName}」)` : `回傳提示：${notFoundMsg}`);
               if (deleted) {
                 const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
                 replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
               } else {
-                const notFoundMsg = isEn ? `🐼 Cannot find any meal log named "${targetName}" today.` : `🐼 找不到今日名稱為「${targetName}」的餐點紀錄。`;
                 replyTextMessage(replyToken, notFoundMsg, CHANNEL_ACCESS_TOKEN, userId, props);
               }
               continue;
@@ -1300,7 +1349,7 @@ function doPost(e) {
           // 🎯 1. 查看目前飲食目標 (例如: "目標", "我的目標", "查看目標", "目前目標", "goals")
           if (userText === '目標' || userText === '我的目標' || userText === '查看目標' || userText === '目前目標' || userText === '每日目標' || userText.toLowerCase() === 'goals' || userText.toLowerCase() === 'goal') {
             const goals = getUserGoals(userId, props, userGistId);
-            recordSystemLog('查看目標', userId, userText, `${goals.calories}卡 / ${goals.protein}g蛋 / ${goals.water}ml水`, '發送目前目標卡片');
+            recordSystemLog('查看目標', userId, userText, `${goals.calories}卡 / ${goals.protein}g蛋 / ${goals.water}ml水`, `回傳目標卡片：每日熱量 ${goals.calories} kcal · 蛋白質 ${goals.protein}g · 水分 ${goals.water}ml`);
             const goalFlex = generateCurrentGoalFlex(userId, goals, LIFF_ID, userGistId, userLang);
             replyFlexMessage(replyToken, goalFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1321,7 +1370,7 @@ function doPost(e) {
             ((userText.startsWith('改目標') || userText.startsWith('設定目標') || userText.startsWith('修改目標')) && !/\d+/.test(userText));
 
           if (isGoalGuideRequest) {
-            recordSystemLog('目標推薦導引', userId, userText, '', '發送 AI 體態目標推薦導引卡片');
+            recordSystemLog('目標推薦導引', userId, userText, '', '回傳 AI 體態目標推薦導引卡片');
             const guideFlex = generateGoalGuideFlex(userId, LIFF_ID, userGistId, userLang);
             replyFlexMessage(replyToken, guideFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
@@ -1338,7 +1387,7 @@ function doPost(e) {
 
           if (isGoalUpdate) {
             sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
-            recordSystemLog('體態目標', userId, userText, '計算BMR/TDEE', '發送目標卡片');
+            recordSystemLog('體態目標', userId, userText, '計算BMR/TDEE中', '正在呼叫 AI 計算體態目標與個人化教練建議');
             handleGoalSettingWithAI(replyToken, userId, userText, userGistId, GITHUB_PAT, props, LIFF_ID, CHANNEL_ACCESS_TOKEN, GEMINI_API_KEY, userLang);
             continue;
           }
@@ -1424,7 +1473,7 @@ function doPost(e) {
               };
 
               const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
-              recordSystemLog('文字倍數調整', userId, userText, `${newName} (${newCal}卡 / ${newPro}g蛋)`, `已調整為 ${m} 倍份量`);
+              recordSystemLog('文字倍數調整', userId, userText, `${newName} (${newCal}卡 / ${newPro}g蛋)`, `回傳調整卡片：【${newName}】${newCal} kcal · ${newPro}g 蛋 (${m}倍份量)`);
               replyMealConfirmCard(replyToken, updatedMeal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
             }
@@ -1488,7 +1537,7 @@ function doPost(e) {
 
             if (Object.keys(updateFields).length > 0) {
               const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
-              recordSystemLog('修改數值', userId, userText, `${updatedMeal.dish_name} (${updatedMeal.calories}卡 / ${updatedMeal.protein}g蛋 / ${updatedMeal.carbs || 0}g碳)`, '已更新餐點');
+              recordSystemLog('修改數值', userId, userText, `${updatedMeal.dish_name} (${updatedMeal.calories}卡 / ${updatedMeal.protein}g蛋 / ${updatedMeal.carbs || 0}g碳)`, `回傳今日總結卡片：已更新【${updatedMeal.dish_name}】數值`);
               const summaryFlex = generateDailySummaryFlex(userId, updatedMeal, LIFF_ID, userGistId, props);
               replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
@@ -1505,7 +1554,7 @@ function doPost(e) {
             if (isEn && /[\u4e00-\u9fa5]/.test(finalReply)) {
               finalReply = defaultReply;
             }
-            recordSystemLog('日常對話', userId, userText, '非食物訊息', finalReply);
+            recordSystemLog('日常對話', userId, userText, '非食物訊息', `回傳文字：${finalReply}`);
             replyTextMessage(replyToken, finalReply, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             const meal = {
@@ -1531,7 +1580,13 @@ function doPost(e) {
             };
 
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
-            recordSystemLog('文字辨識', userId, userText, `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, '已即時寫入資料庫並發送卡片');
+            recordSystemLog(
+              '文字辨識', 
+              userId, 
+              userText, 
+              `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
+              `回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
+            );
             replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           }
         }

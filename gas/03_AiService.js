@@ -543,6 +543,15 @@ Do NOT wrap in markdown backticks.`;
         }
 
         const goalFlex = generateGoalSettingFlex(parsed, calories, protein, water, liffId, userGistId, userLang);
+        if (typeof recordSystemLog === 'function') {
+          recordSystemLog(
+            '體態目標', 
+            userId, 
+            userText, 
+            `${parsed.goal_type || '目標推薦'}: ${calories}卡 / ${protein}g蛋 / ${water}ml水`, 
+            `回傳推薦目標卡片：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml (BMR: ${parsed.bmr || '-'} / TDEE: ${parsed.tdee || '-'})${parsed.panda_advice ? ' · 教練建議：「' + parsed.panda_advice + '」' : ''}`
+          );
+        }
         replyFlexMessage(replyToken, goalFlex, channelAccessToken, userId, props);
         return true;
       } else {
@@ -558,6 +567,9 @@ Do NOT wrap in markdown backticks.`;
     ? "🐼 Panda Coach Tip: Please tell me your height, weight, gender and goal, e.g.:\n'Set goal 175cm 70kg male fat loss'\nor enter numerical targets directly:\n'Set goal 1800cal 120pro 2500water'"
     : "🐼 熊貓教練提示：請輸入您的身高、體重、性別與目標，例如：\n「改目標 175cm 70kg 男 減脂」\n或直接輸入：「改目標 1800卡 120蛋 2500水」";
 
+  if (typeof recordSystemLog === 'function') {
+    recordSystemLog('體態目標', userId, userText, '無法解析體態數值', `回傳提示：${fallbackMsg}`);
+  }
   replyTextMessage(replyToken, fallbackMsg, channelAccessToken);
   return false;
 }

@@ -1269,8 +1269,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                                   {aiResult ? (
                                     <span className="text-purple-700 ml-1">➔ {aiResult}</span>
                                   ) : null}
-                                  {output && !aiResult ? (
-                                    <span className="text-zinc-500 ml-1">➔ {output}</span>
+                                  {output ? (
+                                    <span className="text-emerald-700 ml-1">💬 {output}</span>
                                   ) : null}
                                   {!input && !aiResult && !output && (
                                     <span className="text-zinc-400 italic">—</span>

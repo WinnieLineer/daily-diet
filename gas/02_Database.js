@@ -1060,9 +1060,9 @@ function getOrCreateLogSheet(props) {
 
     const sheet = ss.getSheets()[0];
     sheet.setName('運作與對話紀錄');
-    sheet.appendRow(["時間", "用戶名稱", "用戶識別碼", "操作類型", "用戶傳送內容", "AI辨識結果", "處理狀態"]);
+    sheet.appendRow(["時間", "用戶名稱", "用戶識別碼", "操作類型", "用戶傳送內容", "AI辨識結果", "回傳內容 / 處理狀態", "IP", "地理位置"]);
 
-    const headerRange = sheet.getRange(1, 1, 1, 7);
+    const headerRange = sheet.getRange(1, 1, 1, 9);
     headerRange.setBackground("#000000").setFontColor("#FDE047").setFontWeight("bold").setFontSize(11);
     sheet.setFrozenRows(1);
     sheet.setColumnWidth(1, 160);
@@ -1071,7 +1071,9 @@ function getOrCreateLogSheet(props) {
     sheet.setColumnWidth(4, 120);
     sheet.setColumnWidth(5, 280);
     sheet.setColumnWidth(6, 280);
-    sheet.setColumnWidth(7, 200);
+    sheet.setColumnWidth(7, 320);
+    sheet.setColumnWidth(8, 140);
+    sheet.setColumnWidth(9, 140);
 
     return ss;
   } catch (err) {
