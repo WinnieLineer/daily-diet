@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2 } from 'lucide-react';
+import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, PhoneCall, Mic } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
@@ -30,7 +30,7 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.1.0';
+export const LATEST_WHATSNEW_VERSION = '3.2.0';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
@@ -38,6 +38,7 @@ export const hasWhatsNewContent = (lastSeenVersion) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show320 = isNewer('3.2.0', lastSeenVersion);
   const show310 = isNewer('3.1.0', lastSeenVersion);
   const show300 = isNewer('3.0.0', lastSeenVersion);
   const show250 = isNewer('2.5.0', lastSeenVersion);
@@ -101,6 +102,36 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show320 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v320_header')}</div>
+                  
+                  <FeatureItem 
+                    icon={PhoneCall}
+                    title={t('whatsnew_v320_live_call_title')}
+                    description={t('whatsnew_v320_live_call_desc')}
+                    color="bg-emerald-400"
+                  />
+                  <FeatureItem 
+                    icon={Mic}
+                    title={t('whatsnew_v320_line_voice_title')}
+                    description={t('whatsnew_v320_line_voice_desc')}
+                    color="bg-cyan-300"
+                  />
+                  <FeatureItem 
+                    icon={Zap}
+                    title={t('whatsnew_v320_ai_routing_title')}
+                    description={t('whatsnew_v320_ai_routing_desc')}
+                    color="bg-amber-300"
+                  />
+                  <FeatureItem 
+                    icon={BarChart2}
+                    title={t('whatsnew_v320_log_filter_title')}
+                    description={t('whatsnew_v320_log_filter_desc')}
+                    color="bg-fuchsia-300"
+                  />
+                </div>
+              )}
               {show310 && (
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v310_header')}</div>
