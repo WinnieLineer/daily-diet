@@ -37,7 +37,8 @@ import {
   Code,
   MapPin,
   ShieldAlert,
-  Download
+  Download,
+  X
 } from 'lucide-react';
 import NeoButton from './NeoButton';
 
@@ -195,9 +196,25 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [viewMode, setViewMode] = useState('kibana'); // 'kibana' (table) or 'cards' (stream)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
+  const [selectedActionType, setSelectedActionType] = useState('ALL');
   const [autoRefreshInterval, setAutoRefreshInterval] = useState(10); // seconds (0 = off)
   const [countdown, setCountdown] = useState(10);
   const [copiedId, setCopiedId] = useState(null);
+
+  // 🎯 操作類型切換與聯動
+  const handleSelectActionType = (actType) => {
+    setSelectedActionType(actType);
+    if (actType !== 'ALL') {
+      setSelectedCategory('ALL'); // 避免大類別互斥過濾
+    }
+  };
+
+  const handleSelectCategory = (catId) => {
+    setSelectedCategory(catId);
+    if (catId !== 'ALL') {
+      setSelectedActionType('ALL'); // 切換大類別時重設細部操作類型
+    }
+  };
 
   // 📑 Kibana Row Expansion & Inspector States
   const [expandedRowIds, setExpandedRowIds] = useState(new Set([0])); // default expand 1st row
@@ -514,12 +531,29 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     ];
   }, [isEn, normalizedLogs]);
 
+  // ⚡ 動態統計所有日誌中的具體操作類型及其計數 (支援所有自訂操作類型)
+  const allActionTypes = useMemo(() => {
+    if (!normalizedLogs || !normalizedLogs.length) return [];
+    const countMap = {};
+    normalizedLogs.forEach((log) => {
+      const t = (log.type || '未分類').trim();
+      countMap[t] = (countMap[t] || 0) + 1;
+    });
+    return Object.entries(countMap).sort((a, b) => b[1] - a[1]);
+  }, [normalizedLogs]);
+
   const filteredLogs = useMemo(() => {
     if (!normalizedLogs || !normalizedLogs.length) return [];
     return normalizedLogs.filter((log) => {
       const { time, userName, userId, type, input, aiResult, output, source, ip, location } = log;
 
-      // Category matching
+      // 1. 精確操作類型篩選 (Action Type Filter - 支援全量操作類型)
+      if (selectedActionType !== 'ALL') {
+        const logType = (type || '未分類').trim();
+        if (logType !== selectedActionType) return false;
+      }
+
+      // 2. 既有大分類篩選 (Category matching)
       if (selectedCategory === 'LOGIN') {
         const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer' || input.includes('IP:');
         if (!isLogin) return false;
@@ -532,7 +566,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       if (selectedCategory === 'SYNC' && !type.includes('Web') && !type.includes('同步')) return false;
       if (selectedCategory === 'ALERT' && !type.includes('異常') && !type.includes('Alert') && !type.includes('錯誤') && !output.includes('失敗')) return false;
 
-      // Text Search matching (includes userName, location, ip, type, etc.)
+      // 3. 關鍵字全文搜尋
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const fullContent = `${time} ${userName} ${userId} ${type} ${input} ${aiResult} ${output} ${source} ${ip} ${location}`.toLowerCase();
@@ -541,7 +575,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
       return true;
     });
-  }, [normalizedLogs, selectedCategory, searchQuery]);
+  }, [normalizedLogs, selectedCategory, selectedActionType, searchQuery]);
 
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
@@ -1074,22 +1108,76 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           </div>
         </div>
 
-        {/* Category Filter Pills */}
-        <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-1">
-          {categories.map((cat) => (
-            <button
-              key={cat.id}
-              onClick={() => setSelectedCategory(cat.id)}
-              className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${
-                selectedCategory === cat.id
-                  ? 'bg-black text-white border-black shadow-neo-xs'
-                  : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-black'
-              }`}
+        {/* Category Filter Pills & Action Type Selector */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 pt-1 border-t-2 border-dashed border-zinc-100">
+          {/* 大類別標籤列 */}
+          <div className="flex gap-1.5 overflow-x-auto custom-scrollbar pb-1 pt-1 flex-1">
+            {categories.map((cat) => (
+              <button
+                key={cat.id}
+                onClick={() => handleSelectCategory(cat.id)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-black whitespace-nowrap transition-all border-2 ${
+                  selectedCategory === cat.id && selectedActionType === 'ALL'
+                    ? 'bg-black text-white border-black shadow-neo-xs'
+                    : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-black'
+                }`}
+              >
+                {cat.label}
+              </button>
+            ))}
+          </div>
+
+          {/* ⚡ 全量操作類型精確下拉篩選 (支援全部自訂 action/type) */}
+          <div className="flex items-center gap-1.5 bg-zinc-50 border-2 border-black rounded-xl px-2.5 py-1 shadow-neo-xs shrink-0 self-start md:self-auto">
+            <Filter size={13} className="text-zinc-600 shrink-0" />
+            <span className="text-[11px] font-black text-zinc-600 whitespace-nowrap hidden sm:inline">
+              {isEn ? 'Action Type:' : '操作類型:'}
+            </span>
+            <select
+              value={selectedActionType}
+              onChange={(e) => handleSelectActionType(e.target.value)}
+              className="bg-transparent text-xs font-black text-black outline-none cursor-pointer pr-1 max-w-[180px] sm:max-w-none"
             >
-              {cat.label}
-            </button>
-          ))}
+              <option value="ALL">
+                {isEn ? `⚡ All Action Types (${normalizedLogs.length})` : `⚡ 全部操作類型 (${normalizedLogs.length})`}
+              </option>
+              {allActionTypes.map(([actType, count]) => (
+                <option key={actType} value={actType}>
+                  {actType} ({count})
+                </option>
+              ))}
+            </select>
+            {selectedActionType !== 'ALL' && (
+              <button
+                onClick={() => handleSelectActionType('ALL')}
+                className="text-zinc-400 hover:text-black p-0.5 rounded hover:bg-zinc-200 transition-colors"
+                title={isEn ? 'Reset action type filter' : '重設操作類型篩選'}
+              >
+                <X size={13} />
+              </button>
+            )}
+          </div>
         </div>
+
+        {/* 作用中的操作類型篩選提示條 */}
+        {selectedActionType !== 'ALL' && (
+          <div className="flex flex-wrap items-center gap-2 bg-amber-50 border-2 border-amber-300 rounded-xl px-3 py-1.5 text-xs font-bold text-amber-900">
+            <span>🎯 {isEn ? 'Filtering specific action type:' : '目前僅篩選操作類型：'}</span>
+            <span className="bg-black text-white px-2.5 py-0.5 rounded-md font-mono font-black text-[11px] flex items-center gap-1">
+              {selectedActionType}
+            </span>
+            <span className="text-zinc-500 font-normal">
+              ({filteredLogs.length} {isEn ? 'records' : '筆符合'})
+            </span>
+            <button
+              onClick={() => handleSelectActionType('ALL')}
+              className="ml-auto text-xs underline hover:text-black font-black flex items-center gap-1 cursor-pointer"
+            >
+              <X size={12} />
+              {isEn ? 'Clear Filter' : '清除篩選'}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ==========================================
@@ -1202,7 +1290,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                           {/* Action Badge */}
                           <td className="py-3 px-3 whitespace-nowrap">
-                            <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${badgeClass}`}>
+                            <span 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                if (type) handleSelectActionType(type);
+                              }}
+                              title={isEn ? `Filter action: "${type}"` : `點擊直接篩選操作類型：「${type}」`}
+                              className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border cursor-pointer hover:ring-2 hover:ring-black transition-all ${badgeClass}`}
+                            >
                               {isLogin && '🛡️'}
                               {isFallback && '🔄'}
                               {isAlert && '🚨'}
@@ -1469,7 +1564,13 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                         <Clock size={12} />
                         {time}
                       </span>
-                      <span className={`text-[10px] uppercase px-2.5 py-0.5 rounded-full border ${badgeBg}`}>
+                      <span 
+                        onClick={() => {
+                          if (type) handleSelectActionType(type);
+                        }}
+                        title={isEn ? `Filter action: "${type}"` : `點擊直接篩選操作類型：「${type}」`}
+                        className={`text-[10px] uppercase px-2.5 py-0.5 rounded-full border cursor-pointer hover:ring-2 hover:ring-black transition-all ${badgeBg}`}
+                      >
                         {isLogin && '🛡️ '}
                         {type || '系統操作'}
                       </span>
