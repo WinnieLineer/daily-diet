@@ -1015,34 +1015,36 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
 
   Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
-  // 1. 高速暫存快取 (精簡巨大欄位，確保在 GAS 9KB 限制內可容納更多秒級即時日誌)
+  // 1. 本地多槽位高速暫存 (Multi-Slot 高速快取，突破 9KB 限制，可容納 180+ 筆)
   try {
-    let recentLogs = [];
-    const raw = props.getProperty('SYSTEM_RECENT_LOGS');
-    if (raw) recentLogs = JSON.parse(raw);
-
     const cacheItem = {
       time: logItem.time,
       userName: logItem.userName,
       userId: logItem.userId,
       type: logItem.type,
-      input: logItem.input ? logItem.input.slice(0, 300) : '',
-      aiResult: logItem.aiResult ? logItem.aiResult.slice(0, 300) : '',
-      output: logItem.output ? logItem.output.slice(0, 300) : '',
+      input: logItem.input ? logItem.input.slice(0, 500) : '',
+      aiResult: logItem.aiResult ? logItem.aiResult.slice(0, 500) : '',
+      output: logItem.output ? logItem.output.slice(0, 500) : '',
       ip: logItem.ip,
-      location: logItem.location
+      location: logItem.location,
+      device: logItem.device
     };
-    recentLogs.unshift(cacheItem);
-    while (recentLogs.length > 0 && JSON.stringify(recentLogs).length > 8000) {
-      recentLogs.pop();
-    }
-    if (recentLogs.length > 60) recentLogs = recentLogs.slice(0, 60);
-    props.setProperty('SYSTEM_RECENT_LOGS', JSON.stringify(recentLogs));
+    appendToLocalCachedLogs(cacheItem, props);
   } catch (e) {
     console.error("儲存實時日誌快取失敗:", e);
   }
 
-  // 2. Google 試算表存檔 (全量無損永久存檔，保證至少留存一個月以上歷史)
+  // 2. GitHub Gist 永久無損雲端存檔 (透過 PAT，無須額外授權，永不消失)
+  try {
+    const pat = props.getProperty('GITHUB_PAT');
+    if (pat) {
+      syncLogToSystemGist(logItem, pat, props);
+    }
+  } catch (gistErr) {
+    console.warn("寫入 Gist 日誌庫失敗:", gistErr);
+  }
+
+  // 3. Google 試算表存檔 (備援存檔)
   try {
     const ss = getOrCreateLogSheet(props);
     if (ss) {
@@ -1060,7 +1062,184 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
       ]);
     }
   } catch (sheetErr) {
-    console.error("寫入 Google Sheet 日誌失敗:", sheetErr);
+    console.warn("寫入 Google Sheet 日誌失敗:", sheetErr);
+  }
+}
+
+// ========================================================
+// 📊 Multi-Slot 本地快取與 Gist 系統日誌持久化模組
+// ========================================================
+
+const LOG_SLOT_COUNT = 6;
+const LOG_SLOT_PREFIX = 'SYS_LOG_SLOT_';
+
+function deduplicateLogs(logs) {
+  const seen = new Set();
+  const deduped = [];
+  for (const log of (logs || [])) {
+    if (!log) continue;
+    const timeStr = String(log.time || '').trim();
+    const userStr = String(log.userId || log.userName || '').trim();
+    const typeStr = String(log.type || '').trim();
+    const inputStr = String(log.input || '').slice(0, 30).trim();
+    const key = `${timeStr}_${userStr}_${typeStr}_${inputStr}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      deduped.push(log);
+    }
+  }
+  deduped.sort((a, b) => String(b.time || '').localeCompare(String(a.time || '')));
+  return deduped;
+}
+
+function getLocalCachedLogs(props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const allCached = [];
+
+  // 1. 舊版單一屬性相容
+  try {
+    const legacyRaw = props.getProperty('SYSTEM_RECENT_LOGS');
+    if (legacyRaw) {
+      const parsed = JSON.parse(legacyRaw);
+      if (Array.isArray(parsed)) allCached.push(...parsed);
+    }
+  } catch (e) {}
+
+  // 2. Multi-Slot 分槽讀取 (突破 GAS 9KB 限制)
+  for (let i = 0; i < LOG_SLOT_COUNT; i++) {
+    try {
+      const raw = props.getProperty(`${LOG_SLOT_PREFIX}${i}`);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        if (Array.isArray(parsed)) allCached.push(...parsed);
+      }
+    } catch (e) {}
+  }
+
+  return deduplicateLogs(allCached);
+}
+
+function appendToLocalCachedLogs(logItem, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const currentLogs = getLocalCachedLogs(props);
+  currentLogs.unshift(logItem);
+
+  const trimmed = deduplicateLogs(currentLogs).slice(0, 180); // 本地保留最多 180 筆
+  const chunkSize = 30; // 每個 Slot 約 30 筆 (約 5KB~7KB)
+
+  for (let i = 0; i < LOG_SLOT_COUNT; i++) {
+    const chunk = trimmed.slice(i * chunkSize, (i + 1) * chunkSize);
+    if (chunk.length > 0) {
+      props.setProperty(`${LOG_SLOT_PREFIX}${i}`, JSON.stringify(chunk));
+    } else {
+      props.deleteProperty(`${LOG_SLOT_PREFIX}${i}`);
+    }
+  }
+
+  try {
+    props.setProperty('SYSTEM_RECENT_LOGS', JSON.stringify(trimmed.slice(0, 20)));
+  } catch (e) {}
+}
+
+function getOrCreateSystemLogsGist(pat, props) {
+  if (!pat) return '';
+  if (!props) props = PropertiesService.getScriptProperties();
+  const gistKey = 'SYSTEM_LOGS_GIST_ID';
+  let gistId = props.getProperty(gistKey);
+  if (gistId) return gistId;
+
+  try {
+    const createRes = UrlFetchApp.fetch('https://api.github.com/gists', {
+      method: 'post',
+      headers: {
+        'Authorization': `Bearer ${pat}`,
+        'Accept': 'application/vnd.github+json',
+        'Content-Type': 'application/json'
+      },
+      payload: JSON.stringify({
+        description: '📊 Daily Diet System Audit Logs (永久無損雲端日誌庫)',
+        public: false,
+        files: {
+          'daily-diet-system-logs.json': {
+            content: JSON.stringify({
+              createdAt: new Date().toISOString(),
+              retentionPolicy: 'Permanent (GitHub Gist)',
+              logs: []
+            }, null, 2)
+          }
+        }
+      }),
+      muteHttpExceptions: true
+    });
+
+    if (createRes.getResponseCode() === 201) {
+      const data = JSON.parse(createRes.getContentText());
+      gistId = data.id;
+      props.setProperty(gistKey, gistId);
+      console.log(`✅ [Gist 日誌庫] 成功建立專屬系統審計 Gist: ${gistId}`);
+      return gistId;
+    }
+  } catch (e) {
+    console.error("建立系統日誌 Gist 失敗:", e);
+  }
+  return '';
+}
+
+function syncLogToSystemGist(logItem, pat, props) {
+  if (!pat) return;
+  if (!props) props = PropertiesService.getScriptProperties();
+  const gistId = getOrCreateSystemLogsGist(pat, props);
+  if (!gistId) return;
+
+  try {
+    const gistUrl = `https://api.github.com/gists/${gistId}`;
+    const getRes = UrlFetchApp.fetch(gistUrl, {
+      headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+      muteHttpExceptions: true
+    });
+
+    if (getRes.getResponseCode() === 200) {
+      const fileContent = JSON.parse(getRes.getContentText()).files?.['daily-diet-system-logs.json']?.content;
+      let logData = { logs: [] };
+      if (fileContent) {
+        try { logData = JSON.parse(fileContent); } catch (e) {}
+      }
+      if (!Array.isArray(logData.logs)) logData.logs = [];
+
+      const exists = logData.logs.some(l => 
+        l.time === logItem.time && 
+        l.userId === logItem.userId && 
+        l.type === logItem.type && 
+        (l.input || '').slice(0, 30) === (logItem.input || '').slice(0, 30)
+      );
+      if (!exists) {
+        logData.logs.unshift(logItem);
+      }
+
+      // 保留多達 3,000 筆紀錄（約 1.5MB，Gist 上限為 100MB）
+      if (logData.logs.length > 3000) {
+        logData.logs = logData.logs.slice(0, 3000);
+      }
+
+      UrlFetchApp.fetch(gistUrl, {
+        method: 'patch',
+        headers: {
+          'Authorization': `Bearer ${pat}`,
+          'Accept': 'application/vnd.github+json',
+          'Content-Type': 'application/json'
+        },
+        payload: JSON.stringify({
+          files: {
+            'daily-diet-system-logs.json': {
+              content: JSON.stringify(logData)
+            }
+          }
+        }),
+        muteHttpExceptions: true
+      });
+    }
+  } catch (e) {
+    console.warn("同步日誌至 System Gist 失敗:", e);
   }
 }
 
@@ -1100,52 +1279,64 @@ function getOrCreateLogSheet(props) {
 
     return ss;
   } catch (err) {
-    console.error("自動建立 Google Sheet 日誌失敗:", err);
+    console.warn("自動建立 Google Sheet 日誌失敗 (可能是權限未授權):", err);
     return null;
   }
 }
 
 /**
- * 取得完整運作日誌：預設從 Google 試算表（永久存檔）載入至少 30 天之完整歷史紀錄
- * @param {number} limit 最大回傳筆數 (預設 500，上限 1000)
+ * 取得完整運作日誌：結合 Gist 永久無損存檔、Google 試算表與 Multi-Slot 本地秒級快取
+ * @param {number} limit 最大回傳筆數 (預設 1000)
  * @param {number} days 回溯天數 (預設 30 天)
  */
 function getRecentLogsData(limit, days) {
-  const targetLimit = limit ? Number(limit) : 500;
+  const targetLimit = limit ? Number(limit) : 1000;
   const targetDays = (typeof days !== 'undefined' && days !== null) ? Number(days) : 30; // 預設 30 天
-  let logsFromSheet = [];
+  const props = PropertiesService.getScriptProperties();
+  const pat = props.getProperty('GITHUB_PAT');
+  let allLogs = [];
 
-  // 1. 優先從 Google 試算表讀取（永久保存，至少保留一個月以上歷史）
+  // 1. 優先從 GitHub Gist 讀取（全量永久保存，無損無大小上限）
+  if (pat) {
+    const gistId = getOrCreateSystemLogsGist(pat, props);
+    if (gistId) {
+      try {
+        const gistUrl = `https://api.github.com/gists/${gistId}`;
+        const getRes = UrlFetchApp.fetch(gistUrl, {
+          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (getRes.getResponseCode() === 200) {
+          const fileContent = JSON.parse(getRes.getContentText()).files?.['daily-diet-system-logs.json']?.content;
+          if (fileContent) {
+            const data = JSON.parse(fileContent);
+            if (data.logs && Array.isArray(data.logs)) {
+              allLogs = data.logs;
+            }
+          }
+        }
+      } catch (e) {
+        console.warn("從 System Gist 載入日誌失敗:", e);
+      }
+    }
+  }
+
+  // 2. 備援：若有 Google Sheet 紀錄，雙向合併
   try {
-    const props = PropertiesService.getScriptProperties();
     const ss = getOrCreateLogSheet(props);
     if (ss) {
       const sheet = ss.getSheets()[0];
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) {
-        // 最多抓取 1000 筆或試算表所有現有列
-        const maxFetch = Math.min(lastRow - 1, targetLimit > 0 ? Math.min(targetLimit, 1000) : 1000);
+        const maxFetch = Math.min(lastRow - 1, 1000);
         const startRow = lastRow - maxFetch + 1;
         const rawValues = sheet.getRange(startRow, 1, maxFetch, 9).getValues();
-
-        const now = Date.now();
-        const cutoff = targetDays > 0 ? now - (targetDays * 24 * 60 * 60 * 1000) : 0;
-
-        // 倒序排列（最新排在最上面）
+        const sheetLogs = [];
         for (let i = rawValues.length - 1; i >= 0; i--) {
           const row = rawValues[i];
           const timeStr = String(row[0] || '').trim();
           if (!timeStr) continue;
-
-          // 若有設定天數過濾 (預設 30 天留存)
-          if (cutoff > 0) {
-            const rowTime = new Date(timeStr).getTime();
-            if (!isNaN(rowTime) && rowTime < cutoff) {
-              continue; // 略過早於設定天數的舊資料
-            }
-          }
-
-          logsFromSheet.push({
+          sheetLogs.push({
             time: timeStr,
             userName: String(row[1] || '用戶'),
             userId: String(row[2] || ''),
@@ -1156,50 +1347,58 @@ function getRecentLogsData(limit, days) {
             ip: String(row[7] || ''),
             location: String(row[8] || '')
           });
-
-          if (targetLimit > 0 && logsFromSheet.length >= targetLimit) {
-            break;
-          }
         }
+        allLogs = deduplicateLogs(allLogs.concat(sheetLogs));
       }
     }
-  } catch (sheetErr) {
-    console.warn("從 Google Sheet 讀取全量日誌失敗，將降級讀取快取:", sheetErr);
+  } catch (sheetErr) {}
+
+  // 3. 雙向合併 Multi-Slot 快取 (確保最新幾秒尚未 flush 至 Gist 的秒級紀錄即時呈現)
+  const localLogs = getLocalCachedLogs(props);
+  if (localLogs.length > 0) {
+    allLogs = deduplicateLogs(localLogs.concat(allLogs));
   }
 
-  // 2. 雙向合併快取：確保最新幾秒內產生的快取亦無縫呈現在最上方
-  try {
-    const props = PropertiesService.getScriptProperties();
-    const raw = props.getProperty('SYSTEM_RECENT_LOGS');
-    if (raw) {
-      const cacheLogs = JSON.parse(raw);
-      if (Array.isArray(cacheLogs) && cacheLogs.length > 0) {
-        const existingKeys = new Set(logsFromSheet.map(function(l) { return `${l.time}_${l.userId}_${l.type}`; }));
-        const newUnsynced = cacheLogs.filter(function(l) { return !existingKeys.has(`${l.time}_${l.userId}_${l.type}`); });
-        if (newUnsynced.length > 0) {
-          logsFromSheet = newUnsynced.concat(logsFromSheet);
-        }
+  // 若 Gist 是新建或數量少於現有合併日誌，自動全量回寫至 Gist 完成初次歷史遷移
+  if (pat && allLogs.length > 0) {
+    try {
+      const gistId = props.getProperty('SYSTEM_LOGS_GIST_ID');
+      if (gistId) {
+        UrlFetchApp.fetch(`https://api.github.com/gists/${gistId}`, {
+          method: 'patch',
+          headers: {
+            'Authorization': `Bearer ${pat}`,
+            'Accept': 'application/vnd.github+json',
+            'Content-Type': 'application/json'
+          },
+          payload: JSON.stringify({
+            files: {
+              'daily-diet-system-logs.json': {
+                content: JSON.stringify({
+                  updatedAt: new Date().toISOString(),
+                  logs: allLogs.slice(0, 3000)
+                })
+              }
+            }
+          }),
+          muteHttpExceptions: true
+        });
       }
-    }
-  } catch (e) {}
-
-  if (logsFromSheet && logsFromSheet.length > 0) {
-    return targetLimit > 0 ? logsFromSheet.slice(0, targetLimit) : logsFromSheet;
+    } catch (e) {}
   }
 
-  // 3. 備援降級：若 Google Sheet 空白或出錯，返回 Properties 快取
-  try {
-    const props = PropertiesService.getScriptProperties();
-    const raw = props.getProperty('SYSTEM_RECENT_LOGS');
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed)) {
-        return targetLimit ? parsed.slice(0, targetLimit) : parsed;
-      }
-    }
-  } catch (e) {}
+  // 4. 依照 targetDays 過濾 (預設 30 天)
+  const now = Date.now();
+  const cutoff = targetDays > 0 ? now - (targetDays * 24 * 60 * 60 * 1000) : 0;
+  if (cutoff > 0) {
+    allLogs = allLogs.filter(function(l) {
+      if (!l.time) return true;
+      const t = new Date(l.time).getTime();
+      return isNaN(t) || t >= cutoff;
+    });
+  }
 
-  return [];
+  return targetLimit > 0 ? allLogs.slice(0, targetLimit) : allLogs;
 }
 
 function recordAiUsageAttempt(model, isSuccess, props) {

@@ -418,7 +418,40 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           }
         }
 
-        setRawLogs(fetchedLogs);
+        setRawLogs((prev) => {
+          const seen = new Set();
+          const combined = [];
+          for (const item of (fetchedLogs || [])) {
+            const timeStr = String(item.time || item[0] || '').trim();
+            const userStr = String(item.userId || item.userName || item[1] || item[2] || '').trim();
+            const typeStr = String(item.type || item[3] || '').trim();
+            const inputStr = String(item.input || item[4] || '').slice(0, 30).trim();
+            const k = `${timeStr}_${userStr}_${typeStr}_${inputStr}`;
+            if (!seen.has(k)) {
+              seen.add(k);
+              combined.push(item);
+            }
+          }
+          // 保留之前已載入的歷史日誌，防止任何短暫中斷導致日誌消失
+          for (const item of (prev || [])) {
+            const timeStr = String(item.time || item[0] || '').trim();
+            const userStr = String(item.userId || item.userName || item[1] || item[2] || '').trim();
+            const typeStr = String(item.type || item[3] || '').trim();
+            const inputStr = String(item.input || item[4] || '').slice(0, 30).trim();
+            const k = `${timeStr}_${userStr}_${typeStr}_${inputStr}`;
+            if (!seen.has(k)) {
+              seen.add(k);
+              combined.push(item);
+            }
+          }
+          combined.sort((a, b) => {
+            const timeA = String(a.time || a[0] || '');
+            const timeB = String(b.time || b[0] || '');
+            return timeB.localeCompare(timeA);
+          });
+          return combined;
+        });
+
         setAiQuota(data.aiQuota || null);
         if (data.sheetUrl) setSheetUrl(data.sheetUrl);
         setLastFetchedAt(new Date());
@@ -838,16 +871,17 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               {isLoading ? (isEn ? 'Syncing...' : '讀取中...') : (isEn ? 'Refresh' : '重新整理')}
             </NeoButton>
 
-            {/* Google Sheets Link */}
+            {/* Cloud Archive / Google Sheets Link */}
             {sheetUrl && (
               <a
                 href={sheetUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="h-10 px-3 bg-emerald-50 border-2 border-black rounded-2xl flex items-center gap-1.5 text-xs font-black text-emerald-900 hover:bg-emerald-100 transition-colors shadow-neo-xs"
+                title={sheetUrl.includes('gist') ? '前往 GitHub Gist 永久日誌庫' : '前往 Google Sheets 試算表'}
               >
                 <FileSpreadsheet size={14} />
-                <span className="hidden sm:inline">{isEn ? 'Google Sheet' : '雲端試算表'}</span>
+                <span className="hidden sm:inline">{sheetUrl.includes('gist') ? (isEn ? 'Gist Archive' : 'Gist 雲端日誌庫') : (isEn ? 'Google Sheet' : '雲端試算表')}</span>
                 <ExternalLink size={12} />
               </a>
             )}

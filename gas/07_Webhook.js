@@ -230,7 +230,9 @@ function doGet(e) {
       const days = typeof e?.parameter?.days !== 'undefined' ? Number(e?.parameter?.days) : 30;
       const logs = getRecentLogsData(limit, days);
       const sheetId = props.getProperty('LOG_SHEET_ID');
-      const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
+      const gistLogsId = props.getProperty('SYSTEM_LOGS_GIST_ID');
+      const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : (gistLogsId ? `https://gist.github.com/${gistLogsId}` : '');
+      const gistUrl = gistLogsId ? `https://gist.github.com/${gistLogsId}` : '';
       const aiQuota = getAiQuotaStats(props);
       let lastMaintainerLogin = null;
       try {
@@ -241,9 +243,10 @@ function doGet(e) {
         status: 'ok', 
         logs, 
         sheetUrl, 
+        gistUrl,
         aiQuota, 
         lastMaintainerLogin,
-        retentionPolicy: 'Google Sheets 永久存檔 (最少留存 30 天以上)',
+        retentionPolicy: 'GitHub Gist 雲端永久無損存檔 + Multi-Slot 高速快取 (最少留存 30 天以上)',
         daysRequested: days,
         totalLogsReturned: logs.length 
       })).setMimeType(ContentService.MimeType.JSON);
