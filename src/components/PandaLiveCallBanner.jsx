@@ -47,7 +47,17 @@ export default function PandaLiveCallBanner({ onStartCall }) {
 
         {/* Big Action Call Button */}
         <button
-          onClick={onStartCall}
+          onClick={() => {
+            if (typeof window !== 'undefined' && window.speechSynthesis) {
+              try {
+                window.speechSynthesis.cancel();
+                const unlock = new SpeechSynthesisUtterance(' ');
+                unlock.volume = 0.01;
+                window.speechSynthesis.speak(unlock);
+              } catch (e) {}
+            }
+            onStartCall();
+          }}
           className="w-full bg-emerald-400 text-black h-14 rounded-2xl flex items-center justify-center gap-3 font-black text-base sm:text-lg border-2 border-black shadow-neo hover:bg-emerald-300 hover:scale-[1.01] active:scale-95 transition-all cursor-pointer mt-1"
         >
           <div className="bg-black text-emerald-400 p-1.5 rounded-xl border border-black/20 animate-bounce">

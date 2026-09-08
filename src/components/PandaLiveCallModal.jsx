@@ -1,21 +1,16 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { 
   PhoneOff, 
   Mic, 
   MicOff, 
   Volume2, 
   VolumeX, 
-  Sparkles, 
   Send, 
-  Clock, 
-  Flame, 
-  HeartHandshake, 
-  ShieldAlert,
   Radio
 } from 'lucide-react';
 import { t, getLanguage } from '../lib/translations';
-import { getPandaAdvice } from '../lib/groq';
+import { completeText } from '../lib/gemini';
 
 export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goals }) {
   if (!isOpen) return null;
@@ -37,8 +32,8 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       intro: isEn 
         ? "Hello? Why are you calling me during gym hours? Speak up, what did you eat today?" 
         : "喂？飲控時間突然打電話來幹嘛？哼，說吧，今天又偷吃了什麼？",
-      pitch: 1.2,
-      rate: 1.15
+      pitch: 1.15,
+      rate: 1.1
     },
     gentle: {
       avatar: '🐼',
@@ -60,7 +55,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
         ? "WHAT'S UP! Are you resting or working out?! Report your calories right now! GO GO GO!" 
         : "喂！動起來沒有！現在打來最好是有認真吃蛋白質！今天吃了多少卡路里，立刻報上來！",
       pitch: 0.85,
-      rate: 1.25
+      rate: 1.2
     }
   }[activePersona] || {
     avatar: '🐼',
@@ -83,15 +78,15 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
   const [interimUserText, setInterimUserText] = useState('');
   const [coachStatus, setCoachStatus] = useState('speaking_intro'); // 'listening' | 'thinking' | 'speaking' | 'speaking_intro'
   const [textInput, setTextInput] = useState('');
-  const [hasSpeechRecognitionSupport, setHasSpeechRecognitionSupport] = useState(true);
 
   const recognitionRef = useRef(null);
   const scrollEndRef = useRef(null);
   const timerRef = useRef(null);
-  const synthRef = useRef(typeof window !== 'undefined' ? window.speechSynthesis : null);
   const silenceTimerRef = useRef(null);
+  const isProcessingRef = useRef(false);
+  const lastSpokenRef = useRef({ text: '', time: 0 });
 
-  // 🕒 Call Timer
+  // 🕒 Call Duration Timer
   useEffect(() => {
     if (callStatus === 'connected') {
       timerRef.current = setInterval(() => {
@@ -108,65 +103,168 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     scrollEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [transcriptHistory, interimUserText, coachStatus]);
 
-  // 🔊 TTS Speak Function
-  const speakText = (text) => {
-    if (!isSpeakerOn || !synthRef.current) return;
+  // 🎙️ Helper: Pause/Resume recognition to prevent coach's own voice from looping back
+  const pauseRecognition = () => {
     try {
-      synthRef.current.cancel(); // Stop ongoing speech
-      const utterance = new SpeechSynthesisUtterance(text);
+      if (recognitionRef.current) {
+        recognitionRef.current.abort();
+      }
+    } catch (e) {}
+  };
+
+  const resumeRecognition = () => {
+    if (isMuted || isProcessingRef.current) return;
+    try {
+      if (recognitionRef.current) {
+        recognitionRef.current.start();
+      }
+    } catch (e) {}
+  };
+
+  // 🔊 TTS Speak Function with Voice Matching & Autoplay Safety
+  const speakText = (text) => {
+    if (!isSpeakerOn || typeof window === 'undefined' || !window.speechSynthesis) {
+      setCoachStatus('listening');
+      isProcessingRef.current = false;
+      resumeRecognition();
+      return;
+    }
+
+    try {
+      window.speechSynthesis.cancel();
+      // Remove emojis & markdown symbols for cleaner speech
+      const cleanSpeech = text
+        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
+        .replace(/[*#_~`]/g, '')
+        .trim();
+
+      if (!cleanSpeech) {
+        setCoachStatus('listening');
+        isProcessingRef.current = false;
+        resumeRecognition();
+        return;
+      }
+
+      const utterance = new SpeechSynthesisUtterance(cleanSpeech);
       utterance.lang = isEn ? 'en-US' : 'zh-TW';
       utterance.pitch = personaConfig.pitch;
       utterance.rate = personaConfig.rate;
-      utterance.onend = () => {
+
+      // Select natural voice
+      const voices = window.speechSynthesis.getVoices();
+      if (voices && voices.length > 0) {
+        const targetPrefix = isEn ? 'en' : 'zh';
+        const bestVoice = voices.find(v => 
+          v.lang.toLowerCase().startsWith(targetPrefix) || 
+          v.lang.includes('TW') || 
+          v.lang.includes('cmn') || 
+          v.lang.includes('HK')
+        );
+        if (bestVoice) utterance.voice = bestVoice;
+      }
+
+      let isFinished = false;
+      const onSpeechDone = () => {
+        if (isFinished) return;
+        isFinished = true;
         setCoachStatus('listening');
+        isProcessingRef.current = false;
+        resumeRecognition();
       };
-      utterance.onerror = () => {
-        setCoachStatus('listening');
+
+      utterance.onend = onSpeechDone;
+      utterance.onerror = (err) => {
+        console.warn("TTS playback error:", err);
+        onSpeechDone();
       };
-      synthRef.current.speak(utterance);
+
+      // Fallback timeout in case browser hangs on onend
+      setTimeout(() => {
+        if (!isFinished) onSpeechDone();
+      }, Math.max(3000, cleanSpeech.length * 400));
+
+      window.speechSynthesis.speak(utterance);
     } catch (e) {
-      console.warn("TTS Error:", e);
+      console.warn("Speech synthesis error:", e);
       setCoachStatus('listening');
+      isProcessingRef.current = false;
+      resumeRecognition();
     }
   };
 
-  // 🤖 Process User Query and Get Coach Answer
+  // 🤖 Process User Query and Get Coach Answer (Strict Deduplication & Loop Defense)
   const handleUserSpoke = async (spokenText) => {
     if (!spokenText || !spokenText.trim()) return;
     const cleanText = spokenText.trim();
 
+    // 🛡️ 1. Double-Send Protection
+    if (isProcessingRef.current) return;
+    const now = Date.now();
+    if (lastSpokenRef.current.text === cleanText && (now - lastSpokenRef.current.time) < 3000) {
+      return;
+    }
+    lastSpokenRef.current = { text: cleanText, time: now };
+    isProcessingRef.current = true;
+
+    // Clear any pending silence timer
+    if (silenceTimerRef.current) {
+      clearTimeout(silenceTimerRef.current);
+      silenceTimerRef.current = null;
+    }
+
+    // Immediately pause recognition so coach's own reply won't be captured!
+    pauseRecognition();
+
     // Add user message to history
-    setTranscriptHistory(prev => [...prev, { sender: 'user', text: cleanText, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }]);
+    setTranscriptHistory(prev => [
+      ...prev, 
+      { sender: 'user', text: cleanText, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }
+    ]);
     setInterimUserText('');
     setCoachStatus('thinking');
 
     try {
-      // Build context
       const cals = todaySummary?.calories || 0;
       const calGoal = goals?.calories || 2000;
       const prot = todaySummary?.protein || 0;
       const protGoal = goals?.protein || 100;
-      const context = isEn
-        ? `[Live Phone Call Context] Today user ate ${cals}/${calGoal} kcal, ${prot}/${protGoal}g protein. User said on the phone: "${cleanText}". Give a snappy, spoken conversational response under 45 words in your persona style.`
-        : `【即時電話語音熱線】今日使用者已攝取 ${cals}/${calGoal} 大卡，蛋白質 ${prot}/${protGoal} 克。使用者在電話中對你說：「${cleanText}」。請以你的人設風格，口語化給予 60 字以內直接、犀利或親切的即時通話語音回覆。若使用者有提到吃什麼，順便點評。`;
 
-      let reply = await getPandaAdvice(cals, calGoal, prot, protGoal, cleanText, isEn ? 'en' : 'zh');
-      if (!reply || reply.includes('保持健康')) {
-        // Fallback natural replies if needed
+      const prompt = `You are Daily Diet Panda Coach.
+Persona: ${activePersona} (${personaConfig.badge}).
+Today's progress: Calories ${cals}/${calGoal} kcal, Protein ${prot}/${protGoal}g.
+User is speaking to you directly in a live phone call: "${cleanText}".
+Reply in ${isEn ? 'English' : 'Traditional Chinese'}.
+CRITICAL REQUIREMENTS:
+1. Speak naturally as if answering a direct phone call.
+2. Keep it under 45 words, punchy and direct.
+3. If user mentioned eating something, evaluate briefly in your persona tone.
+4. NO markdown symbols, NO emojis, NO quotes, so TTS voice can read aloud cleanly.`;
+
+      let reply = await completeText(prompt);
+      
+      if (!reply || reply.includes('保持健康飲控節奏')) {
         reply = activePersona === 'tsundere'
-          ? (isEn ? "Hmph, noted! But don't you dare sneak snacks tonight!" : "哼，本教練聽到了！等一下晚餐最好給我乖乖吃蔬菜，不准偷吃甜點！")
+          ? (isEn ? "Hmph, noted! But don't you dare sneak snacks tonight, keep an eye on your calories!" : "哼，本教練聽到了！等一下最好給我乖乖吃蔬菜，不准偷吃甜點！")
           : activePersona === 'gentle'
-          ? (isEn ? "Got it! You're doing wonderful today, keep drinking water and rest well! 💖" : "收到囉～今天有認真注意飲食很棒！記得多喝點水喔，加油！💖")
-          : (isEn ? "UNDERSTOOD! Finish your water and hit the gym tonight!" : "收到！把剩下的水給我灌完，今晚深蹲做滿！動起來！🔥");
+          ? (isEn ? "Got it! You are doing wonderful today, remember to drink enough water and rest well! 💖" : "收到囉～今天有認真注意飲食很棒！記得多補充水分喔，加油！💖")
+          : (isEn ? "UNDERSTOOD! Finish your water and push your workouts today, let's go!" : "收到！把剩下的水給我灌完，今晚深蹲做滿！動起來！🔥");
       }
 
-      setTranscriptHistory(prev => [...prev, { sender: 'coach', text: reply, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }]);
+      setTranscriptHistory(prev => [
+        ...prev, 
+        { sender: 'coach', text: reply, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }
+      ]);
       setCoachStatus('speaking');
       speakText(reply);
     } catch (err) {
       console.error("Coach answer error:", err);
-      const fallback = isEn ? "Connection glitch! But keep up your diet discipline!" : "電話訊號有點雜音！總之今天飲控給我盯緊了！🐼";
-      setTranscriptHistory(prev => [...prev, { sender: 'coach', text: fallback, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }]);
+      const fallback = isEn 
+        ? "Line has some static! But stick strictly to your calorie goals today!" 
+        : "電話訊號有點雜音！總之今天的熱量目標給我盯緊了！";
+      setTranscriptHistory(prev => [
+        ...prev, 
+        { sender: 'coach', text: fallback, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }
+      ]);
       setCoachStatus('speaking');
       speakText(fallback);
     }
@@ -175,53 +273,68 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
   // 🎙️ Initialize Speech Recognition
   const startRecognition = () => {
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    if (!SpeechRecognition) {
-      setHasSpeechRecognitionSupport(false);
-      return;
-    }
+    if (!SpeechRecognition) return;
 
     try {
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+
       const recognition = new SpeechRecognition();
       recognition.continuous = true;
       recognition.interimResults = true;
       recognition.lang = isEn ? 'en-US' : 'zh-TW';
 
       recognition.onresult = (event) => {
+        if (isProcessingRef.current) return;
+
         let currentInterim = '';
         let finalPhrase = '';
 
         for (let i = event.resultIndex; i < event.results.length; ++i) {
-          if (event.results[i].isFinal) {
-            finalPhrase += event.results[i][0].transcript;
-          } else {
-            currentInterim += event.results[i][0].transcript;
+          const item = event.results[i];
+          if (item && item[0]) {
+            if (item.isFinal) {
+              finalPhrase += item[0].transcript;
+            } else {
+              currentInterim += item[0].transcript;
+            }
           }
         }
 
-        if (currentInterim) {
-          setInterimUserText(currentInterim);
+        // Clear existing debounce timer
+        if (silenceTimerRef.current) {
+          clearTimeout(silenceTimerRef.current);
+          silenceTimerRef.current = null;
         }
 
-        if (finalPhrase) {
-          handleUserSpoke(finalPhrase);
-        } else if (currentInterim) {
-          // Debounced auto-submit after user pauses for 1.8s
-          if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+        // 1. If final phrase received, immediately send!
+        if (finalPhrase && finalPhrase.trim()) {
+          setInterimUserText('');
+          handleUserSpoke(finalPhrase.trim());
+          return;
+        }
+
+        // 2. If interim speaking, display subtitle and set silence debounce timer
+        if (currentInterim && currentInterim.trim()) {
+          setInterimUserText(currentInterim);
           silenceTimerRef.current = setTimeout(() => {
-            if (currentInterim.trim().length > 1) {
-              handleUserSpoke(currentInterim);
+            if (currentInterim.trim().length > 1 && !isProcessingRef.current) {
+              handleUserSpoke(currentInterim.trim());
             }
-          }, 1800);
+          }, 1600);
         }
       };
 
       recognition.onerror = (e) => {
-        console.warn("Speech recognition error:", e.error);
+        if (e.error !== 'no-speech' && e.error !== 'aborted') {
+          console.warn("Speech recognition error:", e.error);
+        }
       };
 
       recognition.onend = () => {
-        // Auto-restart if not muted and still connected
-        if (callStatus === 'connected' && !isMuted) {
+        // Auto-restart only when call is active, not muted, and not currently processing/speaking
+        if (callStatus === 'connected' && !isMuted && !isProcessingRef.current) {
           try {
             recognition.start();
           } catch (e) {}
@@ -232,33 +345,33 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       recognitionRef.current = recognition;
     } catch (e) {
       console.warn("Failed to start speech recognition:", e);
-      setHasSpeechRecognitionSupport(false);
     }
   };
 
-  // 🚀 Start Call Flow
+  // 🚀 Start Call Flow on Mount
   useEffect(() => {
     // 1. Simulate fast dialing ring
     const connectTimer = setTimeout(() => {
       setCallStatus('connected');
-      // Speak intro greeting
+      isProcessingRef.current = true;
+      // Greet user
       setTranscriptHistory([
         { sender: 'coach', text: personaConfig.intro, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }
       ]);
       speakText(personaConfig.intro);
-      // Start microphone listening
+      // Init speech recognition instance
       startRecognition();
-    }, 1200);
+    }, 1000);
 
     return () => {
       clearTimeout(connectTimer);
-      if (recognitionRef.current) {
-        try { recognitionRef.current.stop(); } catch (e) {}
-      }
-      if (synthRef.current) {
-        try { synthRef.current.cancel(); } catch (e) {}
-      }
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (recognitionRef.current) {
+        try { recognitionRef.current.abort(); } catch (e) {}
+      }
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        try { window.speechSynthesis.cancel(); } catch (e) {}
+      }
     };
   }, []);
 
@@ -266,10 +379,10 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
   const handleToggleMute = () => {
     if (isMuted) {
       setIsMuted(false);
-      try { recognitionRef.current?.start(); } catch (e) {}
+      resumeRecognition();
     } else {
       setIsMuted(true);
-      try { recognitionRef.current?.stop(); } catch (e) {}
+      pauseRecognition();
     }
   };
 
@@ -277,7 +390,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
   const handleToggleSpeaker = () => {
     if (isSpeakerOn) {
       setIsSpeakerOn(false);
-      synthRef.current?.cancel();
+      window.speechSynthesis?.cancel();
     } else {
       setIsSpeakerOn(true);
     }
@@ -285,9 +398,11 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
 
   // 🛑 End Call
   const handleEndCall = () => {
-    if (synthRef.current) synthRef.current.cancel();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.cancel();
+    }
     if (recognitionRef.current) {
-      try { recognitionRef.current.stop(); } catch (e) {}
+      try { recognitionRef.current.abort(); } catch (e) {}
     }
     onClose();
   };
@@ -307,7 +422,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
         exit={{ scale: 0.9, opacity: 0, y: 30 }}
         className="bg-zinc-950 border-4 border-black rounded-[2.5rem] w-full max-w-md h-[90vh] max-h-[750px] shadow-neo-lg flex flex-col overflow-hidden text-white relative"
       >
-        {/* Top Floating Glow & Waves */}
+        {/* Top Floating Glow */}
         <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-emerald-500/20 via-transparent to-transparent pointer-events-none" />
 
         {/* Header: Call Info & Status */}
@@ -348,7 +463,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
 
           <button
             onClick={handleEndCall}
-            className="p-2.5 rounded-2xl bg-zinc-900 text-zinc-400 hover:text-white border-2 border-zinc-700 hover:border-black transition-all"
+            className="p-2.5 rounded-2xl bg-zinc-900 text-zinc-400 hover:text-white border-2 border-zinc-700 hover:border-black transition-all cursor-pointer"
             title={t('live_call_end_call')}
           >
             <PhoneOff size={18} />
@@ -390,7 +505,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
                 }}
                 transition={{
                   repeat: Infinity,
-                  duration: 0.6 + (i * 0.1),
+                  duration: 0.5 + (i * 0.1),
                   ease: "easeInOut"
                 }}
                 className={`w-1 rounded-full ${
@@ -457,30 +572,34 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
           <input
             type="text"
             value={textInput}
+            disabled={coachStatus === 'thinking' || coachStatus.startsWith('speaking')}
             onChange={(e) => setTextInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && textInput.trim()) {
-                handleUserSpoke(textInput);
+                const val = textInput.trim();
                 setTextInput('');
+                handleUserSpoke(val);
               }
             }}
             placeholder={t('live_call_text_fallback_placeholder')}
-            className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-400 transition-colors"
+            className="flex-1 bg-zinc-900 border border-zinc-700 rounded-xl px-3 py-2 text-xs font-bold text-white outline-none focus:border-emerald-400 transition-colors disabled:opacity-50"
           />
           <button
             onClick={() => {
               if (textInput.trim()) {
-                handleUserSpoke(textInput);
+                const val = textInput.trim();
                 setTextInput('');
+                handleUserSpoke(val);
               }
             }}
-            className="bg-emerald-400 text-black p-2 rounded-xl border border-black hover:bg-emerald-300 active:scale-95 transition-all cursor-pointer font-black"
+            disabled={coachStatus === 'thinking' || coachStatus.startsWith('speaking')}
+            className="bg-emerald-400 text-black p-2 rounded-xl border border-black hover:bg-emerald-300 active:scale-95 transition-all cursor-pointer font-black disabled:opacity-50"
           >
             <Send size={15} />
           </button>
         </div>
 
-        {/* Bottom Call Controls (Neo-Brutalist Dial Pad Buttons) */}
+        {/* Bottom Call Controls (Dial Pad Buttons) */}
         <div className="p-4 sm:p-5 bg-zinc-900 border-t-2 border-zinc-800 flex items-center justify-around gap-4 shrink-0">
           {/* Mute Button */}
           <button
@@ -495,7 +614,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
             <span className="text-[10px] font-black">{isMuted ? t('live_call_unmute') : t('live_call_mute')}</span>
           </button>
 
-          {/* End Call Button (Big Red Button) */}
+          {/* End Call Button */}
           <button
             onClick={handleEndCall}
             className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center border-4 border-black shadow-neo-sm active:scale-90 transition-transform cursor-pointer"
