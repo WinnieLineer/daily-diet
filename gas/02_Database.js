@@ -1096,14 +1096,14 @@ function getRecentLogsData(limit) {
   return [];
 }
 
-function recordAiUsage(model, isSuccess, props, errorMsg, callerInfo) {
+function recordAiUsageAttempt(model, isSuccess, props) {
   try {
     const p = props || PropertiesService.getScriptProperties();
     const cache = CacheService.getScriptCache();
     const now = Date.now();
     const cutoff = now - 60000;
 
-    // 1. 滾動 60 秒 RPM 視窗統計 (同時持久化至 ScriptProperties 作為 CacheService 失效時的備援)
+    // 1. 滾動 60 秒 RPM 視窗統計
     const windowKey = 'RPM_TIMESTAMPS_WINDOW';
     let timestamps = [];
     try {
@@ -1125,58 +1125,104 @@ function recordAiUsage(model, isSuccess, props, errorMsg, callerInfo) {
       p.setProperty('RPM_BACKUP_WINDOW', JSON.stringify(timestamps.slice(-30)));
     } catch (e) {}
 
-    // 2. 當日配額與模型維度統計 (持久化於 AI_QUOTA_YYYY-MM-DD)
+    // 2. 當日配額統計（記錄單一嘗試計數，但不記錄至 recentErrors，避免單次重試造成重複報警）
     const today = getTodayDateString();
     const key = 'AI_QUOTA_' + today;
     const raw = p.getProperty(key);
     let stats = raw ? JSON.parse(raw) : { count: 0, success: 0, fail: 0, models: {}, recentErrors: [] };
     if (!stats.models) stats.models = {};
-    if (!Array.isArray(stats.recentErrors)) stats.recentErrors = [];
 
     stats.count = (stats.count || 0) + 1;
+    const m = String(model || 'gemini-2.5-flash-lite');
+    if (!stats.models[m]) stats.models[m] = { count: 0, success: 0, fail: 0 };
+    stats.models[m].count = (stats.models[m].count || 0) + 1;
+
     if (isSuccess) {
       stats.success = (stats.success || 0) + 1;
+      stats.models[m].success = (stats.models[m].success || 0) + 1;
+      stats.lastSuccessfulModel = m;
     } else {
       stats.fail = (stats.fail || 0) + 1;
-      if (errorMsg) {
-        let callerName = '';
-        let callerId = '';
-        let callerOp = 'AI 模型運算';
-        if (callerInfo) {
-          if (typeof callerInfo === 'string') {
-            callerId = callerInfo;
-            callerName = p.getProperty(`USER_NAME_${callerInfo}`) || `用戶 (${callerInfo.slice(-4)})`;
-          } else if (typeof callerInfo === 'object') {
-            callerId = callerInfo.userId || '';
-            callerName = callerInfo.userName || (callerId ? p.getProperty(`USER_NAME_${callerId}`) : '') || callerInfo.caller || 'LINE 用戶';
-            callerOp = callerInfo.operation || callerOp;
-          }
-        }
-        stats.recentErrors.unshift({
-          time: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-          model: String(model || 'unknown'),
-          error: String(errorMsg).slice(0, 200),
-          caller: callerName || '系統服務',
-          userId: callerId || 'API-Gateway',
-          operation: callerOp
-        });
-        if (stats.recentErrors.length > 20) stats.recentErrors = stats.recentErrors.slice(0, 20);
-      }
-    }
-
-    const m = String(model || (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-2.5-flash-lite');
-    if (!stats.models[m]) {
-      stats.models[m] = { count: 0, success: 0, fail: 0 };
-    }
-    stats.models[m].count = (stats.models[m].count || 0) + 1;
-    if (isSuccess) {
-      stats.models[m].success = (stats.models[m].success || 0) + 1;
-    } else {
       stats.models[m].fail = (stats.models[m].fail || 0) + 1;
     }
 
     stats.lastUpdated = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
     p.setProperty(key, JSON.stringify(stats));
+  } catch (e) {
+    console.warn('記錄單次 AI 嘗試失敗:', e);
+  }
+}
+
+function recordAiUsageSuccess(model, props, meta) {
+  try {
+    const p = props || PropertiesService.getScriptProperties();
+    const today = getTodayDateString();
+    const key = 'AI_QUOTA_' + today;
+    const raw = p.getProperty(key);
+    let stats = raw ? JSON.parse(raw) : { count: 0, success: 0, fail: 0, models: {}, recentErrors: [] };
+    if (!stats.models) stats.models = {};
+
+    const m = String(model || 'gemini-2.5-flash-lite');
+    if (!stats.models[m]) stats.models[m] = { count: 0, success: 0, fail: 0 };
+    stats.lastSuccessfulModel = m;
+    stats.currentModel = m;
+
+    stats.lastUpdated = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    p.setProperty(key, JSON.stringify(stats));
+  } catch (e) {
+    console.warn('記錄 AI 成功模型失敗:', e);
+  }
+}
+
+function recordAiUsageConsolidatedFailure(models, props, consolidatedError, callerInfo) {
+  try {
+    const p = props || PropertiesService.getScriptProperties();
+    const today = getTodayDateString();
+    const key = 'AI_QUOTA_' + today;
+    const raw = p.getProperty(key);
+    let stats = raw ? JSON.parse(raw) : { count: 0, success: 0, fail: 0, models: {}, recentErrors: [] };
+    if (!Array.isArray(stats.recentErrors)) stats.recentErrors = [];
+
+    let callerName = '';
+    let callerId = '';
+    let callerOp = 'AI 模型運算';
+    if (callerInfo) {
+      if (typeof callerInfo === 'string') {
+        callerId = callerInfo;
+        callerName = p.getProperty(`USER_NAME_${callerInfo}`) || `用戶 (${callerInfo.slice(-4)})`;
+      } else if (typeof callerInfo === 'object') {
+        callerId = callerInfo.userId || '';
+        callerName = callerInfo.userName || (callerId ? p.getProperty(`USER_NAME_${callerId}`) : '') || callerInfo.caller || 'LINE 用戶';
+        callerOp = callerInfo.operation || callerOp;
+      }
+    }
+
+    const modelName = Array.isArray(models) ? `${models.length} 個模型依序切換` : String(models || 'Gemini');
+    stats.recentErrors.unshift({
+      time: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
+      model: modelName,
+      error: String(consolidatedError || '所有備用模型嘗試皆失敗').slice(0, 300),
+      caller: callerName || '系統服務',
+      userId: callerId || 'API-Gateway',
+      operation: callerOp
+    });
+    if (stats.recentErrors.length > 20) stats.recentErrors = stats.recentErrors.slice(0, 20);
+
+    stats.lastUpdated = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    p.setProperty(key, JSON.stringify(stats));
+  } catch (e) {
+    console.warn('記錄收斂錯誤失敗:', e);
+  }
+}
+
+function recordAiUsage(model, isSuccess, props, errorMsg, callerInfo) {
+  try {
+    recordAiUsageAttempt(model, isSuccess, props);
+    if (!isSuccess && errorMsg) {
+      recordAiUsageConsolidatedFailure([model], props, errorMsg, callerInfo);
+    } else if (isSuccess) {
+      recordAiUsageSuccess(model, props, callerInfo);
+    }
   } catch (e) {
     console.warn('記錄 AI 用量失敗:', e);
   }
@@ -1232,7 +1278,8 @@ function getAiQuotaStats(props) {
       models: stats.models || {},
       recentErrors: stats.recentErrors || [],
       lastUpdated: stats.lastUpdated || Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-      currentModel: (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-2.5-flash-lite'
+      currentModel: stats.currentModel || (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-2.5-flash-lite',
+      lastSuccessfulModel: stats.lastSuccessfulModel || stats.currentModel || (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-2.5-flash-lite'
     };
   } catch (e) {
     return {
@@ -1249,7 +1296,8 @@ function getAiQuotaStats(props) {
       models: {},
       recentErrors: [],
       lastUpdated: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-      currentModel: 'gemini-2.5-flash-lite'
+      currentModel: 'gemini-2.5-flash-lite',
+      lastSuccessfulModel: 'gemini-2.5-flash-lite'
     };
   }
 }

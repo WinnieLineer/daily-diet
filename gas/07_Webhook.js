@@ -394,12 +394,16 @@ function doPost(e) {
         const base64 = data?.image || data?.base64Image || e.parameter?.image;
         const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language);
         if (result && typeof recordSystemLog === 'function') {
+          const mUsed = result.model_used || 'Gemini';
+          const fallbackNote = (result.failed_attempts && result.failed_attempts.length > 0)
+            ? ` (前序 ${result.failed_attempts.length} 次重試)`
+            : '';
           recordSystemLog(
             'Web照片辨識', 
             data?.userId || 'web_user', 
             '上傳餐點照片辨識', 
-            `${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
-            `回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
+            `[${mUsed}${fallbackNote}] ${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
+            `[模型: ${mUsed}] 回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
           );
         }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
@@ -409,12 +413,16 @@ function doPost(e) {
         const text = data?.text || data?.textInstruction || e.parameter?.text;
         const result = parseTextWithGeminiFull(text, GEMINI_API_KEY, data?.context, data?.language);
         if (result && typeof recordSystemLog === 'function') {
+          const mUsed = result.model_used || 'Gemini';
+          const fallbackNote = (result.failed_attempts && result.failed_attempts.length > 0)
+            ? ` (前序 ${result.failed_attempts.length} 次重試)`
+            : '';
           recordSystemLog(
             'Web文字辨識', 
             data?.userId || 'web_user', 
             text || '輸入餐點文字辨識', 
-            `${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
-            `回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
+            `[${mUsed}${fallbackNote}] ${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
+            `[模型: ${mUsed}] 回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
           );
         }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
@@ -913,6 +921,7 @@ function doPost(e) {
           const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
           console.log(`🤖 [照片 AI 辨識結果]`, JSON.stringify(analysis));
 
+          const usedModel = analysis.model_used || 'Gemini';
           const meal = {
             id: Date.now(),
             date: getTodayDateString(),
@@ -932,16 +941,20 @@ function doPost(e) {
             baseCarbs: Number(analysis.carbs) || 0,
             baseFat: Number(analysis.fat) || 0,
             baseWater: Number(analysis.water) || 0,
-            multiplier: 1
+            multiplier: 1,
+            model_used: usedModel
           };
 
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+          const fallbackNote = (analysis.failed_attempts && analysis.failed_attempts.length > 0)
+            ? ` (前序 ${analysis.failed_attempts.length} 次重試)`
+            : '';
           recordSystemLog(
             '照片辨識', 
             userId, 
             `傳送照片 (ID: ${messageId})`, 
-            `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
-            `回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
+            `[${usedModel}${fallbackNote}] ${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
+            `[模型: ${usedModel}] 回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
           );
           replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -1546,6 +1559,11 @@ function doPost(e) {
 
           sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
           const analysis = parseTextWithGemini(userText, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
+          const usedModel = analysis.model_used || 'Gemini';
+          const fallbackNote = (analysis.failed_attempts && analysis.failed_attempts.length > 0)
+            ? ` (前序 ${analysis.failed_attempts.length} 次重試)`
+            : '';
+
           if (analysis.is_food === false) {
             const defaultReply = isEn 
               ? "Hello! I am your AI Panda Nutrition Coach 🐼. Send me a meal photo or type a food name anytime, and I'll calculate calories and nutrients for you!"
@@ -1554,7 +1572,7 @@ function doPost(e) {
             if (isEn && /[\u4e00-\u9fa5]/.test(finalReply)) {
               finalReply = defaultReply;
             }
-            recordSystemLog('日常對話', userId, userText, '非食物訊息', `回傳文字：${finalReply}`);
+            recordSystemLog('日常對話', userId, userText, `[${usedModel}${fallbackNote}] 非食物訊息`, `[模型: ${usedModel}] 回傳文字：${finalReply}`);
             replyTextMessage(replyToken, finalReply, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             const meal = {
@@ -1576,7 +1594,8 @@ function doPost(e) {
               baseCarbs: Number(analysis.carbs) || 0,
               baseFat: Number(analysis.fat) || 0,
               baseWater: Number(analysis.water) || 0,
-              multiplier: 1
+              multiplier: 1,
+              model_used: usedModel
             };
 
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
@@ -1584,8 +1603,8 @@ function doPost(e) {
               '文字辨識', 
               userId, 
               userText, 
-              `${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
-              `回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
+              `[${usedModel}${fallbackNote}] ${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
+              `[模型: ${usedModel}] 回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
             );
             replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           }

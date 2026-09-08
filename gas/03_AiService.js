@@ -162,7 +162,7 @@ ${schemaBlock}`;
     }
   };
 
-  let lastError = null;
+  let failedAttempts = [];
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     try {
@@ -174,16 +174,42 @@ ${schemaBlock}`;
         muteHttpExceptions: true
       });
 
-      if (res.getResponseCode() !== 200) {
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`, { userId: userId, operation: '照片辨識' });
-        throw new Error(res.getContentText());
+      const statusCode = res.getResponseCode();
+      if (statusCode !== 200) {
+        let errSnippet = '';
+        try {
+          const errObj = JSON.parse(res.getContentText());
+          errSnippet = errObj?.error?.message || res.getContentText();
+        } catch (je) {
+          errSnippet = res.getContentText();
+        }
+        failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
+        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+        continue;
       }
 
       const data = JSON.parse(res.getContentText());
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       const parsed = JSON.parse(cleanJson);
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, true, props);
+
+      if (typeof recordAiUsageSuccess === 'function') {
+        recordAiUsageSuccess(model, props, { userId: userId, operation: '照片辨識', failedAttempts: failedAttempts });
+      } else if (typeof recordAiUsage === 'function') {
+        recordAiUsage(model, true, props);
+      }
+
+      // 🔄 若經歷前序重試才成功，收斂成單一容錯日誌
+      if (failedAttempts.length > 0 && typeof recordSystemLog === 'function') {
+        const retryChain = failedAttempts.map(function(a) { return a.model + ' (' + a.status + ')'; }).join(' ➔ ');
+        recordSystemLog(
+          '模型降級容錯', 
+          userId, 
+          `照片辨識順序切換 (共嘗試 ${failedAttempts.length + 1} 次)`, 
+          `前序失敗: ${retryChain}`, 
+          `最後成功調用模型: [${model}]`
+        );
+      }
 
       const dishName = parsed.dish_name || (isEn ? "Delicious Meal" : "美味餐點");
       const cal = Number(parsed.calories) || 0;
@@ -214,14 +240,25 @@ ${schemaBlock}`;
         water: water,
         breakdown: breakdown,
         calculation_note: calculationNote,
-        panda_comment: comment
+        panda_comment: comment,
+        model_used: model,
+        failed_attempts: failedAttempts
       };
     } catch (err) {
-      lastError = err;
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, err.message, { userId: userId, operation: '照片辨識' });
+      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
+      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
     }
   }
-  throw new Error(`Gemini 辨識失敗：${lastError?.message || '未知錯誤'}`);
+
+  // ⚠️ 所有模型皆嘗試失敗：將錯誤收斂成單一報警日誌
+  const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  if (typeof recordAiUsageConsolidatedFailure === 'function') {
+    recordAiUsageConsolidatedFailure(models, props, consolidatedError, { userId: userId, operation: '照片辨識', failedAttempts: failedAttempts });
+  }
+  if (typeof recordSystemLog === 'function') {
+    recordSystemLog('模型調用異常', userId, `照片辨識 (${models.length}個模型順序調用皆失敗)`, '', `⚠️ 所有模型嘗試皆失敗: ${consolidatedError}`);
+  }
+  throw new Error(`Gemini 辨識失敗（所有模型皆嘗試）：${consolidatedError}`);
 }
 
 // ========================================================
@@ -325,6 +362,7 @@ Return ONLY raw JSON:
 }
 Do NOT wrap in markdown backticks.`;
 
+  let failedAttempts = [];
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     try {
@@ -335,85 +373,129 @@ Do NOT wrap in markdown backticks.`;
         payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, response_mime_type: "application/json" } }),
         muteHttpExceptions: true
       });
-      if (res.getResponseCode() === 200) {
-        const data = JSON.parse(res.getContentText());
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleanJson);
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, true, props);
 
-        if (parsed.is_food === false) {
-          let defaultReply = '';
-          if (isEn) {
-            defaultReply = userPersona === 'gentle' 
-              ? "Hello! I'm your healing nutrition panda 🐼🥰 What delicious food did you have today? Send a photo or tell me what you ate anytime!" 
-              : userPersona === 'hardcore' 
-              ? "Hey! I'm your drill sergeant panda 🐼🔥 Confess what you ate right now, don't even think about sneaking junk food!" 
-              : "Hey there! I'm your AI Panda Coach 🐼 Send meal photos or type what you ate, and I'll keep your nutrition on track!";
-          } else {
-            defaultReply = userPersona === 'gentle' 
-              ? "你好呀～我是你的治癒系熊貓小夥伴 🐼🥰 今天吃了什麼好吃的呢？隨時傳送照片或跟我說喔！" 
-              : userPersona === 'hardcore' 
-              ? "看什麼看！我是你的魔鬼體態教練熊貓 🐼🔥 還不快點把剛剛吃了什麼如實報上來，休想偷吃垃圾食物！" 
-              : "哈囉！我是熊貓飲食小教練 🐼 傳送餐點照片或告訴我吃了什麼，我就能幫你秒速記帳喔！";
-          }
-          let replyText = (parsed.reply && parsed.reply.trim()) ? parsed.reply.trim() : defaultReply;
-          if (isEn && /[\u4e00-\u9fa5]/.test(replyText)) {
-            console.warn("⚠️ [AiService] AI returned Chinese chat reply under English mode! Sanitizing to English default reply.");
-            replyText = defaultReply;
-          }
-          return {
-            is_food: false,
-            reply: replyText
-          };
+      const statusCode = res.getResponseCode();
+      if (statusCode !== 200) {
+        let errSnippet = '';
+        try {
+          const errObj = JSON.parse(res.getContentText());
+          errSnippet = errObj?.error?.message || res.getContentText();
+        } catch (je) {
+          errSnippet = res.getContentText();
         }
-
-        const dishName = parsed.dish_name || (isEn ? "Meal" : "餐點");
-        const cal = Number(parsed.calories) || 0;
-        const pro = Number(parsed.protein) || 0;
-        const carbs = Number(parsed.carbs) || 0;
-        const fat = Number(parsed.fat) || 0;
-        const water = Number(parsed.water) || 0;
-        const breakdown = Array.isArray(parsed.breakdown) ? parsed.breakdown : [];
-        let calculationNote = parsed.calculation_note || '';
-        if (isEn && /[\u4e00-\u9fa5]/.test(calculationNote)) {
-          calculationNote = `${dishName}: ${cal} kcal, ${pro}g protein`;
-        }
-        let comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : '';
-        if (isEn && /[\u4e00-\u9fa5]/.test(comment)) {
-          console.warn("⚠️ [AiService] AI returned Chinese comment in text analysis under English mode! Sanitizing to English fallback:", comment);
-          comment = generateFallbackComment(dishName, cal, pro, userPersona, 'en');
-        }
-        if (!comment) {
-          comment = generateFallbackComment(dishName, cal, pro, userPersona, userLang);
-        }
-
-        return {
-          is_food: true,
-          dish_name: dishName,
-          calories: cal,
-          protein: pro,
-          carbs: carbs,
-          fat: fat,
-          water: water,
-          breakdown: breakdown,
-          calculation_note: calculationNote,
-          panda_comment: comment
-        };
-      } else {
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`, { userId: userId, operation: '文字記餐' });
+        failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
+        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+        continue;
       }
+
+      const data = JSON.parse(res.getContentText());
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+
+      if (typeof recordAiUsageSuccess === 'function') {
+        recordAiUsageSuccess(model, props, { userId: userId, operation: '文字記餐', failedAttempts: failedAttempts });
+      } else if (typeof recordAiUsage === 'function') {
+        recordAiUsage(model, true, props);
+      }
+
+      // 🔄 若經歷前序重試才成功，收斂成單一容錯日誌
+      if (failedAttempts.length > 0 && typeof recordSystemLog === 'function') {
+        const retryChain = failedAttempts.map(function(a) { return a.model + ' (' + a.status + ')'; }).join(' ➔ ');
+        recordSystemLog(
+          '模型降級容錯', 
+          userId, 
+          `文字分析順序切換 (共嘗試 ${failedAttempts.length + 1} 次)`, 
+          `前序失敗: ${retryChain}`, 
+          `最後成功調用模型: [${model}]`
+        );
+      }
+
+      if (parsed.is_food === false) {
+        let defaultReply = '';
+        if (isEn) {
+          defaultReply = userPersona === 'gentle' 
+            ? "Hello! I'm your healing nutrition panda 🐼🥰 What delicious food did you have today? Send a photo or tell me what you ate anytime!" 
+            : userPersona === 'hardcore' 
+            ? "Hey! I'm your drill sergeant panda 🐼🔥 Confess what you ate right now, don't even think about sneaking junk food!" 
+            : "Hey there! I'm your AI Panda Coach 🐼 Send meal photos or type what you ate, and I'll keep your nutrition on track!";
+        } else {
+          defaultReply = userPersona === 'gentle' 
+            ? "你好呀～我是你的治癒系熊貓小夥伴 🐼🥰 今天吃了什麼好吃的呢？隨時傳送照片或跟我說喔！" 
+            : userPersona === 'hardcore' 
+            ? "看什麼看！我是你的魔鬼體態教練熊貓 🐼🔥 還不快點把剛剛吃了什麼如實報上來，休想偷吃垃圾食物！" 
+            : "哈囉！我是熊貓飲食小教練 🐼 傳送餐點照片或告訴我吃了什麼，我就能幫你秒速記帳喔！";
+        }
+        let replyText = (parsed.reply && parsed.reply.trim()) ? parsed.reply.trim() : defaultReply;
+        if (isEn && /[\u4e00-\u9fa5]/.test(replyText)) {
+          console.warn("⚠️ [AiService] AI returned Chinese chat reply under English mode! Sanitizing to English default reply.");
+          replyText = defaultReply;
+        }
+        return {
+          is_food: false,
+          reply: replyText,
+          model_used: model,
+          failed_attempts: failedAttempts
+        };
+      }
+
+      const dishName = parsed.dish_name || (isEn ? "Meal" : "餐點");
+      const cal = Number(parsed.calories) || 0;
+      const pro = Number(parsed.protein) || 0;
+      const carbs = Number(parsed.carbs) || 0;
+      const fat = Number(parsed.fat) || 0;
+      const water = Number(parsed.water) || 0;
+      const breakdown = Array.isArray(parsed.breakdown) ? parsed.breakdown : [];
+      let calculationNote = parsed.calculation_note || '';
+      if (isEn && /[\u4e00-\u9fa5]/.test(calculationNote)) {
+        calculationNote = `${dishName}: ${cal} kcal, ${pro}g protein`;
+      }
+      let comment = (parsed.panda_comment && parsed.panda_comment.trim()) ? parsed.panda_comment.trim() : '';
+      if (isEn && /[\u4e00-\u9fa5]/.test(comment)) {
+        console.warn("⚠️ [AiService] AI returned Chinese comment in text analysis under English mode! Sanitizing to English fallback:", comment);
+        comment = generateFallbackComment(dishName, cal, pro, userPersona, 'en');
+      }
+      if (!comment) {
+        comment = generateFallbackComment(dishName, cal, pro, userPersona, userLang);
+      }
+
+      return {
+        is_food: true,
+        dish_name: dishName,
+        calories: cal,
+        protein: pro,
+        carbs: carbs,
+        fat: fat,
+        water: water,
+        breakdown: breakdown,
+        calculation_note: calculationNote,
+        panda_comment: comment,
+        model_used: model,
+        failed_attempts: failedAttempts
+      };
     } catch (e) {
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, props, e.message, { userId: userId, operation: '文字記餐' });
-      console.warn("文字辨識解析失敗:", e);
+      failedAttempts.push({ model: model, status: 'EXC', error: (e.message || '未知異常').slice(0, 150) });
+      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+      console.warn("文字辨識單次解析失敗:", e);
     }
+  }
+
+  // ⚠️ 所有模型皆嘗試失敗：將所有錯誤嘗試收斂成單一報警日誌
+  const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  if (typeof recordAiUsageConsolidatedFailure === 'function') {
+    recordAiUsageConsolidatedFailure(models, props, consolidatedError, { userId: userId, operation: '文字記餐', failedAttempts: failedAttempts });
+  }
+  if (typeof recordSystemLog === 'function') {
+    recordSystemLog('模型調用異常', userId, `文字分析 (${models.length}個模型順序調用皆失敗)`, '', `⚠️ 所有模型嘗試皆失敗: ${consolidatedError}`);
   }
 
   return {
     is_food: false,
     reply: isEn 
       ? "Panda Coach is having a bit of hiccups 🐼 Please try again in a moment, or send a meal photo!"
-      : "熊貓教練剛剛稍微恍神了一下 🐼 請再跟我說一次你吃了什麼，或者直接傳送食物照片給我！"
+      : "熊貓教練剛剛稍微恍神了一下 🐼 請再跟我說一次你吃了什麼，或者直接傳送食物照片給我！",
+    model_used: 'all_failed',
+    failed_attempts: failedAttempts
   };
 }
 
@@ -505,62 +587,102 @@ Return ONLY a raw JSON object with keys:
 }
 Do NOT wrap in markdown backticks.`;
 
+  let failedAttempts = [];
   for (let i = 0; i < models.length; i++) {
+    const model = models[i];
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${models[i]}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
       const res = UrlFetchApp.fetch(url, {
         method: "post",
         contentType: "application/json",
         payload: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
         muteHttpExceptions: true
       });
-      if (res.getResponseCode() === 200) {
-        const data = JSON.parse(res.getContentText());
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        const parsed = JSON.parse(cleanJson);
-        if (typeof recordAiUsage === 'function') recordAiUsage(models[i], true, props);
 
-        const calories = Number(parsed.calories) || DEFAULT_CALORIE_GOAL;
-        const protein = Number(parsed.protein) || DEFAULT_PROTEIN_GOAL;
-        const water = Number(parsed.water) || DEFAULT_WATER_GOAL;
-
-        if (isEn && /[\u4e00-\u9fa5]/.test(parsed.panda_advice || '')) {
-          console.warn("⚠️ [AiService] AI returned Chinese goal advice under English mode! Replacing with English advice.");
-          parsed.panda_advice = `Based on your goal, we've planned a daily intake of ${calories} kcal and ${protein}g protein. Drink ${water}ml water daily to fuel your transformation! 🐼💪`;
+      const statusCode = res.getResponseCode();
+      if (statusCode !== 200) {
+        let errSnippet = '';
+        try {
+          const errObj = JSON.parse(res.getContentText());
+          errSnippet = errObj?.error?.message || res.getContentText();
+        } catch (je) {
+          errSnippet = res.getContentText();
         }
-
-        props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
-        props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
-        props.setProperty(`WATER_GOAL_${userId}`, String(water));
-
-        if (pat && userGistId) {
-          try {
-            syncGoalsToUserGist({ calories, protein, water }, pat, userGistId);
-          } catch (e) {
-            console.error("同步目標至 Gist 失敗:", e);
-          }
-        }
-
-        const goalFlex = generateGoalSettingFlex(parsed, calories, protein, water, liffId, userGistId, userLang);
-        if (typeof recordSystemLog === 'function') {
-          recordSystemLog(
-            '體態目標', 
-            userId, 
-            userText, 
-            `${parsed.goal_type || '目標推薦'}: ${calories}卡 / ${protein}g蛋 / ${water}ml水`, 
-            `回傳推薦目標卡片：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml (BMR: ${parsed.bmr || '-'} / TDEE: ${parsed.tdee || '-'})${parsed.panda_advice ? ' · 教練建議：「' + parsed.panda_advice + '」' : ''}`
-          );
-        }
-        replyFlexMessage(replyToken, goalFlex, channelAccessToken, userId, props);
-        return true;
-      } else {
-        if (typeof recordAiUsage === 'function') recordAiUsage(models[i], false, props, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`, { userId: userId, operation: '目標推薦' });
+        failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
+        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+        continue;
       }
+
+      const data = JSON.parse(res.getContentText());
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      const parsed = JSON.parse(cleanJson);
+
+      if (typeof recordAiUsageSuccess === 'function') {
+        recordAiUsageSuccess(model, props, { userId: userId, operation: '目標推薦', failedAttempts: failedAttempts });
+      } else if (typeof recordAiUsage === 'function') {
+        recordAiUsage(model, true, props);
+      }
+
+      if (failedAttempts.length > 0 && typeof recordSystemLog === 'function') {
+        const retryChain = failedAttempts.map(function(a) { return a.model + ' (' + a.status + ')'; }).join(' ➔ ');
+        recordSystemLog(
+          '模型降級容錯', 
+          userId, 
+          `體態目標順序切換 (共嘗試 ${failedAttempts.length + 1} 次)`, 
+          `前序失敗: ${retryChain}`, 
+          `最後成功調用模型: [${model}]`
+        );
+      }
+
+      const calories = Number(parsed.calories) || DEFAULT_CALORIE_GOAL;
+      const protein = Number(parsed.protein) || DEFAULT_PROTEIN_GOAL;
+      const water = Number(parsed.water) || DEFAULT_WATER_GOAL;
+
+      if (isEn && /[\u4e00-\u9fa5]/.test(parsed.panda_advice || '')) {
+        console.warn("⚠️ [AiService] AI returned Chinese goal advice under English mode! Replacing with English advice.");
+        parsed.panda_advice = `Based on your goal, we've planned a daily intake of ${calories} kcal and ${protein}g protein. Drink ${water}ml water daily to fuel your transformation! 🐼💪`;
+      }
+
+      props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
+      props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
+      props.setProperty(`WATER_GOAL_${userId}`, String(water));
+
+      if (pat && userGistId) {
+        try {
+          syncGoalsToUserGist({ calories, protein, water }, pat, userGistId);
+        } catch (e) {
+          console.error("同步目標至 Gist 失敗:", e);
+        }
+      }
+
+      const goalFlex = generateGoalSettingFlex(parsed, calories, protein, water, liffId, userGistId, userLang);
+      if (typeof recordSystemLog === 'function') {
+        const fallbackNote = failedAttempts.length > 0 ? ` (前序 ${failedAttempts.length} 次重試)` : '';
+        recordSystemLog(
+          '體態目標', 
+          userId, 
+          userText, 
+          `[${model}${fallbackNote}] ${parsed.goal_type || '目標推薦'}: ${calories}卡 / ${protein}g蛋 / ${water}ml水`, 
+          `[模型: ${model}] 回傳推薦目標卡片：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml (BMR: ${parsed.bmr || '-'} / TDEE: ${parsed.tdee || '-'})${parsed.panda_advice ? ' · 教練建議：「' + parsed.panda_advice + '」' : ''}`
+        );
+      }
+      replyFlexMessage(replyToken, goalFlex, channelAccessToken, userId, props);
+      return true;
     } catch (e) {
-      if (typeof recordAiUsage === 'function') recordAiUsage(models[i], false, props, e.message, { userId: userId, operation: '目標推薦' });
-      console.error("設定目標失敗:", e);
+      failedAttempts.push({ model: model, status: 'EXC', error: (e.message || '未知異常').slice(0, 150) });
+      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+      console.error("設定目標單次嘗試失敗:", e);
     }
+  }
+
+  // ⚠️ 全部失敗：收斂成單一錯誤日誌
+  const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  if (typeof recordAiUsageConsolidatedFailure === 'function') {
+    recordAiUsageConsolidatedFailure(models, props, consolidatedError, { userId: userId, operation: '目標推薦', failedAttempts: failedAttempts });
+  }
+  if (typeof recordSystemLog === 'function') {
+    recordSystemLog('模型調用異常', userId, `目標推薦 (${models.length}個模型順序調用皆失敗)`, '', `⚠️ 所有模型嘗試皆失敗: ${consolidatedError}`);
   }
 
   const fallbackMsg = isEn
@@ -612,7 +734,7 @@ No markdown backticks.`;
     }
   };
 
-  let lastError = null;
+  let failedAttempts = [];
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     try {
@@ -623,21 +745,44 @@ No markdown backticks.`;
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
       });
-      if (res.getResponseCode() === 200) {
-        const data = JSON.parse(res.getContentText());
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, true);
-        return JSON.parse(cleanJson);
-      } else {
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, null, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`);
+
+      const statusCode = res.getResponseCode();
+      if (statusCode !== 200) {
+        let errSnippet = '';
+        try {
+          const errObj = JSON.parse(res.getContentText());
+          errSnippet = errObj?.error?.message || res.getContentText();
+        } catch (je) {
+          errSnippet = res.getContentText();
+        }
+        failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
+        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        continue;
       }
+
+      const data = JSON.parse(res.getContentText());
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      if (typeof recordAiUsageSuccess === 'function') {
+        recordAiUsageSuccess(model);
+      } else if (typeof recordAiUsage === 'function') {
+        recordAiUsage(model, true);
+      }
+      const parsedObj = JSON.parse(cleanJson);
+      parsedObj.model_used = model;
+      parsedObj.failed_attempts = failedAttempts;
+      return parsedObj;
     } catch (err) {
-      lastError = err;
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, null, err.message);
+      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
+      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
     }
   }
-  throw new Error(`Gemini Vision analysis failed: ${lastError?.message || 'Unknown'}`);
+
+  const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  if (typeof recordAiUsageConsolidatedFailure === 'function') {
+    recordAiUsageConsolidatedFailure(models, null, consolidatedError, { operation: 'Web照片辨識', failedAttempts: failedAttempts });
+  }
+  throw new Error(`Gemini Vision analysis failed: ${consolidatedError}`);
 }
 
 function parseTextWithGeminiFull(text, apiKey, context, language) {
@@ -668,7 +813,7 @@ No markdown backticks.`;
     }
   };
 
-  let lastError = null;
+  let failedAttempts = [];
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     try {
@@ -679,21 +824,44 @@ No markdown backticks.`;
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
       });
-      if (res.getResponseCode() === 200) {
-        const data = JSON.parse(res.getContentText());
-        const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-        const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, true);
-        return JSON.parse(cleanJson);
-      } else {
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, null, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`);
+
+      const statusCode = res.getResponseCode();
+      if (statusCode !== 200) {
+        let errSnippet = '';
+        try {
+          const errObj = JSON.parse(res.getContentText());
+          errSnippet = errObj?.error?.message || res.getContentText();
+        } catch (je) {
+          errSnippet = res.getContentText();
+        }
+        failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
+        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        continue;
       }
+
+      const data = JSON.parse(res.getContentText());
+      const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
+      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+      if (typeof recordAiUsageSuccess === 'function') {
+        recordAiUsageSuccess(model);
+      } else if (typeof recordAiUsage === 'function') {
+        recordAiUsage(model, true);
+      }
+      const parsedObj = JSON.parse(cleanJson);
+      parsedObj.model_used = model;
+      parsedObj.failed_attempts = failedAttempts;
+      return parsedObj;
     } catch (err) {
-      lastError = err;
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, null, err.message);
+      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
+      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
     }
   }
-  throw new Error(`Gemini Text analysis failed: ${lastError?.message || 'Unknown'}`);
+
+  const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  if (typeof recordAiUsageConsolidatedFailure === 'function') {
+    recordAiUsageConsolidatedFailure(models, null, consolidatedError, { operation: 'Web文字辨識', failedAttempts: failedAttempts });
+  }
+  throw new Error(`Gemini Text analysis failed: ${consolidatedError}`);
 }
 
 function generateGeminiText(prompt, apiKey) {
@@ -705,6 +873,8 @@ function generateGeminiText(prompt, apiKey) {
     contents: [{ parts: [{ text: prompt }] }],
     generationConfig: { temperature: 0.3 }
   };
+
+  let failedAttempts = [];
   for (let i = 0; i < models.length; i++) {
     const model = models[i];
     try {
@@ -715,16 +885,37 @@ function generateGeminiText(prompt, apiKey) {
         payload: JSON.stringify(payload),
         muteHttpExceptions: true
       });
-      if (res.getResponseCode() === 200) {
-        const data = JSON.parse(res.getContentText());
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, true);
-        return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
-      } else {
-        if (typeof recordAiUsage === 'function') recordAiUsage(model, false, null, `HTTP ${res.getResponseCode()}: ${res.getContentText().slice(0, 100)}`);
+
+      const statusCode = res.getResponseCode();
+      if (statusCode !== 200) {
+        let errSnippet = '';
+        try {
+          const errObj = JSON.parse(res.getContentText());
+          errSnippet = errObj?.error?.message || res.getContentText();
+        } catch (je) {
+          errSnippet = res.getContentText();
+        }
+        failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
+        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        continue;
       }
+
+      const data = JSON.parse(res.getContentText());
+      if (typeof recordAiUsageSuccess === 'function') {
+        recordAiUsageSuccess(model);
+      } else if (typeof recordAiUsage === 'function') {
+        recordAiUsage(model, true);
+      }
+      return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } catch (e) {
-      if (typeof recordAiUsage === 'function') recordAiUsage(model, false, null, e.message);
+      failedAttempts.push({ model: model, status: 'EXC', error: (e.message || '未知異常').slice(0, 150) });
+      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
     }
+  }
+
+  const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  if (typeof recordAiUsageConsolidatedFailure === 'function') {
+    recordAiUsageConsolidatedFailure(models, null, consolidatedError, { operation: 'Web教練諮詢', failedAttempts: failedAttempts });
   }
   return '繼續保持健康飲控節奏喔！🐼✨';
 }

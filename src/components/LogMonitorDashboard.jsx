@@ -910,14 +910,21 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
         {/* KPI 4: Active Models Distribution */}
         <div className="bg-white border-4 border-black rounded-[2rem] p-4 shadow-neo space-y-2 relative overflow-hidden">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between gap-1 flex-wrap">
             <span className="text-[10px] font-black uppercase tracking-widest text-zinc-400 flex items-center gap-1">
               <Cpu size={14} className="text-purple-500" />
               {isEn ? 'Models Active' : '活躍 Gemini 模型'}
             </span>
-            <span className="text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded-full">
-              {Object.keys(models).length} {isEn ? 'Models' : '款模型'}
-            </span>
+            <div className="flex items-center gap-1">
+              {aiQuota?.lastSuccessfulModel && (
+                <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded-md" title="最後成功調用之模型">
+                  ✅ {aiQuota.lastSuccessfulModel}
+                </span>
+              )}
+              <span className="text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded-full">
+                {Object.keys(models).length} {isEn ? 'Models' : '款模型'}
+              </span>
+            </div>
           </div>
 
           <div className="space-y-1.5 max-h-[70px] overflow-y-auto custom-scrollbar pr-1">
@@ -927,8 +934,11 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               </p>
             ) : (
               Object.entries(models).map(([mName, mStats]) => (
-                <div key={mName} className="flex items-center justify-between text-xs font-bold border border-black/10 rounded-lg px-2 py-1 bg-zinc-50">
-                  <span className="font-mono text-[10px] truncate max-w-[120px]">{mName}</span>
+                <div key={mName} className={`flex items-center justify-between text-xs font-bold border rounded-lg px-2 py-1 ${mName === aiQuota?.lastSuccessfulModel ? 'bg-emerald-50/80 border-emerald-300' : 'bg-zinc-50 border-black/10'}`}>
+                  <span className="font-mono text-[10px] truncate max-w-[120px] flex items-center gap-1">
+                    {mName === aiQuota?.lastSuccessfulModel && <span className="text-emerald-600 font-black">●</span>}
+                    {mName}
+                  </span>
                   <div className="flex items-center gap-1 font-mono text-[10px]">
                     <span className="bg-black text-white px-1.5 py-0.2 rounded font-black">{mStats.count || 0}</span>
                     {mStats.fail > 0 && <span className="text-rose-600 font-black">({mStats.fail}x)</span>}
@@ -1135,7 +1145,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     const currentTab = rowInspectorTab[index] || 'table';
 
                     const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer';
-                    const isAlert = type.includes('異常') || output.includes('失敗') || type.includes('報警') || output.includes('錯誤');
+                    const isFallback = type.includes('降級') || type.includes('容錯') || type.includes('切換');
+                    const isAlert = (type.includes('異常') || output.includes('失敗') || type.includes('報警') || output.includes('錯誤')) && !isFallback;
                     const isPhoto = type.includes('照片') || type.includes('Photo');
                     const isText = type.includes('文字') || type.includes('Text');
                     const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
@@ -1146,6 +1157,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     // Badge Styling
                     let badgeClass = 'bg-zinc-100 text-zinc-800 border-zinc-300';
                     if (isLogin) badgeClass = 'bg-purple-100 text-purple-900 border-purple-400 font-black';
+                    else if (isFallback) badgeClass = 'bg-amber-100 text-amber-900 border-amber-400 font-black';
                     else if (isAlert) badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
                     else if (isPhoto) badgeClass = 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300 font-black';
                     else if (isText) badgeClass = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
@@ -1192,6 +1204,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                           <td className="py-3 px-3 whitespace-nowrap">
                             <span className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border ${badgeClass}`}>
                               {isLogin && '🛡️'}
+                              {isFallback && '🔄'}
                               {isAlert && '🚨'}
                               {isPhoto && '📸'}
                               {isText && '💬'}
