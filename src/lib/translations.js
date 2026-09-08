@@ -479,12 +479,22 @@ const translations = {
     live_call_coach_speaking: "🐼 教練正在回覆中...",
     live_call_coach_thinking: "🐼 教練正在思考中...",
     live_call_end_call: "掛斷電話",
+    live_call_call_ended: "通話已結束",
     live_call_mute: "靜音",
     live_call_unmute: "開麥",
     live_call_speaker_on: "語音已開",
     live_call_speaker_off: "語音已關",
     live_call_tip: "💡 提示：您可以說「我吃了牛肉麵」、「今天卡路里剩多少？」或「好想喝珍奶怎麼辦」",
-    live_call_text_fallback_placeholder: "或直接輸入想對教練說的話..."
+    live_call_text_fallback_placeholder: "或直接輸入想對教練說的話...",
+    live_call_voice_settings: "聲音設定",
+    live_call_preview_voice: "試聽",
+    live_call_voice_natural: "自然人聲 ✨",
+    live_call_voice_robotic: "系統合成音",
+    live_call_auto_voice: "智慧推薦 (自然人聲)",
+    live_call_coach_thinking_tsundere: "正在想怎麼吐槽你... 💭",
+    live_call_coach_thinking_gentle: "正在用心整理溫暖叮嚀... 💖",
+    live_call_coach_thinking_hardcore: "正在計算燃脂菜單... 🔥",
+    live_call_replying: "教練正在組織回覆中..."
   },
   en: {
     app_title: "DAILY DIET",
@@ -958,12 +968,22 @@ const translations = {
     live_call_coach_speaking: "🐼 Coach is speaking...",
     live_call_coach_thinking: "🐼 Coach is thinking...",
     live_call_end_call: "End Call",
+    live_call_call_ended: "Call Ended",
     live_call_mute: "Mute",
     live_call_unmute: "Unmute",
     live_call_speaker_on: "Voice On",
     live_call_speaker_off: "Voice Off",
     live_call_tip: "💡 Tip: Say 'I had a beef noodle bowl', 'How many calories left today?', or 'I want boba tea!'",
-    live_call_text_fallback_placeholder: "Or type a message to coach..."
+    live_call_text_fallback_placeholder: "Or type a message to coach...",
+    live_call_voice_settings: "Voice Settings",
+    live_call_preview_voice: "Preview",
+    live_call_voice_natural: "Natural Voice ✨",
+    live_call_voice_robotic: "Standard Synth",
+    live_call_auto_voice: "Smart Recommended (Natural)",
+    live_call_coach_thinking_tsundere: "Scrutinizing your food logs... 💭",
+    live_call_coach_thinking_gentle: "Preparing sweet advice... 💖",
+    live_call_coach_thinking_hardcore: "Calculating burn routine... 🔥",
+    live_call_replying: "Coach is preparing response..."
   }
 };
 

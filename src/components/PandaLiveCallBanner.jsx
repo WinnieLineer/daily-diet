@@ -2,6 +2,7 @@ import React from 'react';
 import { PhoneCall, Radio } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { t } from '../lib/translations';
+import { getAudioContext } from '../lib/phoneAudio';
 
 export default function PandaLiveCallBanner({ onStartCall }) {
   return (
@@ -48,6 +49,7 @@ export default function PandaLiveCallBanner({ onStartCall }) {
         {/* Big Action Call Button */}
         <button
           onClick={() => {
+            getAudioContext();
             if (typeof window !== 'undefined' && window.speechSynthesis) {
               try {
                 window.speechSynthesis.cancel();

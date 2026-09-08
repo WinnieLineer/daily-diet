@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { 
   PhoneOff, 
   Mic, 
@@ -7,10 +7,29 @@ import {
   Volume2, 
   VolumeX, 
   Send, 
-  Radio
+  Radio,
+  Sliders,
+  Check,
+  Play,
+  X,
+  Sparkles
 } from 'lucide-react';
 import { t, getLanguage } from '../lib/translations';
 import { completeText } from '../lib/gemini';
+import { 
+  playRinging, 
+  playConnected, 
+  playHangup, 
+  playAcknowledge, 
+  playThinkingPulse 
+} from '../lib/phoneAudio';
+import { 
+  getBestVoice, 
+  getSortedVoices, 
+  getStoredVoiceName, 
+  setStoredVoiceName, 
+  formatSpeechText 
+} from '../lib/phoneVoice';
 
 export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goals }) {
   if (!isOpen) return null;
@@ -32,8 +51,9 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       intro: isEn 
         ? "Hello? Why are you calling me during gym hours? Speak up, what did you eat today?" 
         : "喂？飲控時間突然打電話來幹嘛？哼，說吧，今天又偷吃了什麼？",
-      pitch: 1.15,
-      rate: 1.1
+      thinkingHint: t('live_call_coach_thinking_tsundere'),
+      pitch: 1.05,
+      rate: 1.05
     },
     gentle: {
       avatar: '🐼',
@@ -43,8 +63,9 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       intro: isEn 
         ? "Hello there! I'm so happy you called. How are you feeling today? Tell me everything you ate!" 
         : "哈囉～好開心接到你的電話！今天過得好嗎？不管吃了什麼都可以慢慢跟我說喔 ✨",
+      thinkingHint: t('live_call_coach_thinking_gentle'),
       pitch: 1.0,
-      rate: 0.95
+      rate: 0.98
     },
     hardcore: {
       avatar: '🐼',
@@ -54,8 +75,9 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       intro: isEn 
         ? "WHAT'S UP! Are you resting or working out?! Report your calories right now! GO GO GO!" 
         : "喂！動起來沒有！現在打來最好是有認真吃蛋白質！今天吃了多少卡路里，立刻報上來！",
-      pitch: 0.85,
-      rate: 1.2
+      thinkingHint: t('live_call_coach_thinking_hardcore'),
+      pitch: 0.95,
+      rate: 1.12
     }
   }[activePersona] || {
     avatar: '🐼',
@@ -63,12 +85,13 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     badge: '教練',
     badgeColor: 'bg-zinc-100 text-black border-black',
     intro: '喂？說吧！',
+    thinkingHint: '教練正在整理回覆中...',
     pitch: 1.0,
     rate: 1.0
   };
 
-  // 📞 Call Status States: 'connecting' | 'connected'
-  const [callStatus, setCallStatus] = useState('connecting');
+  // 📞 Call Status States: 'calling' | 'connected' | 'ended'
+  const [callStatus, setCallStatus] = useState('calling');
   const [duration, setDuration] = useState(0);
   const [isMuted, setIsMuted] = useState(false);
   const [isSpeakerOn, setIsSpeakerOn] = useState(true);
@@ -79,12 +102,41 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
   const [coachStatus, setCoachStatus] = useState('speaking_intro'); // 'listening' | 'thinking' | 'speaking' | 'speaking_intro'
   const [textInput, setTextInput] = useState('');
 
+  // 🎙️ Voice Settings & Natural Human Voice
+  const [showVoiceSheet, setShowVoiceSheet] = useState(false);
+  const [availableVoices, setAvailableVoices] = useState([]);
+  const [currentVoice, setCurrentVoice] = useState(null);
+  const [previewingVoiceName, setPreviewingVoiceName] = useState(null);
+
   const recognitionRef = useRef(null);
   const scrollEndRef = useRef(null);
   const timerRef = useRef(null);
   const silenceTimerRef = useRef(null);
   const isProcessingRef = useRef(false);
   const lastSpokenRef = useRef({ text: '', time: 0 });
+  const ringingRef = useRef(null);
+  const thinkingPulseIntervalRef = useRef(null);
+
+  // 🔊 Initialize Voices on Mount & Voice Changed
+  useEffect(() => {
+    const updateVoiceList = () => {
+      const sorted = getSortedVoices(isEn, activePersona);
+      setAvailableVoices(sorted);
+      const best = getBestVoice(isEn, activePersona);
+      setCurrentVoice(best);
+    };
+
+    updateVoiceList();
+    if (typeof window !== 'undefined' && window.speechSynthesis) {
+      window.speechSynthesis.onvoiceschanged = updateVoiceList;
+    }
+
+    return () => {
+      if (typeof window !== 'undefined' && window.speechSynthesis) {
+        window.speechSynthesis.onvoiceschanged = null;
+      }
+    };
+  }, [isEn, activePersona]);
 
   // 🕒 Call Duration Timer
   useEffect(() => {
@@ -121,7 +173,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     } catch (e) {}
   };
 
-  // 🔊 TTS Speak Function with Voice Matching & Autoplay Safety
+  // 🔊 Natural TTS Speak Function
   const speakText = (text) => {
     if (!isSpeakerOn || typeof window === 'undefined' || !window.speechSynthesis) {
       setCoachStatus('listening');
@@ -132,11 +184,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
 
     try {
       window.speechSynthesis.cancel();
-      // Remove emojis & markdown symbols for cleaner speech
-      const cleanSpeech = text
-        .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
-        .replace(/[*#_~`]/g, '')
-        .trim();
+      const cleanSpeech = formatSpeechText(text);
 
       if (!cleanSpeech) {
         setCoachStatus('listening');
@@ -150,17 +198,10 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       utterance.pitch = personaConfig.pitch;
       utterance.rate = personaConfig.rate;
 
-      // Select natural voice
-      const voices = window.speechSynthesis.getVoices();
-      if (voices && voices.length > 0) {
-        const targetPrefix = isEn ? 'en' : 'zh';
-        const bestVoice = voices.find(v => 
-          v.lang.toLowerCase().startsWith(targetPrefix) || 
-          v.lang.includes('TW') || 
-          v.lang.includes('cmn') || 
-          v.lang.includes('HK')
-        );
-        if (bestVoice) utterance.voice = bestVoice;
+      // Use active natural voice
+      const activeVoice = currentVoice || getBestVoice(isEn, activePersona);
+      if (activeVoice) {
+        utterance.voice = activeVoice;
       }
 
       let isFinished = false;
@@ -192,12 +233,12 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     }
   };
 
-  // 🤖 Process User Query and Get Coach Answer (Strict Deduplication & Loop Defense)
+  // 🤖 Process User Query and Get Coach Answer
   const handleUserSpoke = async (spokenText) => {
     if (!spokenText || !spokenText.trim()) return;
     const cleanText = spokenText.trim();
 
-    // 🛡️ 1. Double-Send Protection
+    // 🛡️ Double-Send & Duplicate Lock Protection
     if (isProcessingRef.current) return;
     const now = Date.now();
     if (lastSpokenRef.current.text === cleanText && (now - lastSpokenRef.current.time) < 3000) {
@@ -212,8 +253,11 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       silenceTimerRef.current = null;
     }
 
-    // Immediately pause recognition so coach's own reply won't be captured!
+    // Immediately pause speech recognition
     pauseRecognition();
+
+    // 📻 Play telecom acknowledgment chirp (Roger beep!)
+    playAcknowledge();
 
     // Add user message to history
     setTranscriptHistory(prev => [
@@ -222,6 +266,13 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     ]);
     setInterimUserText('');
     setCoachStatus('thinking');
+
+    // Start subtle thinking sound pulse
+    playThinkingPulse();
+    if (thinkingPulseIntervalRef.current) clearInterval(thinkingPulseIntervalRef.current);
+    thinkingPulseIntervalRef.current = setInterval(() => {
+      playThinkingPulse();
+    }, 2200);
 
     try {
       const cals = todaySummary?.calories || 0;
@@ -236,18 +287,24 @@ User is speaking to you directly in a live phone call: "${cleanText}".
 Reply in ${isEn ? 'English' : 'Traditional Chinese'}.
 CRITICAL REQUIREMENTS:
 1. Speak naturally as if answering a direct phone call.
-2. Keep it under 45 words, punchy and direct.
+2. Keep it under 40 words, punchy and conversational.
 3. If user mentioned eating something, evaluate briefly in your persona tone.
-4. NO markdown symbols, NO emojis, NO quotes, so TTS voice can read aloud cleanly.`;
+4. NO markdown symbols, NO emojis, NO quotes, so natural voice reads smoothly.`;
 
       let reply = await completeText(prompt);
       
       if (!reply || reply.includes('保持健康飲控節奏')) {
         reply = activePersona === 'tsundere'
-          ? (isEn ? "Hmph, noted! But don't you dare sneak snacks tonight, keep an eye on your calories!" : "哼，本教練聽到了！等一下最好給我乖乖吃蔬菜，不准偷吃甜點！")
+          ? (isEn ? "Hmph, noted! But don't you dare sneak snacks tonight, watch your calories!" : "哼，本教練聽到了！等一下最好給我乖乖吃蔬菜，不准偷吃甜點！")
           : activePersona === 'gentle'
-          ? (isEn ? "Got it! You are doing wonderful today, remember to drink enough water and rest well! 💖" : "收到囉～今天有認真注意飲食很棒！記得多補充水分喔，加油！💖")
-          : (isEn ? "UNDERSTOOD! Finish your water and push your workouts today, let's go!" : "收到！把剩下的水給我灌完，今晚深蹲做滿！動起來！🔥");
+          ? (isEn ? "Got it! You are doing wonderful today, remember to drink enough water! 💖" : "收到囉～今天有認真注意飲食很棒！記得多補充水分喔，加油！")
+          : (isEn ? "UNDERSTOOD! Finish your water and push your workouts today, let's go!" : "收到！把剩下的水給我灌完，今晚深蹲做滿！動起來！");
+      }
+
+      // Stop thinking sound
+      if (thinkingPulseIntervalRef.current) {
+        clearInterval(thinkingPulseIntervalRef.current);
+        thinkingPulseIntervalRef.current = null;
       }
 
       setTranscriptHistory(prev => [
@@ -258,8 +315,12 @@ CRITICAL REQUIREMENTS:
       speakText(reply);
     } catch (err) {
       console.error("Coach answer error:", err);
+      if (thinkingPulseIntervalRef.current) {
+        clearInterval(thinkingPulseIntervalRef.current);
+        thinkingPulseIntervalRef.current = null;
+      }
       const fallback = isEn 
-        ? "Line has some static! But stick strictly to your calorie goals today!" 
+        ? "Line has some static! Stick strictly to your calorie goals today!" 
         : "電話訊號有點雜音！總之今天的熱量目標給我盯緊了！";
       setTranscriptHistory(prev => [
         ...prev, 
@@ -333,7 +394,6 @@ CRITICAL REQUIREMENTS:
       };
 
       recognition.onend = () => {
-        // Auto-restart only when call is active, not muted, and not currently processing/speaking
         if (callStatus === 'connected' && !isMuted && !isProcessingRef.current) {
           try {
             recognition.start();
@@ -348,24 +408,41 @@ CRITICAL REQUIREMENTS:
     }
   };
 
-  // 🚀 Start Call Flow on Mount
+  // 🚀 Start Phone Call Sequence on Mount (Authentic Ringing -> Pickup)
   useEffect(() => {
-    // 1. Simulate fast dialing ring
+    // 1. Start telephone ringback tone ("嘟... 嘟...")
+    ringingRef.current = playRinging();
+
+    // 2. Simulate telephone connection pickup after ~1.6 seconds
     const connectTimer = setTimeout(() => {
+      if (ringingRef.current) {
+        ringingRef.current.stop();
+        ringingRef.current = null;
+      }
+
+      // 📲 Play Call Connected Pickup Chime!
+      playConnected();
+
       setCallStatus('connected');
       isProcessingRef.current = true;
-      // Greet user
+
+      // Coach speaks intro
       setTranscriptHistory([
         { sender: 'coach', text: personaConfig.intro, time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }) }
       ]);
       speakText(personaConfig.intro);
-      // Init speech recognition instance
+
+      // Start recognition
       startRecognition();
-    }, 1000);
+    }, 1600);
 
     return () => {
       clearTimeout(connectTimer);
+      if (ringingRef.current) {
+        ringingRef.current.stop();
+      }
       if (silenceTimerRef.current) clearTimeout(silenceTimerRef.current);
+      if (thinkingPulseIntervalRef.current) clearInterval(thinkingPulseIntervalRef.current);
       if (recognitionRef.current) {
         try { recognitionRef.current.abort(); } catch (e) {}
       }
@@ -396,15 +473,63 @@ CRITICAL REQUIREMENTS:
     }
   };
 
-  // 🛑 End Call
+  // 🛑 End Call Sequence (Authentic Hangup tone & busy signal)
   const handleEndCall = () => {
+    setCallStatus('ended');
+
+    // 1. Stop any ringing or thinking pulse
+    if (ringingRef.current) {
+      ringingRef.current.stop();
+      ringingRef.current = null;
+    }
+    if (thinkingPulseIntervalRef.current) {
+      clearInterval(thinkingPulseIntervalRef.current);
+      thinkingPulseIntervalRef.current = null;
+    }
+
+    // 2. Cancel active speech & recognition
     if (typeof window !== 'undefined' && window.speechSynthesis) {
       window.speechSynthesis.cancel();
     }
     if (recognitionRef.current) {
       try { recognitionRef.current.abort(); } catch (e) {}
     }
-    onClose();
+
+    // 3. Play realistic busy/hangup tone (嘟、嘟、嘟 + receiver click)
+    playHangup();
+
+    // 4. Close modal after 400ms so user hears the hangup audio
+    setTimeout(() => {
+      onClose();
+    }, 450);
+  };
+
+  // 🧪 Preview Voice
+  const handlePreviewVoice = (voice) => {
+    if (typeof window === 'undefined' || !window.speechSynthesis) return;
+    window.speechSynthesis.cancel();
+    setPreviewingVoiceName(voice.name);
+
+    const testText = isEn 
+      ? `Hello! This is Coach Panda, let's achieve your fitness goals!` 
+      : `哈囉！我是胖達教練，今天有好好控制熱量嗎？`;
+
+    const utterance = new SpeechSynthesisUtterance(testText);
+    utterance.voice = voice;
+    utterance.lang = voice.lang;
+    utterance.rate = personaConfig.rate;
+    utterance.pitch = personaConfig.pitch;
+
+    utterance.onend = () => setPreviewingVoiceName(null);
+    utterance.onerror = () => setPreviewingVoiceName(null);
+
+    window.speechSynthesis.speak(utterance);
+  };
+
+  // 🎯 Select Voice
+  const handleSelectVoice = (voice) => {
+    setCurrentVoice(voice);
+    setStoredVoiceName(voice.name);
   };
 
   // ⏱️ Format MM:SS
@@ -415,21 +540,27 @@ CRITICAL REQUIREMENTS:
   };
 
   return (
-    <div className="fixed inset-0 z-[500] flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md animate-fadeIn">
+    <div className="fixed inset-0 z-[500] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md animate-fadeIn">
       <motion.div
-        initial={{ scale: 0.9, opacity: 0, y: 30 }}
+        initial={{ scale: 0.92, opacity: 0, y: 30 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
-        exit={{ scale: 0.9, opacity: 0, y: 30 }}
-        className="bg-zinc-950 border-4 border-black rounded-[2.5rem] w-full max-w-md h-[90vh] max-h-[750px] shadow-neo-lg flex flex-col overflow-hidden text-white relative"
+        exit={{ scale: 0.92, opacity: 0, y: 30 }}
+        className="bg-zinc-950 border-4 border-black rounded-[2.5rem] w-full max-w-md h-[92vh] max-h-[760px] shadow-neo-lg flex flex-col overflow-hidden text-white relative"
       >
-        {/* Top Floating Glow */}
-        <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-emerald-500/20 via-transparent to-transparent pointer-events-none" />
+        {/* Top Ambient Glow */}
+        <div className={`absolute top-0 left-0 right-0 h-44 bg-gradient-to-b ${
+          callStatus === 'ended' 
+            ? 'from-rose-500/20' 
+            : coachStatus === 'thinking' 
+            ? 'from-amber-500/25' 
+            : 'from-emerald-500/20'
+        } via-transparent to-transparent pointer-events-none transition-colors duration-500`} />
 
-        {/* Header: Call Info & Status */}
+        {/* 1. Header: Caller ID & Telecom Status */}
         <div className="p-4 sm:p-5 flex items-center justify-between border-b-2 border-zinc-800 relative z-10">
           <div className="flex items-center gap-3">
             <div className="relative">
-              <span className="text-3xl sm:text-4xl p-2 bg-zinc-900 border-2 border-zinc-700 rounded-2xl block">
+              <span className="text-3xl sm:text-4xl p-2 bg-zinc-900 border-2 border-zinc-700 rounded-2xl block shadow-inner">
                 {personaConfig.avatar}
               </span>
               <span className="absolute -bottom-1 -right-1 text-sm bg-black border border-zinc-700 rounded-full p-0.5">
@@ -446,77 +577,111 @@ CRITICAL REQUIREMENTS:
                 </span>
               </div>
               <div className="flex items-center gap-2 text-xs font-mono font-bold text-zinc-400 mt-0.5">
-                {callStatus === 'connecting' ? (
-                  <span className="text-amber-400 animate-pulse flex items-center gap-1">
-                    <Radio size={12} className="animate-spin" />
-                    {t('live_call_calling')}
+                {callStatus === 'calling' ? (
+                  <span className="text-amber-400 animate-pulse flex items-center gap-1.5 font-sans">
+                    <Radio size={13} className="animate-spin" />
+                    <span>{t('live_call_calling')} (嘟...)</span>
+                  </span>
+                ) : callStatus === 'ended' ? (
+                  <span className="text-rose-400 font-sans flex items-center gap-1">
+                    <span>📵</span> {t('live_call_call_ended')}
                   </span>
                 ) : (
                   <span className="text-emerald-400 flex items-center gap-1.5">
                     <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                    {t('live_call_connected')} · {formatTime(duration)}
+                    <span>{t('live_call_connected')}</span>
+                    <span className="text-zinc-500">·</span>
+                    <span>{formatTime(duration)}</span>
+                    <span className="text-[10px] px-1.5 py-0.2 bg-zinc-800 text-zinc-300 rounded border border-zinc-700 font-sans">
+                      📶 HD Voice
+                    </span>
                   </span>
                 )}
               </div>
             </div>
           </div>
 
-          <button
-            onClick={handleEndCall}
-            className="p-2.5 rounded-2xl bg-zinc-900 text-zinc-400 hover:text-white border-2 border-zinc-700 hover:border-black transition-all cursor-pointer"
-            title={t('live_call_end_call')}
-          >
-            <PhoneOff size={18} />
-          </button>
+          {/* Top Actions: Voice Switcher & Hangup */}
+          <div className="flex items-center gap-1.5">
+            <button
+              onClick={() => setShowVoiceSheet(true)}
+              className="p-2 rounded-2xl bg-zinc-900 text-zinc-300 hover:text-white border-2 border-zinc-700 hover:border-accent transition-all cursor-pointer flex items-center gap-1 text-[11px] font-black"
+              title={t('live_call_voice_settings')}
+            >
+              <Sliders size={15} className="text-accent" />
+              <span className="hidden sm:inline">聲音</span>
+            </button>
+            <button
+              onClick={handleEndCall}
+              className="p-2.5 rounded-2xl bg-zinc-900 text-zinc-400 hover:text-rose-400 border-2 border-zinc-700 hover:border-rose-500 transition-all cursor-pointer"
+              title={t('live_call_end_call')}
+            >
+              <PhoneOff size={18} />
+            </button>
+          </div>
         </div>
 
-        {/* Dynamic Waveform & Voice State */}
-        <div className="bg-zinc-900/60 border-b-2 border-zinc-800/80 px-4 py-3 flex items-center justify-between gap-2 shrink-0">
+        {/* 2. Prominent Dynamic State Banner & Audio Waveform */}
+        <div className={`px-4 py-2.5 flex items-center justify-between gap-2 shrink-0 border-b-2 transition-colors duration-300 ${
+          coachStatus === 'thinking'
+            ? 'bg-amber-950/60 border-amber-600/50 text-amber-300'
+            : coachStatus === 'speaking' || coachStatus === 'speaking_intro'
+            ? 'bg-emerald-950/50 border-emerald-600/50 text-emerald-300'
+            : 'bg-zinc-900/60 border-zinc-800/80 text-cyan-300'
+        }`}>
           <div className="flex items-center gap-2">
             {coachStatus === 'speaking' || coachStatus === 'speaking_intro' ? (
-              <span className="text-xs font-black text-emerald-400 flex items-center gap-1.5 animate-pulse">
-                <span>🔊</span> {t('live_call_coach_speaking')}
+              <span className="text-xs font-black flex items-center gap-1.5 animate-pulse text-emerald-300">
+                <span className="text-sm">🔊</span>
+                <span>{t('live_call_coach_speaking')}</span>
               </span>
             ) : coachStatus === 'thinking' ? (
-              <span className="text-xs font-black text-amber-400 flex items-center gap-1.5 animate-bounce">
-                <span>🤔</span> {t('live_call_coach_thinking')}
+              <span className="text-xs font-black flex items-center gap-1.5 animate-pulse text-amber-300">
+                <span className="text-sm animate-spin">⏳</span>
+                <span>{t('live_call_replying')}</span>
               </span>
             ) : isMuted ? (
               <span className="text-xs font-black text-rose-400 flex items-center gap-1.5">
                 <span>🔇</span> 已靜音
               </span>
             ) : (
-              <span className="text-xs font-black text-cyan-400 flex items-center gap-1.5">
+              <span className="text-xs font-black flex items-center gap-1.5 text-cyan-300">
                 <Radio size={13} className="animate-pulse" />
-                {t('live_call_listening')}
+                <span>{t('live_call_listening')}</span>
               </span>
             )}
           </div>
 
-          {/* Audio Waveform Animation Bars */}
+          {/* Dynamic Audio Waveform Animation */}
           <div className="flex items-center gap-1 h-5">
-            {[40, 75, 100, 60, 90, 45, 80].map((h, i) => (
+            {[40, 80, 100, 60, 95, 50, 85].map((h, i) => (
               <motion.span
                 key={i}
                 animate={{
                   height: (coachStatus.startsWith('speaking') || (!isMuted && interimUserText))
                     ? [`${h * 0.2}%`, `${h}%`, `${h * 0.4}%`]
+                    : coachStatus === 'thinking'
+                    ? [`${h * 0.3}%`, `${h * 0.6}%`, `${h * 0.2}%`]
                     : '15%'
                 }}
                 transition={{
                   repeat: Infinity,
-                  duration: 0.5 + (i * 0.1),
+                  duration: coachStatus === 'thinking' ? 0.8 : (0.45 + i * 0.08),
                   ease: "easeInOut"
                 }}
                 className={`w-1 rounded-full ${
-                  coachStatus.startsWith('speaking') ? 'bg-emerald-400' : 'bg-cyan-400'
+                  coachStatus === 'thinking'
+                    ? 'bg-amber-400'
+                    : coachStatus.startsWith('speaking')
+                    ? 'bg-emerald-400'
+                    : 'bg-cyan-400'
                 }`}
               />
             ))}
           </div>
         </div>
 
-        {/* Live Conversation Transcript Stream */}
+        {/* 3. Live Conversation Transcript Stream */}
         <div className="flex-1 overflow-y-auto p-4 space-y-3.5 custom-scrollbar">
           {transcriptHistory.map((item, idx) => (
             <motion.div
@@ -543,7 +708,34 @@ CRITICAL REQUIREMENTS:
             </motion.div>
           ))}
 
-          {/* Interim Realtime Transcript */}
+          {/* 🌟 Prominent Indicator: 對方正在回覆提示卡片 */}
+          {coachStatus === 'thinking' && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 8 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              className="flex flex-col items-start"
+            >
+              <div className="flex items-center gap-1.5 mb-1 px-1">
+                <span className="text-[10px] font-black uppercase text-amber-400 animate-pulse flex items-center gap-1">
+                  <span>🐼</span> {personaConfig.badge}
+                </span>
+                <span className="text-[9px] font-mono text-zinc-500">正在輸入...</span>
+              </div>
+              <div className="max-w-[85%] p-3 rounded-2xl border-2 border-amber-400 bg-amber-950/50 text-amber-200 rounded-tl-none flex items-center gap-2.5 shadow-neo-xs">
+                <div className="flex items-center gap-1">
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: '0ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: '150ms' }} />
+                  <span className="w-2 h-2 rounded-full bg-amber-400 animate-bounce" style={{ animationDelay: '300ms' }} />
+                </div>
+                <span className="text-xs font-bold italic text-amber-100">
+                  {personaConfig.thinkingHint}
+                </span>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Interim Realtime Speech Subtitles */}
           {interimUserText && (
             <motion.div
               initial={{ opacity: 0 }}
@@ -562,17 +754,17 @@ CRITICAL REQUIREMENTS:
           <div ref={scrollEndRef} />
         </div>
 
-        {/* Quick Voice Prompt Tips */}
-        <div className="px-4 py-2 bg-zinc-900/40 text-[11px] font-bold text-zinc-400 border-t border-zinc-800 text-center">
+        {/* 4. Quick Tips */}
+        <div className="px-4 py-1.5 bg-zinc-900/40 text-[11px] font-bold text-zinc-400 border-t border-zinc-800 text-center">
           {t('live_call_tip')}
         </div>
 
-        {/* Text Fallback Input Bar */}
+        {/* 5. Text Fallback Input Bar */}
         <div className="px-3 py-2 bg-zinc-950 border-t-2 border-zinc-800 flex items-center gap-2">
           <input
             type="text"
             value={textInput}
-            disabled={coachStatus === 'thinking' || coachStatus.startsWith('speaking')}
+            disabled={coachStatus === 'thinking' || coachStatus.startsWith('speaking') || callStatus !== 'connected'}
             onChange={(e) => setTextInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && textInput.trim()) {
@@ -592,14 +784,14 @@ CRITICAL REQUIREMENTS:
                 handleUserSpoke(val);
               }
             }}
-            disabled={coachStatus === 'thinking' || coachStatus.startsWith('speaking')}
+            disabled={coachStatus === 'thinking' || coachStatus.startsWith('speaking') || callStatus !== 'connected'}
             className="bg-emerald-400 text-black p-2 rounded-xl border border-black hover:bg-emerald-300 active:scale-95 transition-all cursor-pointer font-black disabled:opacity-50"
           >
             <Send size={15} />
           </button>
         </div>
 
-        {/* Bottom Call Controls (Dial Pad Buttons) */}
+        {/* 6. Bottom Telecom Controls (Mute, Red Hangup, Speakerphone) */}
         <div className="p-4 sm:p-5 bg-zinc-900 border-t-2 border-zinc-800 flex items-center justify-around gap-4 shrink-0">
           {/* Mute Button */}
           <button
@@ -614,7 +806,7 @@ CRITICAL REQUIREMENTS:
             <span className="text-[10px] font-black">{isMuted ? t('live_call_unmute') : t('live_call_mute')}</span>
           </button>
 
-          {/* End Call Button */}
+          {/* Big Red Hangup Button */}
           <button
             onClick={handleEndCall}
             className="w-16 h-16 rounded-full bg-rose-600 hover:bg-rose-500 text-white flex items-center justify-center border-4 border-black shadow-neo-sm active:scale-90 transition-transform cursor-pointer"
@@ -636,6 +828,117 @@ CRITICAL REQUIREMENTS:
             <span className="text-[10px] font-black">{isSpeakerOn ? t('live_call_speaker_on') : t('live_call_speaker_off')}</span>
           </button>
         </div>
+
+        {/* 7. Voice Settings Slide-Over Drawer */}
+        <AnimatePresence>
+          {showVoiceSheet && (
+            <motion.div
+              initial={{ y: '100%' }}
+              animate={{ y: 0 }}
+              exit={{ y: '100%' }}
+              transition={{ type: 'spring', damping: 25, stiffness: 280 }}
+              className="absolute inset-0 bg-zinc-950/95 backdrop-blur-md z-50 flex flex-col p-5 overflow-hidden"
+            >
+              <div className="flex items-center justify-between pb-3 border-b border-zinc-800">
+                <div className="flex items-center gap-2">
+                  <div className="p-2 rounded-xl bg-accent text-black font-black">
+                    <Sparkles size={16} />
+                  </div>
+                  <div>
+                    <h4 className="font-black text-sm text-white">選擇教練聲音 (自然人聲)</h4>
+                    <p className="text-[10px] text-zinc-400 font-bold">已自動過濾機械音，優先選擇自然高音質人聲</p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowVoiceSheet(false)}
+                  className="p-2 rounded-xl bg-zinc-900 border border-zinc-700 text-zinc-400 hover:text-white cursor-pointer"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              <div className="flex-1 overflow-y-auto py-3 space-y-2 custom-scrollbar">
+                {availableVoices.length === 0 ? (
+                  <div className="text-center py-10 text-xs text-zinc-400 font-bold">
+                    系統尚未載入語音，請稍後重試...
+                  </div>
+                ) : (
+                  availableVoices.map((item, idx) => {
+                    const v = item.voice;
+                    const isSelected = currentVoice?.name === v.name;
+                    const isPreviewing = previewingVoiceName === v.name;
+
+                    return (
+                      <div
+                        key={v.name + idx}
+                        onClick={() => handleSelectVoice(v)}
+                        className={`p-3 rounded-2xl border-2 cursor-pointer transition-all flex items-center justify-between gap-2 ${
+                          isSelected
+                            ? 'bg-accent/15 border-accent text-white shadow-neo-xs'
+                            : 'bg-zinc-900/80 border-zinc-800 text-zinc-300 hover:border-zinc-700'
+                        }`}
+                      >
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-1.5 flex-wrap">
+                            <span className="font-black text-xs truncate">
+                              {v.name.replace(/Microsoft|Online|\(Natural\)|\(Enhanced\)/gi, '').trim()}
+                            </span>
+                            {item.isNatural && (
+                              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-400 text-black">
+                                自然人聲 ✨
+                              </span>
+                            )}
+                            {idx === 0 && (
+                              <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-400 text-black">
+                                最佳推薦 🏆
+                              </span>
+                            )}
+                          </div>
+                          <p className="text-[10px] text-zinc-400 font-mono mt-0.5 truncate">
+                            {v.lang} · {v.name}
+                          </p>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handlePreviewVoice(v);
+                            }}
+                            className={`px-2.5 py-1.5 rounded-xl border text-[10px] font-black flex items-center gap-1 cursor-pointer transition-all ${
+                              isPreviewing
+                                ? 'bg-emerald-400 text-black border-black animate-pulse'
+                                : 'bg-zinc-800 text-zinc-200 border-zinc-700 hover:bg-zinc-700'
+                            }`}
+                          >
+                            <Play size={11} />
+                            <span>{isPreviewing ? '播放中' : '試聽'}</span>
+                          </button>
+
+                          {isSelected && (
+                            <div className="w-6 h-6 rounded-full bg-accent text-black flex items-center justify-center font-black">
+                              <Check size={14} />
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="pt-3 border-t border-zinc-800 text-center">
+                <button
+                  onClick={() => setShowVoiceSheet(false)}
+                  className="w-full py-2.5 bg-accent text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-xs hover:bg-yellow-300 active:scale-95 transition-all cursor-pointer"
+                >
+                  確認完成
+                </button>
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </motion.div>
     </div>
   );
