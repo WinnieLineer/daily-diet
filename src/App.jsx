@@ -45,6 +45,9 @@ function lazyWithRetry(componentImport) {
   });
 }
 
+// 📞 即時語音通話模組開關 (依需求設為 false 隱藏，避免耗費過量 API)
+const ENABLE_LIVE_CALL = false;
+
 import PandaLiveCallBanner from './components/PandaLiveCallBanner';
 
 // 🚀 Dynamic Lazy-Loaded Modals & Components (Code Splitting with Auto-Retry)
@@ -2100,20 +2103,22 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* 📞 胖達教練即時語音熱線 (Live Audio Call Beta) */}
-      <PandaLiveCallBanner onStartCall={() => setShowLiveCallModal(true)} />
-
-      {/* 📞 胖達教練即時通話彈窗 */}
-      <Suspense fallback={null}>
-        {showLiveCallModal && (
-          <PandaLiveCallModal
-            isOpen={showLiveCallModal}
-            onClose={() => setShowLiveCallModal(false)}
-            todaySummary={summary}
-            goals={goals}
-          />
-        )}
-      </Suspense>
+      {/* 📞 胖達教練即時語音熱線 (Live Audio Call) - 已依指示隱藏以節省 API 額度 */}
+      {ENABLE_LIVE_CALL && (
+        <>
+          <PandaLiveCallBanner onStartCall={() => setShowLiveCallModal(true)} />
+          <Suspense fallback={null}>
+            {showLiveCallModal && (
+              <PandaLiveCallModal
+                isOpen={showLiveCallModal}
+                onClose={() => setShowLiveCallModal(false)}
+                todaySummary={summary}
+                goals={goals}
+              />
+            )}
+          </Suspense>
+        </>
+      )}
 
       {/* Feedback Banner */}
       <motion.div

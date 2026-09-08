@@ -17,9 +17,8 @@ const VERSION_HISTORY = [
     version: '3.2.0', 
     date: '2026-09-08', 
     features: [
-      '📞 胖達教練即時語音熱線 (Live Audio Call)', 
       '🎙️ LINE 官方帳號支援語音記餐', 
-      '⚡ 任務模型分流與極速 Gemma 4 (14.4K 額度)'
+      '⚡ 任務模型分流與極速 AI 辨識'
     ] 
   },
   { version: '3.1.0', date: '2026-08-31', features: ['LINE 官方帳號無縫連動 🐼', '雙向 Gist 雲端同步與綁定 ☁️', 'Gemini 8階梯 AI 容錯引擎 ⚡', '主視覺歡迎卡片與實時日誌 📊'] },

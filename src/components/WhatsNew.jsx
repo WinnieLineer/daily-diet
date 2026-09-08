@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, PhoneCall, Mic } from 'lucide-react';
+import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
@@ -106,12 +106,6 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v320_header')}</div>
                   
-                  <FeatureItem 
-                    icon={PhoneCall}
-                    title={t('whatsnew_v320_live_call_title')}
-                    description={t('whatsnew_v320_live_call_desc')}
-                    color="bg-emerald-400"
-                  />
                   <FeatureItem 
                     icon={Mic}
                     title={t('whatsnew_v320_line_voice_title')}
