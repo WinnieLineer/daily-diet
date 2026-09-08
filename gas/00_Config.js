@@ -51,6 +51,8 @@ const PRIMARY_GEMINI_MODELS = VISION_GEMINI_MODELS;
 const DEFAULT_CALORIE_GOAL = 2000; // kcal
 const DEFAULT_PROTEIN_GOAL = 100;  // grams
 const DEFAULT_WATER_GOAL = 2500;   // ml
+const DEFAULT_CARBS_GOAL = 200;    // grams
+const DEFAULT_FAT_GOAL = 60;       // grams
 
 // 🎨 預設教練性格與語系
 const DEFAULT_PERSONA = 'tsundere'; // 'tsundere' | 'gentle' | 'hardcore'

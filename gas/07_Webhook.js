@@ -199,14 +199,22 @@ function doGet(e) {
       const calories = Number(e?.parameter?.calories);
       const protein = Number(e?.parameter?.protein);
       const water = Number(e?.parameter?.water);
+      const carbs = Number(e?.parameter?.carbs);
+      const fat = Number(e?.parameter?.fat);
+      const showCarbsFatRaw = e?.parameter?.show_carbs_fat;
+      const showCarbsFat = showCarbsFatRaw === 'true';
       if (calories) props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
       if (protein) props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
       if (water) props.setProperty(`WATER_GOAL_${userId}`, String(water));
+      if (carbs) props.setProperty(`CARBS_GOAL_${userId}`, String(carbs));
+      if (fat) props.setProperty(`FAT_GOAL_${userId}`, String(fat));
+      if (showCarbsFatRaw !== undefined) props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbsFat));
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       if (pat && userGistId) {
-        syncGoalsToUserGist({ calories, protein, water }, userGistId, pat);
+        syncGoalsToUserGist({ calories, protein, water, carbs, fat, show_carbs_fat: showCarbsFat }, userGistId, pat);
       }
-      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, '', `已更新體態目標：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml`);
+      const carbsStatus = showCarbsFatRaw !== undefined ? ` / 碳水:${carbs}g 脂肪:${fat}g (顯示:${showCarbsFat})` : '';
+      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水${carbsStatus}`, '', `已更新體態目標：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml`);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -847,6 +855,18 @@ function doPost(e) {
           continue;
         }
 
+        // 🍞 切換碳水與脂肪追蹤開關
+        if (payload.action === 'toggleCarbsFat') {
+          const currentGoals = getUserGoals(userId, props, userGistId);
+          const newEnable = !currentGoals.show_carbs_fat;
+          setUserCarbsFatToggle(userId, newEnable, userGistId, GITHUB_PAT, props);
+          const toggleLabel = newEnable ? (isEn ? '🍞 Carbs & Fat tracking ON' : '🍞 已開啟碳水與脂肪追蹤') : (isEn ? '🥑 Carbs & Fat tracking OFF' : '🥑 已關閉碳水與脂肪追蹤');
+          recordSystemLog('切換碳水追蹤', userId, toggleLabel, '', `回傳今日總結：碳水追蹤已${newEnable ? '開啟' : '關閉'}`);
+          const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 📈 查看 7 日趨勢週報
         if (payload.action === 'viewWeeklyTrends' || payload.action === 'weeklyTrends') {
           console.log(`📈 [查看週報] 用戶: ${userId}`);
@@ -1268,6 +1288,19 @@ function doPost(e) {
               : "📸 請點擊下方輸入框左側的【📷 相機】或【🖼️ 相簿】圖示，直接拍照或挑選餐點照片傳給我，AI 熊貓立刻為您分析熱量與營養素！🐼✨";
             recordSystemLog('拍照引導', userId, userText, '', `回傳指引提示：${cameraGuideText.slice(0, 100)}`);
             replyTextMessage(replyToken, cameraGuideText, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 🍞 開啟/關閉碳水與脂肪追蹤
+          const isEnableCarbs = userText === '開啟碳水' || userText === '記錄碳水' || userText === '開啟碳水與糖' || userText === '顯示碳水' || userText === '碳水追蹤' || userText.toLowerCase() === 'enable carbs' || userText.toLowerCase() === 'track carbs' || userText.toLowerCase() === 'show carbs';
+          const isDisableCarbs = userText === '關閉碳水' || userText === '隱藏碳水' || userText === '不記錄碳水' || userText === '關閉碳水與糖' || userText === '關閉碳水脂肪' || userText.toLowerCase() === 'disable carbs' || userText.toLowerCase() === 'hide carbs';
+          if (isEnableCarbs || isDisableCarbs) {
+            const enable = isEnableCarbs;
+            setUserCarbsFatToggle(userId, enable, userGistId, GITHUB_PAT, props);
+            const toggleLabel = enable ? (isEn ? '🍞 Carbs & Fat tracking is now ON!' : '🍞 已開啟碳水與脂肪追蹤！') : (isEn ? '🥑 Carbs & Fat tracking is now OFF.' : '🥑 已關閉碳水與脂肪追蹤。');
+            recordSystemLog('切換碳水追蹤', userId, userText, toggleLabel, `回傳今日總結：碳水追蹤已${enable ? '開啟' : '關閉'}`);
+            const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 

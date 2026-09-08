@@ -189,9 +189,13 @@ function getUserGoals(userId, props, userGistId) {
   let cal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || Number(props.getProperty('CALORIE_GOAL'));
   let pro = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || Number(props.getProperty('PROTEIN_GOAL'));
   let wat = Number(props.getProperty(`WATER_GOAL_${userId}`)) || Number(props.getProperty('WATER_GOAL'));
+  let carbs = Number(props.getProperty(`CARBS_GOAL_${userId}`)) || 0;
+  let fat = Number(props.getProperty(`FAT_GOAL_${userId}`)) || 0;
+  let showCarbsRaw = props.getProperty(`SHOW_CARBS_FAT_${userId}`);
+  let showCarbs = showCarbsRaw === 'true' ? true : (showCarbsRaw === 'false' ? false : null);
 
   // 若尚未儲存目標，向 Gist 雲端資料庫拉取
-  if (!cal || !pro || !wat) {
+  if (!cal || !pro || !wat || !carbs || !fat || showCarbs === null) {
     const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
     const pat = props.getProperty('GITHUB_PAT');
     if (gistId && pat) {
@@ -209,9 +213,18 @@ function getUserGoals(userId, props, userGistId) {
               const gCal = backupData.settings.find(s => s.key === 'calorie_goal' || s.key === 'user_calories')?.value;
               const gPro = backupData.settings.find(s => s.key === 'protein_goal' || s.key === 'user_protein')?.value;
               const gWat = backupData.settings.find(s => s.key === 'water_goal' || s.key === 'user_water')?.value;
+              const gCarbs = backupData.settings.find(s => s.key === 'carbs_goal')?.value;
+              const gFat = backupData.settings.find(s => s.key === 'fat_goal')?.value;
+              const gShowCarbs = backupData.settings.find(s => s.key === 'show_carbs_fat')?.value;
               if (gCal && !cal) { cal = Number(gCal); props.setProperty(`CALORIE_GOAL_${userId}`, String(cal)); }
               if (gPro && !pro) { pro = Number(gPro); props.setProperty(`PROTEIN_GOAL_${userId}`, String(pro)); }
               if (gWat && !wat) { wat = Number(gWat); props.setProperty(`WATER_GOAL_${userId}`, String(wat)); }
+              if (gCarbs && !carbs) { carbs = Number(gCarbs); props.setProperty(`CARBS_GOAL_${userId}`, String(carbs)); }
+              if (gFat && !fat) { fat = Number(gFat); props.setProperty(`FAT_GOAL_${userId}`, String(fat)); }
+              if (gShowCarbs !== undefined && showCarbs === null) {
+                showCarbs = (gShowCarbs === true || gShowCarbs === 'true');
+                props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbs));
+              }
             }
           }
         }
@@ -224,8 +237,52 @@ function getUserGoals(userId, props, userGistId) {
   return {
     calories: cal || DEFAULT_CALORIE_GOAL,
     protein: pro || DEFAULT_PROTEIN_GOAL,
-    water: wat || DEFAULT_WATER_GOAL
+    water: wat || DEFAULT_WATER_GOAL,
+    carbs: carbs || DEFAULT_CARBS_GOAL,
+    fat: fat || DEFAULT_FAT_GOAL,
+    show_carbs_fat: showCarbs === true
   };
+}
+
+/**
+ * 在 LINE 端切換碳水與脂肪追蹤開關，並同步至 ScriptProperties 與 Gist
+ */
+function setUserCarbsFatToggle(userId, enable, userGistId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(!!enable));
+  console.log(`🍞 [碳水追蹤] 已將用戶 ${userId} 的碳水與脂肪追蹤設為 ${enable ? '開啟' : '關閉'}`);
+  const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
+  if (gistId && pat) {
+    try {
+      const gistUrl = `https://api.github.com/gists/${gistId}`;
+      const getRes = UrlFetchApp.fetch(gistUrl, {
+        headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      if (getRes.getResponseCode() === 200) {
+        let backupData = { settings: [] };
+        const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+        if (content) backupData = JSON.parse(content);
+        if (!backupData.settings) backupData.settings = [];
+        const setVal = (key, val) => {
+          const idx = backupData.settings.findIndex(s => s.key === key);
+          if (idx >= 0) backupData.settings[idx].value = val;
+          else backupData.settings.push({ key, value: val });
+        };
+        setVal('show_carbs_fat', !!enable);
+        UrlFetchApp.fetch(gistUrl, {
+          method: 'patch',
+          headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+          payload: JSON.stringify({
+            files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+          }),
+          muteHttpExceptions: true
+        });
+      }
+    } catch (err) {
+      console.error("同步碳水開關至 Gist 失敗:", err);
+    }
+  }
 }
 
 function syncGoalsToUserGist(goals, pat, gistId) {
@@ -251,6 +308,9 @@ function syncGoalsToUserGist(goals, pat, gistId) {
       if (goals.calories) setVal('calorie_goal', goals.calories);
       if (goals.protein) setVal('protein_goal', goals.protein);
       if (goals.water) setVal('water_goal', goals.water);
+      if (goals.carbs) setVal('carbs_goal', goals.carbs);
+      if (goals.fat) setVal('fat_goal', goals.fat);
+      if (goals.show_carbs_fat !== undefined) setVal('show_carbs_fat', !!goals.show_carbs_fat);
 
       UrlFetchApp.fetch(gistUrl, {
         method: 'patch',

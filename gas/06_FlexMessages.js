@@ -580,12 +580,16 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   let totalCal = 0;
   let totalPro = 0;
   let totalWater = 0;
+  let totalCarbs = 0;
+  let totalFat = 0;
   let mealItems = [];
 
   allLogs.forEach((log) => {
     totalCal += Number(log.calories) || 0;
     totalPro += Number(log.protein) || 0;
     totalWater += Number(log.water) || 0;
+    totalCarbs += Number(log.carbs) || 0;
+    totalFat += Number(log.fat) || 0;
 
     let timeText = log.time || '';
     if (!timeText && log.timestamp) {
@@ -618,6 +622,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   const calGoal = goals.calories;
   const proGoal = goals.protein;
   const watGoal = goals.water;
+  const carbsGoal = goals.carbs || 200;
+  const fatGoal = goals.fat || 60;
+  const showCarbsFat = !!goals.show_carbs_fat;
   const remainingCal = Math.max(0, calGoal - totalCal);
   const calPercent = Math.min(100, Math.round((totalCal / calGoal) * 100));
 
@@ -677,61 +684,109 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
         spacing: "md",
         paddingAll: "16px",
         contents: [
-          {
-            type: "box",
-            layout: "horizontal",
-            spacing: "xs",
-            contents: [
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#FFF1F2",
-                borderColor: "#000000",
-                borderWidth: "2.5px",
-                cornerRadius: "14px",
-                paddingAll: "8px",
-                flex: 1,
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "🔥 Calories" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: false },
-                  { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#EFF6FF",
-                borderColor: "#000000",
-                borderWidth: "2.5px",
-                cornerRadius: "14px",
-                paddingAll: "8px",
-                flex: 1,
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: false },
-                  { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#ECFEFF",
-                borderColor: "#000000",
-                borderWidth: "2.5px",
-                cornerRadius: "14px",
-                paddingAll: "8px",
-                flex: 1,
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: false },
-                  { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
-                ]
-              }
-            ]
-          },
+          // === 營養統計格（條件：是否開啟碳水追蹤）===
+          ...(showCarbsFat ? [
+            // Row 1：熱量 + 水分（各半寬度，數字大氣好讀）
+            {
+              type: "box", layout: "horizontal", spacing: "xs",
+              contents: [
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2.5px",
+                  cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "🔥 Cal" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold", wrap: false }
+                  ]
+                },
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2.5px",
+                  cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: `ml / ${watGoal}`, size: "xxs", color: "#164E63", weight: "bold", wrap: false }
+                  ]
+                }
+              ]
+            },
+            // Row 2：蛋白質 + 碳水 + 脂肪（各三分之一，精準不折行）
+            {
+              type: "box", layout: "horizontal", spacing: "xs", margin: "xs",
+              contents: [
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2px",
+                  cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "🥩 Pro" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalPro}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: `/${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
+                  ]
+                },
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#FFF7ED", borderColor: "#000000", borderWidth: "2px",
+                  cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "🍞 Carbs" : "🍞 碳水", size: "xxs", color: "#C2410C", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalCarbs}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: `/${carbsGoal}g`, size: "xxs", color: "#92400E", weight: "bold" }
+                  ]
+                },
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#F0FDF4", borderColor: "#000000", borderWidth: "2px",
+                  cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "🥑 Fat" : "🥑 脂肪", size: "xxs", color: "#166534", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalFat}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: `/${fatGoal}g`, size: "xxs", color: "#14532D", weight: "bold" }
+                  ]
+                }
+              ]
+            }
+          ] : [
+            // 未開啟：原始單行三欄（熱量、蛋白質、水分）
+            {
+              type: "box", layout: "horizontal", spacing: "xs",
+              contents: [
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2.5px",
+                  cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "🔥 Calories" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold" }
+                  ]
+                },
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2.5px",
+                  cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
+                  ]
+                },
+                {
+                  type: "box", layout: "vertical",
+                  backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2.5px",
+                  cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
+                  contents: [
+                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                    { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
+                  ]
+                }
+              ]
+            }
+          ]),
+          // 餐點列表框
           {
             type: "box",
             layout: "vertical",
@@ -746,6 +801,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
               ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isEn ? (isToday ? "No meals logged yet today" : "No meals logged on this date") : (isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄"), size: "xs", color: "#A1A1AA" }])
             ]
           },
+          // 教練提示框
           {
             type: "box",
             layout: "vertical",
@@ -824,12 +880,27 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 }
               })
             ]
-          }
+          },
+          // 碳水追蹤切換按鈕
+          createNeoFlexButton({
+            label: showCarbsFat
+              ? (isEn ? "🥑 Hide Carbs & Fat" : "🥑 關閉碳水脂肪顯示")
+              : (isEn ? "🍞 Track Carbs & Fat" : "🍞 開啟碳水與脂肪追蹤"),
+            variant: showCarbsFat ? "secondary" : "cyanLight",
+            size: "md",
+            action: {
+              type: "postback",
+              label: showCarbsFat ? (isEn ? "Hide Carbs & Fat" : "關閉碳水脂肪") : (isEn ? "Track Carbs & Fat" : "開啟碳水追蹤"),
+              data: JSON.stringify({ action: 'toggleCarbsFat' }),
+              displayText: showCarbsFat ? (isEn ? "🥑 Carbs & Fat tracking OFF" : "🥑 關閉碳水脂肪追蹤") : (isEn ? "🍞 Carbs & Fat tracking ON" : "🍞 開啟碳水與脂肪追蹤")
+            }
+          })
         ]
       }
     }
   };
 }
+
 
 // ========================================================
 // 🎯 3. 個人飲食目標設定卡片
@@ -1837,6 +1908,8 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
   const userLang = lang || getUserLanguage(userId, props, userGistId);
   const isEn = userLang === 'en';
   const favorites = getUserFavorites(userId, props, userGistId);
+  const goals = getUserGoals(userId, props, userGistId);
+  const showCarbsFat = !!goals.show_carbs_fat;
 
   let totalCal = 0;
   const mealBoxes = [];
@@ -1908,40 +1981,43 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
             spacing: "xs",
             contents: [
               {
-                type: "box",
-                layout: "horizontal",
-                backgroundColor: "#FFF1F2",
-                cornerRadius: "6px",
-                paddingStart: "6px",
-                paddingEnd: "6px",
-                paddingTop: "2px",
-                paddingBottom: "2px",
+                type: "box", layout: "horizontal",
+                backgroundColor: "#FFF1F2", cornerRadius: "6px",
+                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
                 contents: [{ type: "text", text: `🔥 ${log.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
               },
               {
-                type: "box",
-                layout: "horizontal",
-                backgroundColor: "#EFF6FF",
-                cornerRadius: "6px",
-                paddingStart: "6px",
-                paddingEnd: "6px",
-                paddingTop: "2px",
-                paddingBottom: "2px",
+                type: "box", layout: "horizontal",
+                backgroundColor: "#EFF6FF", cornerRadius: "6px",
+                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
                 contents: [{ type: "text", text: `🥩 ${log.protein}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
               },
               {
-                type: "box",
-                layout: "horizontal",
-                backgroundColor: "#ECFEFF",
-                cornerRadius: "6px",
-                paddingStart: "6px",
-                paddingEnd: "6px",
-                paddingTop: "2px",
-                paddingBottom: "2px",
+                type: "box", layout: "horizontal",
+                backgroundColor: "#ECFEFF", cornerRadius: "6px",
+                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
                 contents: [{ type: "text", text: `💧 ${log.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
               }
             ]
           },
+          ...(showCarbsFat && (Number(log.carbs) > 0 || Number(log.fat) > 0) ? [{
+            type: "box", layout: "horizontal", spacing: "xs",
+            contents: [
+              Number(log.carbs) > 0 ? {
+                type: "box", layout: "horizontal",
+                backgroundColor: "#FFF7ED", cornerRadius: "6px",
+                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+                contents: [{ type: "text", text: `🍞 ${log.carbs}g`, size: "xxs", color: "#C2410C", weight: "bold" }]
+              } : null,
+              Number(log.fat) > 0 ? {
+                type: "box", layout: "horizontal",
+                backgroundColor: "#F0FDF4", cornerRadius: "6px",
+                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+                contents: [{ type: "text", text: `🥑 ${log.fat}g`, size: "xxs", color: "#166534", weight: "bold" }]
+              } : null
+            ].filter(Boolean)
+          }] : []),
+
           {
             type: "box",
             layout: "horizontal",
@@ -2643,8 +2719,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
     };
   }
 
-  // 2️⃣ 常用餐點 <= 10 道：單頁完全呈現 (1 補水站 + 所有常用 + 1 管理卡，總數 <= 12)
-  if (totalFavs <= 10) {
+  // 2️⃣ 常用餐點 <= 5 道：單頁完全呈現 (1 補水站 + 所有常用 + 1 管理卡，總數 <= 7)
+  if (totalFavs <= 5) {
     bubbles.push(createWaterBubble());
     favorites.forEach((fav, index) => {
       bubbles.push(createFavoriteBubble(fav, index, totalFavs, 1));
@@ -2661,8 +2737,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
     };
   }
 
-  // 3️⃣ 常用餐點 > 10 道：啟用動態分頁 (每頁 8 道，嚴格確保在 LINE 12 個 Bubble 限制內)
-  const PAGE_SIZE = 8;
+  // 3️⃣ 常用餐點 > 5 道：啟用動態分頁 (每頁 5 道，1+5+1=7 Bubbles ≈ 32KB，嚴格遠低於 LINE 50KB 限制)
+  const PAGE_SIZE = 5;
   const totalPages = Math.ceil(totalFavs / PAGE_SIZE);
   const currentPage = Math.max(1, Math.min(parseInt(page, 10) || 1, totalPages));
   const startIdx = (currentPage - 1) * PAGE_SIZE;

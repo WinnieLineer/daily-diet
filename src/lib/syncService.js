@@ -124,13 +124,16 @@ function doSyncGoals(goals) {
     userId,
     calories: String(goals.calories || 2000),
     protein: String(goals.protein || 100),
-    water: String(goals.water || 2500)
+    water: String(goals.water || 2500),
+    carbs: String(goals.carbs || 200),
+    fat: String(goals.fat || 60),
+    show_carbs_fat: String(!!goals.show_carbs_fat)
   });
   if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
-    console.log(`🎯 [Web ➔ LINE Sync] 即時同步體態目標: ${goals.calories}卡 / ${goals.protein}g蛋`);
+    console.log(`🎯 [Web ➔ LINE Sync] 即時同步體態目標: ${goals.calories}卡 / ${goals.protein}g蛋 / 碳水:${goals.carbs || 200}g / 脂肪:${goals.fat || 60}g (開啟:${!!goals.show_carbs_fat})`);
   } catch (err) {}
 }
 

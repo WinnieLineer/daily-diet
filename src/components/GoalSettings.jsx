@@ -363,7 +363,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       const effectiveUserId = localStorage.getItem('line_user_id');
       const currentGist = getCurrentGistId();
       if (effectiveUserId || currentGist) {
-        syncGoalsToCloud({ calories: parsedCal, protein: parsedPro, water: parsedWat }, true);
+        syncGoalsToCloud({ calories: parsedCal, protein: parsedPro, water: parsedWat, carbs: parsedCarb, fat: parsedFat, show_carbs_fat: !!goals.show_carbs_fat }, true);
 
         if (currentGist) {
           db.settings.toArray().then((allSettings) => {
@@ -974,7 +974,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         </div>
                         <button
                           type="button"
-                          onClick={() => setGoals({ ...goals, show_carbs_fat: !goals.show_carbs_fat })}
+                          onClick={() => {
+                            const newVal = !goals.show_carbs_fat;
+                            const newGoals = { ...goals, show_carbs_fat: newVal };
+                            setGoals(newGoals);
+                            db.settings.put({ key: 'show_carbs_fat', value: newVal });
+                            const _uid = localStorage.getItem('line_user_id');
+                            const _gid = getCurrentGistId();
+                            if (_uid || _gid) syncGoalsToCloud({ ...newGoals, show_carbs_fat: newVal }, true);
+                          }}
                           className={`w-12 h-6 rounded-full border-2 border-black relative transition-colors shrink-0 ${goals.show_carbs_fat ? 'bg-black' : 'bg-zinc-200'}`}
                         >
                           <div className={`w-4 h-4 rounded-full bg-white border-2 border-black absolute top-0.5 transition-all ${goals.show_carbs_fat ? 'left-6' : 'left-0.5'}`} />
