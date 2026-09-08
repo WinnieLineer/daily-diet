@@ -6,6 +6,80 @@
  */
 
 // ========================================================
+// 🎨 Neo-Brutalist 按鈕通用產生器 (與 Web App NeoButton 完美對齊)
+// 粗黑框 (2px #000000) + 圓角 (10px/14px) + 高對比品牌底色 + 粗體置中文字
+// ========================================================
+
+function createNeoFlexButton(config) {
+  const label = config.label || '';
+  const action = config.action || {};
+  const variant = config.variant || 'accent';
+  const size = config.size || 'md';
+  const flex = config.flex !== undefined ? config.flex : null;
+  const margin = config.margin !== undefined ? config.margin : null;
+
+  const bgMap = {
+    accent: '#FDE047',
+    white: '#FFFFFF',
+    black: '#000000',
+    secondary: '#F4F4F5',
+    danger: '#FFF1F2',
+    green: '#DCFCE7',
+    yellowLight: '#FEF9C3',
+    blue: '#2563EB',
+    blueLight: '#DBEAFE',
+    cyan: '#06B6D4',
+    cyanLight: '#CCFBF1',
+    slate: '#475569',
+    slateLight: '#E2E8F0'
+  };
+
+  const textMap = {
+    black: '#FFFFFF',
+    blue: '#FFFFFF',
+    cyan: '#FFFFFF',
+    slate: '#FFFFFF',
+    danger: '#E11D48'
+  };
+
+  const backgroundColor = bgMap[variant] || '#FFFFFF';
+  const textColor = textMap[variant] || '#000000';
+  const isSm = size === 'sm';
+
+  const btnBox = {
+    type: 'box',
+    layout: 'vertical',
+    backgroundColor: backgroundColor,
+    borderColor: '#000000',
+    borderWidth: '2px',
+    cornerRadius: isSm ? '10px' : '14px',
+    paddingTop: isSm ? '8px' : '10px',
+    paddingBottom: isSm ? '8px' : '10px',
+    paddingStart: isSm ? '6px' : '12px',
+    paddingEnd: isSm ? '6px' : '12px',
+    alignItems: 'center',
+    justifyContent: 'center',
+    action: action,
+    contents: [
+      {
+        type: 'text',
+        text: label,
+        weight: 'bold',
+        size: isSm ? 'xxs' : 'xs',
+        color: textColor,
+        align: 'center',
+        wrap: true
+      }
+    ]
+  };
+
+  if (flex !== null) btnBox.flex = flex;
+  if (margin !== null) btnBox.margin = margin;
+
+  return btnBox;
+}
+
+// ========================================================
 // 🍱 1. 餐點辨識確認與微調卡片
 // ========================================================
 
@@ -1066,11 +1140,11 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 layout: "horizontal",
                 spacing: "xs",
                 contents: [
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FFFFFF",
+                  createNeoFlexButton({
+                    label: isEn ? "Sed 1.2" : "久坐 1.2",
+                    variant: "white",
+                    size: "sm",
+                    flex: 1,
                     action: {
                       type: "postback",
                       label: isEn ? "Sed 1.2" : "久坐 1.2",
@@ -1080,12 +1154,12 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                         ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} sedentary ${currentGoalType}`
                         : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 久坐少動 ${currentGoalType}`
                     }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FFFFFF",
+                  }),
+                  createNeoFlexButton({
+                    label: isEn ? "Light 1.38" : "輕度 1.38",
+                    variant: "white",
+                    size: "sm",
+                    flex: 1,
                     action: {
                       type: "postback",
                       label: isEn ? "Light 1.38" : "輕度 1.38",
@@ -1095,12 +1169,12 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                         ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} light activity ${currentGoalType}`
                         : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 輕度活動 ${currentGoalType}`
                     }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FFFFFF",
+                  }),
+                  createNeoFlexButton({
+                    label: isEn ? "Mod 1.55" : "中度 1.55",
+                    variant: "white",
+                    size: "sm",
+                    flex: 1,
                     action: {
                       type: "postback",
                       label: isEn ? "Mod 1.55" : "中度 1.55",
@@ -1110,12 +1184,12 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                         ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} moderate exercise ${currentGoalType}`
                         : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 中度運動 ${currentGoalType}`
                     }
-                  },
-                  {
-                    type: "button",
-                    style: "secondary",
-                    height: "sm",
-                    color: "#FFFFFF",
+                  }),
+                  createNeoFlexButton({
+                    label: isEn ? "Heavy 1.73" : "高強 1.73",
+                    variant: "white",
+                    size: "sm",
+                    flex: 1,
                     action: {
                       type: "postback",
                       label: isEn ? "Heavy 1.73" : "高強 1.73",
@@ -1125,7 +1199,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                         ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} heavy exercise ${currentGoalType}`
                         : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 高強度運動 ${currentGoalType}`
                     }
-                  }
+                  })
                 ]
               }
             ]
@@ -1158,22 +1232,20 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
         spacing: "sm",
         paddingAll: "14px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#FDE047",
+          createNeoFlexButton({
+            label: isEn ? "📱 Open App to View Progress" : "📱 開啟 App 查看目標進度",
+            variant: "accent",
+            size: "md",
             action: {
               type: "uri",
               label: isEn ? "📱 Open App to View Progress" : "📱 開啟 App 查看目標進度",
               uri: appTargetUrl
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#F4F4F5",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "✏️ Custom Target" : "✏️ 填入輸入框自訂調整",
+            variant: "white",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "✏️ Custom Target" : "✏️ 填入輸入框自訂調整",
@@ -1181,7 +1253,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
               inputOption: "openKeyboard",
               fillInText: isEn ? `Set goal ${cal}cal ${pro}pro ${wat}water` : `改目標 ${cal}卡 ${pro}蛋 ${wat}水`
             }
-          }
+          })
         ]
       }
     }
@@ -1469,17 +1541,16 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
         spacing: "sm",
         paddingAll: "14px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#FDE047",
+          createNeoFlexButton({
+            label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
+            variant: "accent",
+            size: "md",
             action: {
               type: "uri",
               label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
               uri: appTargetUrl
             }
-          }
+          })
         ]
       }
     }
@@ -1589,29 +1660,27 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
         spacing: "sm",
         paddingAll: "14px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#FDE047",
+          createNeoFlexButton({
+            label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
+            variant: "accent",
+            size: "md",
             action: {
               type: "uri",
               label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
               uri: appTargetUrl
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#F4F4F5",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "🪄 Smart Goal Recommendations" : "🪄 依身材智能推薦目標",
+            variant: "white",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "🪄 Smart Goal Recommendations" : "🪄 依身材智能推薦目標",
               data: JSON.stringify({ action: 'goalGuide' }),
               displayText: isEn ? "Smart Goals" : "設定目標"
             }
-          }
+          })
         ]
       }
     }
@@ -1810,18 +1879,17 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
         spacing: "sm",
         paddingAll: "14px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isEn ? "📊 View Today's Summary" : "📊 查看今日總結",
+            variant: "black",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "📊 View Today's Summary" : "📊 查看今日總結",
               data: JSON.stringify({ action: 'save' }),
               displayText: isEn ? "Daily Summary" : "今日總結"
             }
-          }
+          })
         ]
       }
     }
@@ -1939,11 +2007,10 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
             margin: "xs",
             contents: [
               ...(isFav ? [] : [
-                {
-                  type: "button",
-                  style: "secondary",
-                  height: "sm",
-                  color: "#FEF08A",
+                createNeoFlexButton({
+                  label: isEn ? "⭐ Fav" : "⭐ 加常用",
+                  variant: "yellowLight",
+                  size: "sm",
                   flex: 1,
                   action: {
                     type: "postback",
@@ -1957,13 +2024,12 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
                     }),
                     displayText: isEn ? `⭐ Favorite: ${cleanDishName}` : `⭐ 存為常用：${cleanDishName}`
                   }
-                }
+                })
               ]),
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#F4F4F5",
+              createNeoFlexButton({
+                label: isEn ? "✏️ Edit" : "✏️ 微調",
+                variant: "white",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -1972,12 +2038,11 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
                   inputOption: "openKeyboard",
                   fillInText: isEn ? `Change ${dishName} ${log.calories}cal ${log.protein || 0}pro ${log.water || 0}water` : `改 ${dishName} ${log.calories}卡 ${log.protein || 0}蛋 ${log.water || 0}水`
                 }
-              },
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#FFF1F2",
+              }),
+              createNeoFlexButton({
+                label: isEn ? "🗑️ Delete" : "🗑️ 刪除",
+                variant: "danger",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -1985,7 +2050,7 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
                   data: JSON.stringify({ action: 'deleteMeal', id: log.id, index: index, date: todayStr }),
                   displayText: isEn ? `🗑️ Delete meal: ${dishName}` : `🗑️ 刪除餐點：${dishName}`
                 }
-              }
+              })
             ]
           }
         ]
@@ -2048,30 +2113,28 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
         spacing: "sm",
         paddingAll: "14px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isToday ? (isEn ? "📊 View Today's Summary" : "📊 查看今日總結") : (isEn ? `📊 View ${todayStr} Summary` : `📊 查看 ${todayStr} 總結`),
+            variant: "black",
+            size: "md",
             action: {
               type: "postback",
               label: isToday ? (isEn ? "📊 View Today's Summary" : "📊 查看今日總結") : (isEn ? `📊 View ${todayStr} Summary` : `📊 查看 ${todayStr} 總結`),
               data: JSON.stringify({ action: 'pickDate', date: todayStr }),
               displayText: isToday ? (isEn ? "Daily Summary" : "今日總結") : (isEn ? `${todayStr} Summary` : `${todayStr} 總結`)
             }
-          },
-          ...(isToday && allLogs.length > 0 ? [{
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FFF1F2",
+          }),
+          ...(isToday && allLogs.length > 0 ? [createNeoFlexButton({
+            label: isEn ? "🗑️ Clear All Today's Logs" : "🗑️ 清空今日紀錄",
+            variant: "danger",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "🗑️ Clear All Today's Logs" : "🗑️ 清空今日紀錄",
               data: JSON.stringify({ action: 'clearTodayConfirm' }),
               displayText: isEn ? "🗑️ Clear Today's Logs" : "🗑️ 清空今日紀錄"
             }
-          }] : [])
+          })] : [])
         ]
       }
     }
@@ -2125,42 +2188,39 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         paddingAll: "14px",
         backgroundColor: "#F0FDFA",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#0891B2",
+          createNeoFlexButton({
+            label: isEn ? "💧 +500ml Water" : "💧 喝水 +500ml",
+            variant: "cyan",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "💧 +500ml Water" : "💧 喝水 +500ml",
               data: JSON.stringify({ action: 'quickWater', amount: 500 }),
               displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 +500ml"
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#CCFBF1",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "💧 +250ml Water" : "💧 喝水 +250ml",
+            variant: "cyanLight",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "💧 +250ml Water" : "💧 喝水 +250ml",
               data: JSON.stringify({ action: 'quickWater', amount: 250 }),
               displayText: isEn ? "💧 Drink 250ml water" : "💧 喝水 +250ml"
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#CCFBF1",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "💧 +1000ml Water" : "💧 喝水 +1000ml",
+            variant: "cyanLight",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "💧 +1000ml Water" : "💧 喝水 +1000ml",
               data: JSON.stringify({ action: 'quickWater', amount: 1000 }),
               displayText: isEn ? "💧 Drink 1000ml water" : "💧 喝水 +1000ml"
             }
-          }
+          })
         ]
       }
     };
@@ -2258,11 +2318,10 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         spacing: "xs",
         paddingAll: "10px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isEn ? "⚡ Quick Log This" : "⚡ 一鍵記錄這餐",
+            variant: "black",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "⚡ Quick Log This" : "⚡ 一鍵記錄這餐",
@@ -2275,17 +2334,16 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
               }),
               displayText: isEn ? `⚡ Quick Log: ${dishName}` : `⚡ 快捷記錄：${dishName}`
             }
-          },
+          }),
           {
             type: "box",
             layout: "horizontal",
             spacing: "xs",
             contents: [
-              globalIdx > 0 ? {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#FEF9C3",
+              globalIdx > 0 ? createNeoFlexButton({
+                label: isEn ? "🔝 Top" : "🔝 置頂",
+                variant: "yellowLight",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2293,12 +2351,11 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
                   data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'top', returnView: 'carousel', page: curPage }),
                   displayText: isEn ? `🔝 Pin to front: ${dishName}` : `🔝 將「${dishName}」置頂排在第一位`
                 }
-              } : null,
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#F4F4F5",
+              }) : null,
+              createNeoFlexButton({
+                label: isEn ? "✏️ Adjust" : "✏️ 調整",
+                variant: "white",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2309,12 +2366,11 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
                     ? `Edit fav ${dishName} ${fav.calories || 0}cal ${fav.protein || 0}pro ${fav.water || 0}water`
                     : `調整常用 ${dishName} ${fav.calories || 0}卡 ${fav.protein || 0}蛋 ${fav.water || 0}水`
                 }
-              },
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#FEE2E2",
+              }),
+              createNeoFlexButton({
+                label: isEn ? "🗑️ Delete" : "🗑️ 移除",
+                variant: "danger",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2327,7 +2383,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
                   }),
                   displayText: isEn ? `🗑️ Remove from favorites: ${dishName}` : `🗑️ 移除常用：${dishName}`
                 }
-              }
+              })
             ].filter(Boolean)
           }
         ]
@@ -2387,30 +2443,28 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         spacing: "sm",
         paddingAll: "10px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#2563EB",
+          createNeoFlexButton({
+            label: isEn ? `➡️ View Page ${curPage + 1}` : `➡️ 前往第 ${curPage + 1} 頁`,
+            variant: "blue",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? `➡️ View Page ${curPage + 1}` : `➡️ 前往第 ${curPage + 1} 頁`,
               data: JSON.stringify({ action: 'favPage', page: curPage + 1 }),
               displayText: isEn ? `➡️ View Page ${curPage + 1}` : `➡️ 前往第 ${curPage + 1} 頁常用`
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#DBEAFE",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "📋 All Favorites List" : "📋 常用管理面板 (全部)",
+            variant: "blueLight",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "📋 All Favorites List" : "📋 常用管理面板 (全部)",
               data: JSON.stringify({ action: 'manageFavorites' }),
               displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
             }
-          }
+          })
         ]
       }
     };
@@ -2468,30 +2522,28 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         spacing: "sm",
         paddingAll: "10px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#475569",
+          createNeoFlexButton({
+            label: isEn ? `⬅️ Back to Page ${curPage - 1}` : `⬅️ 返回第 ${curPage - 1} 頁`,
+            variant: "slate",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? `⬅️ Back to Page ${curPage - 1}` : `⬅️ 返回第 ${curPage - 1} 頁`,
               data: JSON.stringify({ action: 'favPage', page: curPage - 1 }),
               displayText: isEn ? `⬅️ Back to Page ${curPage - 1}` : `⬅️ 返回第 ${curPage - 1} 頁常用`
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#E2E8F0",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "💧 First Page & Water" : "💧 返回首頁與補水站",
+            variant: "slateLight",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "💧 First Page & Water" : "💧 返回首頁與補水站",
               data: JSON.stringify({ action: 'favPage', page: 1 }),
               displayText: isEn ? "💧 Back to page 1" : "💧 返回第 1 頁與補水站"
             }
-          }
+          })
         ]
       }
     };
@@ -2536,11 +2588,10 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         spacing: "sm",
         paddingAll: "10px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
+            variant: "black",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
@@ -2548,31 +2599,29 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
               inputOption: "openKeyboard",
               fillInText: isEn ? "Add fav Oatmeal+Latte 220cal 8pro 300water" : "加常用 燕麥奶拿鐵 150卡 5蛋 300水"
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FEE2E2",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理面板",
+            variant: "danger",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理面板",
               data: JSON.stringify({ action: 'manageFavorites' }),
               displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
             }
-          },
-          totalP > 1 && curPage > 1 ? {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#E5E7EB",
+          }),
+          totalP > 1 && curPage > 1 ? createNeoFlexButton({
+            label: isEn ? "⏮️ Back to First Page" : "⏮️ 返回第一頁",
+            variant: "secondary",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "⏮️ Back to First Page" : "⏮️ 返回第一頁",
               data: JSON.stringify({ action: 'favPage', page: 1 }),
               displayText: isEn ? "⏮️ Back to first page" : "⏮️ 返回第一頁常用"
             }
-          } : null
+          }) : null
         ].filter(Boolean)
       }
     };
@@ -2614,11 +2663,10 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         layout: "vertical",
         paddingAll: "10px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isEn ? "➕ Add Favorite" : "➕ 新增常用餐點",
+            variant: "black",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "➕ Add Favorite" : "➕ 新增常用餐點",
@@ -2626,7 +2674,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
               inputOption: "openKeyboard",
               fillInText: isEn ? "Add fav Black Coffee+Egg 160cal 14pro 450water" : "加常用 美式咖啡+茶葉蛋 160卡 14蛋 450水"
             }
-          }
+          })
         ]
       }
     });
@@ -2802,11 +2850,10 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
             spacing: "xs",
             margin: "xs",
             contents: [
-              index > 0 ? {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#F0FDF4",
+              index > 0 ? createNeoFlexButton({
+                label: isEn ? "⬆️ Up" : "⬆️ 上移",
+                variant: "green",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2814,12 +2861,11 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'up' }),
                   displayText: isEn ? `⬆️ Move up: ${dishName}` : `⬆️ 將「${dishName}」往上移`
                 }
-              } : null,
-              index < favorites.length - 1 ? {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#F0FDF4",
+              }) : null,
+              index < favorites.length - 1 ? createNeoFlexButton({
+                label: isEn ? "⬇️ Down" : "⬇️ 下移",
+                variant: "green",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2827,12 +2873,11 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'down' }),
                   displayText: isEn ? `⬇️ Move down: ${dishName}` : `⬇️ 將「${dishName}」往下移`
                 }
-              } : null,
-              index > 1 ? {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#FEF9C3",
+              }) : null,
+              index > 1 ? createNeoFlexButton({
+                label: isEn ? "🔝 Top" : "🔝 置頂",
+                variant: "yellowLight",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2840,7 +2885,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'top' }),
                   displayText: isEn ? `🔝 Move to top: ${dishName}` : `🔝 將「${dishName}」置頂`
                 }
-              } : null
+              }) : null
             ].filter(Boolean)
           } : null,
           // 第二行（數值調整與刪除）：固定寬敞 50/50 佈局，字體永不吃字
@@ -2850,11 +2895,10 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
             spacing: "xs",
             margin: "xs",
             contents: [
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#F4F4F5",
+              createNeoFlexButton({
+                label: isEn ? "✏️ Adjust" : "✏️ 調整數值",
+                variant: "white",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2865,12 +2909,11 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                     ? `Edit fav ${dishName} ${fav.calories || 0}cal ${fav.protein || 0}pro ${fav.water || 0}water`
                     : `調整常用 ${dishName} ${fav.calories || 0}卡 ${fav.protein || 0}蛋 ${fav.water || 0}水`
                 }
-              },
-              {
-                type: "button",
-                style: "secondary",
-                height: "sm",
-                color: "#FFF1F2",
+              }),
+              createNeoFlexButton({
+                label: isEn ? "🗑️ Delete" : "🗑️ 刪除",
+                variant: "danger",
+                size: "sm",
                 flex: 1,
                 action: {
                   type: "postback",
@@ -2883,7 +2926,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   }),
                   displayText: isEn ? `🗑️ Delete favorite: ${dishName}` : `🗑️ 刪除常用：${dishName}`
                 }
-              }
+              })
             ]
           }
         ].filter(Boolean)
@@ -2935,11 +2978,10 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
         spacing: "sm",
         paddingAll: "14px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
+            variant: "black",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
@@ -2947,18 +2989,17 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
               inputOption: "openKeyboard",
               fillInText: isEn ? "Add fav Oatmeal+Latte 220cal 8pro 300water" : "加常用 燕麥奶拿鐵 150卡 5蛋 300水"
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#F4F4F5",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "⭐ Back to Carousel" : "⭐ 返回常用輪播",
+            variant: "white",
+            size: "md",
             action: {
               type: "message",
               label: isEn ? "⭐ Back to Carousel" : "⭐ 返回常用輪播",
               text: isEn ? "Favorites" : "常用"
             }
-          }
+          })
         ]
       }
     }
@@ -3071,17 +3112,17 @@ function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang, isEdit) {
         spacing: "sm",
         paddingAll: "10px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isEn ? "⭐ View Favorites" : "⭐ 查看常用庫",
+            variant: "black",
+            size: "md",
+            flex: 1,
             action: {
               type: "message",
               label: isEn ? "⭐ View Favorites" : "⭐ 查看常用庫",
               text: isEn ? "Favorites" : "常用"
             }
-          }
+          })
         ]
       }
     }
@@ -3992,25 +4033,23 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props, lang) {
       footer: {
         type: "box",
         layout: "vertical",
-        spacing: "xs",
+        spacing: "sm",
         paddingAll: "12px",
         contents: [
-          {
-            type: "button",
-            style: "primary",
-            height: "sm",
-            color: "#000000",
+          createNeoFlexButton({
+            label: isEn ? "📱 Open Web to Copy Gist ID" : "📱 開啟 Web 複製 Gist ID",
+            variant: "accent",
+            size: "md",
             action: {
               type: "uri",
               label: isEn ? "📱 Open Web to Copy Gist ID" : "📱 開啟 Web 複製 Gist ID",
               uri: appTargetUrl
             }
-          },
-          {
-            type: "button",
-            style: "secondary",
-            height: "sm",
-            color: "#FEF08A",
+          }),
+          createNeoFlexButton({
+            label: isEn ? "☁️ Fill 'Bind Gist'" : "☁️ 填入「綁定 Gist」",
+            variant: "white",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "☁️ Fill 'Bind Gist'" : "☁️ 填入「綁定 Gist」",
@@ -4018,7 +4057,7 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props, lang) {
               inputOption: "openKeyboard",
               fillInText: isEn ? "Bind " : "綁定 "
             }
-          }
+          })
         ]
       }
     }
