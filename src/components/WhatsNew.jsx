@@ -124,12 +124,6 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                     description={t('whatsnew_v320_ai_routing_desc')}
                     color="bg-amber-300"
                   />
-                  <FeatureItem 
-                    icon={BarChart2}
-                    title={t('whatsnew_v320_log_filter_title')}
-                    description={t('whatsnew_v320_log_filter_desc')}
-                    color="bg-fuchsia-300"
-                  />
                 </div>
               )}
               {show310 && (
