@@ -1,17 +1,21 @@
 /**
  * 🎙️ PhoneVoice - Smart Natural Neural Voice Engine & Selector
  * 
- * Solves the infamous "Google 小姐" robotic voice issue by:
- * 1. Ranking and prioritizing real human/neural voices:
- *    - Edge/Windows: Microsoft Natural voices (HsiaoChen, Yunxi, Yunjian, Xiaoxiao)
- *    - Apple/macOS/iOS: Siri & Enhanced natural voices (Meijia 美佳, Sandy, Shelley, Flo, Sinji 善芝)
- *    - Android: Neural WaveNet / Samsung Natural voices
- * 2. Explicitly demoting / blacklisting old robotic voices (Google 國語, Google 普通話)
- * 3. Matching persona characteristics (Tsundere: Crisp lively; Gentle: Warm soothing; Hardcore: Strong masculine)
- * 4. Storing and respecting user-selected voice preferences
+ * Optimized for natural, human-like voice synthesis:
+ * 1. Prioritizes authentic human recordings and neural TTS:
+ *    - Microsoft Natural voices (HsiaoChen, Yunxi, Yunjian, Xiaoxiao)
+ *    - Apple High-Fidelity voices (Meijia 美佳, Sandy 珊蒂, Shelley, Flo, Eddy)
+ *    - Google 國語（臺灣）with natural pacing
+ * 2. Strongly demotes legacy robotic/scratchy voices:
+ *    - Microsoft Hanhan (Windows 7 robot)
+ *    - Ting-Ting (legacy OS X basic synth)
+ * 3. Keeps pitch at strictly 1.0 (prevents metallic chipmunk vocoder distortion)
+ * 4. Inserts conversational breath pauses via natural punctuation
+ * 5. Persists user preference for voice and speech rate
  */
 
 const PREFERRED_VOICE_KEY = 'panda_preferred_voice_name';
+const PREFERRED_RATE_KEY = 'panda_preferred_speech_rate';
 
 export function getStoredVoiceName() {
   if (typeof localStorage === 'undefined') return null;
@@ -27,10 +31,21 @@ export function setStoredVoiceName(name) {
   }
 }
 
+export function getStoredSpeechRate() {
+  if (typeof localStorage === 'undefined') return 0.96;
+  const saved = localStorage.getItem(PREFERRED_RATE_KEY);
+  return saved ? Number(saved) : 0.96;
+}
+
+export function setStoredSpeechRate(rate) {
+  if (typeof localStorage === 'undefined') return;
+  localStorage.setItem(PREFERRED_RATE_KEY, String(rate));
+}
+
 /**
  * Calculate naturalness score for a SpeechSynthesisVoice
  */
-function scoreVoice(voice, isEn, persona = 'tsundere') {
+function scoreVoice(voice, isEn = false, persona = 'tsundere') {
   let score = 0;
   const name = (voice.name || '').toLowerCase();
   const uri = (voice.voiceURI || '').toLowerCase();
@@ -38,56 +53,65 @@ function scoreVoice(voice, isEn, persona = 'tsundere') {
 
   // 1. Language Relevance
   if (isEn) {
-    if (lang.startsWith('en')) score += 100;
-    if (lang === 'en-us') score += 50;
+    if (lang.startsWith('en')) score += 200;
+    if (lang === 'en-us' || lang === 'en_us') score += 100;
   } else {
     if (lang.startsWith('zh') || lang.includes('cmn') || lang.includes('tw') || lang.includes('hk') || lang.includes('cn')) {
-      score += 100;
+      score += 200;
     }
-    // Taiwan accent preference for natural local experience
+    // Taiwan accent preference for authentic local warmth
     if (lang.includes('tw') || name.includes('taiwan') || name.includes('台灣') || name.includes('臺灣')) {
-      score += 300;
+      score += 400;
     }
   }
 
   // 2. High-Tech Neural / Natural / Premium Indicators (Highest Priority!)
   const isNeural = /natural|neural|enhanced|premium|online|siri/i.test(name + ' ' + uri);
   if (isNeural) {
-    score += 1200;
+    score += 1500;
   }
 
   // 3. Microsoft Natural Neural voices (Edge / Windows 11 / Mac Edge) - Studio Grade!
   if (/hsiaochen|yunxi|yunjian|xiaoxiao|yunyang|xiaoyi/i.test(name)) {
+    score += 1200;
+  }
+
+  // 4. Apple Natural System Voices (macOS / iOS) - Human Recordings!
+  if (/meijia|mei-jia|sandy|shelley|flo|eddy/i.test(name)) {
     score += 1000;
   }
 
-  // 4. Apple Natural System Voices (macOS / iOS) - Natural Human Recordings!
-  if (/meijia|mei-jia|sinji|sin-ji|sandy|shelley|flo|eddy/i.test(name)) {
-    score += 800;
+  // 5. Google 國語（臺灣）is remote cloud-synthesized and sounds clean if paced well
+  if (/google.*(國語|taiwan|台灣|臺灣)/i.test(name)) {
+    score += 600;
   }
 
-  // 5. Persona Voice Style Matching
+  // 6. Persona Voice Style Matching
   if (persona === 'hardcore') {
-    // Prefer male voices
     if (/male|yunxi|yunjian|eddy|reed|rocko|danny|grandpa|kangkang/i.test(name)) {
-      score += 400;
+      score += 300;
     }
   } else {
     // Tsundere or Gentle: Prefer natural female voices
-    if (/female|hsiaochen|xiaoxiao|meijia|mei-jia|sandy|shelley|flo|sinji|sin-ji/i.test(name)) {
-      score += 400;
+    if (/female|hsiaochen|xiaoxiao|meijia|mei-jia|sandy|shelley|flo/i.test(name)) {
+      score += 300;
     }
   }
 
-  // 6. ❌ PENALTY for Infamous Robotic "Google 小姐" Voices
-  // Google's 2011 standard synthetic voice is famously robotic and monotone
-  if ((/google.*(國語|普通話|chinese)/i.test(name) || /google.*zh/i.test(name)) && !isNeural) {
-    score -= 800; // Strong penalty to push below any human/natural voice
+  // 7. ❌ Strong Penalty for Legacy Scratchy Robotic Synthesizers
+  // Microsoft Hanhan is the 2003 monotone robotic voice from Windows XP
+  if (/hanhan/i.test(name) && !isNeural) {
+    score -= 1000;
   }
 
-  // Penalty for default basic Ting-Ting
-  if ((name === 'tingting' || name === 'ting-ting') && !isNeural) {
-    score -= 300;
+  // Basic Ting-Ting is OS X 10.7 low-bitrate synth
+  if (/ting-ting|tingting/i.test(name) && !isNeural) {
+    score -= 800;
+  }
+
+  // Basic Sin-ji without enhanced
+  if (/sin-ji|sinji/i.test(name) && !isNeural) {
+    score -= 400;
   }
 
   return score;
@@ -111,7 +135,7 @@ export function getSortedVoices(isEn = false, persona = 'tsundere') {
     .map(v => ({
       voice: v,
       score: scoreVoice(v, isEn, persona),
-      isNatural: /natural|neural|enhanced|premium|online|siri|meijia|hsiaochen|yunxi|yunjian|xiaoxiao/i.test(v.name)
+      isNatural: /natural|neural|enhanced|premium|online|siri|meijia|hsiaochen|yunxi|yunjian|xiaoxiao|sandy|shelley/i.test(v.name)
     }))
     .sort((a, b) => b.score - a.score);
 }
@@ -136,26 +160,33 @@ export function getBestVoice(isEn = false, persona = 'tsundere') {
     return sorted[0].voice;
   }
 
-  // Extreme fallback
-  return voices[0] || null;
+  // Fallback to any Chinese or default voice
+  const zhVoice = voices.find(v => (v.lang || '').toLowerCase().startsWith('zh'));
+  return zhVoice || voices[0] || null;
 }
 
 /**
  * Preprocess text for natural conversational speech
  * - Strips emojis and markdown
- * - Replaces multiple exclamation marks with calm cadence
- * - Inserts natural punctuation pauses
+ * - Eliminates quotes and robotic braces
+ * - Inserts natural punctuation pauses for human breathing cadence
  */
 export function formatSpeechText(rawText) {
   if (!rawText) return '';
-  return rawText
-    // Remove emojis
+  let text = String(rawText)
+    // Remove emojis & symbols
     .replace(/[\u{1F300}-\u{1F9FF}]|[\u{2600}-\u{26FF}]|[\u{2700}-\u{27BF}]/gu, '')
-    // Remove markdown formatting
+    // Remove markdown formatting & quotes
     .replace(/[*#_~`[\]()]/g, '')
-    // Replace continuous punctuation
-    .replace(/!{2,}/g, '！')
-    .replace(/\?{2,}/g, '？')
+    .replace(/["'「」『』]/g, '')
+    // Standardize punctuation to conversational rhythm
+    .replace(/!+/g, '！')
+    .replace(/\?+/g, '？')
     .replace(/\.{2,}/g, '…')
     .trim();
+
+  // Insert gentle space after commas and periods to help browser TTS breathe naturally
+  text = text.replace(/([，。！？…])/g, '$1 ');
+
+  return text;
 }

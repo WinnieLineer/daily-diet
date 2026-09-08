@@ -867,7 +867,7 @@ No markdown backticks.`;
 function generateGeminiText(prompt, apiKey) {
   const models = (typeof ADVICE_GEMINI_MODELS !== 'undefined' && ADVICE_GEMINI_MODELS.length) 
     ? ADVICE_GEMINI_MODELS 
-    : ['gemma-4-31b-it', 'gemma-4-26b-it', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],

@@ -28,6 +28,8 @@ import {
   getSortedVoices, 
   getStoredVoiceName, 
   setStoredVoiceName, 
+  getStoredSpeechRate,
+  setStoredSpeechRate,
   formatSpeechText 
 } from '../lib/phoneVoice';
 
@@ -42,6 +44,9 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     ? localStorage.getItem('panda_active_persona') || 'tsundere' 
     : 'tsundere';
 
+  // 🎙️ Speech Rate State (0.96 = natural conversational speed)
+  const [speechRate, setSpeechRate] = useState(() => getStoredSpeechRate());
+
   const personaConfig = {
     tsundere: {
       avatar: '🐼',
@@ -52,8 +57,8 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
         ? "Hello? Why are you calling me during gym hours? Speak up, what did you eat today?" 
         : "喂？飲控時間突然打電話來幹嘛？哼，說吧，今天又偷吃了什麼？",
       thinkingHint: t('live_call_coach_thinking_tsundere'),
-      pitch: 1.05,
-      rate: 1.05
+      pitch: 1.0, // Strict 1.0 preserves natural human vocal formants
+      rate: speechRate
     },
     gentle: {
       avatar: '🐼',
@@ -65,7 +70,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
         : "哈囉～好開心接到你的電話！今天過得好嗎？不管吃了什麼都可以慢慢跟我說喔 ✨",
       thinkingHint: t('live_call_coach_thinking_gentle'),
       pitch: 1.0,
-      rate: 0.98
+      rate: speechRate
     },
     hardcore: {
       avatar: '🐼',
@@ -76,8 +81,8 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
         ? "WHAT'S UP! Are you resting or working out?! Report your calories right now! GO GO GO!" 
         : "喂！動起來沒有！現在打來最好是有認真吃蛋白質！今天吃了多少卡路里，立刻報上來！",
       thinkingHint: t('live_call_coach_thinking_hardcore'),
-      pitch: 0.95,
-      rate: 1.12
+      pitch: 1.0,
+      rate: speechRate
     }
   }[activePersona] || {
     avatar: '🐼',
@@ -87,7 +92,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     intro: '喂？說吧！',
     thinkingHint: '教練正在整理回覆中...',
     pitch: 1.0,
-    rate: 1.0
+    rate: speechRate
   };
 
   // 📞 Call Status States: 'calling' | 'connected' | 'ended'
@@ -195,8 +200,8 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
 
       const utterance = new SpeechSynthesisUtterance(cleanSpeech);
       utterance.lang = isEn ? 'en-US' : 'zh-TW';
-      utterance.pitch = personaConfig.pitch;
-      utterance.rate = personaConfig.rate;
+      utterance.pitch = 1.0; // Fixed 1.0 eliminates metallic robotic distortion
+      utterance.rate = speechRate || 0.96; // Conversational human pace
 
       // Use active natural voice
       const activeVoice = currentVoice || getBestVoice(isEn, activePersona);
@@ -222,7 +227,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       // Fallback timeout in case browser hangs on onend
       setTimeout(() => {
         if (!isFinished) onSpeechDone();
-      }, Math.max(3000, cleanSpeech.length * 400));
+      }, Math.max(2500, cleanSpeech.length * 350));
 
       window.speechSynthesis.speak(utterance);
     } catch (e) {
@@ -233,7 +238,7 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
     }
   };
 
-  // 🤖 Process User Query and Get Coach Answer
+  // 🤖 Process User Query and Get Coach Answer (Ultra-Fast Response)
   const handleUserSpoke = async (spokenText) => {
     if (!spokenText || !spokenText.trim()) return;
     const cleanText = spokenText.trim();
@@ -280,16 +285,16 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
       const prot = todaySummary?.protein || 0;
       const protGoal = goals?.protein || 100;
 
-      const prompt = `You are Daily Diet Panda Coach.
+      // ⚡ Highly optimized, token-efficient prompt for fast response
+      const prompt = `You are Daily Diet Panda Coach on a live phone call.
 Persona: ${activePersona} (${personaConfig.badge}).
-Today's progress: Calories ${cals}/${calGoal} kcal, Protein ${prot}/${protGoal}g.
-User is speaking to you directly in a live phone call: "${cleanText}".
+Today: Calories ${cals}/${calGoal} kcal, Protein ${prot}/${protGoal}g.
+User said: "${cleanText}".
 Reply in ${isEn ? 'English' : 'Traditional Chinese'}.
-CRITICAL REQUIREMENTS:
-1. Speak naturally as if answering a direct phone call.
-2. Keep it under 40 words, punchy and conversational.
-3. If user mentioned eating something, evaluate briefly in your persona tone.
-4. NO markdown symbols, NO emojis, NO quotes, so natural voice reads smoothly.`;
+RULES:
+1. Max 20 words! Short, punchy, spoken reply.
+2. 1 or 2 spoken sentences with natural commas.
+3. NO emojis, NO markdown, NO quotes.`;
 
       let reply = await completeText(prompt);
       
@@ -376,14 +381,14 @@ CRITICAL REQUIREMENTS:
           return;
         }
 
-        // 2. If interim speaking, display subtitle and set silence debounce timer
+        // 2. Fast conversational silence debounce: 650ms (responsive phone dialogue)
         if (currentInterim && currentInterim.trim()) {
           setInterimUserText(currentInterim);
           silenceTimerRef.current = setTimeout(() => {
             if (currentInterim.trim().length > 1 && !isProcessingRef.current) {
               handleUserSpoke(currentInterim.trim());
             }
-          }, 1600);
+          }, 650);
         }
       };
 
@@ -517,8 +522,8 @@ CRITICAL REQUIREMENTS:
     const utterance = new SpeechSynthesisUtterance(testText);
     utterance.voice = voice;
     utterance.lang = voice.lang;
-    utterance.rate = personaConfig.rate;
-    utterance.pitch = personaConfig.pitch;
+    utterance.rate = speechRate || 0.96;
+    utterance.pitch = 1.0;
 
     utterance.onend = () => setPreviewingVoiceName(null);
     utterance.onerror = () => setPreviewingVoiceName(null);
@@ -857,7 +862,37 @@ CRITICAL REQUIREMENTS:
                 </button>
               </div>
 
-              <div className="flex-1 overflow-y-auto py-3 space-y-2 custom-scrollbar">
+              {/* ⚡ 語速調節 (Speech Rate) */}
+              <div className="py-2 px-3 bg-zinc-900 border border-zinc-800 rounded-2xl my-2 flex items-center justify-between gap-2 shrink-0">
+                <span className="text-xs font-black text-zinc-300 flex items-center gap-1.5">
+                  <span>⏱️</span> 語速節奏
+                </span>
+                <div className="flex items-center gap-1.5">
+                  {[
+                    { rate: 0.88, label: '0.88x 柔和' },
+                    { rate: 0.96, label: '0.96x 自然 ⭐' },
+                    { rate: 1.05, label: '1.05x 快速' }
+                  ].map((s) => (
+                    <button
+                      key={s.rate}
+                      type="button"
+                      onClick={() => {
+                        setSpeechRate(s.rate);
+                        setStoredSpeechRate(s.rate);
+                      }}
+                      className={`px-2 py-1 rounded-lg text-[10px] font-black border transition-all cursor-pointer ${
+                        speechRate === s.rate
+                          ? 'bg-accent text-black border-black shadow-neo-xs'
+                          : 'bg-zinc-800 text-zinc-400 border-zinc-700 hover:text-white'
+                      }`}
+                    >
+                      {s.label}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex-1 overflow-y-auto py-2 space-y-2 custom-scrollbar">
                 {availableVoices.length === 0 ? (
                   <div className="text-center py-10 text-xs text-zinc-400 font-bold">
                     系統尚未載入語音，請稍後重試...

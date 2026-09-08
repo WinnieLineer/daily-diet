@@ -26,14 +26,13 @@ const TEXT_GEMINI_MODELS = [
   'gemini-2.5-flash-lite'
 ];
 
-// 🐼 教練諮詢與對話模型清單 (純文字輸出、人設風格，優先調用極高 RPD 14.4K 與 30 RPM 的 Gemma 4，輔以 3.5/3.1-flash-lite)
+// 🐼 教練諮詢與即時通話模型清單 (極速回應優先，採用秒級 gemini-2.5-flash-lite / gemini-2.5-flash)
 const ADVICE_GEMINI_MODELS = [
-  'gemma-4-31b-it',
-  'gemma-4-26b-it',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
-  'gemini-3.5-flash',
-  'gemini-2.5-flash-lite'
+  'gemini-3.5-flash'
 ];
 
 // 🎙️ 語音多模態辨識模型清單 (必須支援 Audio 多模態輸入，優先使用 RPD 500 之 3.5-flash-lite / 3.1-flash-lite)
