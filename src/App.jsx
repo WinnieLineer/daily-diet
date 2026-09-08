@@ -741,6 +741,12 @@ function App() {
   const [lastSeenVersionState, setLastSeenVersionState] = useState(null);
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '20:00', fasting_end: '12:00' });
 
+  useEffect(() => {
+    const handleOpenWhatsNew = () => setShowWhatsNew(true);
+    window.addEventListener('open-whatsnew', handleOpenWhatsNew);
+    return () => window.removeEventListener('open-whatsnew', handleOpenWhatsNew);
+  }, []);
+
   const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);

@@ -13,6 +13,16 @@ import { syncPersonaToCloud, syncLanguageToCloud } from '../lib/syncService';
 
 
 const VERSION_HISTORY = [
+  { 
+    version: '3.2.0', 
+    date: '2026-09-08', 
+    features: [
+      '📞 胖達教練即時語音熱線 (Live Audio Call)', 
+      '🎙️ LINE 官方帳號支援語音記餐', 
+      '⚡ 任務模型分流與極速 Gemma 4 (14.4K 額度)', 
+      '📊 後台全量日誌動態篩選與點擊過濾'
+    ] 
+  },
   { version: '3.1.0', date: '2026-08-31', features: ['LINE 官方帳號無縫連動 🐼', '雙向 Gist 雲端同步與綁定 ☁️', 'Gemini 8階梯 AI 容錯引擎 ⚡', '主視覺歡迎卡片與實時日誌 📊'] },
   { version: '3.0.0', date: '2026-08-30', features: [t('whatsnew_v300_line_title'), t('whatsnew_v300_water_title')] },
   { version: '2.5.0', date: '2026-06-05', features: [t('v250_vip_title'), t('v250_timers_title')] },
@@ -1769,7 +1779,23 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <p className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">© 2026 Winnie Lin Space</p>
                     </div>
                     <div className="space-y-3">
-                      <div className="flex items-center gap-2 px-1 text-zinc-400"><History size={16} /><span className="text-[10px] font-black uppercase">{t('settings_version_history')}</span></div>
+                      <div className="flex items-center justify-between px-1">
+                        <div className="flex items-center gap-2 text-zinc-400">
+                          <History size={16} />
+                          <span className="text-[10px] font-black uppercase">{t('settings_version_history')}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setIsOpen(false);
+                            window.dispatchEvent(new CustomEvent('open-whatsnew'));
+                          }}
+                          className="text-[10px] font-black text-black bg-accent px-2.5 py-1 rounded-lg border border-black shadow-neo-xs hover:bg-yellow-300 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                        >
+                          <Sparkles size={12} />
+                          <span>What's New</span>
+                        </button>
+                      </div>
                       <div className="space-y-2">
                         {VERSION_HISTORY.map(v => (
                           <div key={v.version} className="p-3 border-2 border-black rounded-xl bg-white">
