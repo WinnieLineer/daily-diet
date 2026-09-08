@@ -483,11 +483,12 @@ function doPost(e) {
       const userLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
       const isEn = userLang === 'en';
 
-      // 👑 自動識別並快取系統管理員 LINE ID (Winnie Lin ...497c66)
-      if (userId && (userId.endsWith('497c66') || userId === props.getProperty('ADMIN_LINE_USER_ID'))) {
+      // 👑 自動識別並快取系統管理員 LINE ID (唯一限定末尾 497c66 之 Winnie Lin)
+      const adminSuffix = (typeof MASTER_ADMIN_LINE_SUFFIX !== 'undefined' && MASTER_ADMIN_LINE_SUFFIX) || '497c66';
+      if (userId && userId.endsWith(adminSuffix)) {
         if (props.getProperty('ADMIN_LINE_USER_ID') !== userId) {
           props.setProperty('ADMIN_LINE_USER_ID', userId);
-          console.log(`👑 [管理員識別] 已自動記錄 ADMIN_LINE_USER_ID = ${userId}`);
+          console.log(`👑 [管理員識別] 已自動鎖定唯一 ADMIN_LINE_USER_ID = ${userId}`);
         }
       }
 
@@ -1014,13 +1015,21 @@ function doPost(e) {
             continue;
           }
 
-          // 👑 綁定/查詢管理員身分指令
+          // 👑 綁定/查詢管理員身分指令 (唯一限定末碼 497c66，其餘任何人輸入皆無效且無權限)
           if (userText === '我是管理員' || userText === '綁定管理員' || userText === '設定管理員' || userText === 'admin') {
-            props.setProperty('ADMIN_LINE_USER_ID', userId);
-            const adminReply = isEn
-              ? `👑 Success! Your LINE account (${userId.slice(-6)}) is now bound as the Daily-Diet System Admin.\nYou will receive instant push notifications here whenever users report bugs or system alerts trigger 🐼✨`
-              : `👑 成功！您的 LINE 帳號 (${userId.slice(-6)}) 已綁定為 Daily-Diet 系統管理員。\n從現在起，若有用戶在 LINE 回報問題或系統發生告警，您的手機都會在此第一時間收到專屬推播卡片 🐼✨`;
-            replyTextMessage(replyToken, adminReply, CHANNEL_ACCESS_TOKEN, userId, props);
+            const adminSuffix = (typeof MASTER_ADMIN_LINE_SUFFIX !== 'undefined' && MASTER_ADMIN_LINE_SUFFIX) || '497c66';
+            if (userId && userId.endsWith(adminSuffix)) {
+              props.setProperty('ADMIN_LINE_USER_ID', userId);
+              const adminReply = isEn
+                ? `👑 Verified: You are the verified System Master Admin (${userId.slice(-6)}).\nYou will receive instant push notifications here whenever users report bugs or system alerts trigger 🐼✨`
+                : `👑 驗證通過：您為 Daily-Diet 系統唯一指定管理員 (${userId.slice(-6)})。\n從現在起，只要有用戶回報問題或系統異常，您的手機都會在此第一時間收到專屬推播卡片 🐼✨`;
+              replyTextMessage(replyToken, adminReply, CHANNEL_ACCESS_TOKEN, userId, props);
+            } else {
+              const rejectReply = isEn
+                ? `⛔ Permission denied: Your account is not authorized as a system admin 🐼`
+                : `⛔ 權限不足：您並非系統唯一授權管理員，無法啟用管理員功能 🐼`;
+              replyTextMessage(replyToken, rejectReply, CHANNEL_ACCESS_TOKEN, userId, props);
+            }
             continue;
           }
 
@@ -1684,9 +1693,10 @@ function sendBugReportNotification(params) {
 function notifyAdminViaLine(params) {
   const { reporterName, reporterId, content, userLang, props, accessToken } = params;
   try {
+    const adminSuffix = (typeof MASTER_ADMIN_LINE_SUFFIX !== 'undefined' && MASTER_ADMIN_LINE_SUFFIX) || '497c66';
     const adminLineId = (props && props.getProperty('ADMIN_LINE_USER_ID')) || '';
-    if (!adminLineId || !accessToken) {
-      console.log('ℹ️ 尚未設定 ADMIN_LINE_USER_ID 或缺少 accessToken，略過 LINE 管理員推播');
+    if (!adminLineId || !adminLineId.endsWith(adminSuffix) || !accessToken) {
+      console.log('ℹ️ ADMIN_LINE_USER_ID 非授權管理員或未設定，略過 LINE 管理員推播');
       return;
     }
 

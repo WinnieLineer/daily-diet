@@ -27,6 +27,9 @@ const DEFAULT_LANGUAGE = 'zh';      // 'zh' | 'en'
 // 📧 預設開發者與管理員通知信箱
 const DEFAULT_ADMIN_EMAIL = 'hi@winnie-lin.space';
 
+// 👑 唯一授權之系統管理員 LINE 帳號尾碼 (防偽權限校驗)
+const MASTER_ADMIN_LINE_SUFFIX = '497c66';
+
 // 🖼️ 圖文選單背景圖片來源 (GitHub Raw CDN)
 const RICH_MENU_IMAGE_ZH = 'https://raw.githubusercontent.com/WinnieLineer/daily-diet/main/public/richmenu-2500x1686.jpg';
 const RICH_MENU_IMAGE_EN = 'https://raw.githubusercontent.com/WinnieLineer/daily-diet/main/public/richmenu-en-2500x1686.jpg';
