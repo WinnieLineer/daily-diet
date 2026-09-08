@@ -544,6 +544,19 @@ function doPost(e) {
       currentOperation = `LINE 事件 (${event.type})`;
       currentUserInput = '';
 
+      // 🛑【LINE 去重防重試機制】以 webhookEventId / message.id / postback.data 結合建立 Idempotency Key
+      const eventUniqueId = event.webhookEventId || event.message?.id || (event.postback ? `${userId}_${event.postback.data}_${event.timestamp}` : null);
+      if (eventUniqueId) {
+        const cache = CacheService.getScriptCache();
+        const cacheKey = `LINE_EVENT_SEEN_${eventUniqueId}`.slice(0, 100);
+        if (cache.get(cacheKey)) {
+          console.warn(`⚠️ [LINE 重試防護] 偵測到重複發送之事件 ${eventUniqueId}，已自動阻擋避免重複記帳！`);
+          continue;
+        }
+        // 暫存 60 秒（覆蓋 LINE 的自動重試窗口）
+        cache.put(cacheKey, 'processed', 60);
+      }
+
       console.log(`\n========================================`);
       console.log(`📩 [LINE 事件收到] 用戶 ID: ${userId} | 類型: ${event.type}`);
 

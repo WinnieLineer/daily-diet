@@ -1,6 +1,7 @@
 /**
  * Cloud & LINE Bot Synchronization Service
  * 負責將 Web App / PWA 端的所有紀錄與目標即時同步至 GAS 後端與 Gist 雲端
+ * 具備請求防抖 (Debounce) 與 序列化防衝突 (Queue & Idempotency) 機制
  */
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
@@ -19,6 +20,41 @@ function getEffectiveIds() {
     }
   } catch (e) {}
   return { userId: userId || 'default_user', gistId };
+}
+
+// ⏱️ 輕量防抖工具函數
+function debounce(fn, waitMs = 350) {
+  let timer = null;
+  return function (...args) {
+    if (timer) clearTimeout(timer);
+    timer = setTimeout(() => {
+      timer = null;
+      fn.apply(this, args);
+    }, waitMs);
+  };
+}
+
+// 🛡️ 餐點同步隊列（防止突發多筆記帳造成 Gist 409 衝突與伺服器過載）
+const mealSyncQueue = [];
+let isProcessingMealQueue = false;
+
+async function processMealSyncQueue() {
+  if (isProcessingMealQueue || mealSyncQueue.length === 0) return;
+  isProcessingMealQueue = true;
+
+  while (mealSyncQueue.length > 0) {
+    const nextTask = mealSyncQueue.shift();
+    try {
+      await nextTask();
+    } catch (e) {
+      console.warn('[SyncService] Task failed:', e);
+    }
+    if (mealSyncQueue.length > 0) {
+      await new Promise(r => setTimeout(r, 150));
+    }
+  }
+
+  isProcessingMealQueue = false;
 }
 
 /**
@@ -46,12 +82,17 @@ export async function syncMealToCloud(meal) {
   });
   if (gistId) params.append('gistId', gistId);
 
-  try {
-    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
-    console.log(`📤 [Web ➔ LINE Sync] 即時同步餐點成功: ${meal.dish_name} (${meal.calories} kcal)`);
-  } catch (err) {
-    console.warn("[Web ➔ LINE Sync] 同步失敗:", err);
-  }
+  const task = async () => {
+    try {
+      fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+      console.log(`📤 [Web ➔ LINE Sync] 即時同步餐點成功: ${meal.dish_name} (${meal.calories} kcal)`);
+    } catch (err) {
+      console.warn("[Web ➔ LINE Sync] 同步失敗:", err);
+    }
+  };
+
+  mealSyncQueue.push(task);
+  processMealSyncQueue();
 }
 
 /**
@@ -74,9 +115,9 @@ export async function syncDeleteMealToCloud(mealIdOrName) {
 }
 
 /**
- * 即時同步飲食目標至 LINE 後端與 Gist
+ * 實際執行目標更新
  */
-export async function syncGoalsToCloud(goals) {
+function doSyncGoals(goals) {
   const { userId, gistId } = getEffectiveIds();
   const params = new URLSearchParams({
     action: 'updateGoals',
@@ -93,10 +134,23 @@ export async function syncGoalsToCloud(goals) {
   } catch (err) {}
 }
 
+const debouncedGoalsSync = debounce(doSyncGoals, 400);
+
 /**
- * 即時同步教練性格至 LINE 後端與 Gist
+ * 即時同步飲食目標至 LINE 後端與 Gist (支援防抖，避免拉桿連續觸發)
  */
-export async function syncPersonaToCloud(persona) {
+export function syncGoalsToCloud(goals, immediate = false) {
+  if (immediate) {
+    doSyncGoals(goals);
+  } else {
+    debouncedGoalsSync(goals);
+  }
+}
+
+/**
+ * 實際執行教練性格更新
+ */
+function doSyncPersona(persona) {
   const { userId, gistId } = getEffectiveIds();
   const params = new URLSearchParams({
     action: 'updatePersona',
@@ -111,10 +165,23 @@ export async function syncPersonaToCloud(persona) {
   } catch (err) {}
 }
 
+const debouncedPersonaSync = debounce(doSyncPersona, 300);
+
 /**
- * 即時同步語言偏好至 LINE 後端與 Gist，並觸發 LINE 圖文選單換檔 (中/英)
+ * 即時同步教練性格至 LINE 後端與 Gist
  */
-export async function syncLanguageToCloud(lang) {
+export function syncPersonaToCloud(persona, immediate = false) {
+  if (immediate) {
+    doSyncPersona(persona);
+  } else {
+    debouncedPersonaSync(persona);
+  }
+}
+
+/**
+ * 實際執行語言更新
+ */
+function doSyncLanguage(lang) {
   const { userId, gistId } = getEffectiveIds();
   const validLang = lang === 'en' ? 'en' : 'zh';
   const params = new URLSearchParams({
@@ -130,5 +197,15 @@ export async function syncLanguageToCloud(lang) {
   } catch (err) {}
 }
 
+const debouncedLanguageSync = debounce(doSyncLanguage, 300);
 
-
+/**
+ * 即時同步語言偏好至 LINE 後端與 Gist，並觸發 LINE 圖文選單換檔 (中/英)
+ */
+export function syncLanguageToCloud(lang, immediate = false) {
+  if (immediate) {
+    doSyncLanguage(lang);
+  } else {
+    debouncedLanguageSync(lang);
+  }
+}

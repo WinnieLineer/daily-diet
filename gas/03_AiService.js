@@ -67,6 +67,47 @@ function generateFallbackComment(dishName, calories, protein, persona = 'tsunder
 }
 
 // ========================================================
+// 🧮 巨量營養素平衡校驗與飲品水分自動補正
+// ========================================================
+
+function sanitizeAndBalanceNutrition(data, dishName = '') {
+  let cal = Number(data.calories) || 0;
+  let pro = Number(data.protein) || 0;
+  let carbs = Number(data.carbs) || 0;
+  let fat = Number(data.fat) || 0;
+  let water = Number(data.water) || 0;
+
+  // 1. 飲品/湯品水分自動補正 (Liquid & Hydration Auto-Detection)
+  const nameLower = (dishName || data.dish_name || '').toLowerCase();
+  const isBeverageOrSoup = /(湯|茶|咖啡|水|飲|拿鐵|豆漿|牛奶|奶茶|果汁|soup|tea|coffee|water|latte|milk|juice|smoothie|shake|coke|soda)/i.test(nameLower);
+  if (isBeverageOrSoup && water <= 0) {
+    water = 350; // 預設一杯飲品或一碗湯提供約 350ml 水分
+  }
+
+  // 2. 巨量營養素總熱量平衡校驗 (Macro Sanity Check)
+  if (pro > 0 || carbs > 0 || fat > 0) {
+    const calculatedMinCal = Math.round(pro * 4 + carbs * 4 + fat * 9);
+    if (cal <= 0 && calculatedMinCal > 0) {
+      cal = calculatedMinCal;
+    } else if (cal > 0 && calculatedMinCal > 0) {
+      const diffRatio = Math.abs(cal - calculatedMinCal) / cal;
+      // 若熱量與巨量營養素乘積偏差超過 35%，進行加權平滑校正
+      if (diffRatio > 0.35) {
+        cal = Math.round((cal * 0.4) + (calculatedMinCal * 0.6));
+      }
+    }
+  }
+
+  return {
+    calories: cal,
+    protein: pro,
+    carbs: carbs,
+    fat: fat,
+    water: water
+  };
+}
+
+// ========================================================
 // 📸 Gemini 多模態照片辨識
 // ========================================================
 
@@ -212,11 +253,12 @@ ${schemaBlock}`;
       }
 
       const dishName = parsed.dish_name || (isEn ? "Delicious Meal" : "美味餐點");
-      const cal = Number(parsed.calories) || 0;
-      const pro = Number(parsed.protein) || 0;
-      const carbs = Number(parsed.carbs) || 0;
-      const fat = Number(parsed.fat) || 0;
-      const water = Number(parsed.water) || 0;
+      const balanced = sanitizeAndBalanceNutrition(parsed, dishName);
+      const cal = balanced.calories;
+      const pro = balanced.protein;
+      const carbs = balanced.carbs;
+      const fat = balanced.fat;
+      const water = balanced.water;
       const breakdown = Array.isArray(parsed.breakdown) ? parsed.breakdown : [];
       let calculationNote = parsed.calculation_note || '';
       if (isEn && /[\u4e00-\u9fa5]/.test(calculationNote)) {
@@ -440,11 +482,12 @@ Do NOT wrap in markdown backticks.`;
       }
 
       const dishName = parsed.dish_name || (isEn ? "Meal" : "餐點");
-      const cal = Number(parsed.calories) || 0;
-      const pro = Number(parsed.protein) || 0;
-      const carbs = Number(parsed.carbs) || 0;
-      const fat = Number(parsed.fat) || 0;
-      const water = Number(parsed.water) || 0;
+      const balanced = sanitizeAndBalanceNutrition(parsed, dishName);
+      const cal = balanced.calories;
+      const pro = balanced.protein;
+      const carbs = balanced.carbs;
+      const fat = balanced.fat;
+      const water = balanced.water;
       const breakdown = Array.isArray(parsed.breakdown) ? parsed.breakdown : [];
       let calculationNote = parsed.calculation_note || '';
       if (isEn && /[\u4e00-\u9fa5]/.test(calculationNote)) {
@@ -807,6 +850,12 @@ No markdown backticks.`;
         recordAiUsage(model, true);
       }
       const parsedObj = JSON.parse(cleanJson);
+      const balanced = sanitizeAndBalanceNutrition(parsedObj, parsedObj.dish_name);
+      parsedObj.calories = balanced.calories;
+      parsedObj.protein = balanced.protein;
+      parsedObj.carbs = balanced.carbs;
+      parsedObj.fat = balanced.fat;
+      parsedObj.water = balanced.water;
       parsedObj.model_used = model;
       parsedObj.failed_attempts = failedAttempts;
       return parsedObj;
@@ -886,6 +935,12 @@ No markdown backticks.`;
         recordAiUsage(model, true);
       }
       const parsedObj = JSON.parse(cleanJson);
+      const balanced = sanitizeAndBalanceNutrition(parsedObj, parsedObj.dish_name);
+      parsedObj.calories = balanced.calories;
+      parsedObj.protein = balanced.protein;
+      parsedObj.carbs = balanced.carbs;
+      parsedObj.fat = balanced.fat;
+      parsedObj.water = balanced.water;
       parsedObj.model_used = model;
       parsedObj.failed_attempts = failedAttempts;
       return parsedObj;

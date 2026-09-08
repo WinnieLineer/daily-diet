@@ -9,7 +9,7 @@ import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
 import { liffService } from '../lib/liffService';
-import { syncPersonaToCloud, syncLanguageToCloud } from '../lib/syncService';
+import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud } from '../lib/syncService';
 
 
 const VERSION_HISTORY = [
@@ -363,10 +363,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       const effectiveUserId = localStorage.getItem('line_user_id');
       const currentGist = getCurrentGistId();
       if (effectiveUserId || currentGist) {
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-        try {
-          fetch(`${GAS_URL}?action=updateGoals&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&calories=${parsedCal}&protein=${parsedPro}&water=${parsedWat}`, { mode: 'no-cors' });
-        } catch (e) {}
+        syncGoalsToCloud({ calories: parsedCal, protein: parsedPro, water: parsedWat }, true);
 
         if (currentGist) {
           db.settings.toArray().then((allSettings) => {

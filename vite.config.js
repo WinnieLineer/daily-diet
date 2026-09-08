@@ -59,7 +59,8 @@ export default defineConfig(({ command }) => ({
           'vendor-charts': ['recharts'],
           'vendor-motion': ['framer-motion'],
           'vendor-icons': ['lucide-react'],
-          'vendor-db': ['dexie']
+          'vendor-db': ['dexie'],
+          'vendor-canvas': ['html2canvas']
         }
       }
     }

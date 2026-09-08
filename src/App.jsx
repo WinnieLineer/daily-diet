@@ -1639,7 +1639,7 @@ function App() {
 
   if (currentView === 'logs') {
     return (
-      <Suspense fallback={<div className="min-h-screen bg-[#FFFDF5] flex items-center justify-center font-black">🐼 載入監控儀表板中...</div>}>
+      <Suspense fallback={<div className="min-h-screen min-h-[100dvh] bg-[#FFFDF5] flex items-center justify-center font-black">🐼 載入監控儀表板中...</div>}>
         <LogMonitorDashboard 
           lang={currentLang} 
           onBack={() => {
@@ -1663,7 +1663,7 @@ function App() {
 
   const fasting = getFastingStatus();
   return (
-    <div className="min-h-screen p-4 pb-28 max-w-lg mx-auto space-y-6">
+    <div className="min-h-screen min-h-[100dvh] p-4 pb-28 max-w-lg mx-auto space-y-6">
       <Suspense fallback={null}>
         {ENABLE_520_THEME && <Theme520 />}
         <AnimatePresence>

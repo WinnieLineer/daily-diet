@@ -125,6 +125,43 @@ async function callGasProxy(action, data) {
   return json.data || json.text || json;
 }
 
+export function sanitizeAndBalanceNutrition(data, dishName = '') {
+  if (!data || typeof data !== 'object') return data;
+  let cal = Number(data.calories) || 0;
+  let pro = Number(data.protein) || 0;
+  let carbs = Number(data.carbs) || 0;
+  let fat = Number(data.fat) || 0;
+  let water = Number(data.water) || 0;
+
+  // 1. 飲品/湯品水分自動補正 (Liquid & Hydration Auto-Detection)
+  const nameLower = (dishName || data.dish_name || '').toLowerCase();
+  const isBeverageOrSoup = /(湯|茶|咖啡|水|飲|拿鐵|豆漿|牛奶|奶茶|果汁|soup|tea|coffee|water|latte|milk|juice|smoothie|shake|coke|soda)/i.test(nameLower);
+  if (isBeverageOrSoup && water <= 0) {
+    water = 350; // 預設一杯飲品或一碗湯提供約 350ml 水分
+  }
+
+  // 2. 巨量營養素總熱量平衡校驗 (Macro Sanity Check)
+  if (pro > 0 || carbs > 0 || fat > 0) {
+    const calculatedMinCal = Math.round(pro * 4 + carbs * 4 + fat * 9);
+    if (cal <= 0 && calculatedMinCal > 0) {
+      cal = calculatedMinCal;
+    } else if (cal > 0 && calculatedMinCal > 0) {
+      const diffRatio = Math.abs(cal - calculatedMinCal) / cal;
+      // 若熱量與巨量營養素乘積偏差超過 35%，進行加權平滑校正
+      if (diffRatio > 0.35) {
+        cal = Math.round((cal * 0.4) + (calculatedMinCal * 0.6));
+      }
+    }
+  }
+
+  data.calories = cal;
+  data.protein = pro;
+  data.carbs = carbs;
+  data.fat = fat;
+  data.water = water;
+  return data;
+}
+
 /**
  * Analyze food image using Gemini Vision (or GAS fallback)
  */
@@ -199,7 +236,7 @@ History Today: ${foodStrip || 'None'}`;
       if (parsed && !parsed.dish_name) {
         parsed.dish_name = language === 'zh' ? "美味餐點" : "Delicious Meal";
       }
-      return parsed;
+      return sanitizeAndBalanceNutrition(parsed, parsed.dish_name);
     } catch (err) {
       console.warn("Direct Gemini failed, attempting GAS backend proxy...", err);
     }
@@ -212,7 +249,7 @@ History Today: ${foodStrip || 'None'}`;
       context,
       language
     });
-    return proxyResult;
+    return sanitizeAndBalanceNutrition(proxyResult, proxyResult?.dish_name);
   } catch (gasErr) {
     console.error("All AI Recognition methods failed:", gasErr);
     throw new Error(language === 'zh' ? "AI 辨識暫時繁忙，請稍後重試 🐼" : "AI analysis temporarily busy, please try again 🐼");
@@ -275,7 +312,7 @@ History Today: ${foodStrip || 'None'}`;
       if (parsed && !parsed.dish_name) {
         parsed.dish_name = language === 'zh' ? "美味餐點" : "Delicious Meal";
       }
-      return parsed;
+      return sanitizeAndBalanceNutrition(parsed, parsed.dish_name);
     } catch (err) {
       console.warn("Direct Gemini text analysis failed, attempting GAS backend proxy...", err);
     }
@@ -287,7 +324,7 @@ History Today: ${foodStrip || 'None'}`;
       context,
       language
     });
-    return proxyResult;
+    return sanitizeAndBalanceNutrition(proxyResult, proxyResult?.dish_name);
   } catch (gasErr) {
     console.error("Text analysis failed:", gasErr);
     throw new Error(language === 'zh' ? "文字辨識暫時繁忙，請稍後重試 🐼" : "Text analysis temporarily busy, please try again 🐼");
