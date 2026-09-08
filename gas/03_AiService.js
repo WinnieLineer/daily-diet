@@ -512,30 +512,41 @@ function handleGoalSettingWithAI(replyToken, userId, userText, userGistId, pat, 
   const isEn = userLang === 'en';
 
   const prompt = isEn 
-    ? `You are an expert fitness and nutrition coach panda for a diet tracking app.
+    ? `You are an expert fitness and sports nutrition coach panda for Daily Diet app.
 The user is sending a message to set/adjust their diet goals or asking for body transformation advice: "${userText}".
 
-Analyze the message to extract or estimate:
+Analyze the message to extract or intelligently estimate:
 - gender ("Male" or "Female", default "Male")
 - height (cm, default 170)
 - weight (kg, default 65)
 - age (years, default 28)
+- activity_level:
+    * "Sedentary (desk job, little/no exercise, factor 1.2)"
+    * "Light Activity (walking, light exercise 1-3 days/wk, factor 1.375)"
+    * "Moderate Activity (regular gym/cardio 3-5 days/wk, factor 1.55)"
+    * "Heavy Activity (intense training 6-7 days/wk or heavy labor, factor 1.725)"
+    * "Athlete (twice a day training, factor 1.9)"
+    If not explicitly mentioned by user, default to factor 1.375 and mark as "Estimated: Light Activity (1.375, customizable)".
 - goal_type: "Fat Loss", "Muscle Gain", "Maintenance", "Fast Cut"
-- If user directly gave numerical targets (e.g. 1800 cal 120 pro 2500 water), respect those targets.
+- If user directly gave numerical targets (e.g. 1800 cal 120 pro 2500 water), respect those numbers.
 
-Scientific Formulas:
-- BMR = 10 * weight + 6.25 * height - 5 * age + (gender === 'Male' ? 5 : -161)
-- TDEE = Math.round(BMR * 1.375) (assuming moderate activity)
-- Target Calories: 
-    Fat Loss: TDEE - 400 ~ 500 kcal
-    Muscle Gain: TDEE + 300 ~ 400 kcal
-    Maintenance: TDEE
-- Target Protein:
-    Fat Loss: Math.round(weight * 2.0) g
-    Muscle Gain: Math.round(weight * 2.0) g
-    Maintenance: Math.round(weight * 1.6) g
-- Target Water: Math.round(weight * 35) ml
-- panda_advice: English, warm, professional Panda Coach personalized advice (60-100 words), explaining the calorie deficit/surplus, protein and water priorities, and expected progress.
+Scientific Formulas & Definitions:
+1. BMR (Mifflin-St Jeor): 10 * weight + 6.25 * height - 5 * age + (gender === 'Male' ? 5 : -161)
+2. TDEE = Math.round(BMR * activity_factor)
+3. Target Calories & Calorie Deficit/Surplus:
+    - Fat Loss: TDEE - 400 ~ 500 kcal (healthy deficit, never below BMR)
+    - Muscle Gain: TDEE + 300 ~ 400 kcal (surplus for muscle hyper-compensation)
+    - Maintenance: TDEE
+4. Target Protein:
+    - Fat Loss: Math.round(weight * 2.0) g (preserve lean mass during deficit)
+    - Muscle Gain: Math.round(weight * 2.0) g
+    - Maintenance: Math.round(weight * 1.6) g
+5. Target Water: Math.round(weight * 35) ml
+
+Expected Effects:
+- For Fat Loss: Every 7,700 kcal cumulative deficit burns ~1 kg pure body fat. A daily 450 kcal deficit achieves ~0.4 - 0.5 kg fat loss per week sustainably without muscle wasting.
+- For Muscle Gain: A moderate 350 kcal daily surplus with 2.0g/kg protein and resistance training gains ~0.2 - 0.3 kg lean mass weekly while minimizing fat accumulation.
+- For Maintenance: Balances energy input/output, stabilizes weight, and promotes body recomposition.
 
 Return ONLY a raw JSON object with keys:
 {
@@ -543,49 +554,76 @@ Return ONLY a raw JSON object with keys:
   "protein": <integer>,
   "water": <integer>,
   "goal_type": "Fat Loss / Muscle Gain / Maintenance",
-  "summary": "175cm / 70kg / Male ➔ Fat Loss",
+  "summary": "175cm · 70kg · Male · Fat Loss",
+  "gender": "Male",
+  "height": 175,
+  "weight": 70,
   "bmr": <integer>,
   "tdee": <integer>,
-  "panda_advice": "Based on your 70kg weight and fat loss goal, we've planned a 450 kcal daily deficit with 140g protein to preserve muscle. Remember to drink 2500ml water daily to boost metabolism! 🐼"
+  "activity_level": "Light Activity (1-3 days/wk, x1.375)",
+  "activity_factor": 1.375,
+  "deficit_or_surplus": "-450 kcal daily deficit",
+  "calorie_definition": "Calculated as BMR (1,680) x Activity Level (1.375) = TDEE (2,310 kcal). Applying a safe -450 kcal daily deficit gives target 1,860 kcal/day.",
+  "expected_effect": "A cumulative 7,700 kcal deficit burns 1 kg fat. With a 450 kcal daily deficit, you can expect ~0.4-0.5 kg fat loss weekly while 140g protein protects your muscle mass.",
+  "panda_advice": "English warm coach advice (40-60 words)."
 }
 Do NOT wrap in markdown backticks.`
-    : `You are an expert fitness and nutrition coach panda for a diet tracking app.
-The user is sending a message to set/adjust their diet goals or asking for body transformation advice: "${userText}".
+    : `You are an expert fitness and sports nutrition coach panda for Daily Diet app.
+使用者正在發送設定/修改體態目標或諮詢飲食規劃訊息：「${userText}」。
 
-Analyze the message to extract or estimate:
-- gender ("男" or "女", default "男")
-- height (cm, default 170)
-- weight (kg, default 65)
-- age (years, default 28)
-- goal_type: "減脂" (fat loss), "增肌" (muscle gain), "維持體態" (maintain/recomp), "極速減脂" (fast cut)
-- If user directly gave numerical targets (e.g. 1800卡 120蛋 2500水), respect those targets.
+請解析使用者的文字並萃取或合理推估：
+- gender ("男" 或 "女"，未提及預設 "男")
+- height (公分，未提及預設 170)
+- weight (公斤，未提及預設 65)
+- age (年齡歲數，未提及預設 28)
+- activity_level (活動量等級):
+    * 若提及久坐/辦公室/不運動/幾乎不動 ➔ 係數 1.2 ("久坐少動 (×1.2)")
+    * 若提及散步/走路/輕度/每週運動1-3天 ➔ 係數 1.375 ("輕度活動 (×1.375)")
+    * 若提及規律運動/健身/跑步/每週3-5天 ➔ 係數 1.55 ("中度運動 (×1.55)")
+    * 若提及高強度重訓/每天運動/勞力工作/每週6-7天 ➔ 係數 1.725 ("高強度運動 (×1.725)")
+    * 若提及運動員/高強度雙練 ➔ 係數 1.9 ("運動員級別 (×1.9)")
+    * 若使用者未提及活動量，預設以 1.375 估算，並標註「預設輕度活動 (×1.375，可微調)」。
+- goal_type: "減脂", "增肌", "維持體態", "極速減脂"
+- 若使用者直接指定具體數值（例如 1800卡 120蛋 2500水），直接尊重並採用使用者指定數值。
 
-Scientific Formulas:
-- BMR = 10 * weight + 6.25 * height - 5 * age + (gender === '男' ? 5 : -161)
-- TDEE = Math.round(BMR * 1.375) (assuming moderate activity)
-- Target Calories: 
-    減脂: TDEE - 400 ~ 500 kcal
-    增肌: TDEE + 300 ~ 400 kcal
-    維持: TDEE
-- Target Protein:
-    減脂: Math.round(weight * 2.0) g
-    增肌: Math.round(weight * 2.0) g
-    維持: Math.round(weight * 1.6) g
-- Target Water: Math.round(weight * 35) ml
-- panda_advice: 繁體中文，溫暖專業的熊貓教練個人化建議（約 60-100 字），說明針對其體型與目標規劃的熱量缺口/盈餘、蛋白質與水分攝取重點、以及預期的體型變化方向。
+科學公式與定義原理：
+1. BMR (基礎代謝率，Mifflin-St Jeor 醫學公式): 10 * weight + 6.25 * height - 5 * age + (gender === '男' ? 5 : -161)
+2. TDEE (每日總熱量消耗) = Math.round(BMR * activity_factor)
+3. 每日目標熱量與赤字/盈餘：
+    - 減脂: TDEE - 400 ~ 500 kcal（健康安全熱量赤字，不低於 BMR）
+    - 增肌: TDEE + 300 ~ 400 kcal（促進肌纖維超補償修復合成）
+    - 維持: TDEE（熱量收支平衡）
+4. 蛋白質目標：
+    - 減脂: Math.round(weight * 2.0) g（高蛋白防止赤字期間肌肉分解消耗）
+    - 增肌: Math.round(weight * 2.0) g
+    - 維持: Math.round(weight * 1.6) g
+5. 水分目標: Math.round(weight * 35) ml
 
-Return ONLY a raw JSON object with keys:
+預期效果與體態變化原理：
+- 減脂：每累積 7,700 kcal 熱量赤字約消耗 1 公斤純脂肪。每日 -450 kcal 赤字，預估每週穩定減去約 0.4 ~ 0.5 kg 純脂肪（相當於每月 -1.8 kg 純脂），且在足量蛋白質保護下能留住肌肉線條！
+- 增肌：每日適度熱量盈餘 +300 ~ 400 kcal 配合每公斤 2.0g 蛋白質與阻力訓練，預估每週穩健增重約 0.2 ~ 0.3 kg 精實肌肉，避免過多脂肪堆積！
+- 維持：每日攝取與 TDEE 相當，體重保持穩定不波動，優化身體組成與代謝！
+
+請嚴格僅回傳標準 JSON 物件，格式如下：
 {
-  "calories": <integer>,
-  "protein": <integer>,
-  "water": <integer>,
+  "calories": <整數>,
+  "protein": <整數>,
+  "water": <整數>,
   "goal_type": "減脂 / 增肌 / 維持體態",
-  "summary": "175cm / 70kg / 男 ➔ 減脂雕塑",
-  "bmr": <integer>,
-  "tdee": <integer>,
-  "panda_advice": "針對您的體重 70kg 與減脂需求，規劃每日熱量缺口約 450 kcal，同時拉高蛋白質至 140g 保留肌肉量。記得每天喝足 2500ml 水分加速代謝喔！🐼"
+  "summary": "175cm · 75kg · 男 · 減脂雕塑",
+  "gender": "男",
+  "height": 175,
+  "weight": 75,
+  "bmr": <整數>,
+  "tdee": <整數>,
+  "activity_level": "輕度活動 (每週運動1-3天，×1.375)",
+  "activity_factor": 1.375,
+  "deficit_or_surplus": "每日熱量赤字 -450 kcal",
+  "calorie_definition": "依 BMR (1,709) × 活動量 (1.375) 算出 TDEE 為 2,350 kcal。針對減脂規劃每日熱量赤字 -450 kcal，得出每日建議熱量 1,900 kcal。",
+  "expected_effect": "每累積 7,700 kcal 赤字可消耗 1kg 純脂肪。持續維持此目標，預估每週穩定減脂約 0.4~0.5 kg，配合 150g 高蛋白能守住肌肉不流失！",
+  "panda_advice": "繁體中文溫暖專業教練建議（約 40-60 字）。"
 }
-Do NOT wrap in markdown backticks.`;
+不要包含 markdown 標籤或 backticks。`;
 
   let failedAttempts = [];
   for (let i = 0; i < models.length; i++) {

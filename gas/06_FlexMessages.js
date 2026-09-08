@@ -836,6 +836,11 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
   const isEn = lang === 'en';
   const appTargetUrl = userGistId ? `https://liff.line.me/${liffId}?gistId=${userGistId}` : `https://liff.line.me/${liffId}`;
 
+  const currentHeight = info.height || 170;
+  const currentWeight = info.weight || 65;
+  const currentGender = info.gender || (isEn ? "male" : "男");
+  const currentGoalType = info.goal_type || (isEn ? "fat loss" : "減脂");
+
   return {
     type: "flex",
     altText: isEn 
@@ -881,7 +886,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
         type: "box",
         layout: "vertical",
         spacing: "md",
-        paddingAll: "16px",
+        paddingAll: "14px",
         contents: [
           {
             type: "box",
@@ -932,36 +937,199 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
               }
             ]
           },
-          ...(info.bmr && info.tdee ? [{
+          {
             type: "box",
-            layout: "horizontal",
-            backgroundColor: "#F4F4F5",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            borderColor: "#E2E8F0",
+            borderWidth: "1px",
             cornerRadius: "10px",
             paddingAll: "10px",
-            spacing: "sm",
+            spacing: "xs",
             contents: [
               {
                 type: "box",
-                layout: "vertical",
-                flex: 1,
-                alignItems: "center",
+                layout: "horizontal",
                 contents: [
-                  { type: "text", text: isEn ? "🧬 Basal Rate (BMR)" : "🧬 基礎代謝 (BMR)", size: "xxs", color: "#71717A", weight: "bold" },
-                  { type: "text", text: `${info.bmr} kcal`, size: "xs", color: "#18181B", weight: "bold", margin: "xs" }
+                  { type: "text", text: isEn ? "🔬 Calorie Definition" : "🔬 熱量科學計算依據", weight: "bold", size: "xs", color: "#0F172A", flex: 1 },
+                  ...(info.activity_level ? [{ type: "text", text: `${info.activity_level}`, size: "xxs", color: "#64748B", align: "end", wrap: true }] : [])
                 ]
               },
               {
                 type: "box",
-                layout: "vertical",
-                flex: 1,
-                alignItems: "center",
+                layout: "horizontal",
+                spacing: "xs",
+                margin: "xs",
                 contents: [
-                  { type: "text", text: isEn ? "⚡ Daily Burn (TDEE)" : "⚡ 每日消耗 (TDEE)", size: "xxs", color: "#71717A", weight: "bold" },
-                  { type: "text", text: `${info.tdee} kcal`, size: "xs", color: "#18181B", weight: "bold", margin: "xs" }
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#FFFFFF",
+                    cornerRadius: "6px",
+                    paddingAll: "6px",
+                    flex: 1,
+                    alignItems: "center",
+                    contents: [
+                      { type: "text", text: isEn ? "🧬 Basal BMR" : "🧬 基礎代謝", size: "xxs", color: "#64748B" },
+                      { type: "text", text: `${info.bmr || '-'} kcal`, size: "xs", weight: "bold", color: "#0F172A" }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#FFFFFF",
+                    cornerRadius: "6px",
+                    paddingAll: "6px",
+                    flex: 1,
+                    alignItems: "center",
+                    contents: [
+                      { type: "text", text: isEn ? "⚡ TDEE Burn" : "⚡ 每日總消耗", size: "xxs", color: "#64748B" },
+                      { type: "text", text: `${info.tdee || '-'} kcal`, size: "xs", weight: "bold", color: "#0F172A" }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#FFFFFF",
+                    cornerRadius: "6px",
+                    paddingAll: "6px",
+                    flex: 1,
+                    alignItems: "center",
+                    contents: [
+                      { type: "text", text: isEn ? "⚖️ Deficit/Gain" : "⚖️ 赤字/盈餘", size: "xxs", color: "#64748B" },
+                      { type: "text", text: `${info.deficit_or_surplus ? info.deficit_or_surplus.replace(/每日熱量/g, '') : (info.tdee ? `${cal - info.tdee} kcal` : '-')}`, size: "xs", weight: "bold", color: "#0F172A", wrap: true }
+                    ]
+                  }
+                ]
+              },
+              ...(info.calorie_definition ? [{
+                type: "text",
+                text: info.calorie_definition,
+                size: "xxs",
+                color: "#475569",
+                wrap: true,
+                margin: "xs"
+              }] : [])
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#ECFDF5",
+            borderColor: "#A7F3D0",
+            borderWidth: "1px",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "✨ Expected Results:" : "✨ 按照目標這樣吃的預期效果：",
+                weight: "bold",
+                size: "xs",
+                color: "#065F46",
+                wrap: true
+              },
+              {
+                type: "text",
+                text: info.expected_effect || (isEn 
+                  ? "Consistently maintaining this energy balance with optimal protein preserves muscle while reaching your body goal safely!" 
+                  : (info.goal_type === '增肌'
+                    ? "每日適度熱量盈餘配合高蛋白與阻力訓練，每週預計可穩健增加 0.2~0.3 kg 精實肌肉，避免過多體脂堆積！"
+                    : (info.goal_type === '維持體態'
+                      ? "熱量達到動態平衡，體重平穩不波動，能長期維持好體態與健康新陳代謝！"
+                      : "每累積 7,700 kcal 赤字可消耗 1kg 純脂。依此目標規劃，預計每週穩定減脂約 0.4~0.5 kg，同時充足蛋白質能留住肌肉線條！"))),
+                size: "xxs",
+                color: "#047857",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F1F5F9",
+            cornerRadius: "10px",
+            paddingAll: "8px",
+            spacing: "xs",
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "🏃 Check Your Activity Level (Affects TDEE ±500 kcal):" : "🏃 生活活動量是否相符？（影響 TDEE 達 500+ kcal）",
+                size: "xxs",
+                weight: "bold",
+                color: "#334155",
+                wrap: true
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "xs",
+                contents: [
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FFFFFF",
+                    action: {
+                      type: "postback",
+                      label: isEn ? "Sed 1.2" : "久坐 1.2",
+                      data: JSON.stringify({ action: 'fillGoal' }),
+                      inputOption: "openKeyboard",
+                      fillInText: isEn 
+                        ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} sedentary ${currentGoalType}`
+                        : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 久坐少動 ${currentGoalType}`
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FFFFFF",
+                    action: {
+                      type: "postback",
+                      label: isEn ? "Light 1.38" : "輕度 1.38",
+                      data: JSON.stringify({ action: 'fillGoal' }),
+                      inputOption: "openKeyboard",
+                      fillInText: isEn 
+                        ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} light activity ${currentGoalType}`
+                        : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 輕度活動 ${currentGoalType}`
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FFFFFF",
+                    action: {
+                      type: "postback",
+                      label: isEn ? "Mod 1.55" : "中度 1.55",
+                      data: JSON.stringify({ action: 'fillGoal' }),
+                      inputOption: "openKeyboard",
+                      fillInText: isEn 
+                        ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} moderate exercise ${currentGoalType}`
+                        : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 中度運動 ${currentGoalType}`
+                    }
+                  },
+                  {
+                    type: "button",
+                    style: "secondary",
+                    height: "sm",
+                    color: "#FFFFFF",
+                    action: {
+                      type: "postback",
+                      label: isEn ? "Heavy 1.73" : "高強 1.73",
+                      data: JSON.stringify({ action: 'fillGoal' }),
+                      inputOption: "openKeyboard",
+                      fillInText: isEn 
+                        ? `Set goal ${currentHeight}cm ${currentWeight}kg ${currentGender} heavy exercise ${currentGoalType}`
+                        : `改目標 ${currentHeight}cm ${currentWeight}kg ${currentGender} 高強度運動 ${currentGoalType}`
+                    }
+                  }
                 ]
               }
             ]
-          }] : []),
+          },
           {
             type: "box",
             layout: "vertical",
@@ -1027,8 +1195,8 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
   return {
     type: "flex",
     altText: isEn 
-      ? "🎯 Smart Diet Goals: Tell coach your height, weight & goals!"
-      : "🎯 AI 智能體態目標推薦導引：告訴教練身高體重與目標，自動規劃！",
+      ? "🎯 Smart Diet Goals: Tell coach your height, weight, activity & goals!"
+      : "🎯 AI 智能體態目標推薦導引：告訴教練身材、活動量與目標，自動規劃！",
     contents: {
       type: "bubble",
       size: "mega",
@@ -1057,7 +1225,7 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
           },
           {
             type: "text",
-            text: isEn ? "No need to calculate calories! AI plans it for you" : "不需要自己算熱量！告訴教練身材，AI 自動規劃",
+            text: isEn ? "No need to calculate calories! AI plans it for you" : "不需要自己算熱量！告訴教練身材與活動量，AI 自動規劃",
             color: "#A1A1AA",
             size: "xxs",
             margin: "xs",
@@ -1068,17 +1236,17 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
       body: {
         type: "box",
         layout: "vertical",
-        spacing: "md",
-        paddingAll: "16px",
+        spacing: "sm",
+        paddingAll: "14px",
         contents: [
           {
             type: "box",
             layout: "vertical",
             backgroundColor: "#FEF9C3",
-            cornerRadius: "12px",
-            paddingAll: "12px",
+            cornerRadius: "10px",
+            paddingAll: "10px",
             borderColor: "#000000",
-            borderWidth: "2px",
+            borderWidth: "1px",
             contents: [
               {
                 type: "text",
@@ -1091,10 +1259,49 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
               {
                 type: "text",
                 text: isEn 
-                  ? "No manual math needed! Tell Panda Coach your height, weight, gender, and goal. AI calculates your BMR/TDEE and plans the perfect calorie deficit, protein, and water targets!"
-                  : "不必自己計算熱量！只要告訴熊貓教練您的【身高、體重、性別與期望目標】，AI 將依據醫學 BMR/TDEE 公式與活動量，自動規劃每日熱量赤字/盈餘、蛋白質與飲水建議！",
+                  ? "Tell Panda Coach your height, weight, gender, activity level & goal. AI calculates your BMR/TDEE and plans the perfect calorie balance, protein, and water targets!"
+                  : "只要告訴熊貓教練您的【身高、體重、性別、活動量與期望目標】，AI 將依據醫學 BMR/TDEE 公式，自動規劃每日熱量赤字/盈餘、蛋白質與飲水建議！",
                 size: "xxs",
                 color: "#713F12",
+                wrap: true,
+                margin: "xs"
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F1F5F9",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            borderColor: "#CBD5E1",
+            borderWidth: "1px",
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "❓ Why Activity Level Matters?" : "❓ 為什麼活動量至關重要？",
+                weight: "bold",
+                size: "xs",
+                color: "#0F172A",
+                wrap: true
+              },
+              {
+                type: "text",
+                text: isEn 
+                  ? "BMR is your baseline burn at rest. TDEE = BMR × Activity Factor. A sedentary office worker vs. an active lifter can differ by 500-800+ kcal daily! Specifying activity ensures accurate targets."
+                  : "BMR 是整天躺著不動的消耗，而 TDEE = BMR × 活動係數。相同身材的上班族 (久坐 1.2) 與規律重訓者 (中度 1.55)，每日消耗可差 500~800 kcal！如果不考慮活動量，減脂容易餓垮掉肌，增肌容易吃不夠。",
+                size: "xxs",
+                color: "#334155",
+                wrap: true,
+                margin: "xs"
+              },
+              {
+                type: "text",
+                text: isEn 
+                  ? "🏃 4 Activity Levels:\n• Sedentary (1.2): Desk job, little exercise\n• Light (1.375): 1-3 days light exercise/walk\n• Moderate (1.55): 3-5 days workout/training\n• Heavy (1.725): 6-7 days intense/labor"
+                  : "🏃 4 大活動量對照：\n• 🪑 久坐少動 (×1.2)：整天坐著辦公、無規律運動\n• 🚶 輕度活動 (×1.375)：每週運動1-3天、常走動\n• 🏋️ 中度運動 (×1.55)：每週運動重訓3-5天\n• 🔥 高強運動 (×1.725)：每週運動6-7天或體力勞工",
+                size: "xxs",
+                color: "#475569",
                 wrap: true,
                 margin: "xs"
               }
@@ -1132,7 +1339,7 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
                   label: isEn ? "Female Cut" : "🏃‍♀️ 女生減脂",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
-                  fillInText: isEn ? "Set goal 160cm 52kg female fat loss" : "改目標 160cm 52kg 女 減脂"
+                  fillInText: isEn ? "Set goal 160cm 52kg female light activity fat loss" : "改目標 160cm 52kg 女 輕度活動 減脂"
                 },
                 contents: [
                   {
@@ -1165,7 +1372,7 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
                   label: isEn ? "Male Cut" : "🥗 男生減脂",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
-                  fillInText: isEn ? "Set goal 175cm 75kg male fat loss" : "改目標 175cm 75kg 男 減脂"
+                  fillInText: isEn ? "Set goal 175cm 75kg male light activity fat loss" : "改目標 175cm 75kg 男 輕度活動 減脂"
                 },
                 contents: [
                   {
@@ -1205,7 +1412,7 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
                   label: isEn ? "Male Bulk" : "💪 男生增肌",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
-                  fillInText: isEn ? "Set goal 175cm 68kg male muscle gain" : "改目標 175cm 68kg 男 增肌"
+                  fillInText: isEn ? "Set goal 175cm 68kg male moderate exercise muscle gain" : "改目標 175cm 68kg 男 中度運動 增肌"
                 },
                 contents: [
                   {
@@ -1238,7 +1445,7 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
                   label: isEn ? "Maintain" : "🧘 維持體態",
                   data: JSON.stringify({ action: 'fillGoal' }),
                   inputOption: "openKeyboard",
-                  fillInText: isEn ? "Set goal 165cm 55kg female maintenance" : "改目標 165cm 55kg 女 維持體態"
+                  fillInText: isEn ? "Set goal 165cm 55kg female sedentary maintenance" : "改目標 165cm 55kg 女 久坐少動 維持體態"
                 },
                 contents: [
                   {
