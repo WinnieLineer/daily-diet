@@ -2121,8 +2121,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
                     data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(fav.dish_name) }),
                     inputOption: "openKeyboard",
                     fillInText: isEn 
-                      ? `Add fav ${fav.dish_name} ${fav.calories}cal ${fav.protein}pro ${fav.water || 0}water`
-                      : `加常用 ${fav.dish_name} ${fav.calories}卡 ${fav.protein}蛋 ${fav.water || 0}水`
+                      ? `Edit fav ${fav.dish_name} ${fav.calories}cal ${fav.protein}pro ${fav.water || 0}water`
+                      : `調整常用 ${fav.dish_name} ${fav.calories}卡 ${fav.protein}蛋 ${fav.water || 0}水`
                   }
                 },
                 {
@@ -2343,8 +2343,8 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(dishName) }),
                   inputOption: "openKeyboard",
                   fillInText: isEn 
-                    ? `Add fav ${dishName} ${fav.calories || 0}cal ${fav.protein || 0}pro ${fav.water || 0}water`
-                    : `加常用 ${dishName} ${fav.calories || 0}卡 ${fav.protein || 0}蛋 ${fav.water || 0}水`
+                    ? `Edit fav ${dishName} ${fav.calories || 0}cal ${fav.protein || 0}pro ${fav.water || 0}water`
+                    : `調整常用 ${dishName} ${fav.calories || 0}卡 ${fav.protein || 0}蛋 ${fav.water || 0}水`
                 }
               },
               {
@@ -2450,23 +2450,31 @@ function generateFavoritesListFlex(userId, liffId, userGistId, props) {
   return generateManageFavoritesFlex(userId, liffId, userGistId, props);
 }
 
-function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang) {
+function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang, isEdit) {
   const isEn = lang === 'en';
+  const headerTitle = isEdit 
+    ? (isEn ? "✏️ Favorite Updated!" : "✏️ 常用餐點已成功更新！")
+    : (isEn ? "⭐ Added to Favorites!" : "⭐ 成功存入常用餐點！");
+  const headerBg = isEdit ? "#BAE6FD" : "#FDE047";
+  const altTextMsg = isEdit
+    ? (isEn ? `✏️ Updated favorite: ${favItem.dish_name}` : `✏️ 已成功更新常用餐點：${favItem.dish_name}`)
+    : (isEn ? `⭐ Saved to favorites: ${favItem.dish_name}` : `⭐ 已成功存為常用餐點：${favItem.dish_name}`);
+
   return {
     type: "flex",
-    altText: isEn ? `⭐ Saved to favorites: ${favItem.dish_name}` : `⭐ 已成功存為常用餐點：${favItem.dish_name}`,
+    altText: altTextMsg,
     contents: {
       type: "bubble",
       size: "mega",
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#FDE047",
+        backgroundColor: headerBg,
         paddingAll: "14px",
         contents: [
           { 
             type: "text", 
-            text: isEn ? "⭐ Added to Favorites!" : "⭐ 成功存入常用餐點！", 
+            text: headerTitle, 
             weight: "bold", 
             size: "md", 
             color: "#000000",

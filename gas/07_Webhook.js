@@ -1389,30 +1389,49 @@ function doPost(e) {
             userText.toLowerCase().startsWith('edit fav') ||
             userText.toLowerCase().startsWith('update fav')
           ) {
-            const cleanStr = userText.replace(/^(?:加常用|新增常用|加入常用|收藏常用|改常用|調整常用|修改常用|編輯常用|add\s*fav(?:orite)?|edit\s*fav(?:orite)?|update\s*fav(?:orite)?)\s*/i, '');
-            const calMatch = cleanStr.match(/(\d+)\s*(?:kcal|cal|卡|大卡)/i) || (cleanStr.includes('熱量') ? cleanStr.match(/熱量\s*(\d+)/i) : null);
-            const proMatch = cleanStr.match(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質|pro(?:tein)?)/i) || (cleanStr.includes('蛋白質') ? cleanStr.match(/蛋白質\s*(\d+(?:\.\d+)?)/i) : null);
-            const watMatch = cleanStr.match(/(\d+)\s*(?:ml|cc|水|水分|wat(?:er)?)/i) || (cleanStr.includes('水分') ? cleanStr.match(/水分\s*(\d+)/i) : null);
+            const isEdit = userText.startsWith('改') || userText.startsWith('調') || userText.startsWith('編') || userText.startsWith('修') || userText.toLowerCase().startsWith('edit') || userText.toLowerCase().startsWith('update');
+            const cleanStr = userText.replace(/^(?:加常用|新增常用|加入常用|收藏常用|改常用|調整常用|修改常用|編輯常用|add\s*fav(?:orite)?|edit\s*fav(?:orite)?|update\s*fav(?:orite)?)\s*/i, '').trim();
 
+            let calories = 0;
+            let protein = 0;
+            let water = 0;
+
+            // 1. 卡路里: e.g. 150卡, 150kcal, 熱量150
+            const calMatch = cleanStr.match(/熱量\s*[:：]?\s*(\d+)/i) || cleanStr.match(/(\d+)\s*(?:kcal|cal|大卡|卡)/i);
+            if (calMatch) calories = Number(calMatch[1]);
+
+            // 2. 蛋白質: e.g. 蛋白質1.2, 蛋白質: 8, 8g, 8克, 8蛋
+            const proMatch = cleanStr.match(/蛋白質\s*[:：]?\s*(\d+(?:\.\d+)?)/i) || cleanStr.match(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|pro(?:tein)?)/i);
+            if (proMatch) protein = Number(proMatch[1]);
+
+            // 3. 水分: e.g. 水分50, 350ml, 350cc, 350水
+            const watMatch = cleanStr.match(/(?:水分|飲水|水)\s*[:：]?\s*(\d+)/i) || cleanStr.match(/(\d+)\s*(?:ml|cc|水|水分|wat(?:er)?)/i);
+            if (watMatch) water = Number(watMatch[1]);
+
+            // 4. 清理數值與單位，取得乾淨餐點名稱（防止「蛋」、「水」殘留粘在名稱上）
             let dishName = cleanStr
-              .replace(/(\d+)\s*(?:kcal|cal|卡|大卡)/gi, '')
-              .replace(/(?:熱量)?\s*(\d+)\s*(?:kcal|cal|卡|大卡)?/gi, '')
-              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|蛋白質|pro(?:tein)?)/gi, '')
+              .replace(/熱量\s*[:：]?\s*\d+\s*(?:kcal|cal|大卡|卡)?/gi, '')
+              .replace(/(\d+)\s*(?:kcal|cal|大卡|卡)/gi, '')
+              .replace(/蛋白質\s*[:：]?\s*\d+(?:\.\d+)?\s*(?:g|克|蛋)?/gi, '')
+              .replace(/(\d+(?:\.\d+)?)\s*(?:g|克|蛋|pro(?:tein)?)/gi, '')
+              .replace(/(?:水分|飲水|水)\s*[:：]?\s*\d+\s*(?:ml|cc)?/gi, '')
               .replace(/(\d+)\s*(?:ml|cc|水|水分|wat(?:er)?)/gi, '')
-              .trim() || (isEn ? 'Favorite Meal' : '常用餐點');
+              .replace(/[,\/，、|]+/g, ' ')
+              .trim();
+
+            dishName = dishName.replace(/\s+(?:卡|蛋|水|克|g|ml|cc)\s*$/gi, '').replace(/\s*蛋\s*水$/gi, '').trim() || (isEn ? 'Favorite Meal' : '常用餐點');
 
             const favItem = {
               id: Date.now(),
               dish_name: dishName,
-              calories: calMatch ? Number(calMatch[1]) : 0,
-              protein: proMatch ? Number(proMatch[1]) : 0,
-              water: watMatch ? Number(watMatch[1]) : 0
+              calories: calories,
+              protein: protein,
+              water: water
             };
 
-            const isEdit = userText.startsWith('改') || userText.startsWith('調') || userText.startsWith('編') || userText.startsWith('修') || userText.toLowerCase().startsWith('edit') || userText.toLowerCase().startsWith('update');
-            recordSystemLog(isEdit ? '調整常用' : '文字加常用', userId, userText, `${favItem.dish_name} (${favItem.calories}卡 / ${favItem.protein}g蛋)`, `回傳常用收藏卡片：【${favItem.dish_name}】(${favItem.calories} kcal) ${isEdit ? '已成功調整數值' : '已加入常用庫'}`);
+            recordSystemLog(isEdit ? '調整常用' : '文字加常用', userId, userText, `${favItem.dish_name} (${favItem.calories}卡 / ${favItem.protein}g蛋 / ${favItem.water}ml水)`, `回傳常用收藏卡片：【${favItem.dish_name}】(${favItem.calories} kcal) ${isEdit ? '已成功調整數值' : '已加入常用庫'}`);
             saveUserFavorite(userId, favItem, userGistId, GITHUB_PAT, props);
-            const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId, userLang);
+            const favAddedFlex = generateFavoriteAddedFlex(favItem, LIFF_ID, userGistId, userLang, isEdit);
             replyFlexMessage(replyToken, favAddedFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }

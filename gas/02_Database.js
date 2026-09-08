@@ -834,12 +834,56 @@ function saveUserFavorite(userId, favItem, userGistId, pat, props) {
     const favKey = `FAVORITES_${userId}`;
     let favorites = getUserFavorites(userId, props);
 
-    const existingIdx = favorites.findIndex(f => f.dish_name === favItem.dish_name);
+    // 確保輸入的名稱不帶「蛋水」或「蛋 水」等後綴殘留
+    if (favItem.dish_name) {
+      favItem.dish_name = favItem.dish_name.replace(/\s*蛋\s*水$/gi, '').trim();
+    }
+
+    const cleanTargetName = String(favItem.dish_name || '').trim().toLowerCase();
+
+    // 1. 精準比對名稱或 ID
+    let existingIdx = favorites.findIndex(f => {
+      const fn = String(f.dish_name || '').trim().toLowerCase();
+      if (fn === cleanTargetName) return true;
+      if (favItem.id && f.id === favItem.id) return true;
+      return false;
+    });
+
+    // 2. 智慧修復比對：尋找先前因舊版 bug 殘留「蛋水」或「蛋 水」的污染舊資料 (例如 "拿鐵蛋水" 或 "拿鐵 蛋 水")
+    if (existingIdx === -1 && cleanTargetName) {
+      existingIdx = favorites.findIndex(f => {
+        const fn = String(f.dish_name || '').trim().toLowerCase();
+        const cleanedFn = fn.replace(/\s*蛋\s*水$/gi, '').trim();
+        return cleanedFn === cleanTargetName || (fn.startsWith(cleanTargetName) && (fn.endsWith('蛋水') || fn.endsWith('水')));
+      });
+    }
+
     if (existingIdx !== -1) {
-      favorites[existingIdx] = favItem;
+      // 原地更新，保留既有 ID
+      const orig = favorites[existingIdx];
+      favorites[existingIdx] = {
+        ...orig,
+        ...favItem,
+        id: orig.id || favItem.id || Date.now(),
+        dish_name: favItem.dish_name
+      };
+      console.log(`✅ [常用餐點更新] 成功原地更新【${favItem.dish_name}】數值`);
     } else {
       favorites.unshift(favItem);
+      console.log(`➕ [常用餐點新增] 成功新增【${favItem.dish_name}】`);
     }
+
+    // 清理重複項與修復舊污染
+    const seen = new Set();
+    favorites = favorites.filter(f => {
+      const n = String(f.dish_name || '').replace(/\s*蛋\s*水$/gi, '').trim();
+      if (!n) return false;
+      const lower = n.toLowerCase();
+      if (seen.has(lower)) return false;
+      seen.add(lower);
+      f.dish_name = n; // 自動清洗舊資料名稱
+      return true;
+    });
 
     props.setProperty(favKey, JSON.stringify(favorites));
 
