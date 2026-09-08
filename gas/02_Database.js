@@ -1007,13 +1007,16 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
 
   Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
-  // 1. 高速暫存快取 (保留最新 200 筆)
+  // 1. 高速暫存快取 (動態維持在 GAS Properties 9KB 安全容量內)
   try {
     let recentLogs = [];
     const raw = props.getProperty('SYSTEM_RECENT_LOGS');
     if (raw) recentLogs = JSON.parse(raw);
     recentLogs.unshift(logItem);
-    if (recentLogs.length > 200) recentLogs = recentLogs.slice(0, 200);
+    while (recentLogs.length > 0 && JSON.stringify(recentLogs).length > 8000) {
+      recentLogs.pop();
+    }
+    if (recentLogs.length > 100) recentLogs = recentLogs.slice(0, 100);
     props.setProperty('SYSTEM_RECENT_LOGS', JSON.stringify(recentLogs));
   } catch (e) {
     console.error("儲存實時日誌失敗:", e);

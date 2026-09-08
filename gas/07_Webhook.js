@@ -435,9 +435,9 @@ function doPost(e) {
           recordSystemLog(
             'Web教練諮詢', 
             data?.userId || 'web_user', 
-            typeof prompt === 'string' ? prompt.slice(0, 100) : '教練諮詢', 
+            typeof prompt === 'string' ? prompt : '教練諮詢', 
             '', 
-            `回傳教練建議：${typeof result === 'string' ? result.slice(0, 150) : ''}`
+            `回傳教練建議：${typeof result === 'string' ? result : ''}`
           );
         }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))

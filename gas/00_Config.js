@@ -4,16 +4,40 @@
  * ========================================================
  */
 
-// 🤖 Gemini 推薦優先與備用模型清單
-const PRIMARY_GEMINI_MODELS = [
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-3.1-flash-lite',
+// 📸 視覺照片辨識模型清單 (必須為 Multimodal 模型，優先使用 RPD 500 之 3.5-flash-lite / 3.1-flash-lite)
+const VISION_GEMINI_MODELS = [
   'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash',
   'gemini-3.7-flash',
   'gemini-3.6-flash',
-  'gemini-3-flash'
+  'gemini-3-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash'
 ];
+
+// 📝 純文字自然語言記餐模型清單 (文字解析 JSON，優先以 3.1-flash-lite 為主，分流減輕 3.5 的負擔)
+const TEXT_GEMINI_MODELS = [
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
+  'gemini-3.5-flash',
+  'gemini-3.7-flash',
+  'gemini-3.6-flash',
+  'gemini-2.5-flash-lite'
+];
+
+// 🐼 教練諮詢與對話模型清單 (純文字輸出、人設風格，優先調用極高 RPD 14.4K 與 30 RPM 的 Gemma 4，輔以 3.5/3.1-flash-lite)
+const ADVICE_GEMINI_MODELS = [
+  'gemma-4-31b-it',
+  'gemma-4-26b-it',
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash-lite'
+];
+
+// 🔄 通用預設模型清單 (相容性與全域預設)
+const PRIMARY_GEMINI_MODELS = VISION_GEMINI_MODELS;
 
 // 🎯 預設營養目標 (當使用者尚未自訂目標時使用)
 const DEFAULT_CALORIE_GOAL = 2000; // kcal

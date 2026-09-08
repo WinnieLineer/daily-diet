@@ -71,9 +71,9 @@ function generateFallbackComment(dishName, calories, protein, persona = 'tsunder
 // ========================================================
 
 function analyzeMealWithGemini(base64Image, apiKey, userId, props, userGistId, pat) {
-  const models = (typeof PRIMARY_GEMINI_MODELS !== 'undefined' && PRIMARY_GEMINI_MODELS.length) 
-    ? PRIMARY_GEMINI_MODELS 
-    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'];
+  const models = (typeof VISION_GEMINI_MODELS !== 'undefined' && VISION_GEMINI_MODELS.length) 
+    ? VISION_GEMINI_MODELS 
+    : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
 
   const userPersona = getUserPersona(userId, props, userGistId, pat);
   const userLang = getUserLanguage(userId, props, userGistId, pat);
@@ -266,9 +266,9 @@ ${schemaBlock}`;
 // ========================================================
 
 function parseTextWithGemini(text, apiKey, userId, props, userGistId, pat) {
-  const models = (typeof PRIMARY_GEMINI_MODELS !== 'undefined' && PRIMARY_GEMINI_MODELS.length) 
-    ? PRIMARY_GEMINI_MODELS 
-    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'];
+  const models = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
+    ? TEXT_GEMINI_MODELS 
+    : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
 
   const userPersona = getUserPersona(userId, props, userGistId, pat);
   const userLang = getUserLanguage(userId, props, userGistId, pat);
@@ -504,9 +504,9 @@ Do NOT wrap in markdown backticks.`;
 // ========================================================
 
 function handleGoalSettingWithAI(replyToken, userId, userText, userGistId, pat, props, liffId, channelAccessToken, apiKey, lang) {
-  const models = (typeof PRIMARY_GEMINI_MODELS !== 'undefined' && PRIMARY_GEMINI_MODELS.length) 
-    ? PRIMARY_GEMINI_MODELS 
-    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'];
+  const models = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
+    ? TEXT_GEMINI_MODELS 
+    : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
 
   const userLang = lang || getUserLanguage(userId, props, userGistId, pat);
   const isEn = userLang === 'en';
@@ -701,9 +701,9 @@ Do NOT wrap in markdown backticks.`;
 // ========================================================
 
 function analyzeMealWithGeminiFull(base64Image, apiKey, context, language) {
-  const models = (typeof PRIMARY_GEMINI_MODELS !== 'undefined' && PRIMARY_GEMINI_MODELS.length) 
-    ? PRIMARY_GEMINI_MODELS 
-    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'];
+  const models = (typeof VISION_GEMINI_MODELS !== 'undefined' && VISION_GEMINI_MODELS.length) 
+    ? VISION_GEMINI_MODELS 
+    : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
 
   const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
   const prompt = `Analyze this food image. Return STRICTLY a raw JSON object with keys:
@@ -786,9 +786,9 @@ No markdown backticks.`;
 }
 
 function parseTextWithGeminiFull(text, apiKey, context, language) {
-  const models = (typeof PRIMARY_GEMINI_MODELS !== 'undefined' && PRIMARY_GEMINI_MODELS.length) 
-    ? PRIMARY_GEMINI_MODELS 
-    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'];
+  const models = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
+    ? TEXT_GEMINI_MODELS 
+    : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
 
   const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
   const prompt = `You are an expert nutritionist panda. Analyze: "${text}".
@@ -865,9 +865,9 @@ No markdown backticks.`;
 }
 
 function generateGeminiText(prompt, apiKey) {
-  const models = (typeof PRIMARY_GEMINI_MODELS !== 'undefined' && PRIMARY_GEMINI_MODELS.length) 
-    ? PRIMARY_GEMINI_MODELS 
-    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.7-flash'];
+  const models = (typeof ADVICE_GEMINI_MODELS !== 'undefined' && ADVICE_GEMINI_MODELS.length) 
+    ? ADVICE_GEMINI_MODELS 
+    : ['gemma-4-31b-it', 'gemma-4-26b-it', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
