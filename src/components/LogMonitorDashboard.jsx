@@ -200,10 +200,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     return localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
   });
   const [maintainerName, setMaintainerName] = useState(() => {
-    return localStorage.getItem(MAINTAINER_NAME_KEY) || localStorage.getItem('user_name') || 'Winnie';
+    return localStorage.getItem(MAINTAINER_NAME_KEY) || '';
   });
   const [maintainerNameInput, setMaintainerNameInput] = useState(() => {
-    return localStorage.getItem(MAINTAINER_NAME_KEY) || localStorage.getItem('user_name') || 'Winnie';
+    return localStorage.getItem(MAINTAINER_NAME_KEY) || '';
   });
   const [clientInfo, setClientInfo] = useState(() => {
     try {
@@ -319,7 +319,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       os, 
       browser, 
       device, 
-      userName: maintainerName || 'Winnie',
+      userName: maintainerName || 'Admin',
       timestamp: new Date().toISOString() 
     };
   };
@@ -328,7 +328,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const recordMaintainerAuditToBackend = async (info, token, userNameOverride) => {
     try {
       setIsRegisteringAudit(true);
-      const name = userNameOverride || maintainerName || info.userName || 'Winnie';
+      const name = userNameOverride || maintainerName || info.userName || 'Admin';
       const params = new URLSearchParams({
         action: 'recordMaintainerLogin',
         userName: name,
@@ -393,11 +393,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       // Report to GAS
       recordMaintainerAuditToBackend(info, newToken, REQUIRED_MAINTAINER_USER);
     } else {
-      if (!isUserValid && isPassValid) {
-        setAuthError(isEn ? 'Maintainer account must be Winnie.' : '維護者帳號必須為 Winnie。');
-      } else {
-        setAuthError(isEn ? 'Incorrect account or password. Access denied.' : '帳號或密碼不正確，存取被拒絕。');
-      }
+      setAuthError(isEn ? 'Incorrect account or password. Access denied.' : '帳號或密碼不正確，存取被拒絕。');
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 600);
     }
@@ -710,7 +706,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     type="text"
                     value={maintainerNameInput}
                     onChange={(e) => setMaintainerNameInput(e.target.value)}
-                    placeholder="Winnie"
+                    placeholder={isEn ? 'Enter account' : '請輸入帳號'}
                     className="w-full bg-zinc-50 border-4 border-black p-3.5 pl-10 rounded-2xl font-bold text-sm outline-none focus:bg-white shadow-neo-xs transition-colors"
                   />
                   <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
