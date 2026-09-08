@@ -1534,7 +1534,7 @@ function sendBugReportNotification(params) {
     const candidateEmails = [
       props && props.getProperty('ADMIN_EMAIL'),
       props && props.getProperty('DEVELOPER_EMAIL'),
-      'winnie.lin@btse.com'
+      (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space'
     ];
     try {
       const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -1640,7 +1640,7 @@ function sendErrorAlertToWeb3Forms(info) {
       const candidateEmails = [
         props && props.getProperty('ADMIN_EMAIL'),
         props && props.getProperty('DEVELOPER_EMAIL'),
-        'winnie.lin@btse.com'
+        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space'
       ];
       try {
         const effectiveUser = Session.getEffectiveUser().getEmail();
