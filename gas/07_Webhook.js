@@ -1015,24 +1015,6 @@ function doPost(e) {
             continue;
           }
 
-          // 👑 綁定/查詢管理員身分指令 (唯一限定末碼 497c66，其餘任何人輸入皆無效且無權限)
-          if (userText === '我是管理員' || userText === '綁定管理員' || userText === '設定管理員' || userText === 'admin') {
-            const adminSuffix = (typeof MASTER_ADMIN_LINE_SUFFIX !== 'undefined' && MASTER_ADMIN_LINE_SUFFIX) || '497c66';
-            if (userId && userId.endsWith(adminSuffix)) {
-              props.setProperty('ADMIN_LINE_USER_ID', userId);
-              const adminReply = isEn
-                ? `👑 Verified: You are the verified System Master Admin (${userId.slice(-6)}).\nYou will receive instant push notifications here whenever users report bugs or system alerts trigger 🐼✨`
-                : `👑 驗證通過：您為 Daily-Diet 系統唯一指定管理員 (${userId.slice(-6)})。\n從現在起，只要有用戶回報問題或系統異常，您的手機都會在此第一時間收到專屬推播卡片 🐼✨`;
-              replyTextMessage(replyToken, adminReply, CHANNEL_ACCESS_TOKEN, userId, props);
-            } else {
-              const rejectReply = isEn
-                ? `⛔ Permission denied: Your account is not authorized as a system admin 🐼`
-                : `⛔ 權限不足：您並非系統唯一授權管理員，無法啟用管理員功能 🐼`;
-              replyTextMessage(replyToken, rejectReply, CHANNEL_ACCESS_TOKEN, userId, props);
-            }
-            continue;
-          }
-
           // 💡 說明 / 指令 / 教學 / 歡迎 / 功能清單
           if (userText === '說明' || userText.toLowerCase() === 'help' || userText.toLowerCase() === 'guide' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
             recordSystemLog('使用說明', userId, userText, '', '發送操作說明與功能手冊卡片');
