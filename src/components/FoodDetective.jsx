@@ -99,6 +99,8 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
 };
 
 export default function FoodDetective({ onLogAdded, summary, goals, recentLogs = [], setAdvice, adviceUpdateLockRef, favoriteUpdateTrigger, userName }) {
+  const language = getLanguage();
+  const isEn = language === 'en';
   const [mode, setMode] = useState('ai');
   const [aiLoading, setAiLoading] = useState(false);
   const [manualSaving, setManualSaving] = useState(false);
@@ -1109,9 +1111,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     <div className="bg-zinc-50 border-4 border-black p-4 rounded-[2rem] mb-3 shadow-neo-sm">
                       <div className="flex justify-between items-center mb-2">
                         <span className="text-[10px] font-black uppercase text-zinc-600 flex items-center gap-1">
-                          🧮 {language === 'en' ? 'Nutrient Breakdown' : '熱量與份量估算依據'}
+                          🧮 {isEn ? 'Nutrient Breakdown' : '熱量與份量估算依據'}
                         </span>
-                        <span className="text-[9px] font-black text-zinc-400">{language === 'en' ? 'Breakdown' : '各項成分拆解'}</span>
+                        <span className="text-[9px] font-black text-zinc-400">{isEn ? 'Breakdown' : '各項成分拆解'}</span>
                       </div>
                       {result.breakdown && result.breakdown.length > 0 && (
                         <div className="space-y-1.5 mb-2">
@@ -1123,7 +1125,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                               </div>
                               <div className="font-black text-rose-600 font-mono text-[11px] shrink-0 whitespace-nowrap">
                                 {item.calories} kcal
-                                {Number(item.protein) > 0 && <span className="text-blue-600 ml-1">/ {item.protein}g{language === 'en' ? ' pro' : '蛋'}</span>}
+                                {Number(item.protein) > 0 && <span className="text-blue-600 ml-1">/ {item.protein}g{isEn ? ' pro' : '蛋'}</span>}
                               </div>
                             </div>
                           ))}
@@ -1131,7 +1133,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       )}
                       {result.calculation_note && (
                         <div className="pt-2 border-t-2 border-dashed border-zinc-300 text-[10px] font-bold text-zinc-600 leading-snug">
-                          💡 {language === 'en' ? 'Calculation Process: ' : '計算過程：'}{result.calculation_note}
+                          💡 {isEn ? 'Calculation Process: ' : '計算過程：'}{result.calculation_note}
                         </div>
                       )}
                     </div>
