@@ -59,6 +59,9 @@ const DEFAULT_LANGUAGE = 'zh';      // 'zh' | 'en'
 // 📧 預設開發者與管理員通知信箱
 const DEFAULT_ADMIN_EMAIL = 'hi@winnie-lin.space';
 
+// 📊 系統日誌 Google 試算表 ID (留空則嘗試自動建立或由 bindLogSheet 綁定)
+const DEFAULT_LOG_SHEET_ID = '';
+
 // 👑 唯一授權之系統管理員 LINE 帳號尾碼 (防偽權限校驗)
 const MASTER_ADMIN_LINE_SUFFIX = '497c66';
 

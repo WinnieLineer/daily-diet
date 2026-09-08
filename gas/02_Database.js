@@ -1334,7 +1334,7 @@ function purgeSystemLogsGist(props) {
 
 function getOrCreateLogSheet(props) {
   if (!props) props = PropertiesService.getScriptProperties();
-  let sheetId = props.getProperty('LOG_SHEET_ID');
+  let sheetId = props.getProperty('LOG_SHEET_ID') || (typeof DEFAULT_LOG_SHEET_ID !== 'undefined' && DEFAULT_LOG_SHEET_ID);
   if (sheetId) {
     try {
       const ss = SpreadsheetApp.openById(sheetId);
@@ -1369,6 +1369,18 @@ function getOrCreateLogSheet(props) {
     return ss;
   } catch (err) {
     console.warn("自動建立 Google Sheet 日誌失敗 (可能是權限未授權):", err);
+    return null;
+  }
+}
+
+function initLogSheet() {
+  const props = PropertiesService.getScriptProperties();
+  const ss = getOrCreateLogSheet(props);
+  if (ss) {
+    console.log("✅ 成功建立/取得日誌試算表:", ss.getUrl());
+    return ss.getUrl();
+  } else {
+    console.error("❌ 建立日誌試算表失敗，請手動在 Google Drive 建立試算表後綁定。");
     return null;
   }
 }

@@ -268,6 +268,43 @@ function doGet(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 11.1 綁定/設定系統日誌 Google 試算表 ID
+    if (action === 'bindLogSheet' || action === 'setLogSheet') {
+      const input = (e?.parameter?.url || e?.parameter?.sheetId || e?.parameter?.id || '').trim();
+      let cleanId = input;
+      const match = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
+      if (match) cleanId = match[1];
+
+      if (cleanId) {
+        props.setProperty('LOG_SHEET_ID', cleanId);
+        try {
+          const ss = SpreadsheetApp.openById(cleanId);
+          const sheet = ss.getSheets()[0];
+          if (sheet.getLastRow() === 0) {
+            sheet.appendRow(["時間", "用戶名稱", "用戶識別碼", "操作類型", "用戶傳送內容", "AI辨識結果", "回傳內容 / 處理狀態", "IP", "地理位置"]);
+            const headerRange = sheet.getRange(1, 1, 1, 9);
+            headerRange.setBackground("#000000").setFontColor("#FDE047").setFontWeight("bold").setFontSize(11);
+            sheet.setFrozenRows(1);
+          }
+          return ContentService.createTextOutput(JSON.stringify({ 
+            status: 'ok', 
+            message: '✅ 成功綁定 Google 試算表！日誌將即時同步追加。',
+            sheetId: cleanId,
+            sheetUrl: `https://docs.google.com/spreadsheets/d/${cleanId}/edit`
+          })).setMimeType(ContentService.MimeType.JSON);
+        } catch (err) {
+          return ContentService.createTextOutput(JSON.stringify({ 
+            status: 'warning', 
+            message: `已儲存試算表 ID，但嘗試存取時發生提示: ${err.message}`,
+            sheetId: cleanId,
+            sheetUrl: `https://docs.google.com/spreadsheets/d/${cleanId}/edit`
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '請提供 url 或 sheetId 參數' }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 12. 實時運作日誌儀表板 (已全面遷移至 Web 前端專屬維護者密碼保護端點，自動轉導)
     if (action === 'logs' || action === 'viewLogs' || action === 'log') {
       return HtmlService.createHtmlOutput(generateDashboardHtml())
