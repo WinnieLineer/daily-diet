@@ -19,14 +19,40 @@ import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
 import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
 
-// 🚀 Dynamic Lazy-Loaded Modals & Components (Code Splitting)
-const HistoryTrends = lazy(() => import('./components/HistoryTrends'));
-const GoalSettings = lazy(() => import('./components/GoalSettings'));
-const WhatsNew = lazy(() => import('./components/WhatsNew'));
-const Onboarding = lazy(() => import('./components/Onboarding'));
-const WeeklyReportCard = lazy(() => import('./components/WeeklyReportCard'));
-const Theme520 = lazy(() => import('./components/Theme520'));
-const LogMonitorDashboard = lazy(() => import('./components/LogMonitorDashboard'));
+// 🛡️ Safe Lazy Loader with Automatic Cache Busting on Deployment Update
+function lazyWithRetry(componentImport) {
+  return lazy(async () => {
+    try {
+      return await componentImport();
+    } catch (error) {
+      const errMsg = error?.message || error?.toString() || '';
+      if (
+        errMsg.includes('dynamically imported module') ||
+        errMsg.includes('Importing a module script failed') ||
+        errMsg.includes('error loading dynamically imported module') ||
+        errMsg.includes('Failed to fetch')
+      ) {
+        const reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
+        if (reloadCount < 2) {
+          sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
+          console.warn('🔄 Dynamic chunk outdated after new deployment, auto-reloading page...');
+          window.location.reload();
+          return new Promise(() => {}); // Wait for reload without throwing
+        }
+      }
+      throw error;
+    }
+  });
+}
+
+// 🚀 Dynamic Lazy-Loaded Modals & Components (Code Splitting with Auto-Retry)
+const HistoryTrends = lazyWithRetry(() => import('./components/HistoryTrends'));
+const GoalSettings = lazyWithRetry(() => import('./components/GoalSettings'));
+const WhatsNew = lazyWithRetry(() => import('./components/WhatsNew'));
+const Onboarding = lazyWithRetry(() => import('./components/Onboarding'));
+const WeeklyReportCard = lazyWithRetry(() => import('./components/WeeklyReportCard'));
+const Theme520 = lazyWithRetry(() => import('./components/Theme520'));
+const LogMonitorDashboard = lazyWithRetry(() => import('./components/LogMonitorDashboard'));
 
 export const isNewer = (newVer, oldVer) => {
   if (!oldVer) return true;
@@ -734,6 +760,7 @@ function App() {
   const [currentView, setCurrentView] = useState(() => checkIsLogRoute() ? 'logs' : 'main');
 
   useEffect(() => {
+    sessionStorage.removeItem('chunk_reload_count');
     const handleRouteChange = () => {
       setCurrentView(checkIsLogRoute() ? 'logs' : 'main');
     };

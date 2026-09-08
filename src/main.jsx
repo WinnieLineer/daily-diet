@@ -67,6 +67,23 @@ class ErrorBoundary extends React.Component {
   componentDidCatch(error, errorInfo) {
     this.setState({ errorInfo });
     console.error("ErrorBoundary caught an error", error, errorInfo);
+
+    const errMsg = error?.message || error?.toString() || '';
+    if (
+      errMsg.includes('dynamically imported module') ||
+      errMsg.includes('Importing a module script failed') ||
+      errMsg.includes('error loading dynamically imported module') ||
+      errMsg.includes('Loading chunk')
+    ) {
+      const reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
+      if (reloadCount < 2) {
+        sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
+        console.warn('🔄 Detected outdated chunk from past deployment, auto-refreshing page...');
+        window.location.reload();
+        return;
+      }
+    }
+
     reportWebErrorToWeb3Forms('React ErrorBoundary Crash', error?.message || error?.toString(), errorInfo?.componentStack);
   }
 
@@ -111,16 +128,29 @@ class ErrorBoundary extends React.Component {
   }
 }
 
+// Vite dynamic preload error auto-recovery on new deployment
+window.addEventListener('vite:preloadError', (event) => {
+  event.preventDefault();
+  const reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
+  if (reloadCount < 2) {
+    sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
+    console.warn('🔄 Vite preload error (new deployment detected), refreshing...');
+    window.location.reload();
+  }
+});
+
 // Global error catcher for non-React errors
 window.addEventListener('error', (event) => {
   const message = event.message || '';
   const stack = event.error?.stack || `${event.filename}:${event.lineno}`;
 
-  // Ignore benign browser/extension noise
+  // Ignore benign browser/extension noise and dynamic module load errors
   if (
     message.includes('ResizeObserver') ||
     message.includes('Script error') ||
-    message.includes('chrome-extension')
+    message.includes('chrome-extension') ||
+    message.includes('dynamically imported module') ||
+    message.includes('Importing a module script failed')
   ) {
     return;
   }
@@ -139,6 +169,7 @@ window.addEventListener('unhandledrejection', (event) => {
   // 1. ServiceWorker registration rejection in Incognito / Private Browsing / enterprise restrictions
   // 2. AbortError / user cancelled fetch
   // 3. Network or ad-blocker blocked tracking
+  // 4. Stale dynamic import chunks after new deployment
   if (
     reasonStr.includes('Rejected') ||
     reasonStr.includes('ServiceWorker') ||
@@ -147,6 +178,8 @@ window.addEventListener('unhandledrejection', (event) => {
     reasonStr.includes('NetworkError') ||
     reasonStr.includes('cannot be updated') ||
     reasonStr.includes('Failed to upload to Gist') ||
+    reasonStr.includes('dynamically imported module') ||
+    reasonStr.includes('Importing a module script failed') ||
     stack.includes('registerSW') ||
     stack.includes('ServiceWorker') ||
     stack.includes('gistService')
