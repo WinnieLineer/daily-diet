@@ -45,21 +45,27 @@ function createNeoFlexButton(config) {
   const backgroundColor = bgMap[variant] || '#FFFFFF';
   const textColor = textMap[variant] || '#000000';
   const isSm = size === 'sm';
+  const isBlackVariant = variant === 'black';
 
-  const btnBox = {
+  // 🌟 Neo-Brutalist 3D 立體硬黑陰影參數 (完美復刻 Web 端 .shadow-neo 質感)
+  const shadowOffset = isSm ? '2px' : '3px';
+  const outerCorner = isSm ? '11px' : '15px';
+  const innerCorner = isSm ? '9px' : '13px';
+  const shadowColor = isBlackVariant ? '#3F3F46' : '#000000';
+
+  const innerBtn = {
     type: 'box',
     layout: 'vertical',
-    backgroundColor: backgroundColor,
+    backgroundColor: isBlackVariant ? '#18181B' : backgroundColor,
     borderColor: '#000000',
     borderWidth: '2px',
-    cornerRadius: isSm ? '10px' : '14px',
-    paddingTop: isSm ? '8px' : '10px',
-    paddingBottom: isSm ? '8px' : '10px',
+    cornerRadius: innerCorner,
+    paddingTop: isSm ? '7px' : '9px',
+    paddingBottom: isSm ? '7px' : '9px',
     paddingStart: isSm ? '6px' : '12px',
     paddingEnd: isSm ? '6px' : '12px',
     alignItems: 'center',
     justifyContent: 'center',
-    action: action,
     contents: [
       {
         type: 'text',
@@ -73,10 +79,23 @@ function createNeoFlexButton(config) {
     ]
   };
 
-  if (flex !== null) btnBox.flex = flex;
-  if (margin !== null) btnBox.margin = margin;
+  const outerWrapper = {
+    type: 'box',
+    layout: 'vertical',
+    backgroundColor: shadowColor,
+    cornerRadius: outerCorner,
+    paddingTop: '0px',
+    paddingStart: '0px',
+    paddingBottom: shadowOffset,
+    paddingEnd: shadowOffset,
+    action: action,
+    contents: [innerBtn]
+  };
 
-  return btnBox;
+  if (flex !== null) outerWrapper.flex = flex;
+  if (margin !== null) outerWrapper.margin = margin;
+
+  return outerWrapper;
 }
 
 // ========================================================
@@ -486,105 +505,56 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
               }
             ]
           },
-          // 📊 今日總結 & ⭐ 存為常用
+          // 📊 查看總結 & ⭐ 存為常用
           {
             type: "box",
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#000000",
-                borderColor: "#000000",
-                borderWidth: "2.5px",
-                cornerRadius: "14px",
-                paddingTop: "10px",
-                paddingBottom: "10px",
-                paddingStart: "4px",
-                paddingEnd: "4px",
+              createNeoFlexButton({
+                label: isEn 
+                  ? (analysis.date && analysis.date !== getTodayDateString() ? `📊 ${analysis.date} Summary` : "📊 Daily Summary")
+                  : (analysis.date && analysis.date !== getTodayDateString() ? `📊 查看 ${analysis.date} 總結` : "📊 查看今日總結"),
+                variant: "black",
+                size: "md",
                 flex: isEn ? 6 : 5,
-                alignItems: "center",
-                justifyContent: "center",
                 action: {
                   type: "postback",
                   label: isEn ? "Daily Summary" : "今日總結",
-                  data: postbackSaveData,
-                  displayText: isEn ? "Daily Summary" : "今日總結"
-                },
-                contents: [
-                  {
-                    type: "text",
-                    text: isEn ? "📊 Daily Summary" : "📊 查看今日總結",
-                    weight: "bold",
-                    size: isEn ? "xxs" : "xs",
-                    color: "#FFFFFF",
-                    align: "center",
-                    wrap: true
-                  }
-                ]
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#FEF9C3",
-                borderColor: "#000000",
-                borderWidth: "2.5px",
-                cornerRadius: "14px",
-                paddingTop: "10px",
-                paddingBottom: "10px",
-                paddingStart: "4px",
-                paddingEnd: "4px",
+                  data: analysis.date && analysis.date !== getTodayDateString()
+                    ? JSON.stringify({ action: 'pickDate', date: analysis.date })
+                    : postbackSaveData,
+                  displayText: isEn 
+                    ? (analysis.date && analysis.date !== getTodayDateString() ? `${analysis.date} Summary` : "Daily Summary")
+                    : (analysis.date && analysis.date !== getTodayDateString() ? `${analysis.date} 總結` : "今日總結")
+                }
+              }),
+              createNeoFlexButton({
+                label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
+                variant: "yellowLight",
+                size: "md",
                 flex: isEn ? 5 : 5,
-                alignItems: "center",
-                justifyContent: "center",
                 action: {
                   type: "postback",
                   label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
                   data: postbackFavData,
                   displayText: isEn ? `⭐ Favorite: ${analysis.dish_name}` : `⭐ 存為常用：${analysis.dish_name}`
-                },
-                contents: [
-                  {
-                    type: "text",
-                    text: isEn ? "⭐ Favorite" : "⭐ 存為常用",
-                    weight: "bold",
-                    size: isEn ? "xxs" : "xs",
-                    color: "#000000",
-                    align: "center",
-                    wrap: true
-                  }
-                ]
-              }
+                }
+              })
             ]
           },
           // 🗑️ 撤回這筆紀錄
-          {
-            type: "box",
-            layout: "vertical",
-            backgroundColor: "#FFF1F2",
-            borderColor: "#000000",
-            borderWidth: "2px",
-            cornerRadius: "12px",
-            paddingAll: "9px",
-            alignItems: "center",
-            justifyContent: "center",
+          createNeoFlexButton({
+            label: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄",
+            variant: "danger",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄",
               data: postbackCancelData,
               displayText: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄"
-            },
-            contents: [
-              {
-                type: "text",
-                text: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄",
-                weight: "bold",
-                size: "xs",
-                color: "#E11D48"
-              }
-            ]
-          }
+            }
+          })
         ]
       }
     }
@@ -723,7 +693,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? (isToday ? "🔥 Total Cal" : "🔥 Daily Cal") : (isToday ? "🔥 今日總熱量" : "🔥 當日總熱量"), size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
+                  { type: "text", text: isEn ? "🔥 Calories" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: false },
                   { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold" }
                 ]
@@ -739,7 +709,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? (isToday ? "🥩 Protein" : "🥩 Daily Pro") : (isToday ? "🥩 今日蛋白質" : "🥩 當日蛋白質"), size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
+                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: false },
                   { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
                 ]
@@ -755,7 +725,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? (isToday ? "💧 Water" : "💧 Daily Water") : (isToday ? "💧 今日水分" : "💧 當日水分"), size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
+                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: false },
                   { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
                 ]
@@ -797,51 +767,41 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
         paddingAll: "14px",
         backgroundColor: "#FAFAFA",
         contents: [
-          {
-            type: "box",
-            layout: "vertical",
-            backgroundColor: "#FDE047",
-            borderColor: "#000000",
-            borderWidth: "2.5px",
-            cornerRadius: "14px",
-            paddingAll: "12px",
-            alignItems: "center",
-            justifyContent: "center",
+          createNeoFlexButton({
+            label: isEn ? (isToday ? "📋 Manage Today's Logs" : `📋 Manage ${todayStr} Logs`) : (isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`),
+            variant: "accent",
+            size: "md",
             action: {
               type: "postback",
               label: isEn ? (isToday ? "📋 Manage Today's Logs" : `📋 Manage ${todayStr} Logs`) : (isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`),
               data: JSON.stringify({ action: 'manageMeals', date: todayStr }),
               displayText: isEn ? (isToday ? "Manage Today's Logs" : `Manage ${todayStr} Logs`) : (isToday ? "管理今日紀錄" : `管理 ${todayStr} 紀錄`)
-            },
-            contents: [
-              {
-                type: "text",
-                text: isEn ? (isToday ? "📋 Manage Today's Logs" : `📋 Manage ${todayStr} Logs`) : (isToday ? "📋 管理今日紀錄" : `📋 管理 ${todayStr} 紀錄`),
-                weight: "bold",
-                size: "sm",
-                color: "#000000"
+            }
+          }),
+          ...(!isToday ? [
+            createNeoFlexButton({
+              label: isEn ? `➕ Log Meal for ${todayStr}` : `➕ 補記 ${todayStr} 餐點`,
+              variant: "green",
+              size: "md",
+              action: {
+                type: "postback",
+                label: isEn ? `➕ Log Meal` : `➕ 補記餐點`,
+                data: JSON.stringify({ action: 'fillAddMeal', date: todayStr }),
+                inputOption: "openKeyboard",
+                fillInText: `補記 ${todayStr} `
               }
-            ]
-          },
+            })
+          ] : []),
           {
             type: "box",
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#FFFFFF",
-                borderColor: "#000000",
-                borderWidth: "2.5px",
-                cornerRadius: "14px",
-                paddingTop: "10px",
-                paddingBottom: "10px",
-                paddingStart: "4px",
-                paddingEnd: "4px",
+              createNeoFlexButton({
+                label: isEn ? "📅 Select Date" : "📅 查日期",
+                variant: "white",
+                size: "md",
                 flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
                 action: {
                   type: "datetimepicker",
                   label: isEn ? "Select Date" : "📅 查日期",
@@ -849,51 +809,20 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   mode: "date",
                   initial: todayStr,
                   max: getTodayDateString()
-                },
-                contents: [
-                  {
-                    type: "text",
-                    text: isEn ? "📅 Select Date" : "📅 查日期",
-                    weight: "bold",
-                    size: isEn ? "xxs" : "xs",
-                    color: "#000000",
-                    align: "center",
-                    wrap: true
-                  }
-                ]
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#FEF9C3",
-                borderColor: "#000000",
-                borderWidth: "2.5px",
-                cornerRadius: "14px",
-                paddingTop: "10px",
-                paddingBottom: "10px",
-                paddingStart: "4px",
-                paddingEnd: "4px",
+                }
+              }),
+              createNeoFlexButton({
+                label: isEn ? "📊 7-Day Trend" : "📊 7 日週報",
+                variant: "yellowLight",
+                size: "md",
                 flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
                 action: {
                   type: "postback",
                   label: isEn ? "7-Day Trend" : "📊 7 日週報",
                   data: JSON.stringify({ action: 'viewWeeklyTrends' }),
                   displayText: isEn ? "7-Day Trend" : "週報"
-                },
-                contents: [
-                  {
-                    type: "text",
-                    text: isEn ? "📊 7-Day Trend" : "📊 7 日週報",
-                    weight: "bold",
-                    size: isEn ? "xxs" : "xs",
-                    color: "#000000",
-                    align: "center",
-                    wrap: true
-                  }
-                ]
-              }
+                }
+              })
             ]
           }
         ]
@@ -1917,13 +1846,26 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
       type: "box",
       layout: "vertical",
       backgroundColor: "#FFFFFF",
-      cornerRadius: "12px",
-      borderColor: "#E4E4E7",
-      borderWidth: "1px",
+      cornerRadius: "14px",
+      borderColor: "#000000",
+      borderWidth: "2px",
       paddingAll: "16px",
       alignItems: "center",
+      spacing: "md",
       contents: [
-        { type: "text", text: isEn ? "No meals logged on this date 🐼" : "該日期尚未有任何飲食紀錄 🐼", size: "xs", color: "#A1A1AA" }
+        { type: "text", text: isEn ? "No meals logged on this date 🐼" : "該日期尚未有任何飲食紀錄 🐼", size: "xs", color: "#71717A", weight: "bold" },
+        createNeoFlexButton({
+          label: isEn ? (isToday ? "➕ Log Meal" : `➕ Log Meal for ${todayStr}`) : (isToday ? "➕ 記錄今日餐點" : `➕ 補記 ${todayStr} 餐點`),
+          variant: "green",
+          size: "md",
+          action: {
+            type: "postback",
+            label: isEn ? "➕ Log Meal" : "➕ 補記餐點",
+            data: JSON.stringify({ action: 'fillAddMeal', date: todayStr }),
+            inputOption: "openKeyboard",
+            fillInText: isToday ? "記 " : `補記 ${todayStr} `
+          }
+        })
       ]
     });
   } else {
@@ -2113,6 +2055,18 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
         spacing: "sm",
         paddingAll: "14px",
         contents: [
+          createNeoFlexButton({
+            label: isEn ? (isToday ? "➕ Log Another Meal" : `➕ Log Meal for ${todayStr}`) : (isToday ? "➕ 記錄新餐點" : `➕ 補記 ${todayStr} 餐點`),
+            variant: "accent",
+            size: "md",
+            action: {
+              type: "postback",
+              label: isEn ? "➕ Log Meal" : "➕ 補記餐點",
+              data: JSON.stringify({ action: 'fillAddMeal', date: todayStr }),
+              inputOption: "openKeyboard",
+              fillInText: isToday ? "記 " : `補記 ${todayStr} `
+            }
+          }),
           createNeoFlexButton({
             label: isToday ? (isEn ? "📊 View Today's Summary" : "📊 查看今日總結") : (isEn ? `📊 View ${todayStr} Summary` : `📊 查看 ${todayStr} 總結`),
             variant: "black",

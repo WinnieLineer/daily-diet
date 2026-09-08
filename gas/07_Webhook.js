@@ -1814,7 +1814,39 @@ function doPost(e) {
           }
 
           sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
-          const analysis = parseTextWithGemini(userText, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
+
+          // 📅 歷史日期補記前綴解析 (支援: 補記 2026-09-07 牛肉麵 / 補記 9/7 牛肉麵 / 補記 昨天 雞胸便當 / 昨天 牛肉麵 600卡)
+          let targetMealDate = getTodayDateString();
+          let cleanFoodInput = userText;
+
+          const yesterdayStr = Utilities.formatDate(new Date(Date.now() - 86400000), "Asia/Taipei", "yyyy-MM-dd");
+          const dayBeforeYesterdayStr = Utilities.formatDate(new Date(Date.now() - 86400000 * 2), "Asia/Taipei", "yyyy-MM-dd");
+
+          if (/^(?:補記|補錄|記錄|新增)?\s*昨天\s+/i.test(userText)) {
+            targetMealDate = yesterdayStr;
+            cleanFoodInput = userText.replace(/^(?:補記|補錄|記錄|新增)?\s*昨天\s+/i, '').trim();
+          } else if (/^(?:補記|補錄|記錄|新增)?\s*前天\s+/i.test(userText)) {
+            targetMealDate = dayBeforeYesterdayStr;
+            cleanFoodInput = userText.replace(/^(?:補記|補錄|記錄|新增)?\s*前天\s+/i, '').trim();
+          } else {
+            const fullDateMatch = userText.match(/^(?:補記|補錄|記錄|新增)?\s*(\d{4})[-/.年](\d{1,2})[-/.月](\d{1,2})日?\s+(.+)$/i);
+            const shortDateMatch = userText.match(/^(?:補記|補錄|記錄|新增)?\s*(\d{1,2})[-/.月](\d{1,2})日?\s+(.+)$/i);
+            if (fullDateMatch) {
+              const y = fullDateMatch[1];
+              const m = String(fullDateMatch[2]).padStart(2, '0');
+              const d = String(fullDateMatch[3]).padStart(2, '0');
+              targetMealDate = `${y}-${m}-${d}`;
+              cleanFoodInput = fullDateMatch[4].trim();
+            } else if (shortDateMatch) {
+              const nowY = new Date().getFullYear();
+              const m = String(shortDateMatch[1]).padStart(2, '0');
+              const d = String(shortDateMatch[2]).padStart(2, '0');
+              targetMealDate = `${nowY}-${m}-${d}`;
+              cleanFoodInput = shortDateMatch[3].trim();
+            }
+          }
+
+          const analysis = parseTextWithGemini(cleanFoodInput || userText, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
           const usedModel = analysis.model_used || 'Gemini';
           const fallbackNote = (analysis.failed_attempts && analysis.failed_attempts.length > 0)
             ? ` (前序 ${analysis.failed_attempts.length} 次重試)`
@@ -1836,7 +1868,7 @@ function doPost(e) {
           } else {
             const meal = {
               id: Date.now(),
-              date: getTodayDateString(),
+              date: targetMealDate,
               time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
               dish_name: analysis.dish_name || (isEn ? 'Meal' : '美味餐點'),
               calories: Number(analysis.calories) || 0,
@@ -1860,14 +1892,15 @@ function doPost(e) {
             };
 
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
-            const logType = event._isAudioInput ? '語音記餐' : '文字辨識';
+            const isHistorical = targetMealDate !== getTodayDateString();
+            const logType = event._isAudioInput ? '語音記餐' : (isHistorical ? '補記歷史' : '文字辨識');
             const logInput = event._isAudioInput ? `🎙️ 語音: "${userText}"` : userText;
             recordSystemLog(
               logType, 
               userId, 
               logInput, 
-              `[${usedModel}${fallbackNote}] ${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
-              `[模型: ${usedModel}] 回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
+              `[${usedModel}${fallbackNote}] ${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)${isHistorical ? ' ➔ ' + targetMealDate : ''}`, 
+              `[模型: ${usedModel}] 回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂 (${targetMealDate})`
             );
             replyMealConfirmCard(replyToken, meal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           }
