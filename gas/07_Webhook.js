@@ -483,6 +483,14 @@ function doPost(e) {
       const userLang = getUserLanguage(userId, props, userGistId, GITHUB_PAT);
       const isEn = userLang === 'en';
 
+      // 👑 自動識別並快取系統管理員 LINE ID (Winnie Lin ...497c66)
+      if (userId && (userId.endsWith('497c66') || userId === props.getProperty('ADMIN_LINE_USER_ID'))) {
+        if (props.getProperty('ADMIN_LINE_USER_ID') !== userId) {
+          props.setProperty('ADMIN_LINE_USER_ID', userId);
+          console.log(`👑 [管理員識別] 已自動記錄 ADMIN_LINE_USER_ID = ${userId}`);
+        }
+      }
+
       // 🌟 Case 0: 首次加入好友 (Follow 事件)
       if (event.type === 'follow') {
         currentOperation = '首次加入好友 (Follow)';
@@ -973,7 +981,7 @@ function doPost(e) {
             const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
             const userDisplayName = getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || `LINE用戶 (${userId.slice(-6)})`;
 
-            // 🚀 發送郵件通報 (雙重機制：GAS 原生 MailApp 直送 + Web3Forms 備援)
+            // 🚀 1. 發送郵件通報 (雙重機制：GAS 原生 MailApp 直送 + Web3Forms 備援)
             const sendResult = sendBugReportNotification({
               userId,
               userName: userDisplayName,
@@ -982,6 +990,16 @@ function doPost(e) {
               persona,
               userGistId,
               props
+            });
+
+            // 🚀 2. LINE 管理員專屬即時推播通知 (手機秒震動彈出卡片)
+            notifyAdminViaLine({
+              reporterName: userDisplayName,
+              reporterId: userId,
+              content: issueDetails,
+              userLang: userLang,
+              props: props,
+              accessToken: CHANNEL_ACCESS_TOKEN
             });
 
             const isSuccess = sendResult.success;
@@ -993,6 +1011,16 @@ function doPost(e) {
 
             const ackFlex = generateBugReportAckFlex(issueDetails, isSuccess, userLang);
             replyFlexMessage(replyToken, ackFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 👑 綁定/查詢管理員身分指令
+          if (userText === '我是管理員' || userText === '綁定管理員' || userText === '設定管理員' || userText === 'admin') {
+            props.setProperty('ADMIN_LINE_USER_ID', userId);
+            const adminReply = isEn
+              ? `👑 Success! Your LINE account (${userId.slice(-6)}) is now bound as the Daily-Diet System Admin.\nYou will receive instant push notifications here whenever users report bugs or system alerts trigger 🐼✨`
+              : `👑 成功！您的 LINE 帳號 (${userId.slice(-6)}) 已綁定為 Daily-Diet 系統管理員。\n從現在起，若有用戶在 LINE 回報問題或系統發生告警，您的手機都會在此第一時間收到專屬推播卡片 🐼✨`;
+            replyTextMessage(replyToken, adminReply, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
@@ -1648,6 +1676,119 @@ function sendBugReportNotification(params) {
     error: errorDetail,
     recipients: targetEmailStr
   };
+}
+
+/**
+ * 👑 向系統管理員之 LINE 個人帳號即時發送推播通知卡片 (免開信箱、免被去重，0 秒掌握)
+ */
+function notifyAdminViaLine(params) {
+  const { reporterName, reporterId, content, userLang, props, accessToken } = params;
+  try {
+    const adminLineId = (props && props.getProperty('ADMIN_LINE_USER_ID')) || '';
+    if (!adminLineId || !accessToken) {
+      console.log('ℹ️ 尚未設定 ADMIN_LINE_USER_ID 或缺少 accessToken，略過 LINE 管理員推播');
+      return;
+    }
+
+    const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "HH:mm:ss");
+    const adminFlex = {
+      type: "flex",
+      altText: `🚨 [用戶問題回報] ${reporterName}: ${content.slice(0, 30)}`,
+      contents: {
+        type: "bubble",
+        size: "mega",
+        header: {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#18181B",
+          paddingAll: "14px",
+          contents: [
+            {
+              type: "box",
+              layout: "horizontal",
+              contents: [
+                {
+                  type: "text",
+                  text: "🚨 用戶問題與意見回報",
+                  weight: "bold",
+                  size: "sm",
+                  color: "#FDE047",
+                  flex: 1
+                },
+                {
+                  type: "text",
+                  text: timeStr,
+                  size: "xxs",
+                  color: "#A1A1AA",
+                  align: "end"
+                }
+              ]
+            }
+          ]
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          spacing: "md",
+          paddingAll: "14px",
+          contents: [
+            {
+              type: "box",
+              layout: "vertical",
+              spacing: "xs",
+              contents: [
+                {
+                  type: "text",
+                  text: `👤 回報用戶：${reporterName} (${reporterId ? reporterId.slice(-6) : '未知'})`,
+                  size: "xs",
+                  weight: "bold",
+                  color: "#27272A"
+                },
+                {
+                  type: "text",
+                  text: `🌐 用戶語言：${userLang || 'zh'}`,
+                  size: "xxs",
+                  color: "#71717A"
+                }
+              ]
+            },
+            {
+              type: "box",
+              layout: "vertical",
+              backgroundColor: "#FEF2F2",
+              borderColor: "#FECACA",
+              borderWidth: "1.5px",
+              cornerRadius: "8px",
+              paddingAll: "10px",
+              contents: [
+                {
+                  type: "text",
+                  text: "📝 回報內容：",
+                  size: "xxs",
+                  color: "#991B1B",
+                  weight: "bold"
+                },
+                {
+                  type: "text",
+                  text: content,
+                  size: "xs",
+                  color: "#18181B",
+                  weight: "bold",
+                  wrap: true,
+                  margin: "xs"
+                }
+              ]
+            }
+          ]
+        }
+      }
+    };
+
+    pushFlexMessage(adminLineId, adminFlex, accessToken, props);
+    console.log(`📱 [LINE 推播] 成功發送回報通知至管理員 LINE (${adminLineId.slice(-6)})`);
+  } catch (err) {
+    console.warn('⚠️ [LINE 管理員推播失敗]:', err);
+  }
 }
 
 function sendErrorAlertToWeb3Forms(info) {
