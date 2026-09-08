@@ -113,38 +113,75 @@ class ErrorBoundary extends React.Component {
 
 // Global error catcher for non-React errors
 window.addEventListener('error', (event) => {
-  const div = document.createElement('div');
-  div.style.padding = '10px';
-  div.style.background = '#ffebee';
-  div.style.color = '#c62828';
-  div.style.fontFamily = 'monospace';
-  div.style.fontSize = '12px';
-  div.style.wordBreak = 'break-word';
-  div.style.borderBottom = '1px solid #ef5350';
-  div.style.zIndex = '99999';
-  div.style.position = 'relative';
-  div.innerText = `Global Error: ${event.message}\nAt: ${event.filename}:${event.lineno}\nStack: ${event.error?.stack}`;
-  document.body.prepend(div);
-  reportWebErrorToWeb3Forms('Global Window Error', event.message, event.error?.stack || `${event.filename}:${event.lineno}`);
+  const message = event.message || '';
+  const stack = event.error?.stack || `${event.filename}:${event.lineno}`;
+
+  // Ignore benign browser/extension noise
+  if (
+    message.includes('ResizeObserver') ||
+    message.includes('Script error') ||
+    message.includes('chrome-extension')
+  ) {
+    return;
+  }
+
+  console.error("Global Window Error:", event.error || event.message);
+  reportWebErrorToWeb3Forms('Global Window Error', message, stack);
 });
 
+// Global unhandled promise rejection handler
 window.addEventListener('unhandledrejection', (event) => {
-  const div = document.createElement('div');
-  div.style.padding = '10px';
-  div.style.background = '#fff3e0';
-  div.style.color = '#e65100';
-  div.style.fontFamily = 'monospace';
-  div.style.fontSize = '12px';
-  div.style.wordBreak = 'break-word';
-  div.style.borderBottom = '1px solid #ff9800';
-  div.style.zIndex = '99999';
-  div.style.position = 'relative';
-  div.innerText = `Unhandled Promise Rejection: ${event.reason}`;
-  document.body.prepend(div);
-  reportWebErrorToWeb3Forms('Unhandled Promise Rejection', String(event.reason), event.reason?.stack || '');
+  const reason = event.reason;
+  const reasonStr = String(reason?.message || reason || '');
+  const stack = reason?.stack || '';
+
+  // Filter out harmless browser/security noise:
+  // 1. ServiceWorker registration rejection in Incognito / Private Browsing / enterprise restrictions
+  // 2. AbortError / user cancelled fetch
+  // 3. Network or ad-blocker blocked tracking
+  if (
+    reasonStr.includes('Rejected') ||
+    reasonStr.includes('ServiceWorker') ||
+    reasonStr.includes('AbortError') ||
+    reasonStr.includes('Failed to fetch') ||
+    reasonStr.includes('NetworkError') ||
+    stack.includes('registerSW') ||
+    stack.includes('ServiceWorker')
+  ) {
+    console.debug('Suppressed benign unhandled promise rejection:', reason);
+    return;
+  }
+
+  console.error("Unhandled Promise Rejection:", reason);
+  reportWebErrorToWeb3Forms('Unhandled Promise Rejection', reasonStr, stack);
 });
 
-// Service Worker is handled automatically by vite-plugin-pwa
+// Safe Service Worker Registration with Graceful Rejection Catch
+if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    const swUrl = `${import.meta.env.BASE_URL}sw.js`;
+    navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL })
+      .then((reg) => {
+        // Auto-check for Service Worker updates periodically
+        if (reg) {
+          reg.addEventListener('updatefound', () => {
+            const newWorker = reg.installing;
+            if (newWorker) {
+              newWorker.addEventListener('statechange', () => {
+                if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+                  console.log('🔄 New app version available in ServiceWorker cache');
+                }
+              });
+            }
+          });
+        }
+      })
+      .catch((err) => {
+        // Gracefully ignore service worker registration rejection in private/incognito/restricted browsing
+        console.warn('PWA ServiceWorker registration skipped/rejected (normal in Incognito/restricted modes):', err?.message || err);
+      });
+  });
+}
 
 ReactDOM.createRoot(document.getElementById('root')).render(
   <React.StrictMode>
