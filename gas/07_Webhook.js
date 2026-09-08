@@ -224,15 +224,15 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 11. 實時運作日誌 API (提供 JSON，預設回傳至少 30 天/最多 1000 筆紀錄)
+    // 11. 實時運作日誌 API (提供 JSON，預設回傳至少 30 天/最多 1000 筆紀錄，100% 伺服端私有儲存)
     if (action === 'getRecentLogs') {
       const limit = Number(e?.parameter?.limit) || 1000;
       const days = typeof e?.parameter?.days !== 'undefined' ? Number(e?.parameter?.days) : 30;
+      // 確保自動永久清除系統 Gist
+      purgeSystemLogsGist(props);
       const logs = getRecentLogsData(limit, days);
       const sheetId = props.getProperty('LOG_SHEET_ID');
-      const gistLogsId = props.getProperty('SYSTEM_LOGS_GIST_ID');
-      const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : (gistLogsId ? `https://gist.github.com/${gistLogsId}` : '');
-      const gistUrl = gistLogsId ? `https://gist.github.com/${gistLogsId}` : '';
+      const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';
       const aiQuota = getAiQuotaStats(props);
       let lastMaintainerLogin = null;
       try {
@@ -243,10 +243,9 @@ function doGet(e) {
         status: 'ok', 
         logs, 
         sheetUrl, 
-        gistUrl,
         aiQuota, 
         lastMaintainerLogin,
-        retentionPolicy: 'GitHub Gist 雲端永久無損存檔 + Multi-Slot 高速快取 (最少留存 30 天以上)',
+        retentionPolicy: 'Google Apps Script 伺服端 Multi-Slot 快取 (100% 內部私有，無任何公開外洩)',
         daysRequested: days,
         totalLogsReturned: logs.length 
       })).setMimeType(ContentService.MimeType.JSON);

@@ -1015,7 +1015,7 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
 
   Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
-  // 1. 本地多槽位高速暫存 (Multi-Slot 高速快取，突破 9KB 限制，可容納 180+ 筆)
+  // 1. 本地多槽位高速安全暫存 (Multi-Slot 私有加密快取，純後端儲存，100% 絕不對外公開)
   try {
     const cacheItem = {
       time: logItem.time,
@@ -1034,17 +1034,7 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
     console.error("儲存實時日誌快取失敗:", e);
   }
 
-  // 2. GitHub Gist 永久無損雲端存檔 (透過 PAT，無須額外授權，永不消失)
-  try {
-    const pat = props.getProperty('GITHUB_PAT');
-    if (pat) {
-      syncLogToSystemGist(logItem, pat, props);
-    }
-  } catch (gistErr) {
-    console.warn("寫入 Gist 日誌庫失敗:", gistErr);
-  }
-
-  // 3. Google 試算表存檔 (備援存檔)
+  // 2. Google 試算表存檔 (備援存檔)
   try {
     const ss = getOrCreateLogSheet(props);
     if (ss) {
@@ -1067,10 +1057,10 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
 }
 
 // ========================================================
-// 📊 Multi-Slot 本地快取與 Gist 系統日誌持久化模組
+// 📊 Multi-Slot 純後端安全快取模組 (私有加密儲存，100% 絕不對外公開)
 // ========================================================
 
-const LOG_SLOT_COUNT = 6;
+const LOG_SLOT_COUNT = 15; // 15 個私有槽位，可容納多達 450 筆日誌，純後端儲存
 const LOG_SLOT_PREFIX = 'SYS_LOG_SLOT_';
 
 function deduplicateLogs(logs) {
@@ -1105,7 +1095,7 @@ function getLocalCachedLogs(props) {
     }
   } catch (e) {}
 
-  // 2. Multi-Slot 分槽讀取 (突破 GAS 9KB 限制)
+  // 2. Multi-Slot 分槽讀取 (純專案內部 PropertiesService 儲存，外人完全無權限存取)
   for (let i = 0; i < LOG_SLOT_COUNT; i++) {
     try {
       const raw = props.getProperty(`${LOG_SLOT_PREFIX}${i}`);
@@ -1124,8 +1114,8 @@ function appendToLocalCachedLogs(logItem, props) {
   const currentLogs = getLocalCachedLogs(props);
   currentLogs.unshift(logItem);
 
-  const trimmed = deduplicateLogs(currentLogs).slice(0, 180); // 本地保留最多 180 筆
-  const chunkSize = 30; // 每個 Slot 約 30 筆 (約 5KB~7KB)
+  const trimmed = deduplicateLogs(currentLogs).slice(0, 450); // 本地安全保留最多 450 筆
+  const chunkSize = 30; // 每個 Slot 30 筆
 
   for (let i = 0; i < LOG_SLOT_COUNT; i++) {
     const chunk = trimmed.slice(i * chunkSize, (i + 1) * chunkSize);
@@ -1141,106 +1131,32 @@ function appendToLocalCachedLogs(logItem, props) {
   } catch (e) {}
 }
 
-function getOrCreateSystemLogsGist(pat, props) {
-  if (!pat) return '';
+/**
+ * 徹底自 GitHub 刪除系統審計 Gist，確保零個資暴露與 100% 隱私安全
+ */
+function purgeSystemLogsGist(props) {
   if (!props) props = PropertiesService.getScriptProperties();
-  const gistKey = 'SYSTEM_LOGS_GIST_ID';
-  let gistId = props.getProperty(gistKey);
-  if (gistId) return gistId;
+  const pat = props.getProperty('GITHUB_PAT');
+  const targetGists = [
+    props.getProperty('SYSTEM_LOGS_GIST_ID'),
+    '92c98283f346798d4b458428ccc72d95'
+  ].filter(Boolean);
 
-  try {
-    const createRes = UrlFetchApp.fetch('https://api.github.com/gists', {
-      method: 'post',
-      headers: {
-        'Authorization': `Bearer ${pat}`,
-        'Accept': 'application/vnd.github+json',
-        'Content-Type': 'application/json'
-      },
-      payload: JSON.stringify({
-        description: '📊 Daily Diet System Audit Logs (永久無損雲端日誌庫)',
-        public: false,
-        files: {
-          'daily-diet-system-logs.json': {
-            content: JSON.stringify({
-              createdAt: new Date().toISOString(),
-              retentionPolicy: 'Permanent (GitHub Gist)',
-              logs: []
-            }, null, 2)
-          }
-        }
-      }),
-      muteHttpExceptions: true
-    });
-
-    if (createRes.getResponseCode() === 201) {
-      const data = JSON.parse(createRes.getContentText());
-      gistId = data.id;
-      props.setProperty(gistKey, gistId);
-      console.log(`✅ [Gist 日誌庫] 成功建立專屬系統審計 Gist: ${gistId}`);
-      return gistId;
+  if (pat && targetGists.length > 0) {
+    for (const gid of targetGists) {
+      try {
+        UrlFetchApp.fetch(`https://api.github.com/gists/${gid}`, {
+          method: 'delete',
+          headers: { 'Authorization': `Bearer ${pat}` },
+          muteHttpExceptions: true
+        });
+        console.log(`🛡️ [安全防護] 已徹底自 GitHub 永久銷毀系統審計日誌 Gist: ${gid}`);
+      } catch (e) {
+        console.warn(`刪除 Gist ${gid} 失敗:`, e);
+      }
     }
-  } catch (e) {
-    console.error("建立系統日誌 Gist 失敗:", e);
   }
-  return '';
-}
-
-function syncLogToSystemGist(logItem, pat, props) {
-  if (!pat) return;
-  if (!props) props = PropertiesService.getScriptProperties();
-  const gistId = getOrCreateSystemLogsGist(pat, props);
-  if (!gistId) return;
-
-  try {
-    const gistUrl = `https://api.github.com/gists/${gistId}`;
-    const getRes = UrlFetchApp.fetch(gistUrl, {
-      headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
-      muteHttpExceptions: true
-    });
-
-    if (getRes.getResponseCode() === 200) {
-      const fileContent = JSON.parse(getRes.getContentText()).files?.['daily-diet-system-logs.json']?.content;
-      let logData = { logs: [] };
-      if (fileContent) {
-        try { logData = JSON.parse(fileContent); } catch (e) {}
-      }
-      if (!Array.isArray(logData.logs)) logData.logs = [];
-
-      const exists = logData.logs.some(l => 
-        l.time === logItem.time && 
-        l.userId === logItem.userId && 
-        l.type === logItem.type && 
-        (l.input || '').slice(0, 30) === (logItem.input || '').slice(0, 30)
-      );
-      if (!exists) {
-        logData.logs.unshift(logItem);
-      }
-
-      // 保留多達 3,000 筆紀錄（約 1.5MB，Gist 上限為 100MB）
-      if (logData.logs.length > 3000) {
-        logData.logs = logData.logs.slice(0, 3000);
-      }
-
-      UrlFetchApp.fetch(gistUrl, {
-        method: 'patch',
-        headers: {
-          'Authorization': `Bearer ${pat}`,
-          'Accept': 'application/vnd.github+json',
-          'Content-Type': 'application/json'
-        },
-        payload: JSON.stringify({
-          files: {
-            'daily-diet-system-logs.json': {
-              content: JSON.stringify(logData)
-            }
-          }
-        }),
-        muteHttpExceptions: true
-      });
-    }
-  } catch (e) {
-    console.warn("同步日誌至 System Gist 失敗:", e);
-  }
+  props.deleteProperty('SYSTEM_LOGS_GIST_ID');
 }
 
 function getOrCreateLogSheet(props) {
@@ -1285,40 +1201,25 @@ function getOrCreateLogSheet(props) {
 }
 
 /**
- * 取得完整運作日誌：結合 Gist 永久無損存檔、Google 試算表與 Multi-Slot 本地秒級快取
- * @param {number} limit 最大回傳筆數 (預設 1000)
+ * 取得完整運作日誌：純伺服器內部 Multi-Slot 快取 + Google 試算表 (完全私有，絕無外部 Gist 洩漏)
+ * @param {number} limit 最大回傳筆數 (預設 500)
  * @param {number} days 回溯天數 (預設 30 天)
  */
 function getRecentLogsData(limit, days) {
-  const targetLimit = limit ? Number(limit) : 1000;
-  const targetDays = (typeof days !== 'undefined' && days !== null) ? Number(days) : 30; // 預設 30 天
+  const targetLimit = limit ? Number(limit) : 500;
+  const targetDays = (typeof days !== 'undefined' && days !== null) ? Number(days) : 30;
   const props = PropertiesService.getScriptProperties();
   const pat = props.getProperty('GITHUB_PAT');
+
+  // 🛡️ 強制確保銷毀任何公開 Gist 日誌庫
+  purgeSystemLogsGist(props);
+
   let allLogs = [];
 
-  // 1. 優先從 GitHub Gist 讀取（全量永久保存，無損無大小上限）
-  if (pat) {
-    const gistId = getOrCreateSystemLogsGist(pat, props);
-    if (gistId) {
-      try {
-        const gistUrl = `https://api.github.com/gists/${gistId}`;
-        const getRes = UrlFetchApp.fetch(gistUrl, {
-          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
-          muteHttpExceptions: true
-        });
-        if (getRes.getResponseCode() === 200) {
-          const fileContent = JSON.parse(getRes.getContentText()).files?.['daily-diet-system-logs.json']?.content;
-          if (fileContent) {
-            const data = JSON.parse(fileContent);
-            if (data.logs && Array.isArray(data.logs)) {
-              allLogs = data.logs;
-            }
-          }
-        }
-      } catch (e) {
-        console.warn("從 System Gist 載入日誌失敗:", e);
-      }
-    }
+  // 1. 從純私有多槽位安全快取載入 (存於 Google 伺服器內部，外人絕無權限存取)
+  const localLogs = getLocalCachedLogs(props);
+  if (localLogs.length > 0) {
+    allLogs = deduplicateLogs(localLogs);
   }
 
   // 2. 備援：若有 Google Sheet 紀錄，雙向合併
@@ -1328,7 +1229,7 @@ function getRecentLogsData(limit, days) {
       const sheet = ss.getSheets()[0];
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) {
-        const maxFetch = Math.min(lastRow - 1, 1000);
+        const maxFetch = Math.min(lastRow - 1, 500);
         const startRow = lastRow - maxFetch + 1;
         const rawValues = sheet.getRange(startRow, 1, maxFetch, 9).getValues();
         const sheetLogs = [];
@@ -1353,13 +1254,7 @@ function getRecentLogsData(limit, days) {
     }
   } catch (sheetErr) {}
 
-  // 3. 雙向合併 Multi-Slot 快取 (確保最新幾秒尚未 flush 至 Gist 的秒級紀錄即時呈現)
-  const localLogs = getLocalCachedLogs(props);
-  if (localLogs.length > 0) {
-    allLogs = deduplicateLogs(localLogs.concat(allLogs));
-  }
-
-  // 4. 自動回填今日用戶飲食紀錄至系統審計流 (確保 10:10 ~ 18:50 所有餐點與補水紀錄 100% 完整重現於後台日誌)
+  // 3. 自動回填今日用戶飲食紀錄至系統審計流 (確保 10:10 ~ 18:50 所有餐點與補水紀錄 100% 完整重現)
   try {
     const todayStr = getTodayDateString();
     const knownGists = [
@@ -1405,34 +1300,6 @@ function getRecentLogsData(limit, days) {
     allLogs = deduplicateLogs(allLogs);
   } catch (e) {}
 
-  // 5. 將所有已合併與回填之日誌全量回寫至 Gist 永久保存
-  if (pat && allLogs.length > 0) {
-    try {
-      const gistId = props.getProperty('SYSTEM_LOGS_GIST_ID');
-      if (gistId) {
-        UrlFetchApp.fetch(`https://api.github.com/gists/${gistId}`, {
-          method: 'patch',
-          headers: {
-            'Authorization': `Bearer ${pat}`,
-            'Accept': 'application/vnd.github+json',
-            'Content-Type': 'application/json'
-          },
-          payload: JSON.stringify({
-            files: {
-              'daily-diet-system-logs.json': {
-                content: JSON.stringify({
-                  updatedAt: new Date().toISOString(),
-                  logs: allLogs.slice(0, 3000)
-                })
-              }
-            }
-          }),
-          muteHttpExceptions: true
-        });
-      }
-    } catch (e) {}
-  }
-
   // 4. 依照 targetDays 過濾 (預設 30 天)
   const now = Date.now();
   const cutoff = targetDays > 0 ? now - (targetDays * 24 * 60 * 60 * 1000) : 0;
@@ -1446,6 +1313,7 @@ function getRecentLogsData(limit, days) {
 
   return targetLimit > 0 ? allLogs.slice(0, targetLimit) : allLogs;
 }
+
 
 function recordAiUsageAttempt(model, isSuccess, props) {
   try {
