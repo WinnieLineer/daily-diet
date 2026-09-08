@@ -45,6 +45,8 @@ function lazyWithRetry(componentImport) {
   });
 }
 
+import PandaLiveCallBanner from './components/PandaLiveCallBanner';
+
 // 🚀 Dynamic Lazy-Loaded Modals & Components (Code Splitting with Auto-Retry)
 const HistoryTrends = lazyWithRetry(() => import('./components/HistoryTrends'));
 const GoalSettings = lazyWithRetry(() => import('./components/GoalSettings'));
@@ -53,6 +55,7 @@ const Onboarding = lazyWithRetry(() => import('./components/Onboarding'));
 const WeeklyReportCard = lazyWithRetry(() => import('./components/WeeklyReportCard'));
 const Theme520 = lazyWithRetry(() => import('./components/Theme520'));
 const LogMonitorDashboard = lazyWithRetry(() => import('./components/LogMonitorDashboard'));
+const PandaLiveCallModal = lazyWithRetry(() => import('./components/PandaLiveCallModal'));
 
 export const isNewer = (newVer, oldVer) => {
   if (!oldVer) return true;
@@ -1262,6 +1265,7 @@ function App() {
   const [showWeeklyReport, setShowWeeklyReport] = useState(false);
   const [selectedLogForDetail, setSelectedLogForDetail] = useState(null);
   const [settingsTab, setSettingsTab] = useState('profile');
+  const [showLiveCallModal, setShowLiveCallModal] = useState(false);
   
   const DEFAULT_LAYOUT = ['panda', 'dashboard', 'detective', 'today', 'weight', 'history'];
   const [layout, setLayout] = useState(() => {
@@ -2089,6 +2093,21 @@ function App() {
           />
         )}
       </AnimatePresence>
+
+      {/* 📞 胖達教練即時語音熱線 (Live Audio Call Beta) */}
+      <PandaLiveCallBanner onStartCall={() => setShowLiveCallModal(true)} />
+
+      {/* 📞 胖達教練即時通話彈窗 */}
+      <Suspense fallback={null}>
+        {showLiveCallModal && (
+          <PandaLiveCallModal
+            isOpen={showLiveCallModal}
+            onClose={() => setShowLiveCallModal(false)}
+            todaySummary={summary}
+            goals={goals}
+          />
+        )}
+      </Suspense>
 
       {/* Feedback Banner */}
       <motion.div

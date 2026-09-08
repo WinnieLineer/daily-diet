@@ -458,7 +458,24 @@ const translations = {
     v300_line_title: "LINE 官方帳號登場 (@618iipof) 💬",
     v300_water_title: "快捷補水站 & ⭐ 常用餐點滑動庫 💧",
     v250_vip_title: "您的專屬體驗與意見回饋管道 💌",
-    v250_timers_title: "三大貼心追蹤卡片與搜尋效能飛躍 🏆"
+    v250_timers_title: "三大貼心追蹤卡片與搜尋效能飛躍 🏆",
+    live_call_banner_title: "胖達教練即時語音熱線",
+    live_call_banner_tag: "🔥 Beta 實驗功能",
+    live_call_banner_desc: "熱量快超標？想吃宵夜？隨時打電話給教練，用講的諮詢與吐槽，教練開口親自為你評估！",
+    live_call_banner_btn: "撥打電話給教練",
+    live_call_modal_title: "胖達教練熱線通話",
+    live_call_calling: "撥號接通中...",
+    live_call_connected: "通話中",
+    live_call_listening: "🎧 正在聆聽中... (請對著麥克風說話)",
+    live_call_coach_speaking: "🐼 教練正在回覆中...",
+    live_call_coach_thinking: "🐼 教練正在思考中...",
+    live_call_end_call: "掛斷電話",
+    live_call_mute: "靜音",
+    live_call_unmute: "開麥",
+    live_call_speaker_on: "語音已開",
+    live_call_speaker_off: "語音已關",
+    live_call_tip: "💡 提示：您可以說「我吃了牛肉麵」、「今天卡路里剩多少？」或「好想喝珍奶怎麼辦」",
+    live_call_text_fallback_placeholder: "或直接輸入想對教練說的話..."
   },
   en: {
     app_title: "DAILY DIET",
@@ -911,7 +928,24 @@ const translations = {
     v260_line_title: "LINE Official Account Launch (@618iipof) 💬",
     v260_water_title: "Quick Water Station & ⭐ Favorites Carousel 💧",
     v250_vip_title: "Dedicated VIP Feedback Channel 💌",
-    v250_timers_title: "Macronutrient Pie, Fasting Countdowns & Search Boost 🏆"
+    v250_timers_title: "Macronutrient Pie, Fasting Countdowns & Search Boost 🏆",
+    live_call_banner_title: "Panda Coach Live Audio Call",
+    live_call_banner_tag: "🔥 Beta Feature",
+    live_call_banner_desc: "Craving a midnight snack? Calories almost full? Call Coach Panda directly with live audio, and let the coach talk back to you in real-time!",
+    live_call_banner_btn: "Call Coach Panda",
+    live_call_modal_title: "Live Call with Coach Panda",
+    live_call_calling: "Connecting...",
+    live_call_connected: "In Call",
+    live_call_listening: "🎧 Listening... (Please speak into your microphone)",
+    live_call_coach_speaking: "🐼 Coach is speaking...",
+    live_call_coach_thinking: "🐼 Coach is thinking...",
+    live_call_end_call: "End Call",
+    live_call_mute: "Mute",
+    live_call_unmute: "Unmute",
+    live_call_speaker_on: "Voice On",
+    live_call_speaker_off: "Voice Off",
+    live_call_tip: "💡 Tip: Say 'I had a beef noodle bowl', 'How many calories left today?', or 'I want boba tea!'",
+    live_call_text_fallback_placeholder: "Or type a message to coach..."
   }
 };
 
