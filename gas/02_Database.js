@@ -999,6 +999,23 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
     displayName = (userId && userId.length > 8) ? `用戶 (${userId.slice(-4)})` : (userId || '訪客');
   }
 
+  // 決定來源通道 (LINE 智慧助理 vs Web 飲食管家 vs 系統服務)
+  const isWebAction = type.startsWith('Web') || (extra && extra.source === 'Web');
+  const isLineAction = !isWebAction && (
+    (typeof userId === 'string' && userId.startsWith('U')) || 
+    (extra && extra.source === 'LINE')
+  );
+
+  let defaultLocation = 'Cloud 雲端核心';
+  let defaultSource = '系統核心';
+  if (isWebAction) {
+    defaultLocation = 'Web 飲食管家';
+    defaultSource = 'Web 飲食管家';
+  } else if (isLineAction) {
+    defaultLocation = 'LINE 智慧助理';
+    defaultSource = 'LINE 智慧助理';
+  }
+
   const logItem = {
     time: time,
     userName: displayName,
@@ -1009,11 +1026,12 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
     aiResult: typeof aiResult === 'object' ? JSON.stringify(aiResult) : String(aiResult || ''),
     output: typeof output === 'object' ? JSON.stringify(output) : String(output || ''),
     ip: (extra && extra.ip) ? String(extra.ip) : '',
-    location: (extra && extra.location) ? String(extra.location) : '',
-    device: (extra && extra.device) ? String(extra.device) : ''
+    location: (extra && extra.location) ? String(extra.location) : defaultLocation,
+    device: (extra && extra.device) ? String(extra.device) : '',
+    source: (extra && extra.source) ? String(extra.source) : defaultSource
   };
 
-  Logger.log(`[${logItem.time}] [${logItem.type}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
+  Logger.log(`[${logItem.time}] [${logItem.type}] [${logItem.source}] [${displayName}] ${logItem.input} -> ${logItem.output}`);
 
   // 1. 本地多槽位高速安全暫存 (Multi-Slot 私有加密快取，純後端儲存，100% 絕不對外公開)
   try {
@@ -1027,7 +1045,8 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
       output: logItem.output ? logItem.output.slice(0, 500) : '',
       ip: logItem.ip,
       location: logItem.location,
-      device: logItem.device
+      device: logItem.device,
+      source: logItem.source
     };
     appendToLocalCachedLogs(cacheItem, props);
   } catch (e) {
@@ -1288,7 +1307,8 @@ function getRecentLogsData(limit, days) {
                     aiResult: `${meal.calories || 0}卡 / ${meal.protein || 0}g蛋 / ${meal.water || 0}ml水`,
                     output: meal.comment || `已記錄：【${meal.dish_name}】(${meal.calories || 0} kcal · ${meal.protein || 0}g 蛋 · ${meal.water || 0}ml 水)`,
                     ip: '',
-                    location: g.isLine ? 'LINE 智慧助理' : 'Web 飲食管家'
+                    location: g.isLine ? 'LINE 智慧助理' : 'Web 飲食管家',
+                    source: g.isLine ? 'LINE 智慧助理' : 'Web 飲食管家'
                   });
                 }
               }

@@ -90,39 +90,35 @@ const formatUnifiedTimestamp = (rawTime) => {
 // Helper to safely normalize log records (Supports both Object format and Array format from GAS)
 const normalizeLog = (item) => {
   if (!item) return null;
+  let raw = {};
   if (Array.isArray(item)) {
-    const time = formatUnifiedTimestamp(item[0]);
-    const userName = String(item[1] || item[2] || 'LINE 用戶');
-    const userId = String(item[2] || item[1] || 'user');
-    const type = String(item[3] || item[1] || '系統操作');
-    const input = String(item[4] || '');
-    const aiResult = String(item[5] || '');
-    const output = String(item[6] || '');
-    const ip = String(item[7] || '');
-    const location = String(item[8] || '');
-    return {
-      time,
-      userName,
-      userId,
-      type,
-      input,
-      aiResult,
-      output,
-      source: 'LINE Bot / Cloud',
-      ip,
-      location,
-      device: ''
+    raw = {
+      time: item[0],
+      userName: item[1],
+      userId: item[2],
+      type: item[3],
+      input: item[4],
+      aiResult: item[5],
+      output: item[6],
+      ip: item[7],
+      location: item[8],
+      device: '',
+      source: ''
     };
+  } else {
+    raw = { ...item };
   }
 
-  const inputStr = String(item.input || item.query || '');
-  const aiResultStr = String(item.aiResult || item.nutrients || '');
-  const outputStr = String(item.output || item.result || '');
+  const type = String(raw.type || raw.op || '系統操作');
+  const userId = String(raw.userId || raw.rawUserId || '');
+  const userName = String(raw.userName || raw.userId || '用戶');
+  const inputStr = String(raw.input || raw.query || '');
+  const aiResultStr = String(raw.aiResult || raw.nutrients || '');
+  const outputStr = String(raw.output || raw.result || '');
 
-  // Extract ip and location if embedded in input / output
-  let ip = item.ip || '';
-  let location = item.location || '';
-  let device = item.device || '';
+  let ip = raw.ip || '';
+  let location = raw.location || '';
+  let device = raw.device || '';
 
   if (!ip && inputStr.includes('IP:')) {
     const ipMatch = inputStr.match(/IP:\s*([^\s·|,]+)/);
@@ -137,15 +133,56 @@ const normalizeLog = (item) => {
     if (devMatch) device = devMatch[0].trim();
   }
 
+  // 決定來源通道 (LINE 智慧助理 vs Web 飲食管家 vs 系統核心)
+  const rawSource = String(raw.source || '');
+  const isWeb = 
+    type.startsWith('Web') || 
+    type.includes('維護者') || 
+    location.includes('Web') || 
+    rawSource.includes('Web') || 
+    outputStr.includes('Web') ||
+    userId === 'Maintainer' ||
+    userId.startsWith('web_');
+
+  const isLine = 
+    !isWeb && (
+      userId.startsWith('U') || 
+      type.includes('LINE') || 
+      location.includes('LINE') || 
+      rawSource.includes('LINE') ||
+      ['記餐', '喝水', '常用', '總結', '清單', '週報', '語言', '性格', '份量', '倍數', '手冊', '引導', '撤回'].some(t => type.includes(t))
+    );
+
+  let source = '⚡ 系統核心';
+  let channel = 'System';
+  if (isWeb) {
+    source = '🌐 Web 飲食管家';
+    channel = 'Web';
+    if (!location || location === '-' || location.includes('Cloud')) {
+      location = 'Web 飲食管家';
+    }
+  } else if (isLine) {
+    source = '🟢 LINE 智慧助理';
+    channel = 'LINE';
+    if (!location || location === '-' || location.includes('Cloud')) {
+      location = 'LINE 智慧助理';
+    }
+  } else {
+    if (!location || location === '-') {
+      location = 'Cloud 雲端核心';
+    }
+  }
+
   return {
-    time: formatUnifiedTimestamp(item.time),
-    userName: String(item.userName || item.userId || 'LINE 用戶'),
-    userId: String(item.rawUserId || item.userId || 'user'),
-    type: String(item.type || item.op || '系統操作'),
+    time: formatUnifiedTimestamp(raw.time),
+    userName: String(userName || (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'))),
+    userId: String(raw.rawUserId || raw.userId || 'user'),
+    type: type,
     input: inputStr,
     aiResult: aiResultStr,
     output: outputStr,
-    source: String(item.source || (item.type?.includes('維護者') ? 'Web 維護者後台' : 'LINE Bot / Cloud')),
+    source,
+    channel,
     ip,
     location,
     device
@@ -1404,28 +1441,34 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                             </div>
                           </td>
 
-                          {/* Location / IP */}
+                          {/* Location / Source */}
                           <td className="py-3 px-3 font-mono text-[11px] text-zinc-700 whitespace-nowrap">
-                            {ip || (location && location !== '-') ? (
-                              <div className="space-y-0.5">
-                                {location && location !== '-' && (
+                            <div className="space-y-1">
+                              {/* Source Channel Badge (LINE vs Web vs System) */}
+                              <div className="flex items-center gap-1.5">
+                                <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md border ${
+                                  source?.includes('Web')
+                                    ? 'bg-sky-50 text-sky-800 border-sky-300'
+                                    : source?.includes('LINE')
+                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                    : 'bg-zinc-100 text-zinc-700 border-zinc-300'
+                                }`}>
+                                  {source?.includes('Web') ? '🌐 Web' : (source?.includes('LINE') ? '🟢 LINE' : '⚡ System')}
+                                </span>
+                                {location && !location.includes('LINE') && !location.includes('Web') && location !== '-' && (
                                   <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-800">
                                     <MapPin size={10} className="text-rose-500 shrink-0" />
-                                    <span className="truncate max-w-[140px]">{location}</span>
-                                  </div>
-                                )}
-                                {ip && ip !== '-' && (
-                                  <div className="flex items-center gap-1 text-[10px] text-zinc-500">
-                                    <Globe size={10} className="text-purple-600 shrink-0" />
-                                    <span>{ip}</span>
+                                    <span className="truncate max-w-[130px]">{location}</span>
                                   </div>
                                 )}
                               </div>
-                            ) : (
-                              <span className="text-zinc-500 font-medium text-[10px] bg-zinc-100/90 px-1.5 py-0.5 rounded border border-zinc-200">
-                                ☁️ {source || 'LINE Cloud'}
-                              </span>
-                            )}
+                              {ip && ip !== '-' && (
+                                <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-mono">
+                                  <Globe size={10} className="text-purple-600 shrink-0" />
+                                  <span>{ip}</span>
+                                </div>
+                              )}
+                            </div>
                           </td>
 
                           {/* Message Preview */}
@@ -1641,7 +1684,13 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                         {type || '系統操作'}
                       </span>
                       {source && (
-                        <span className="text-[9px] font-black bg-black text-white px-2 py-0.5 rounded-md">
+                        <span className={`text-[9px] font-black px-2 py-0.5 rounded-md border ${
+                          source.includes('Web')
+                            ? 'bg-sky-50 text-sky-800 border-sky-300'
+                            : source.includes('LINE')
+                            ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                            : 'bg-zinc-900 text-white border-black'
+                        }`}>
                           {source}
                         </span>
                       )}
