@@ -793,9 +793,9 @@ function getUserFavorites(userId, props, userGistId) {
   const favKey = `FAVORITES_${userId}`;
   try {
     const raw = props.getProperty(favKey);
-    if (raw) {
+    if (raw !== null && raw !== undefined) {
       const parsed = JSON.parse(raw);
-      if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+      if (Array.isArray(parsed)) return parsed;
     }
   } catch (e) {}
 
@@ -812,7 +812,7 @@ function getUserFavorites(userId, props, userGistId) {
         const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
         if (content) {
           const backupData = JSON.parse(content);
-          if (backupData.favorites && Array.isArray(backupData.favorites) && backupData.favorites.length > 0) {
+          if (backupData.favorites && Array.isArray(backupData.favorites)) {
             props.setProperty(favKey, JSON.stringify(backupData.favorites));
             return backupData.favorites;
           }
@@ -864,7 +864,7 @@ function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
   try { lock.waitLock(30000); } catch (e) {}
   try {
     const favKey = `FAVORITES_${userId}`;
-    let favorites = getUserFavorites(userId, props);
+    let favorites = getUserFavorites(userId, props, userGistId);
     const cleanId = String(favIdentifier || '').trim();
     let decodedId = cleanId;
     try { decodedId = decodeURIComponent(cleanId).trim(); } catch (e) {}

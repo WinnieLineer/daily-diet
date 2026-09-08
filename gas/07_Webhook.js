@@ -863,10 +863,24 @@ function doPost(e) {
         // 🗑️ 移除常用餐點
         if (payload.action === 'deleteFavorite') {
           console.log(`🗑️ [移除常用] 標識: ${payload.favId || payload.name}`);
-          recordSystemLog('移除常用', userId, `標識: ${payload.favId || payload.name}`, '', `回傳常用輪播：已自常用庫移除「${payload.favId || payload.name}」`);
+          recordSystemLog('移除常用', userId, `標識: ${payload.favId || payload.name}`, '', `回傳更新後清單：已自常用庫移除「${payload.favId || payload.name}」`);
           deleteUserFavorite(userId, payload.favId || payload.name, userGistId, GITHUB_PAT, props);
-          const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
-          replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          if (payload.returnView === 'manage') {
+            const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+            replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          } else {
+            const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          }
+          continue;
+        }
+
+        // 📋 常用餐點管理面板
+        if (payload.action === 'manageFavorites') {
+          console.log(`📋 [常用餐點管理] 用戶: ${userId}`);
+          recordSystemLog('常用管理', userId, '常用管理面板', '', '回傳常用餐點管理卡片');
+          const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+          replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -1342,6 +1356,23 @@ function doPost(e) {
             continue;
           }
 
+          // 📋 常用餐點管理面板 (例如: "常用管理", "管理常用", "常用庫管理")
+          if (
+            userText === '常用管理' || 
+            userText === '管理常用' || 
+            userText === '常用庫管理' || 
+            userText === '管理常用庫' || 
+            userText === '常用清單管理' ||
+            userText.toLowerCase() === 'manage fav' ||
+            userText.toLowerCase() === 'manage favorites' ||
+            userText.toLowerCase() === 'fav manager'
+          ) {
+            recordSystemLog('常用管理', userId, userText, '', '回傳常用餐點管理面板卡片');
+            const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+            replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
           // ⭐ 新增或調整常用餐點 (例如: "加常用 拿鐵 150卡 8蛋 350水", "改常用 拿鐵 180卡 10蛋", "調整常用 ...")
           if (
             userText.startsWith('加常用') || 
@@ -1384,7 +1415,7 @@ function doPost(e) {
             continue;
           }
 
-          // 🗑️ 文字指令：刪除/移除常用餐點 (例如: "刪除常用 美式咖啡" 或 "移除常用 拿鐵")
+          // 🗑️ 文字指令：刪除/移除常用餐點 (例如: "刪除常用 美式咖啡" 或單純輸入 "刪除常用")
           if (
             userText.startsWith('刪除常用') || 
             userText.startsWith('移除常用') || 
@@ -1399,6 +1430,11 @@ function doPost(e) {
               deleteUserFavorite(userId, targetName, userGistId, GITHUB_PAT, props);
               const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
               replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            } else {
+              recordSystemLog('常用管理', userId, userText, '', '回傳常用餐點管理面板供點擊刪除');
+              const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+              replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
             }
           }

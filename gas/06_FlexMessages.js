@@ -2184,6 +2184,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
       footer: {
         type: "box",
         layout: "vertical",
+        spacing: "sm",
         paddingAll: "10px",
         contents: [
           {
@@ -2197,6 +2198,18 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
               data: JSON.stringify({ action: 'fillFav' }),
               inputOption: "openKeyboard",
               fillInText: isEn ? "Add fav Oatmeal+Latte 220cal 8pro 300water" : "加常用 燕麥奶拿鐵 150卡 5蛋 300水"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#FEE2E2",
+            action: {
+              type: "postback",
+              label: isEn ? "🗑️ Manage & Delete Favorites" : "🗑️ 清單管理與刪除常用",
+              data: JSON.stringify({ action: 'manageFavorites' }),
+              displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
             }
           }
         ]
@@ -2214,8 +2227,227 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
   };
 }
 
+/**
+ * 常用餐點專屬管理面板 (可直接在 LINE 瀏覽所有常用、微調數值、一鍵刪除)
+ */
+function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const userLang = lang || getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
+  const favorites = getUserFavorites(userId, props, userGistId);
+
+  const favBoxes = [];
+
+  if (favorites.length === 0) {
+    favBoxes.push({
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFFFF",
+      cornerRadius: "12px",
+      borderColor: "#E4E4E7",
+      borderWidth: "1px",
+      paddingAll: "16px",
+      alignItems: "center",
+      contents: [
+        { 
+          type: "text", 
+          text: isEn ? "⭐ No favorites in your list yet 🐼" : "⭐ 常用清單目前是空的 🐼", 
+          size: "xs", 
+          color: "#A1A1AA" 
+        }
+      ]
+    });
+  } else {
+    favorites.forEach((fav, index) => {
+      const dishName = fav.dish_name || (isEn ? 'Favorite Meal' : '常用餐點');
+      favBoxes.push({
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FFFFFF",
+        cornerRadius: "12px",
+        borderColor: "#E4E4E7",
+        borderWidth: "1px",
+        paddingAll: "12px",
+        spacing: "sm",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { 
+                type: "text", 
+                text: `${index + 1}. ${dishName}`, 
+                size: "sm", 
+                color: "#18181B", 
+                weight: "bold", 
+                flex: 1, 
+                wrap: true 
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#FFF1F2",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🔥 ${fav.calories || 0} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#EFF6FF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `🥩 ${fav.protein || 0}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#ECFEFF",
+                cornerRadius: "6px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [{ type: "text", text: `💧 ${fav.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            margin: "xs",
+            contents: [
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#F4F4F5",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "✏️ Edit" : "✏️ 調整",
+                  data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(dishName) }),
+                  inputOption: "openKeyboard",
+                  fillInText: isEn 
+                    ? `Add fav ${dishName} ${fav.calories || 0}cal ${fav.protein || 0}pro ${fav.water || 0}water`
+                    : `加常用 ${dishName} ${fav.calories || 0}卡 ${fav.protein || 0}蛋 ${fav.water || 0}水`
+                }
+              },
+              {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FFF1F2",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "🗑️ Delete" : "🗑️ 刪除",
+                  data: JSON.stringify({ 
+                    action: 'deleteFavorite', 
+                    favId: fav.id || dishName, 
+                    name: dishName,
+                    returnView: 'manage'
+                  }),
+                  displayText: isEn ? `🗑️ Delete favorite: ${dishName}` : `🗑️ 刪除常用：${dishName}`
+                }
+              }
+            ]
+          }
+        ]
+      });
+    });
+  }
+
+  return {
+    type: "flex",
+    altText: isEn ? "⭐ Manage Favorites" : "⭐ 常用餐點管理",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FEF9C3",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用餐點管理", weight: "bold", size: "md", color: "#713F12" },
+              { type: "text", text: isEn ? `${favorites.length} items` : `共 ${favorites.length} 道`, size: "xs", color: "#854D0E", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: isEn ? "Edit nutrition or tap delete to remove" : "點擊「🗑️ 刪除」即可直接移除，或點「✏️ 調整」修改數值",
+            size: "xxs",
+            color: "#A16207",
+            margin: "xs",
+            wrap: true
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        backgroundColor: "#FAFAFA",
+        contents: favBoxes
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "button",
+            style: "primary",
+            height: "sm",
+            color: "#000000",
+            action: {
+              type: "postback",
+              label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
+              data: JSON.stringify({ action: 'fillFav' }),
+              inputOption: "openKeyboard",
+              fillInText: isEn ? "Add fav Oatmeal+Latte 220cal 8pro 300water" : "加常用 燕麥奶拿鐵 150卡 5蛋 300水"
+            }
+          },
+          {
+            type: "button",
+            style: "secondary",
+            height: "sm",
+            color: "#F4F4F5",
+            action: {
+              type: "message",
+              label: isEn ? "⭐ Back to Carousel" : "⭐ 返回常用輪播",
+              text: isEn ? "Favorites" : "常用"
+            }
+          }
+        ]
+      }
+    }
+  };
+}
+
 function generateFavoritesListFlex(userId, liffId, userGistId, props) {
-  return generateFavoritesCarouselFlex(userId, liffId, userGistId, props);
+  return generateManageFavoritesFlex(userId, liffId, userGistId, props);
 }
 
 function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang) {
