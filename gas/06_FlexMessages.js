@@ -2109,6 +2109,19 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
               layout: "horizontal",
               spacing: "xs",
               contents: [
+                index > 0 ? {
+                  type: "button",
+                  style: "secondary",
+                  height: "sm",
+                  color: "#FEF9C3",
+                  flex: 1,
+                  action: {
+                    type: "postback",
+                    label: isEn ? "🔝 Top" : "🔝 置頂",
+                    data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || fav.dish_name, dir: 'top', returnView: 'carousel' }),
+                    displayText: isEn ? `🔝 Pin to front: ${fav.dish_name}` : `🔝 將「${fav.dish_name}」置頂排在第一位`
+                  }
+                } : null,
                 {
                   type: "button",
                   style: "secondary",
@@ -2117,7 +2130,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
                   flex: 1,
                   action: {
                     type: "postback",
-                    label: isEn ? "✏️ Adjust" : "✏️ 調整數值",
+                    label: isEn ? "✏️ Adjust" : "✏️ 調整",
                     data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(fav.dish_name) }),
                     inputOption: "openKeyboard",
                     fillInText: isEn 
@@ -2142,7 +2155,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props) {
                     displayText: isEn ? `🗑️ Remove from favorites: ${fav.dish_name}` : `🗑️ 移除常用：${fav.dish_name}`
                   }
                 }
-              ]
+              ].filter(Boolean)
             }
           ]
         }
@@ -2331,6 +2344,45 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
             spacing: "xs",
             margin: "xs",
             contents: [
+              index > 0 ? {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#F0FDF4",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "⬆️ Up" : "⬆️ 上移",
+                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'up' }),
+                  displayText: isEn ? `⬆️ Move up: ${dishName}` : `⬆️ 將「${dishName}」往上移`
+                }
+              } : null,
+              index < favorites.length - 1 ? {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#F0FDF4",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "⬇️ Down" : "⬇️ 下移",
+                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'down' }),
+                  displayText: isEn ? `⬇️ Move down: ${dishName}` : `⬇️ 將「${dishName}」往下移`
+                }
+              } : null,
+              index > 1 ? {
+                type: "button",
+                style: "secondary",
+                height: "sm",
+                color: "#FEF9C3",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "🔝 Top" : "🔝 置頂",
+                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'top' }),
+                  displayText: isEn ? `🔝 Move to top: ${dishName}` : `🔝 將「${dishName}」置頂`
+                }
+              } : null,
               {
                 type: "button",
                 style: "secondary",
@@ -2365,7 +2417,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   displayText: isEn ? `🗑️ Delete favorite: ${dishName}` : `🗑️ 刪除常用：${dishName}`
                 }
               }
-            ]
+            ].filter(Boolean)
           }
         ]
       });

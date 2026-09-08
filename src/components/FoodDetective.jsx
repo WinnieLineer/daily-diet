@@ -220,6 +220,59 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     setFavorites(items);
   };
 
+  const handleMoveFavorite = async (index, direction) => {
+    if (direction === 'up' && index === 0) return;
+    if (direction === 'down' && index === favorites.length - 1) return;
+
+    const targetIndex = direction === 'up' ? index - 1 : index + 1;
+    const newFavorites = [...favorites];
+    const temp = newFavorites[index];
+    newFavorites[index] = newFavorites[targetIndex];
+    newFavorites[targetIndex] = temp;
+
+    setFavorites(newFavorites);
+
+    try {
+      await db.transaction('rw', db.favorites, async () => {
+        await db.favorites.clear();
+        await db.favorites.bulkAdd(newFavorites.map(({ id, ...item }) => item));
+      });
+      await loadFavorites();
+      setFavToast(t('order_updated') || '常用順序已更新！');
+      setTimeout(() => setFavToast(null), 1500);
+
+      const effectiveUserId = localStorage.getItem('line_user_id');
+      const currentGist = getCurrentGistId();
+      if (effectiveUserId || currentGist) {
+        const orderNames = newFavorites.map(f => f.dish_name).join(',');
+        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+        try {
+          fetch(`${GAS_URL}?action=reorderFavorites&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&order=${encodeURIComponent(orderNames)}`, { mode: 'no-cors' });
+        } catch (e) {}
+
+        if (currentGist) {
+          Promise.all([
+            db.dietLogs.toArray(),
+            db.weightLogs.toArray(),
+            db.settings.toArray(),
+            db.favorites.toArray()
+          ]).then(([dietLogs, weightLogs, settings, favs]) => {
+            return uploadToGist({
+              dietLogs: dietLogs.map(({ image, ...rest }) => rest),
+              weightLogs,
+              settings,
+              favorites: favs
+            }, currentGist);
+          }).catch((e) => {
+            console.warn("[Gist] Background favorite reorder sync skipped:", e?.message);
+          });
+        }
+      }
+    } catch (err) {
+      console.error("Failed to reorder favorites:", err);
+    }
+  };
+
   useEffect(() => {
     let interval;
     if (aiLoading) {
@@ -1216,7 +1269,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             {favToast && <div className="bg-black text-white text-[10px] font-black px-3 py-2 rounded-xl text-center animate-bounce">{favToast}</div>}
             {favorites.length > 0 ? (
               <div className="grid grid-cols-1 gap-2 max-h-[400px] overflow-y-auto pr-2 custom-scrollbar">
-                {favorites.map((item) => {
+                {favorites.map((item, index) => {
                   if (editingFavId === item.id) {
                     return (
                       <div
@@ -1406,9 +1459,37 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                           {goals?.show_carbs_fat && item.fat > 0 && <span>🥑 {item.fat}g</span>}
                         </div>
                       </div>
-                      <div className="flex items-center gap-2 shrink-0">
-                        <Check size={18} className="text-zinc-200 group-hover:text-emerald-500 transition-colors" />
+                      <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+                        {/* ⬆️ 上移 */}
                         <button
+                          type="button"
+                          disabled={index === 0}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveFavorite(index, 'up');
+                          }}
+                          title={t('move_up')}
+                          className={`p-1 rounded-lg transition-colors ${index === 0 ? 'text-zinc-200 cursor-not-allowed' : 'text-zinc-400 hover:text-black hover:bg-zinc-100 active:scale-90'}`}
+                        >
+                          <ChevronUp size={16} />
+                        </button>
+
+                        {/* ⬇️ 下移 */}
+                        <button
+                          type="button"
+                          disabled={index === favorites.length - 1}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleMoveFavorite(index, 'down');
+                          }}
+                          title={t('move_down')}
+                          className={`p-1 rounded-lg transition-colors ${index === favorites.length - 1 ? 'text-zinc-200 cursor-not-allowed' : 'text-zinc-400 hover:text-black hover:bg-zinc-100 active:scale-90'}`}
+                        >
+                          <ChevronDown size={16} />
+                        </button>
+
+                        <button
+                          type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             setEditingFavId(item.id);
@@ -1422,7 +1503,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                               description: item.description || ''
                             });
                           }}
-                          className="p-1 hover:text-black"
+                          className="p-1 text-zinc-400 hover:text-black hover:bg-zinc-100 rounded-lg transition-colors"
                         >
                           <Pencil size={14} />
                         </button>

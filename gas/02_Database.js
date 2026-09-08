@@ -935,6 +935,116 @@ function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
   }
 }
 
+/**
+ * 常用餐點順序調整 (上移 / 下移 / 置頂)
+ */
+function reorderUserFavorites(userId, favIdentifier, direction, userGistId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) {}
+  try {
+    const favKey = `FAVORITES_${userId}`;
+    let favorites = getUserFavorites(userId, props, userGistId);
+    if (!favorites || favorites.length <= 1) return favorites || [];
+
+    const cleanId = String(favIdentifier || '').trim();
+    let decodedId = cleanId;
+    try { decodedId = decodeURIComponent(cleanId).trim(); } catch (e) {}
+
+    const idx = favorites.findIndex(f => {
+      const fId = String(f.id || '').trim();
+      const fName = String(f.dish_name || '').trim();
+      return fId === cleanId || fId === decodedId || fName === cleanId || fName === decodedId;
+    });
+
+    if (idx === -1) return favorites;
+
+    const dir = String(direction || 'up').toLowerCase();
+    const item = favorites[idx];
+
+    if (dir === 'top') {
+      if (idx > 0) {
+        favorites.splice(idx, 1);
+        favorites.unshift(item);
+      }
+    } else if (dir === 'up') {
+      if (idx > 0) {
+        favorites[idx] = favorites[idx - 1];
+        favorites[idx - 1] = item;
+      }
+    } else if (dir === 'down') {
+      if (idx < favorites.length - 1) {
+        favorites[idx] = favorites[idx + 1];
+        favorites[idx + 1] = item;
+      }
+    }
+
+    props.setProperty(favKey, JSON.stringify(favorites));
+
+    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+    const token = pat || props.getProperty('GITHUB_PAT');
+    if (token && gistId) {
+      try {
+        syncFavoritesToUserGist(favorites, gistId, token);
+      } catch (e) {
+        console.error("同步調整常用餐點順序至 Gist 失敗:", e);
+      }
+    }
+    return favorites;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
+/**
+ * 依指定陣列順序全量重新排序常用餐點
+ */
+function saveAllUserFavoritesOrder(userId, orderedIdentifiers, userGistId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const lock = LockService.getScriptLock();
+  try { lock.waitLock(30000); } catch (e) {}
+  try {
+    const favKey = `FAVORITES_${userId}`;
+    let favorites = getUserFavorites(userId, props, userGistId);
+    if (!favorites || favorites.length <= 1) return favorites || [];
+
+    const orderList = (Array.isArray(orderedIdentifiers) ? orderedIdentifiers : [])
+      .map(id => String(id || '').trim().toLowerCase())
+      .filter(Boolean);
+
+    if (orderList.length > 0) {
+      favorites.sort((a, b) => {
+        const idA = String(a.id || '').toLowerCase();
+        const nameA = String(a.dish_name || '').toLowerCase();
+        const idB = String(b.id || '').toLowerCase();
+        const nameB = String(b.dish_name || '').toLowerCase();
+
+        let idxA = orderList.findIndex(o => o === idA || o === nameA);
+        let idxB = orderList.findIndex(o => o === idB || o === nameB);
+
+        if (idxA === -1) idxA = 9999;
+        if (idxB === -1) idxB = 9999;
+        return idxA - idxB;
+      });
+    }
+
+    props.setProperty(favKey, JSON.stringify(favorites));
+
+    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+    const token = pat || props.getProperty('GITHUB_PAT');
+    if (token && gistId) {
+      try {
+        syncFavoritesToUserGist(favorites, gistId, token);
+      } catch (e) {
+        console.error("同步排序常用餐點至 Gist 失敗:", e);
+      }
+    }
+    return favorites;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
+}
+
 function syncFavoritesToUserGist(favorites, gistId, pat) {
   if (!gistId || !pat) return;
   const gistUrl = `https://api.github.com/gists/${gistId}`;

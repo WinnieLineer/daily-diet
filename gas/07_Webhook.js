@@ -177,6 +177,23 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 7.5 Web App 觸發常用餐點排序更新
+    if (action === 'reorderFavorites' && userId) {
+      const favId = e?.parameter?.id || e?.parameter?.favId || e?.parameter?.dishName || e?.parameter?.name;
+      const dir = e?.parameter?.dir || e?.parameter?.direction || 'up';
+      const orderStr = e?.parameter?.order;
+      const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
+      let updated = [];
+      if (orderStr) {
+        updated = saveAllUserFavoritesOrder(userId, orderStr.split(','), userGistId, pat, props);
+      } else if (favId) {
+        updated = reorderUserFavorites(userId, favId, dir, userGistId, pat, props);
+      }
+      recordSystemLog('Web換常用順序', userId, favId ? `${favId} (${dir})` : '批量排序', '', '已更新常用餐點順序');
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', favorites: updated }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 8. Web App 觸發更新個人飲食目標
     if (action === 'updateGoals' && userId) {
       const calories = Number(e?.parameter?.calories);
@@ -877,6 +894,23 @@ function doPost(e) {
           continue;
         }
 
+        // ↕️ 常用餐點換順序 (上移 / 下移 / 置頂)
+        if (payload.action === 'moveFavorite' || payload.action === 'reorderFavorite') {
+          const favId = payload.favId || payload.name;
+          const dir = payload.dir || 'up';
+          console.log(`↕️ [常用換順序] 標識: ${favId}, 方向: ${dir}`);
+          reorderUserFavorites(userId, favId, dir, userGistId, GITHUB_PAT, props);
+          recordSystemLog('常用換順序', userId, `${favId} (${dir})`, '', `已更新常用餐點排列順序 (${dir})`);
+          if (payload.returnView === 'carousel') {
+            const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+            replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          } else {
+            const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+            replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          }
+          continue;
+        }
+
         // 📋 常用餐點管理面板
         if (payload.action === 'manageFavorites') {
           console.log(`📋 [常用餐點管理] 用戶: ${userId}`);
@@ -1454,6 +1488,28 @@ function doPost(e) {
               continue;
             } else {
               recordSystemLog('常用管理', userId, userText, '', '回傳常用餐點管理面板供點擊刪除');
+              const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+              replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
+          }
+
+          // ↕️ 文字指令：常用餐點換順序 (例如: "常用置頂 拿鐵", "常用上移 拿鐵", "常用下移 拿鐵", "置頂常用 拿鐵")
+          if (
+            userText.startsWith('常用置頂') || userText.startsWith('置頂常用') ||
+            userText.startsWith('常用上移') || userText.startsWith('上移常用') ||
+            userText.startsWith('常用下移') || userText.startsWith('下移常用') ||
+            userText.startsWith('常用前移') || userText.startsWith('常用後移')
+          ) {
+            let dir = 'top';
+            if (userText.includes('上移') || userText.includes('前移')) dir = 'up';
+            else if (userText.includes('下移') || userText.includes('後移')) dir = 'down';
+            else if (userText.includes('置頂')) dir = 'top';
+
+            const targetName = userText.replace(/^(?:常用置頂|置頂常用|常用上移|上移常用|常用下移|下移常用|常用前移|常用後移)\s*/i, '').trim();
+            if (targetName) {
+              reorderUserFavorites(userId, targetName, dir, userGistId, GITHUB_PAT, props);
+              recordSystemLog('常用換順序', userId, `${targetName} (${dir})`, '', `已將「${targetName}」常用順序調整 (${dir})`);
               const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
               replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
