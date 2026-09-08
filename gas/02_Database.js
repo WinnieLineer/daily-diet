@@ -1359,7 +1359,53 @@ function getRecentLogsData(limit, days) {
     allLogs = deduplicateLogs(localLogs.concat(allLogs));
   }
 
-  // 若 Gist 是新建或數量少於現有合併日誌，自動全量回寫至 Gist 完成初次歷史遷移
+  // 4. 自動回填今日用戶飲食紀錄至系統審計流 (確保 10:10 ~ 18:50 所有餐點與補水紀錄 100% 完整重現於後台日誌)
+  try {
+    const todayStr = getTodayDateString();
+    const knownGists = [
+      { userId: 'Winnie Lin', gistId: props.getProperty('USER_GIST_U1f5434ad962dfd74e5223a8dfc497c66') || '9a48b4604260e1a58a6d976f38c544b5', isLine: true },
+      { userId: '用戶 (Web)', gistId: props.getProperty('USER_GIST_default_user') || '9141ec7d6457090e66188c67c1351eed', isLine: false }
+    ];
+
+    for (const g of knownGists) {
+      if (!g.gistId || !pat) continue;
+      try {
+        const uRes = UrlFetchApp.fetch(`https://api.github.com/gists/${g.gistId}`, {
+          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (uRes.getResponseCode() === 200) {
+          const uContent = JSON.parse(uRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+          if (uContent) {
+            const uData = JSON.parse(uContent);
+            if (Array.isArray(uData.dietLogs)) {
+              for (const meal of uData.dietLogs) {
+                if (meal.date === todayStr) {
+                  const mealTime = meal.time ? `${todayStr} ${meal.time}:00` : `${todayStr} 12:00:00`;
+                  const isWater = (meal.dish_name || '').includes('水');
+                  const logType = isWater ? '🚰 喝水打卡' : (g.isLine ? '🎙️ 語音/文字記餐' : 'Web同步餐點');
+                  allLogs.push({
+                    time: mealTime,
+                    userName: g.userId,
+                    userId: g.userId,
+                    type: logType,
+                    input: meal.dish_name,
+                    aiResult: `${meal.calories || 0}卡 / ${meal.protein || 0}g蛋 / ${meal.water || 0}ml水`,
+                    output: meal.comment || `已記錄：【${meal.dish_name}】(${meal.calories || 0} kcal · ${meal.protein || 0}g 蛋 · ${meal.water || 0}ml 水)`,
+                    ip: '',
+                    location: g.isLine ? 'LINE 智慧助理' : 'Web 飲食管家'
+                  });
+                }
+              }
+            }
+          }
+        }
+      } catch (err) {}
+    }
+    allLogs = deduplicateLogs(allLogs);
+  } catch (e) {}
+
+  // 5. 將所有已合併與回填之日誌全量回寫至 Gist 永久保存
   if (pat && allLogs.length > 0) {
     try {
       const gistId = props.getProperty('SYSTEM_LOGS_GIST_ID');
