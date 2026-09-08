@@ -23,6 +23,24 @@ function getLineImageBlob(messageId, accessToken) {
 }
 
 /**
+  * 下載 LINE 語音訊息內容
+  * @param {string} messageId LINE 訊息 ID
+  * @param {string} accessToken LINE Channel Access Token
+  * @returns {Blob}
+  */
+function getLineAudioBlob(messageId, accessToken) {
+  const url = `https://api-data.line.me/v2/bot/message/${messageId}/content`;
+  const res = UrlFetchApp.fetch(url, {
+    headers: { Authorization: `Bearer ${accessToken}` },
+    muteHttpExceptions: true
+  });
+  if (res.getResponseCode() !== 200) {
+    throw new Error(`下載 LINE 語音失敗 (${res.getResponseCode()})`);
+  }
+  return res.getBlob();
+}
+
+/**
  * 啟動 LINE 官方「正在輸入中...」Loading 動畫
  * @param {string} userId LINE 使用者 ID
  * @param {string} accessToken LINE Channel Access Token

@@ -36,6 +36,15 @@ const ADVICE_GEMINI_MODELS = [
   'gemini-2.5-flash-lite'
 ];
 
+// 🎙️ 語音多模態辨識模型清單 (必須支援 Audio 多模態輸入，優先使用 RPD 500 之 3.5-flash-lite / 3.1-flash-lite)
+const AUDIO_GEMINI_MODELS = [
+  'gemini-3.5-flash-lite',
+  'gemini-3.1-flash-lite',
+  'gemini-3.5-transcribe',
+  'gemini-3.5-flash',
+  'gemini-2.5-flash'
+];
+
 // 🔄 通用預設模型清單 (相容性與全域預設)
 const PRIMARY_GEMINI_MODELS = VISION_GEMINI_MODELS;
 

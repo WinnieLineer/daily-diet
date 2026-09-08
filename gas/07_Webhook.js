@@ -960,8 +960,46 @@ function doPost(e) {
           continue;
         }
 
-        // 💬 文字訊息
-        else if (event.message.type === 'text') {
+        // 🎙️ 語音訊息 (Audio Message - 語音轉文字後無縫串接所有指令與飲食分析)
+        if (event.message.type === 'audio') {
+          currentOperation = '傳送語音訊息進行 AI 語音轉文字';
+          currentUserInput = `語音 Message ID: ${event.message.id}`;
+          sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 25);
+          const messageId = event.message.id;
+          console.log(`🎙️ [收到用戶語音] Message ID: ${messageId}`);
+
+          let transcribedText = '';
+          try {
+            const audioBlob = getLineAudioBlob(messageId, CHANNEL_ACCESS_TOKEN);
+            const contentType = audioBlob.getContentType() || 'audio/mp4';
+            const base64Audio = Utilities.base64Encode(audioBlob.getBytes());
+            transcribedText = transcribeAudioWithGemini(base64Audio, contentType, GEMINI_API_KEY);
+            console.log(`🎙️ [語音轉錄結果] "${transcribedText}"`);
+          } catch (audioErr) {
+            console.error("🚨 語音下載或辨識失敗:", audioErr);
+            recordSystemLog('語音辨識異常', userId, `語音 ID: ${messageId}`, '', `語音下載或辨識失敗: ${audioErr.message}`);
+          }
+
+          if (!transcribedText || !transcribedText.trim()) {
+            recordSystemLog('語音辨識', userId, `語音 ID: ${messageId}`, '無可辨識語音內容', '回傳重試提示');
+            const noVoiceMsg = (userLang === 'en')
+              ? "🎙️ Sorry, Panda Coach couldn't hear that clearly. Please try speaking again or send text directly! 🐼"
+              : "🎙️ 抱歉，熊貓教練沒有聽清楚您的語音內容～請再說一次，或直接輸入文字記錄喔！🐼✨";
+            replyTextMessage(replyToken, noVoiceMsg, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          recordSystemLog('語音辨識', userId, `語音 ID: ${messageId}`, transcribedText, `語音轉錄成功：「${transcribedText}」，自動執行對應功能`);
+
+          // 🔄 無縫轉交文字處理分支
+          event.message.type = 'text';
+          event.message.text = transcribedText.trim();
+          event._isAudioInput = true;
+          event._rawAudioText = transcribedText.trim();
+        }
+
+        // 💬 文字訊息 (亦承接由語音轉錄而來的文字指令)
+        if (event.message.type === 'text') {
           const userText = event.message.text.trim();
           currentOperation = '傳送文字訊息';
           currentUserInput = userText;
@@ -1572,7 +1610,10 @@ function doPost(e) {
             if (isEn && /[\u4e00-\u9fa5]/.test(finalReply)) {
               finalReply = defaultReply;
             }
-            recordSystemLog('日常對話', userId, userText, `[${usedModel}${fallbackNote}] 非食物訊息`, `[模型: ${usedModel}] 回傳文字：${finalReply}`);
+            if (event._isAudioInput) {
+              finalReply = `🎙️ 聽到了：「${event._rawAudioText}」\n\n${finalReply}`;
+            }
+            recordSystemLog(event._isAudioInput ? '語音對話' : '日常對話', userId, event._isAudioInput ? `🎙️ 語音: "${userText}"` : userText, `[${usedModel}${fallbackNote}] 非食物訊息`, `[模型: ${usedModel}] 回傳文字：${finalReply}`);
             replyTextMessage(replyToken, finalReply, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             const meal = {
@@ -1587,7 +1628,9 @@ function doPost(e) {
               water: Number(analysis.water) || 0,
               breakdown: analysis.breakdown || [],
               calculation_note: analysis.calculation_note || '',
-              comment: analysis.panda_comment || '',
+              comment: (event._isAudioInput && analysis.panda_comment)
+                ? `🎙️「${event._rawAudioText}」\n${analysis.panda_comment}`
+                : (analysis.panda_comment || ''),
               baseDishName: analysis.dish_name || (isEn ? 'Meal' : '美味餐點'),
               baseCalories: Number(analysis.calories) || 0,
               baseProtein: Number(analysis.protein) || 0,
@@ -1599,10 +1642,12 @@ function doPost(e) {
             };
 
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+            const logType = event._isAudioInput ? '語音記餐' : '文字辨識';
+            const logInput = event._isAudioInput ? `🎙️ 語音: "${userText}"` : userText;
             recordSystemLog(
-              '文字辨識', 
+              logType, 
               userId, 
-              userText, 
+              logInput, 
               `[${usedModel}${fallbackNote}] ${analysis.dish_name} (${analysis.calories}卡 / ${analysis.protein}g蛋 / ${analysis.water || 0}ml水)`, 
               `[模型: ${usedModel}] 回傳確認卡片：【${analysis.dish_name}】${analysis.calories} kcal · ${analysis.protein}g 蛋 · ${analysis.carbs || 0}g 碳 · ${analysis.fat || 0}g 脂${analysis.panda_comment ? ' · 教練：「' + analysis.panda_comment + '」' : ''}`
             );

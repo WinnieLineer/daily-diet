@@ -921,6 +921,95 @@ function generateGeminiText(prompt, apiKey) {
 }
 
 // ========================================================
+// 🎙️ Gemini 多模態語音轉文字 (Audio to Text)
+// ========================================================
+
+function transcribeAudioWithGemini(base64Audio, mimeType, apiKey) {
+  const models = (typeof AUDIO_GEMINI_MODELS !== 'undefined' && AUDIO_GEMINI_MODELS.length)
+    ? AUDIO_GEMINI_MODELS
+    : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-transcribe', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+
+  let cleanMimeType = mimeType || 'audio/mp4';
+  if (cleanMimeType.includes('m4a') || cleanMimeType.includes('octet-stream')) {
+    cleanMimeType = 'audio/mp4';
+  }
+
+  const prompt = `You are an accurate, robust speech-to-text transcriber for a daily diet and nutrition tracker app.
+Listen to the user's speech and transcribe it into Traditional Chinese (繁體中文) or English (if spoken in English).
+CRITICAL RULES:
+1. Output ONLY the plain transcribed words.
+2. DO NOT add any quotes, markdown, conversational replies, or explanations.
+3. If the audio is silent or only background noise, return an empty string "".`;
+
+  const payload = {
+    contents: [
+      {
+        parts: [
+          {
+            inline_data: {
+              mime_type: cleanMimeType,
+              data: base64Audio
+            }
+          },
+          {
+            text: prompt
+          }
+        ]
+      }
+    ],
+    generationConfig: {
+      temperature: 0.1
+    }
+  };
+
+  let failedAttempts = [];
+  for (let i = 0; i < models.length; i++) {
+    const model = models[i];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const res = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+
+      const statusCode = res.getResponseCode();
+      if (statusCode !== 200) {
+        let errSnippet = '';
+        try {
+          const errObj = JSON.parse(res.getContentText());
+          errSnippet = errObj?.error?.message || res.getContentText();
+        } catch (je) {
+          errSnippet = res.getContentText();
+        }
+        failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
+        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        continue;
+      }
+
+      const data = JSON.parse(res.getContentText());
+      if (typeof recordAiUsageSuccess === 'function') {
+        recordAiUsageSuccess(model);
+      } else if (typeof recordAiUsage === 'function') {
+        recordAiUsage(model, true);
+      }
+      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
+      return text.trim();
+    } catch (err) {
+      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
+      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+    }
+  }
+
+  const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  if (typeof recordAiUsageConsolidatedFailure === 'function') {
+    recordAiUsageConsolidatedFailure(models, null, consolidatedError, { operation: '語音辨識', failedAttempts: failedAttempts });
+  }
+  throw new Error(`Gemini Audio transcription failed: ${consolidatedError}`);
+}
+
+// ========================================================
 // 🛡️ Web App 安全簽章校驗
 // ========================================================
 
