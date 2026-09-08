@@ -149,7 +149,7 @@ function attachMealMultiplierQuickReply(message, meal, userId, props) {
         label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
         data: JSON.stringify({
           action: "saveFavorite",
-          name: cleanBaseName.slice(0, 30),
+          name: cleanBaseName.slice(0, 80),
           cal: Number(meal.calories) || 0,
           pro: Number(meal.protein) || 0,
           wat: Number(meal.water) || 0
@@ -186,7 +186,7 @@ function attachMealMultiplierQuickReply(message, meal, userId, props) {
       action: {
         type: "postback",
         label: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回紀錄",
-        data: JSON.stringify({ action: "cancel", id: mealId, name: cleanBaseName.slice(0, 30) }),
+        data: JSON.stringify({ action: "cancel", id: mealId, name: cleanBaseName.slice(0, 80) }),
         displayText: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄"
       }
     });

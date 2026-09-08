@@ -242,7 +242,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             weight: "bold",
             size: "md",
             color: curM !== 1 ? "#B45309" : "#000000",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -621,7 +622,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -647,7 +649,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? (isToday ? "🔥 Total Cal" : "🔥 Daily Cal") : (isToday ? "🔥 今日總熱量" : "🔥 當日總熱量"), size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: isEn ? (isToday ? "🔥 Total Cal" : "🔥 Daily Cal") : (isToday ? "🔥 今日總熱量" : "🔥 當日總熱量"), size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
                   { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold" }
                 ]
@@ -679,7 +681,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? (isToday ? "💧 Water" : "💧 Daily Water") : (isToday ? "💧 今日水分" : "💧 當日水分"), size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: isEn ? (isToday ? "💧 Water" : "💧 Daily Water") : (isToday ? "💧 今日水分" : "💧 當日水分"), size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
                   { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
                 ]
@@ -862,14 +864,16 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           },
           {
             type: "text",
             text: info.summary || (isEn ? "Scientific Nutrition Plan" : "客製化科學營養規劃"),
             color: "#A1A1AA",
             size: "xxs",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -893,7 +897,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🔥 Daily Cal" : "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: isEn ? "🔥 Daily Cal" : "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
                   { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: isEn ? "kcal / day" : "kcal / 天", size: "xxs", color: "#881337", weight: "bold" }
                 ]
@@ -907,7 +911,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
                   { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold" }
                 ]
@@ -921,7 +925,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "💧 Daily Water" : "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: isEn ? "💧 Daily Water" : "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
                   { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: isEn ? "ml / day" : "ml / 天", size: "xxs", color: "#164E63", weight: "bold" }
                 ]
@@ -1048,14 +1052,16 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           },
           {
             type: "text",
             text: isEn ? "No need to calculate calories! AI plans it for you" : "不需要自己算熱量！告訴教練身材，AI 自動規劃",
             color: "#A1A1AA",
             size: "xxs",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -1079,7 +1085,8 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
                 text: isEn ? "💡 What is Smart Goal Recommendation?" : "💡 什麼是智能推薦？",
                 weight: "bold",
                 size: "xs",
-                color: "#854D0E"
+                color: "#854D0E",
+                wrap: true
               },
               {
                 type: "text",
@@ -1098,7 +1105,8 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
             text: isEn ? "👇 Tap quick presets below to auto-fill:" : "👇 點擊下方快速範例，帶入後微調送出：",
             weight: "bold",
             size: "xs",
-            color: "#000000"
+            color: "#000000",
+            wrap: true
           },
           {
             type: "box",
@@ -1306,7 +1314,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -1330,7 +1339,7 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🔥 Daily Cal" : "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: isEn ? "🔥 Daily Cal" : "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
                   { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: isEn ? "kcal / day" : "kcal / 天", size: "xxs", color: "#881337", weight: "bold" }
                 ]
@@ -1344,7 +1353,7 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
                   { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold" }
                 ]
@@ -1358,7 +1367,7 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "💧 Daily Water" : "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                  { type: "text", text: isEn ? "💧 Daily Water" : "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
                   { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: isEn ? "ml / day" : "ml / 天", size: "xxs", color: "#164E63", weight: "bold" }
                 ]
@@ -1526,7 +1535,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -1550,7 +1560,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🔥 7-Day Avg Cal" : "🔥 7 日平均熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                  { type: "text", text: isEn ? "🔥 7-Day Avg Cal" : "🔥 7 日平均熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
                   { type: "text", text: `${avgCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `kcal / ${goalCal}`, size: "xxs", color: "#881337", weight: "bold" }
                 ]
@@ -1564,7 +1574,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🥩 7-Day Avg Pro" : "🥩 7 日平均蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                  { type: "text", text: isEn ? "🥩 7-Day Avg Pro" : "🥩 7 日平均蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
                   { type: "text", text: `${avgPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
                   { type: "text", text: `/ ${goalPro}g`, size: "xxs", color: "#71717A", weight: "bold" }
                 ]
@@ -1804,14 +1814,16 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           },
           {
             type: "text",
             text: isEn ? `${allLogs.length} meals logged | Total ${totalCal} kcal` : `${isToday ? '今日' : '該日'}已記錄 ${allLogs.length} 餐 ｜ 累計攝取 ${totalCal} kcal`,
             color: "#FDE047",
             size: "xxs",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -2576,7 +2588,8 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
               }
             ]
           },
-          {
+          // 第一行（順序調整）：若有多於一道常用時顯示
+          (index > 0 || index < favorites.length - 1) ? {
             type: "box",
             layout: "horizontal",
             spacing: "xs",
@@ -2620,7 +2633,16 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'top' }),
                   displayText: isEn ? `🔝 Move to top: ${dishName}` : `🔝 將「${dishName}」置頂`
                 }
-              } : null,
+              } : null
+            ].filter(Boolean)
+          } : null,
+          // 第二行（數值調整與刪除）：固定寬敞 50/50 佈局，字體永不吃字
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            margin: "xs",
+            contents: [
               {
                 type: "button",
                 style: "secondary",
@@ -2629,7 +2651,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                 flex: 1,
                 action: {
                   type: "postback",
-                  label: isEn ? "✏️ Edit" : "✏️ 調整",
+                  label: isEn ? "✏️ Adjust" : "✏️ 調整數值",
                   data: JSON.stringify({ action: 'fillFav', name: encodeURIComponent(dishName) }),
                   inputOption: "openKeyboard",
                   fillInText: isEn 
@@ -2655,9 +2677,9 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                   displayText: isEn ? `🗑️ Delete favorite: ${dishName}` : `🗑️ 刪除常用：${dishName}`
                 }
               }
-            ].filter(Boolean)
+            ]
           }
-        ]
+        ].filter(Boolean)
       });
     });
   }
@@ -2877,7 +2899,7 @@ function generateClearConfirmFlex(liffId, userGistId, lang) {
         spacing: "md",
         paddingAll: "18px",
         contents: [
-          { type: "text", text: isEn ? "⚠️ Confirm Clear Today's Logs" : "⚠️ 清空今日飲食紀錄確認", weight: "bold", size: "md", color: "#E11D48" },
+          { type: "text", text: isEn ? "⚠️ Confirm Clear Today's Logs" : "⚠️ 清空今日飲食紀錄確認", weight: "bold", size: "md", color: "#E11D48", wrap: true },
           {
             type: "text",
             text: isEn ? "Are you sure you want to delete all meal logs recorded today? This cannot be undone!" : "確定要清除今天的所有餐點紀錄嗎？此動作無法復原喔！",
@@ -3612,7 +3634,8 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -3733,8 +3756,8 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props, lang) {
         backgroundColor: "#18181B",
         paddingAll: "14px",
         contents: [
-          { type: "text", text: isEn ? "🌐 Welcome Back! Sync Web Data" : "🌐 歡迎老朋友！無縫連動 Web 紀錄", weight: "bold", size: "md", color: "#FDE047" },
-          { type: "text", text: isEn ? "Bind your Gist ID to sync 100% of meals & targets!" : "綁定 Gist ID，讓歷史餐點與目標 100% 雙向同步！", size: "xxs", color: "#E4E4E7", margin: "xs" }
+          { type: "text", text: isEn ? "🌐 Welcome Back! Sync Web Data" : "🌐 歡迎老朋友！無縫連動 Web 紀錄", weight: "bold", size: "md", color: "#FDE047", wrap: true },
+          { type: "text", text: isEn ? "Bind your Gist ID to sync 100% of meals & targets!" : "綁定 Gist ID，讓歷史餐點與目標 100% 雙向同步！", size: "xxs", color: "#E4E4E7", margin: "xs", wrap: true }
         ]
       },
       body: {
@@ -3751,10 +3774,10 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props, lang) {
             cornerRadius: "10px",
             paddingAll: "12px",
             contents: [
-              { type: "text", text: isEn ? "📌 3 Quick Steps to Link:" : "📌 簡單 3 步驟完成連動：", weight: "bold", size: "xs", color: "#854D0E" },
-              { type: "text", text: isEn ? "1. Open Web app from button below" : "1. 點擊下方按鈕開啟 Web 版 Daily Diet", size: "xxs", color: "#713F12" },
-              { type: "text", text: isEn ? "2. Go to Settings ➔ Cloud Backup to copy Gist ID" : "2. 前往右上角「⚙️ 設定」➔「雲端備份」複製 Gist ID", size: "xxs", color: "#713F12" },
-              { type: "text", text: isEn ? "3. Tap 'Bind Gist' and send: Bind <YourGistId>" : "3. 點擊下方「填入綁定指令」，送出「綁定 您的GistID」即可！", size: "xxs", color: "#713F12" }
+              { type: "text", text: isEn ? "📌 3 Quick Steps to Link:" : "📌 簡單 3 步驟完成連動：", weight: "bold", size: "xs", color: "#854D0E", wrap: true },
+              { type: "text", text: isEn ? "1. Open Web app from button below" : "1. 點擊下方按鈕開啟 Web 版 Daily Diet", size: "xxs", color: "#713F12", wrap: true },
+              { type: "text", text: isEn ? "2. Go to Settings ➔ Cloud Backup to copy Gist ID" : "2. 前往右上角「⚙️ 設定」➔「雲端備份」複製 Gist ID", size: "xxs", color: "#713F12", wrap: true },
+              { type: "text", text: isEn ? "3. Tap 'Bind Gist' and send: Bind <YourGistId>" : "3. 點擊下方「填入綁定指令」，送出「綁定 您的GistID」即可！", size: "xxs", color: "#713F12", wrap: true }
             ]
           }
         ]
