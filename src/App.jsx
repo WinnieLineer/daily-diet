@@ -1521,7 +1521,7 @@ function App() {
     refreshData();
 
     if (target) {
-      syncDeleteMealToCloud(target.timestamp || target.id || target.dish_name);
+      syncDeleteMealToCloud(target);
     }
   };
 

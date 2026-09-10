@@ -138,9 +138,10 @@ function doGet(e) {
       const dishName = e?.parameter?.dishName;
       const targetId = e?.parameter?.id;
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
-      deleteMealLog(userId, targetId || dishName, userGistId, pat, props);
-      recordSystemLog('Web刪除餐點', userId, dishName || targetId, '', `已自雲端資料庫刪除紀錄：${dishName || targetId}`);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
+      const deletedMeal = deleteMealLog(userId, targetId || dishName, userGistId, pat, props);
+      const displayTitle = (dishName && isNaN(Number(dishName))) ? dishName : ((deletedMeal && deletedMeal.dish_name) ? deletedMeal.dish_name : (dishName || targetId));
+      recordSystemLog('Web刪除餐點', userId, displayTitle, '', `已自雲端資料庫刪除紀錄：${displayTitle}`);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', deletedMeal }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -942,8 +943,9 @@ function doPost(e) {
         if (payload.action === 'deleteMeal') {
           const targetDate = payload.date || null;
           console.log(`🗑️ [刪除單筆餐點] 日期: ${targetDate || '今日'} 標識: ${payload.id || payload.index}`);
-          recordSystemLog('刪除餐點', userId, `餐點標識: ${payload.id || payload.index} (${targetDate || '今日'})`, '', `回傳總結卡片：已刪除指定紀錄 (${payload.id || payload.index})`);
-          deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props, targetDate);
+          const deletedMeal = deleteMealLog(userId, payload.id || payload.index, userGistId, GITHUB_PAT, props, targetDate);
+          const mealName = (deletedMeal && deletedMeal.dish_name) ? deletedMeal.dish_name : (payload.id || payload.index);
+          recordSystemLog('刪除餐點', userId, `餐點: ${mealName} (${targetDate || '今日'})`, '', `回傳總結卡片：已刪除指定紀錄 (${mealName})`);
           const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props, targetDate);
           replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;

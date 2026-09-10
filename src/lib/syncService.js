@@ -98,19 +98,30 @@ export async function syncMealToCloud(meal) {
 /**
  * 即時同步刪除餐點至 LINE 後端與 Gist
  */
-export async function syncDeleteMealToCloud(mealIdOrName) {
+export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
   const { userId, gistId } = getEffectiveIds();
+  let targetId = '';
+  let dishName = '';
+
+  if (targetOrId && typeof targetOrId === 'object') {
+    targetId = targetOrId.timestamp || targetOrId.id || '';
+    dishName = targetOrId.dish_name || '';
+  } else {
+    targetId = targetOrId || '';
+    dishName = optionalDishName || (isNaN(Number(targetOrId)) ? targetOrId : '');
+  }
+
   const params = new URLSearchParams({
     action: 'deleteMeal',
     userId,
-    dishName: String(mealIdOrName),
-    id: String(mealIdOrName)
+    dishName: String(dishName || targetId),
+    id: String(targetId || dishName)
   });
   if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
-    console.log(`🗑️ [Web ➔ LINE Sync] 即時同步刪除餐點: ${mealIdOrName}`);
+    console.log(`🗑️ [Web ➔ LINE Sync] 即時同步刪除餐點: ${dishName || targetId}`);
   } catch (err) {}
 }
 

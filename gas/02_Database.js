@@ -654,7 +654,7 @@ function deleteMealLog(userId, mealIdOrName, userGistId, pat, props, targetDateS
           console.error("同步刪除 Gist 紀錄失敗:", e);
         }
       }
-      return true;
+      return removedMeal;
     }
     return false;
   } finally {
