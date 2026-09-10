@@ -174,14 +174,17 @@ const normalizeLog = (item) => {
     }
   }
 
-  // Web 用戶 caller 的名稱拿不到就用他的名字
+  // Web 用戶 caller 的名稱拿不到就用他的名字（自動清理歷史殘留的「用戶 (user)」）
   let finalUserName = userName;
-  if (isWeb) {
-    if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client'].includes(finalUserName)) {
-      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown'].includes(userId)) {
+  if (isWeb || finalUserName.includes('(user)') || finalUserName.includes('(ient)')) {
+    if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client', '用戶 (user)', '用戶 (ient)'].includes(finalUserName) || finalUserName.startsWith('用戶 (')) {
+      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient'].includes(userId)) {
         finalUserName = userId; // 用他的名字
       } else if (raw.name) {
         finalUserName = raw.name;
+      } else {
+        const currentName = (typeof localStorage !== 'undefined' && (localStorage.getItem('line_user_name') || localStorage.getItem('user_name'))) || '';
+        finalUserName = currentName || 'Web 用戶';
       }
     }
   }

@@ -1194,7 +1194,7 @@ function getUserDisplayName(userId, channelAccessToken, props) {
       console.warn("取得 LINE 用戶名失敗:", e);
     }
   }
-  return userId.length > 8 ? `用戶 (${userId.slice(-4)})` : userId;
+  return (userId && userId.length > 8 && userId.startsWith('U')) ? `LINE 用戶 (${userId.slice(-4)})` : (userId || '訪客');
 }
 
 function recordSystemLog(type, userId, input, aiResult, output, userName, extra) {
@@ -1214,7 +1214,13 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
     displayName = userId;
   }
   if (!displayName) {
-    displayName = (userId && userId.length > 8) ? `用戶 (${userId.slice(-4)})` : (userId || '訪客');
+    if (userId === 'default_user' || userId === 'web_user' || userId === 'web_client') {
+      displayName = 'Web 用戶';
+    } else if (userId && userId.length > 8 && userId.startsWith('U')) {
+      displayName = `LINE 用戶 (${userId.slice(-4)})`;
+    } else {
+      displayName = userId || '訪客';
+    }
   }
 
   // 決定來源通道 (LINE 智慧助理 vs Web 飲食管家 vs 系統服務)
