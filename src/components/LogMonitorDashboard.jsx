@@ -792,16 +792,36 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // ==========================================
   // 📊 Render Main Dashboard Screen
   // ==========================================
-  const quotaUsed = aiQuota?.used || 0;
-  const quotaMax = aiQuota?.max || 1500;
-  const quotaPercent = Math.min(Math.round((quotaUsed / quotaMax) * 100), 100);
-  const currentRpm = aiQuota?.rpm || 0;
-  const maxRpm = aiQuota?.maxRpm || 15;
-  const rpmPercent = Math.min(Math.round((currentRpm / maxRpm) * 100), 100);
-  const successCount = aiQuota?.successCount || 0;
-  const failCount = aiQuota?.failCount || 0;
+  // ⚡ 智能對齊：從實際日誌中統計 AI 運算記錄，確保即使後端計數器重置或有前序重試，成功率亦能精準反映現況
+  const logAiStats = useMemo(() => {
+    let success = 0;
+    let fail = 0;
+    (normalizedLogs || []).forEach(log => {
+      const t = String(log.type || '');
+      const out = String(log.output || '');
+      const isAiOp = t.includes('辨識') || t.includes('記餐') || t.includes('AI') || t.includes('智能') || t.includes('模型');
+      if (isAiOp) {
+        if (t.includes('異常') || t.includes('失敗') || out.includes('失敗') || out.includes('異常')) {
+          fail++;
+        } else {
+          success++;
+        }
+      }
+    });
+    return { success, fail };
+  }, [normalizedLogs]);
+
+  const successCount = Math.max(aiQuota?.successCount || 0, logAiStats.success);
+  const failCount = Math.max(aiQuota?.failCount || 0, logAiStats.fail);
   const totalCalls = successCount + failCount;
   const successRate = totalCalls > 0 ? Math.round((successCount / totalCalls) * 100) : 100;
+
+  const quotaUsed = Math.max(aiQuota?.used || 0, totalCalls);
+  const quotaMax = aiQuota?.limit || aiQuota?.max || 1500;
+  const quotaPercent = Math.min(Math.round((quotaUsed / quotaMax) * 100), 100);
+  const currentRpm = aiQuota?.currentRpm || aiQuota?.rpm || 0;
+  const maxRpm = aiQuota?.rpmLimit || aiQuota?.maxRpm || 15;
+  const rpmPercent = Math.min(Math.round((currentRpm / maxRpm) * 100), 100);
   const models = aiQuota?.models || {};
   const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
 
@@ -1043,7 +1063,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
           <div>
             <div className="flex items-baseline gap-1">
-              <span className="text-3xl font-black font-mono tracking-tight text-emerald-600">{successRate}%</span>
+              <span className={`text-3xl font-black font-mono tracking-tight ${successRate >= 90 ? 'text-emerald-600' : successRate >= 70 ? 'text-amber-600' : 'text-rose-600'}`}>{successRate}%</span>
               <span className="text-xs font-bold text-zinc-400 ml-1">
                 ({successCount} OK / {failCount} Err)
               </span>

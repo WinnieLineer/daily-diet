@@ -1620,20 +1620,19 @@ function recordAiUsageAttempt(model, isSuccess, props) {
 
 function recordAiUsageSuccess(model, props, meta) {
   try {
+    recordAiUsageAttempt(model, true, props);
     const p = props || PropertiesService.getScriptProperties();
     const today = getTodayDateString();
     const key = 'AI_QUOTA_' + today;
     const raw = p.getProperty(key);
-    let stats = raw ? JSON.parse(raw) : { count: 0, success: 0, fail: 0, models: {}, recentErrors: [] };
-    if (!stats.models) stats.models = {};
-
-    const m = String(model || 'gemini-2.5-flash-lite');
-    if (!stats.models[m]) stats.models[m] = { count: 0, success: 0, fail: 0 };
-    stats.lastSuccessfulModel = m;
-    stats.currentModel = m;
-
-    stats.lastUpdated = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
-    p.setProperty(key, JSON.stringify(stats));
+    if (raw) {
+      const stats = JSON.parse(raw);
+      const m = String(model || 'gemini-2.5-flash-lite');
+      stats.lastSuccessfulModel = m;
+      stats.currentModel = m;
+      stats.lastUpdated = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+      p.setProperty(key, JSON.stringify(stats));
+    }
   } catch (e) {
     console.warn('記錄 AI 成功模型失敗:', e);
   }
@@ -1682,10 +1681,12 @@ function recordAiUsageConsolidatedFailure(models, props, consolidatedError, call
 
 function recordAiUsage(model, isSuccess, props, errorMsg, callerInfo) {
   try {
-    recordAiUsageAttempt(model, isSuccess, props);
-    if (!isSuccess && errorMsg) {
-      recordAiUsageConsolidatedFailure([model], props, errorMsg, callerInfo);
-    } else if (isSuccess) {
+    if (!isSuccess) {
+      recordAiUsageAttempt(model, false, props);
+      if (errorMsg) {
+        recordAiUsageConsolidatedFailure([model], props, errorMsg, callerInfo);
+      }
+    } else {
       recordAiUsageSuccess(model, props, callerInfo);
     }
   } catch (e) {
@@ -1727,17 +1728,22 @@ function getAiQuotaStats(props) {
     const failCount = stats.fail || 0;
     const limit = 1500;
     const remaining = Math.max(0, limit - used);
-    const successRate = used > 0 ? Math.round((successCount / used) * 100) : 100;
+    const totalCalls = successCount + failCount;
+    const successRate = totalCalls > 0 ? Math.round((successCount / totalCalls) * 100) : (failCount === 0 ? 100 : 0);
 
     return {
       today: today,
       currentRpm: currentRpm,
+      rpm: currentRpm,
       rpmLimit: rpmLimit,
+      maxRpm: rpmLimit,
       rpmPercent: rpmPercent,
       limit: limit,
+      max: limit,
       used: used,
       successCount: successCount,
       failCount: failCount,
+      totalCalls: totalCalls,
       remaining: remaining,
       successRate: successRate,
       models: stats.models || {},
@@ -1750,12 +1756,16 @@ function getAiQuotaStats(props) {
     return {
       today: getTodayDateString(),
       currentRpm: 0,
+      rpm: 0,
       rpmLimit: 15,
+      maxRpm: 15,
       rpmPercent: 0,
       limit: 1500,
+      max: 1500,
       used: 0,
       successCount: 0,
       failCount: 0,
+      totalCalls: 0,
       remaining: 1500,
       successRate: 100,
       models: {},
