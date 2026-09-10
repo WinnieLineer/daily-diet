@@ -14,6 +14,7 @@ function doGet(e) {
     const action = e?.parameter?.action;
     let userId = e?.parameter?.userId;
     const incomingGist = e?.parameter?.gistId;
+    const incomingCaller = e?.parameter?.caller || e?.parameter?.userName || e?.parameter?.name || '';
 
     const props = PropertiesService.getScriptProperties();
     const pat = props.getProperty('GITHUB_PAT');
@@ -29,7 +30,16 @@ function doGet(e) {
         }
       }
     }
+    // Web 用戶 caller 的名稱拿不到就用他的名字
+    if ((!userId || userId === 'default_user' || userId === 'undefined') && incomingCaller) {
+      userId = incomingCaller;
+    }
     if (!userId) userId = 'default_user';
+
+    const webCallerName = incomingCaller || (!userId.startsWith('U') && userId !== 'default_user' ? userId : (props.getProperty(`USER_NAME_${userId}`) || ''));
+    if (webCallerName && userId && userId !== 'default_user') {
+      props.setProperty(`USER_NAME_${userId}`, webCallerName);
+    }
 
     // 🚀 0. 觸發一鍵部署原生相機圖文選單 (支援中英文雙語選單)
     if (action === 'deployRichMenu' || action === 'setupRichMenu') {
@@ -128,7 +138,7 @@ function doGet(e) {
       const meal = { id, date, time, dish_name: dishName, calories, protein, carbs, fat, water, category, comment, source: 'WEB_APP' };
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       saveMealLog(userId, meal, userGistId, pat, props);
-      recordSystemLog('Web同步餐點', userId, dishName, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, `已同步儲存：【${dishName}】${calories} kcal · ${protein}g 蛋 · ${water}ml 水`);
+      recordSystemLog('Web同步餐點', userId, dishName, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, `已同步儲存：【${dishName}】${calories} kcal · ${protein}g 蛋 · ${water}ml 水`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', meal }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -140,7 +150,7 @@ function doGet(e) {
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       const deletedMeal = deleteMealLog(userId, targetId || dishName, userGistId, pat, props);
       const displayTitle = (dishName && isNaN(Number(dishName))) ? dishName : ((deletedMeal && deletedMeal.dish_name) ? deletedMeal.dish_name : (dishName || targetId));
-      recordSystemLog('Web刪除餐點', userId, displayTitle, '', `已自雲端資料庫刪除紀錄：${displayTitle}`);
+      recordSystemLog('Web刪除餐點', userId, displayTitle, '', `已自雲端資料庫刪除紀錄：${displayTitle}`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', deletedMeal }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -149,7 +159,7 @@ function doGet(e) {
     if (action === 'clearToday' && userId) {
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       clearTodayLogs(userId, userGistId, pat, props);
-      recordSystemLog('Web清空今日', userId, '清空今日餐點', '', '已清空今日所有餐點與補水紀錄');
+      recordSystemLog('Web清空今日', userId, '清空今日餐點', '', '已清空今日所有餐點與補水紀錄', webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -163,7 +173,7 @@ function doGet(e) {
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       const favItem = { id: Date.now(), dish_name: dishName, calories, protein, water };
       saveUserFavorite(userId, favItem, userGistId, pat, props);
-      recordSystemLog('Web加常用', userId, dishName, `${calories}卡 / ${protein}g蛋`, `已新增至常用清單：【${dishName}】${calories} kcal · ${protein}g 蛋`);
+      recordSystemLog('Web加常用', userId, dishName, `${calories}卡 / ${protein}g蛋`, `已新增至常用清單：【${dishName}】${calories} kcal · ${protein}g 蛋`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -173,7 +183,7 @@ function doGet(e) {
       const favId = e?.parameter?.id || e?.parameter?.favId || e?.parameter?.dishName || e?.parameter?.name;
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       deleteUserFavorite(userId, favId, userGistId, pat, props);
-      recordSystemLog('Web刪除常用', userId, favId, '', `已自常用庫移除標識：${favId}`);
+      recordSystemLog('Web刪除常用', userId, favId, '', `已自常用庫移除標識：${favId}`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -190,7 +200,7 @@ function doGet(e) {
       } else if (favId) {
         updated = reorderUserFavorites(userId, favId, dir, userGistId, pat, props);
       }
-      recordSystemLog('Web換常用順序', userId, favId ? `${favId} (${dir})` : '批量排序', '', '已更新常用餐點順序');
+      recordSystemLog('Web換常用順序', userId, favId ? `${favId} (${dir})` : '批量排序', '', '已更新常用餐點順序', webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', favorites: updated }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -215,7 +225,7 @@ function doGet(e) {
         syncGoalsToUserGist({ calories, protein, water, carbs, fat, show_carbs_fat: showCarbsFat }, userGistId, pat);
       }
       const carbsStatus = showCarbsFatRaw !== undefined ? ` / 碳水:${carbs}g 脂肪:${fat}g (顯示:${showCarbsFat})` : '';
-      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水${carbsStatus}`, '', `已更新體態目標：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml`);
+      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水${carbsStatus}`, '', `已更新體態目標：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -225,7 +235,7 @@ function doGet(e) {
       const persona = e?.parameter?.persona || 'tsundere';
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       setUserPersona(userId, persona, userGistId, pat, props);
-      recordSystemLog('Web更新性格', userId, persona, '', `已更新教練性格為「${persona}」`);
+      recordSystemLog('Web更新性格', userId, persona, '', `已更新教練性格為「${persona}」`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', persona }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -245,7 +255,7 @@ function doGet(e) {
         console.log(`🌐 [Web 語言切換] 同步為最後活躍 LINE 用戶 ${lastLineUser} 切換語系與 Rich Menu 至 ${updated}`);
       }
 
-      recordSystemLog('Web更新語言', rawUserId || lastLineUser || 'unknown', updated, '', `已更新用戶語言為「${updated}」並同步切換 LINE 選單`);
+      recordSystemLog('Web更新語言', rawUserId || lastLineUser || 'unknown', updated, '', `已更新用戶語言為「${updated}」並同步切換 LINE 選單`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', language: updated, lineUserId: lastLineUser }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -465,9 +475,22 @@ function doPost(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
+      const incomingCallerName = data?.caller || data?.userName || data?.name || e?.parameter?.caller || e?.parameter?.userName || '';
+      let webUserId = data?.userId || e?.parameter?.userId || '';
+      if ((!webUserId || webUserId === 'web_user' || webUserId === 'default_user') && incomingCallerName) {
+        webUserId = incomingCallerName;
+      }
+      if (!webUserId) webUserId = 'web_user';
+      const webCaller = incomingCallerName || (!webUserId.startsWith('U') && webUserId !== 'web_user' ? webUserId : (props.getProperty(`USER_NAME_${webUserId}`) || 'Web 用戶'));
+      if (webCaller && webUserId && webUserId !== 'web_user') {
+        props.setProperty(`USER_NAME_${webUserId}`, webCaller);
+      }
+      const aiCallerInfo = { userId: webUserId, userName: webCaller, caller: webCaller };
+
       if (action === 'analyzeMeal' || action === 'analyzeFoodImage') {
         const base64 = data?.image || data?.base64Image || e.parameter?.image;
-        const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language);
+        aiCallerInfo.operation = 'Web照片辨識';
+        const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language, aiCallerInfo);
         if (result && typeof recordSystemLog === 'function') {
           const mUsed = result.model_used || 'Gemini';
           const fallbackNote = (result.failed_attempts && result.failed_attempts.length > 0)
@@ -475,10 +498,11 @@ function doPost(e) {
             : '';
           recordSystemLog(
             'Web照片辨識', 
-            data?.userId || 'web_user', 
+            webUserId, 
             '上傳餐點照片辨識', 
             `[${mUsed}${fallbackNote}] ${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
-            `[模型: ${mUsed}] 回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
+            `[模型: ${mUsed}] 回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`,
+            webCaller
           );
         }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
@@ -486,7 +510,8 @@ function doPost(e) {
       }
       if (action === 'analyzeText' || action === 'analyzeFoodText') {
         const text = data?.text || data?.textInstruction || e.parameter?.text;
-        const result = parseTextWithGeminiFull(text, GEMINI_API_KEY, data?.context, data?.language);
+        aiCallerInfo.operation = 'Web文字辨識';
+        const result = parseTextWithGeminiFull(text, GEMINI_API_KEY, data?.context, data?.language, aiCallerInfo);
         if (result && typeof recordSystemLog === 'function') {
           const mUsed = result.model_used || 'Gemini';
           const fallbackNote = (result.failed_attempts && result.failed_attempts.length > 0)
@@ -494,10 +519,11 @@ function doPost(e) {
             : '';
           recordSystemLog(
             'Web文字辨識', 
-            data?.userId || 'web_user', 
+            webUserId, 
             text || '輸入餐點文字辨識', 
             `[${mUsed}${fallbackNote}] ${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
-            `[模型: ${mUsed}] 回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`
+            `[模型: ${mUsed}] 回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`,
+            webCaller
           );
         }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
@@ -509,10 +535,11 @@ function doPost(e) {
         if (typeof recordSystemLog === 'function') {
           recordSystemLog(
             'Web教練諮詢', 
-            data?.userId || 'web_user', 
+            webUserId, 
             typeof prompt === 'string' ? prompt : '教練諮詢', 
             '', 
-            `回傳教練建議：${typeof result === 'string' ? result : ''}`
+            `回傳教練建議：${typeof result === 'string' ? result : ''}`,
+            webCaller
           );
         }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))

@@ -781,7 +781,7 @@ Do NOT wrap in markdown backticks.`
 // 🌐 Web App 跨端 AI 代理 (Full Nutrition Recognition)
 // ========================================================
 
-function analyzeMealWithGeminiFull(base64Image, apiKey, context, language) {
+function analyzeMealWithGeminiFull(base64Image, apiKey, context, language, callerInfo) {
   const models = (typeof VISION_GEMINI_MODELS !== 'undefined' && VISION_GEMINI_MODELS.length) 
     ? VISION_GEMINI_MODELS 
     : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
@@ -845,9 +845,9 @@ No markdown backticks.`;
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       if (typeof recordAiUsageSuccess === 'function') {
-        recordAiUsageSuccess(model);
+        recordAiUsageSuccess(model, null, callerInfo);
       } else if (typeof recordAiUsage === 'function') {
-        recordAiUsage(model, true);
+        recordAiUsage(model, true, null, null, callerInfo);
       }
       const parsedObj = JSON.parse(cleanJson);
       const balanced = sanitizeAndBalanceNutrition(parsedObj, parsedObj.dish_name);
@@ -866,13 +866,16 @@ No markdown backticks.`;
   }
 
   const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  const callerPayload = (callerInfo && typeof callerInfo === 'object') ? Object.assign({}, callerInfo) : { operation: 'Web照片辨識' };
+  callerPayload.operation = callerPayload.operation || 'Web照片辨識';
+  callerPayload.failedAttempts = failedAttempts;
   if (typeof recordAiUsageConsolidatedFailure === 'function') {
-    recordAiUsageConsolidatedFailure(models, null, consolidatedError, { operation: 'Web照片辨識', failedAttempts: failedAttempts });
+    recordAiUsageConsolidatedFailure(models, null, consolidatedError, callerPayload);
   }
   throw new Error(`Gemini Vision analysis failed: ${consolidatedError}`);
 }
 
-function parseTextWithGeminiFull(text, apiKey, context, language) {
+function parseTextWithGeminiFull(text, apiKey, context, language, callerInfo) {
   const models = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
     ? TEXT_GEMINI_MODELS 
     : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
@@ -930,9 +933,9 @@ No markdown backticks.`;
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
       const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       if (typeof recordAiUsageSuccess === 'function') {
-        recordAiUsageSuccess(model);
+        recordAiUsageSuccess(model, null, callerInfo);
       } else if (typeof recordAiUsage === 'function') {
-        recordAiUsage(model, true);
+        recordAiUsage(model, true, null, null, callerInfo);
       }
       const parsedObj = JSON.parse(cleanJson);
       const balanced = sanitizeAndBalanceNutrition(parsedObj, parsedObj.dish_name);
@@ -951,8 +954,11 @@ No markdown backticks.`;
   }
 
   const consolidatedError = failedAttempts.map(function(a) { return `[${a.model}: ${a.status || 'ERR'}] ${a.error}`; }).join(' ➔ ');
+  const callerPayload = (callerInfo && typeof callerInfo === 'object') ? Object.assign({}, callerInfo) : { operation: 'Web文字辨識' };
+  callerPayload.operation = callerPayload.operation || 'Web文字辨識';
+  callerPayload.failedAttempts = failedAttempts;
   if (typeof recordAiUsageConsolidatedFailure === 'function') {
-    recordAiUsageConsolidatedFailure(models, null, consolidatedError, { operation: 'Web文字辨識', failedAttempts: failedAttempts });
+    recordAiUsageConsolidatedFailure(models, null, consolidatedError, callerPayload);
   }
   throw new Error(`Gemini Text analysis failed: ${consolidatedError}`);
 }

@@ -1209,6 +1209,10 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
       displayName = getUserDisplayName(userId, channelToken, props);
     }
   }
+  // Web 用戶 caller 的名稱拿不到就用他的名字
+  if (!displayName && userId && !userId.startsWith('U') && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api'].includes(userId)) {
+    displayName = userId;
+  }
   if (!displayName) {
     displayName = (userId && userId.length > 8) ? `用戶 (${userId.slice(-4)})` : (userId || '訪客');
   }
@@ -1653,10 +1657,12 @@ function recordAiUsageConsolidatedFailure(models, props, consolidatedError, call
     if (callerInfo) {
       if (typeof callerInfo === 'string') {
         callerId = callerInfo;
-        callerName = p.getProperty(`USER_NAME_${callerInfo}`) || `用戶 (${callerInfo.slice(-4)})`;
+        callerName = p.getProperty(`USER_NAME_${callerInfo}`) || (!callerInfo.startsWith('U') && !['web_user', 'default_user'].includes(callerInfo) ? callerInfo : `用戶 (${callerInfo.slice(-4)})`);
       } else if (typeof callerInfo === 'object') {
         callerId = callerInfo.userId || '';
-        callerName = callerInfo.userName || (callerId ? p.getProperty(`USER_NAME_${callerId}`) : '') || callerInfo.caller || 'LINE 用戶';
+        const isWeb = (callerInfo.operation && callerInfo.operation.includes('Web')) || (callerId && callerId.startsWith('web_'));
+        const defaultFallback = isWeb ? 'Web 用戶' : 'LINE 用戶';
+        callerName = callerInfo.userName || callerInfo.caller || (callerId ? p.getProperty(`USER_NAME_${callerId}`) : '') || (!callerId.startsWith('U') && callerId && !['web_user', 'default_user', 'API-Gateway'].includes(callerId) ? callerId : '') || defaultFallback;
         callerOp = callerInfo.operation || callerOp;
       }
     }

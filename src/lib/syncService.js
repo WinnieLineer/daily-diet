@@ -9,17 +9,27 @@ const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-
 function getEffectiveIds() {
   let userId = '';
   let gistId = '';
+  let userName = '';
   try {
     userId = localStorage.getItem('line_user_id') || '';
+    userName = localStorage.getItem('line_user_name') || localStorage.getItem('user_name') || '';
     gistId = localStorage.getItem('gist_backup_id') || '';
     if (typeof window !== 'undefined' && window.location.search) {
       const q = new URLSearchParams(window.location.search);
       if (!userId && q.get('userId')) userId = q.get('userId');
       if (!userId && q.get('user')) userId = q.get('user');
+      if (!userName && q.get('userName')) userName = q.get('userName');
+      if (!userName && q.get('name')) userName = q.get('name');
       if (!gistId && q.get('gistId')) gistId = q.get('gistId');
     }
+    // Web 用戶：若 caller 名稱拿不到，就用他的名字
+    if (!userName && userId && !userId.startsWith('U') && userId !== 'default_user') {
+      userName = userId;
+    }
   } catch (e) {}
-  return { userId: userId || 'default_user', gistId };
+  const effectiveUserId = userId || userName || 'default_user';
+  const effectiveUserName = userName || (userId && !userId.startsWith('U') ? userId : '');
+  return { userId: effectiveUserId, userName: effectiveUserName, gistId };
 }
 
 // ⏱️ 輕量防抖工具函數
@@ -61,7 +71,7 @@ async function processMealSyncQueue() {
  * 即時同步單筆餐點至 LINE 後端與 Gist
  */
 export async function syncMealToCloud(meal) {
-  const { userId, gistId } = getEffectiveIds();
+  const { userId, userName, gistId } = getEffectiveIds();
   if (!meal) return;
 
   const nowTime = meal.time || (meal.timestamp ? new Date(Number(meal.timestamp)).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) : new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }));
@@ -80,6 +90,10 @@ export async function syncMealToCloud(meal) {
     time: nowTime,
     id: String(meal.timestamp || meal.id || Date.now())
   });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
   if (gistId) params.append('gistId', gistId);
 
   const task = async () => {
@@ -99,7 +113,7 @@ export async function syncMealToCloud(meal) {
  * 即時同步刪除餐點至 LINE 後端與 Gist
  */
 export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
-  const { userId, gistId } = getEffectiveIds();
+  const { userId, userName, gistId } = getEffectiveIds();
   let targetId = '';
   let dishName = '';
 
@@ -117,6 +131,10 @@ export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
     dishName: String(dishName || targetId),
     id: String(targetId || dishName)
   });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
   if (gistId) params.append('gistId', gistId);
 
   try {
@@ -129,7 +147,7 @@ export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
  * 實際執行目標更新
  */
 function doSyncGoals(goals) {
-  const { userId, gistId } = getEffectiveIds();
+  const { userId, userName, gistId } = getEffectiveIds();
   const params = new URLSearchParams({
     action: 'updateGoals',
     userId,
@@ -140,6 +158,10 @@ function doSyncGoals(goals) {
     fat: String(goals.fat || 60),
     show_carbs_fat: String(!!goals.show_carbs_fat)
   });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
   if (gistId) params.append('gistId', gistId);
 
   try {
@@ -165,12 +187,16 @@ export function syncGoalsToCloud(goals, immediate = false) {
  * 實際執行教練性格更新
  */
 function doSyncPersona(persona) {
-  const { userId, gistId } = getEffectiveIds();
+  const { userId, userName, gistId } = getEffectiveIds();
   const params = new URLSearchParams({
     action: 'updatePersona',
     userId,
     persona: String(persona || 'tsundere')
   });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
   if (gistId) params.append('gistId', gistId);
 
   try {
@@ -196,13 +222,17 @@ export function syncPersonaToCloud(persona, immediate = false) {
  * 實際執行語言更新
  */
 function doSyncLanguage(lang) {
-  const { userId, gistId } = getEffectiveIds();
+  const { userId, userName, gistId } = getEffectiveIds();
   const validLang = lang === 'en' ? 'en' : 'zh';
   const params = new URLSearchParams({
     action: 'updateLanguage',
     userId,
     lang: validLang
   });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
   if (gistId) params.append('gistId', gistId);
 
   try {

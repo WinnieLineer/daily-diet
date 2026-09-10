@@ -93,8 +93,29 @@ function createWebAIPayload(data) {
   const signatureRaw = `DD_AI_${timestamp}_${nonce}_${WEB_AI_SECRET}`;
   const appToken = btoa(signatureRaw).substring(0, 32);
 
+  let userName = '';
+  let userId = '';
+  try {
+    userName = localStorage.getItem('line_user_name') || localStorage.getItem('user_name') || '';
+    userId = localStorage.getItem('line_user_id') || userName || '';
+    if (typeof window !== 'undefined' && window.location.search) {
+      const q = new URLSearchParams(window.location.search);
+      if (!userId && q.get('userId')) userId = q.get('userId');
+      if (!userId && q.get('user')) userId = q.get('user');
+      if (!userName && q.get('userName')) userName = q.get('userName');
+      if (!userName && q.get('name')) userName = q.get('name');
+    }
+    // Web 用戶 caller 的名稱拿不到就用他的名字
+    if (!userName && userId && !userId.startsWith('U')) {
+      userName = userId;
+    }
+  } catch (e) {}
+
   return {
     ...data,
+    userId: data?.userId || userId || userName || 'web_user',
+    userName: data?.userName || userName || userId || '',
+    caller: data?.caller || userName || userId || 'Web 用戶',
     client: 'daily-diet-web',
     timestamp,
     nonce,

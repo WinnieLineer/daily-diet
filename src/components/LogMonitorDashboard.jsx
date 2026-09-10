@@ -111,7 +111,8 @@ const normalizeLog = (item) => {
 
   const type = String(raw.type || raw.op || '系統操作');
   const userId = String(raw.userId || raw.rawUserId || '');
-  const userName = String(raw.userName || raw.userId || '用戶');
+  const caller = String(raw.caller || raw.callerName || '');
+  let userName = String(raw.userName || caller || raw.name || '');
   const inputStr = String(raw.input || raw.query || '');
   const aiResultStr = String(raw.aiResult || raw.nutrients || '');
   const outputStr = String(raw.output || raw.result || '');
@@ -173,9 +174,21 @@ const normalizeLog = (item) => {
     }
   }
 
+  // Web 用戶 caller 的名稱拿不到就用他的名字
+  let finalUserName = userName;
+  if (isWeb) {
+    if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client'].includes(finalUserName)) {
+      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown'].includes(userId)) {
+        finalUserName = userId; // 用他的名字
+      } else if (raw.name) {
+        finalUserName = raw.name;
+      }
+    }
+  }
+
   return {
     time: formatUnifiedTimestamp(raw.time),
-    userName: String(userName || (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'))),
+    userName: String(finalUserName || (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'))),
     userId: String(raw.rawUserId || raw.userId || 'user'),
     type: type,
     input: inputStr,
@@ -546,7 +559,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         const errDesc = `[${err.model || 'Gemini'}] ${err.error || 'Request Error'}`;
         const exists = list.some((l) => l.output && l.output.includes(err.error));
         if (!exists) {
-          const callerName = err.caller || (err.userId ? `用戶 (${err.userId.slice(-4)})` : '系統服務 (AI Gateway)');
+          const isWebError = (err.operation && err.operation.includes('Web')) || (err.model && err.model.includes('Web'));
+          let callerName = err.caller || err.userName || err.name || '';
+          if (!callerName && err.userId && !err.userId.startsWith('U') && !['API-Gateway', 'web_user', 'default_user'].includes(err.userId)) {
+            callerName = err.userId; // Web 用戶 caller 的名稱拿不到就用他的名字
+          }
+          if (!callerName) {
+            callerName = err.userId ? `用戶 (${err.userId.slice(-4)})` : (isWebError ? 'Web 用戶' : '系統服務 (AI Gateway)');
+          }
           const callerId = err.userId || 'API-Gateway';
           const opName = err.operation || '模型運算';
           list.unshift({
