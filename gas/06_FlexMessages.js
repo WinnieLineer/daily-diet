@@ -3666,7 +3666,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🛠️ DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+              { type: "text", text: "🛠️ DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", flex: 0 },
               { type: "text", text: isEn ? "Command Manual" : "全功能操作手冊", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
@@ -3676,7 +3676,8 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             color: "#FFFFFF",
             weight: "bold",
             size: "xs",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
