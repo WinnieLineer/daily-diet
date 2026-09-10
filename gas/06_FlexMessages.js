@@ -56,6 +56,7 @@ function createNeoFlexButton(config) {
   const innerBtn = {
     type: 'box',
     layout: 'vertical',
+    flex: 1,
     backgroundColor: isBlackVariant ? '#18181B' : backgroundColor,
     borderColor: '#000000',
     borderWidth: '2px',
@@ -513,14 +514,14 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             contents: [
               createNeoFlexButton({
                 label: isEn 
-                  ? (analysis.date && analysis.date !== getTodayDateString() ? `📊 ${analysis.date} Summary` : "📊 Daily Summary")
+                  ? (analysis.date && analysis.date !== getTodayDateString() ? `📊 ${analysis.date}` : "📊 Summary")
                   : (analysis.date && analysis.date !== getTodayDateString() ? `📊 查看 ${analysis.date} 總結` : "📊 查看今日總結"),
                 variant: "black",
                 size: "md",
-                flex: isEn ? 6 : 5,
+                flex: 1,
                 action: {
                   type: "postback",
-                  label: isEn ? "Daily Summary" : "今日總結",
+                  label: isEn ? "Summary" : "今日總結",
                   data: analysis.date && analysis.date !== getTodayDateString()
                     ? JSON.stringify({ action: 'pickDate', date: analysis.date })
                     : postbackSaveData,
@@ -533,7 +534,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
                 variant: "yellowLight",
                 size: "md",
-                flex: isEn ? 5 : 5,
+                flex: 1,
                 action: {
                   type: "postback",
                   label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
@@ -1141,7 +1142,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 spacing: "xs",
                 contents: [
                   createNeoFlexButton({
-                    label: isEn ? "Sed 1.2" : "久坐 1.2",
+                    label: isEn ? "Sed\n1.2" : "久坐\n1.2",
                     variant: "white",
                     size: "sm",
                     flex: 1,
@@ -1156,7 +1157,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                     }
                   }),
                   createNeoFlexButton({
-                    label: isEn ? "Light 1.38" : "輕度 1.38",
+                    label: isEn ? "Light\n1.38" : "輕度\n1.38",
                     variant: "white",
                     size: "sm",
                     flex: 1,
@@ -1171,7 +1172,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                     }
                   }),
                   createNeoFlexButton({
-                    label: isEn ? "Mod 1.55" : "中度 1.55",
+                    label: isEn ? "Mod\n1.55" : "中度\n1.55",
                     variant: "white",
                     size: "sm",
                     flex: 1,
@@ -1186,7 +1187,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                     }
                   }),
                   createNeoFlexButton({
-                    label: isEn ? "Heavy 1.73" : "高強 1.73",
+                    label: isEn ? "Heavy\n1.73" : "高強\n1.73",
                     variant: "white",
                     size: "sm",
                     flex: 1,
@@ -2197,9 +2198,10 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
           {
             type: "box",
             layout: "horizontal",
+            alignItems: "center",
             contents: [
-              { type: "text", text: isEn ? "💧 Hydration Station" : "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF" },
-              { type: "text", text: isEn ? "1-Tap Log" : "一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
+              { type: "text", text: isEn ? "💧 Hydration Station" : "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF", flex: 0 },
+              { type: "text", text: isEn ? "⚡ 1-Tap" : "⚡ 一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
             ]
           },
           {
@@ -2491,7 +2493,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             action: {
               type: "postback",
               label: isEn ? "📋 All Favorites List" : "📋 常用管理面板 (全部)",
-              data: JSON.stringify({ action: 'manageFavorites' }),
+              data: JSON.stringify({ action: 'manageFavorites', page: 1 }),
               displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
             }
           })
@@ -2637,7 +2639,7 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             action: {
               type: "postback",
               label: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理面板",
-              data: JSON.stringify({ action: 'manageFavorites' }),
+              data: JSON.stringify({ action: 'manageFavorites', page: 1 }),
               displayText: isEn ? "📋 Manage Favorites" : "📋 常用餐點管理"
             }
           }),
@@ -2777,16 +2779,23 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
 
 /**
  * 常用餐點專屬管理面板 (可直接在 LINE 瀏覽所有常用、微調數值、一鍵刪除)
+ * 🛡️ 內建安全分頁 (PAGE_SIZE = 4)：單張 Bubble 嚴格控制於 ~19KB，徹底杜絕 LINE Flex 30KB 限制所導致的 HTTP 400 失敗
  */
-function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
+function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang, page) {
   if (!props) props = PropertiesService.getScriptProperties();
   const userLang = lang || getUserLanguage(userId, props, userGistId);
   const isEn = userLang === 'en';
   const favorites = getUserFavorites(userId, props, userGistId);
 
   const favBoxes = [];
+  const totalFavs = favorites.length;
+  const PAGE_SIZE = 4;
+  const totalPages = Math.max(1, Math.ceil(totalFavs / PAGE_SIZE));
+  const curPage = Math.max(1, Math.min(parseInt(page, 10) || 1, totalPages));
+  const startIdx = (curPage - 1) * PAGE_SIZE;
+  const pageFavs = favorites.slice(startIdx, startIdx + PAGE_SIZE);
 
-  if (favorites.length === 0) {
+  if (totalFavs === 0) {
     favBoxes.push({
       type: "box",
       layout: "vertical",
@@ -2806,7 +2815,8 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
       ]
     });
   } else {
-    favorites.forEach((fav, index) => {
+    pageFavs.forEach((fav, pIdx) => {
+      const globalIndex = startIdx + pIdx;
       const dishName = fav.dish_name || (isEn ? 'Favorite Meal' : '常用餐點');
       favBoxes.push({
         type: "box",
@@ -2824,7 +2834,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
             contents: [
               { 
                 type: "text", 
-                text: `${index + 1}. ${dishName}`, 
+                text: `${globalIndex + 1}. ${dishName}`, 
                 size: "sm", 
                 color: "#18181B", 
                 weight: "bold", 
@@ -2874,13 +2884,13 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
             ]
           },
           // 第一行（順序調整）：若有多於一道常用時顯示
-          (index > 0 || index < favorites.length - 1) ? {
+          (globalIndex > 0 || globalIndex < totalFavs - 1) ? {
             type: "box",
             layout: "horizontal",
             spacing: "xs",
             margin: "xs",
             contents: [
-              index > 0 ? createNeoFlexButton({
+              globalIndex > 0 ? createNeoFlexButton({
                 label: isEn ? "⬆️ Up" : "⬆️ 上移",
                 variant: "green",
                 size: "sm",
@@ -2888,11 +2898,11 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                 action: {
                   type: "postback",
                   label: isEn ? "⬆️ Up" : "⬆️ 上移",
-                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'up' }),
+                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'up', page: curPage }),
                   displayText: isEn ? `⬆️ Move up: ${dishName}` : `⬆️ 將「${dishName}」往上移`
                 }
               }) : null,
-              index < favorites.length - 1 ? createNeoFlexButton({
+              globalIndex < totalFavs - 1 ? createNeoFlexButton({
                 label: isEn ? "⬇️ Down" : "⬇️ 下移",
                 variant: "green",
                 size: "sm",
@@ -2900,11 +2910,11 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                 action: {
                   type: "postback",
                   label: isEn ? "⬇️ Down" : "⬇️ 下移",
-                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'down' }),
+                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'down', page: curPage }),
                   displayText: isEn ? `⬇️ Move down: ${dishName}` : `⬇️ 將「${dishName}」往下移`
                 }
               }) : null,
-              index > 1 ? createNeoFlexButton({
+              globalIndex > 1 ? createNeoFlexButton({
                 label: isEn ? "🔝 Top" : "🔝 置頂",
                 variant: "yellowLight",
                 size: "sm",
@@ -2912,7 +2922,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                 action: {
                   type: "postback",
                   label: isEn ? "🔝 Top" : "🔝 置頂",
-                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'top' }),
+                  data: JSON.stringify({ action: 'moveFavorite', favId: fav.id || dishName, dir: 'top', page: curPage }),
                   displayText: isEn ? `🔝 Move to top: ${dishName}` : `🔝 將「${dishName}」置頂`
                 }
               }) : null
@@ -2952,7 +2962,8 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
                     action: 'deleteFavorite', 
                     favId: fav.id || dishName, 
                     name: dishName,
-                    returnView: 'manage'
+                    returnView: 'manage',
+                    page: curPage
                   }),
                   displayText: isEn ? `🗑️ Delete favorite: ${dishName}` : `🗑️ 刪除常用：${dishName}`
                 }
@@ -2966,7 +2977,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
 
   return {
     type: "flex",
-    altText: isEn ? "⭐ Manage Favorites" : "⭐ 常用餐點管理",
+    altText: isEn ? `⭐ Manage Favorites (Page ${curPage}/${totalPages})` : `⭐ 常用餐點管理（第 ${curPage}/${totalPages} 頁）`,
     contents: {
       type: "bubble",
       size: "mega",
@@ -2981,7 +2992,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
             layout: "horizontal",
             contents: [
               { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用餐點管理", weight: "bold", size: "md", color: "#713F12" },
-              { type: "text", text: isEn ? `${favorites.length} items` : `共 ${favorites.length} 道`, size: "xs", color: "#854D0E", align: "end" }
+              { type: "text", text: isEn ? `Page ${curPage}/${totalPages} (${totalFavs})` : `第 ${curPage}/${totalPages} 頁 (共 ${totalFavs} 道)`, size: "xs", color: "#854D0E", align: "end" }
             ]
           },
           {
@@ -3008,6 +3019,37 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
         spacing: "sm",
         paddingAll: "14px",
         contents: [
+          ...(totalPages > 1 ? [{
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              curPage > 1 ? createNeoFlexButton({
+                label: isEn ? `⬅️ Page ${curPage - 1}` : `⬅️ 第 ${curPage - 1} 頁`,
+                variant: "slate",
+                size: "md",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? `⬅️ Page ${curPage - 1}` : `⬅️ 第 ${curPage - 1} 頁`,
+                  data: JSON.stringify({ action: 'manageFavorites', page: curPage - 1 }),
+                  displayText: isEn ? `⬅️ Page ${curPage - 1}` : `⬅️ 前往第 ${curPage - 1} 頁`
+                }
+              }) : null,
+              curPage < totalPages ? createNeoFlexButton({
+                label: isEn ? `➡️ Page ${curPage + 1}` : `➡️ 第 ${curPage + 1} 頁`,
+                variant: "blue",
+                size: "md",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? `➡️ Page ${curPage + 1}` : `➡️ 第 ${curPage + 1} 頁`,
+                  data: JSON.stringify({ action: 'manageFavorites', page: curPage + 1 }),
+                  displayText: isEn ? `➡️ Page ${curPage + 1}` : `➡️ 前往第 ${curPage + 1} 頁`
+                }
+              }) : null
+            ].filter(Boolean)
+          }] : []),
           createNeoFlexButton({
             label: isEn ? "➕ Add New Favorite" : "➕ 新增常用餐點",
             variant: "black",
@@ -3025,9 +3067,10 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang) {
             variant: "white",
             size: "md",
             action: {
-              type: "message",
+              type: "postback",
               label: isEn ? "⭐ Back to Carousel" : "⭐ 返回常用輪播",
-              text: isEn ? "Favorites" : "常用"
+              data: JSON.stringify({ action: 'favPage', page: 1 }),
+              displayText: isEn ? "Favorites" : "常用"
             }
           })
         ]

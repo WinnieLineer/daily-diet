@@ -955,7 +955,7 @@ function doPost(e) {
           recordSystemLog('移除常用', userId, `標識: ${payload.favId || payload.name}`, '', `回傳更新後清單：已自常用庫移除「${payload.favId || payload.name}」`);
           deleteUserFavorite(userId, payload.favId || payload.name, userGistId, GITHUB_PAT, props);
           if (payload.returnView === 'manage') {
-            const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+            const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang, payload.page);
             replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
             const page = Number(payload.page) || 1;
@@ -977,7 +977,7 @@ function doPost(e) {
             const favListFlex = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props, page);
             replyFlexMessage(replyToken, favListFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
-            const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+            const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang, payload.page);
             replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           }
           continue;
@@ -997,7 +997,8 @@ function doPost(e) {
         if (payload.action === 'manageFavorites') {
           console.log(`📋 [常用餐點管理] 用戶: ${userId}`);
           recordSystemLog('常用管理', userId, '常用管理面板', '', '回傳常用餐點管理卡片');
-          const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang);
+          const page = Number(payload.page) || 1;
+          const mgmtFavFlex = generateManageFavoritesFlex(userId, LIFF_ID, userGistId, props, userLang, page);
           replyFlexMessage(replyToken, mgmtFavFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
