@@ -100,8 +100,8 @@ const HistoryTrends = ({ goals, summary }) => {
         </div>
       </div>
 
-      <div className="h-[180px] w-full">
-        <ResponsiveContainer width="100%" height="100%">
+      <div className="h-[180px] w-full min-w-0">
+        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
           <BarChart data={trendData} margin={{ top: 25, right: 5, left: -20, bottom: 0 }}>
             <XAxis 
               dataKey="name" 
@@ -137,26 +137,26 @@ const HistoryTrends = ({ goals, summary }) => {
             
             <ReferenceLine 
               y={CALORIE_GOAL} stroke="#000" strokeDasharray="8 8" strokeWidth={2} 
-              label={({ viewBox }) => (
+              label={({ viewBox }) => (viewBox && typeof viewBox.width === 'number' && typeof viewBox.y === 'number') ? (
                 <g>
                   <rect x={viewBox.width - 80} y={viewBox.y - 12} width="76" height="18" rx="6" fill="#000" />
                   <text x={viewBox.width - 42} y={viewBox.y} dy={1} fill="#fff" fontSize="9" fontWeight="900" textAnchor="middle">
                     🔥 {CALORIE_GOAL} kcal
                   </text>
                 </g>
-              )} 
+              ) : null} 
             />
 
             <ReferenceLine 
               y={PROTEIN_GOAL * 10} stroke="#94a3b8" strokeDasharray="4 4" strokeWidth={2} 
-              label={({ viewBox }) => (
+              label={({ viewBox }) => (viewBox && typeof viewBox.width === 'number' && typeof viewBox.y === 'number') ? (
                 <g>
                   <rect x={viewBox.width - 65} y={viewBox.y - 12} width="60" height="18" rx="6" fill="#94a3b8" />
                   <text x={viewBox.width - 35} y={viewBox.y} dy={1} fill="#fff" fontSize="9" fontWeight="900" textAnchor="middle">
                     🍖 {PROTEIN_GOAL}g
                   </text>
                 </g>
-              )} 
+              ) : null} 
             />
             
             <Bar dataKey="calories" radius={[4, 4, 0, 0]} barSize={range > 14 ? 8 : (range > 7 ? 12 : 16)}>

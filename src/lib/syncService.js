@@ -80,14 +80,14 @@ export async function syncMealToCloud(meal) {
   const params = new URLSearchParams({
     action: 'saveMeal',
     userId,
-    dishName: meal.dish_name || '餐點',
+    dishName: String(meal.dish_name || '餐點').slice(0, 100),
     cal: String(meal.calories || 0),
     pro: String(meal.protein || 0),
     wat: String(meal.water || 0),
     carbs: String(meal.carbs || 0),
     fat: String(meal.fat || 0),
-    category: meal.category || '',
-    comment: meal.comment || meal.advice || '',
+    category: String(meal.category || '').slice(0, 50),
+    comment: String(meal.comment || meal.advice || '').slice(0, 200),
     date: meal.date || getLocalDateString(),
     time: nowTime,
     id: String(meal.timestamp || meal.id || Date.now())

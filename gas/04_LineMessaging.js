@@ -300,7 +300,11 @@ function attachQuickReply(message, userId, props) {
  * 回覆 LINE Flex 訊息
  */
 function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
+  if (!flexMessage) return;
   try {
+    if (flexMessage.altText && flexMessage.altText.length > 400) {
+      flexMessage.altText = flexMessage.altText.slice(0, 397) + '...';
+    }
     if (userId && props) {
       attachQuickReply(flexMessage, userId, props);
     }
@@ -337,7 +341,8 @@ function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
  */
 function replyTextMessage(replyToken, text, accessToken, userId, props) {
   try {
-    const textMsg = { type: "text", text: text };
+    const safeText = (typeof text === 'string' && text.length > 5000) ? (text.slice(0, 4997) + '...') : String(text || '');
+    const textMsg = { type: "text", text: safeText };
     if (userId && props) {
       attachQuickReply(textMsg, userId, props);
     }
@@ -370,8 +375,11 @@ function replyTextMessage(replyToken, text, accessToken, userId, props) {
  * 主動推播 LINE Flex 訊息
  */
 function pushFlexMessage(userId, flexMessage, accessToken, props) {
-  if (!userId || !accessToken) return;
+  if (!userId || !accessToken || !flexMessage) return;
   try {
+    if (flexMessage.altText && flexMessage.altText.length > 400) {
+      flexMessage.altText = flexMessage.altText.slice(0, 397) + '...';
+    }
     if (props) attachQuickReply(flexMessage, userId, props);
     UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
       method: "post",
@@ -396,7 +404,8 @@ function pushFlexMessage(userId, flexMessage, accessToken, props) {
 function pushTextMessage(userId, text, accessToken, props) {
   if (!userId || !accessToken) return;
   try {
-    const textMsg = { type: "text", text: text };
+    const safeText = (typeof text === 'string' && text.length > 5000) ? (text.slice(0, 4997) + '...') : String(text || '');
+    const textMsg = { type: "text", text: safeText };
     if (props) attachQuickReply(textMsg, userId, props);
     UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
       method: "post",

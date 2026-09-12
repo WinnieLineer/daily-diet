@@ -1,5 +1,4 @@
 import React, { useRef, useState } from 'react';
-import html2canvas from 'html2canvas';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { X, Download, Share2, Sparkles, Flame, MapPin, Calendar, Loader2, Zap } from 'lucide-react';
@@ -53,6 +52,8 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
   };
 
   const generateCanvas = async () => {
+    const html2canvasModule = await import('html2canvas');
+    const html2canvas = html2canvasModule.default || html2canvasModule;
     return await html2canvas(cardRef.current, {
       scale: 3,
       useCORS: true,

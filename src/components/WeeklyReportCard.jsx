@@ -1,5 +1,4 @@
 import React, { useRef, useState, useEffect } from 'react';
-import html2canvas from 'html2canvas';
 import { motion, AnimatePresence } from 'framer-motion';
 import { createPortal } from 'react-dom';
 import { X, Download, Share2, Sparkles, Flame, Calendar, Loader2, Zap, Trophy, TrendingDown, TrendingUp, BarChart2 } from 'lucide-react';
@@ -228,6 +227,8 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
   };
 
   const generateCanvas = async () => {
+    const html2canvasModule = await import('html2canvas');
+    const html2canvas = html2canvasModule.default || html2canvasModule;
     return await html2canvas(cardRef.current, {
       scale: 3,
       useCORS: true,
