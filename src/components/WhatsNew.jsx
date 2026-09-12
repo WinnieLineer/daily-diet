@@ -4,6 +4,14 @@ import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Za
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
+const safeGetStorage = (key) => {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const FeatureItem = ({ icon: Icon, title, description, color }) => (
   <div className="flex gap-4 p-4 bg-white border-4 border-black rounded-2xl shadow-neo-sm mb-4">
     <div className={`shrink-0 w-12 h-12 ${color} border-4 border-black rounded-xl flex items-center justify-center shadow-neo-sm`}>
@@ -183,7 +191,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                       {t('whatsnew_v300_line_desc')}
                     </p>
 
-                    {localStorage.getItem('gist_backup_id') && (
+                    {safeGetStorage('gist_backup_id') && (
                       <div className="p-2.5 bg-white border-2 border-black rounded-xl space-y-1.5 shadow-neo-xs">
                         <div className="flex items-center justify-between text-[10px] font-black text-amber-950">
                           <span>☁️ 您的 Gist 同步 ID</span>
@@ -191,13 +199,16 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                         </div>
                         <div className="flex items-center gap-1.5">
                           <div className="flex-1 bg-amber-50 border border-black/20 p-1.5 rounded font-mono text-[10px] font-black text-zinc-800 break-all select-all">
-                            {localStorage.getItem('gist_backup_id')}
+                            {safeGetStorage('gist_backup_id')}
                           </div>
                           <button
                             type="button"
                             onClick={() => {
-                              navigator.clipboard.writeText(localStorage.getItem('gist_backup_id'));
-                              alert("📋 Gist ID 已成功複製！請在 LINE 聊天室傳送「綁定 <貼上ID>」即可同步！");
+                              const gid = safeGetStorage('gist_backup_id');
+                              if (gid) {
+                                navigator.clipboard.writeText(gid);
+                                alert("📋 Gist ID 已成功複製！請在 LINE 聊天室傳送「綁定 <貼上ID>」即可同步！");
+                              }
                             }}
                             className="bg-black text-white px-2.5 py-1.5 rounded font-black text-[10px] active:scale-95 shrink-0"
                           >

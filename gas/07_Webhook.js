@@ -70,6 +70,48 @@ function doGet(e) {
       }
     }
 
+    // 📬 0.2 Web 用戶反饋 / 問題回報端點 (GET 支援)
+    if (action === 'sendFeedback' || action === 'reportBug') {
+      const subject = e?.parameter?.subject || '用戶意見反饋';
+      const message = e?.parameter?.message || '';
+      const contact = e?.parameter?.contact || '';
+      const clientDevice = e?.parameter?.device || '';
+      const caller = e?.parameter?.userName || e?.parameter?.caller || 'Web 訪客';
+      const uid = e?.parameter?.userId || 'web_user';
+
+      if (!message.trim()) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '訊息內容不可為空' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const issueDetails = [
+        message,
+        '',
+        `📱 裝置與環境：${clientDevice || '未知'}`,
+        `📫 聯絡方式：${contact || '未提供'}`
+      ].join('\n');
+
+      const mailResult = sendBugReportNotification({
+        userId: uid,
+        userName: caller,
+        issueDetails: issueDetails,
+        userLang: 'zh',
+        persona: 'tsundere',
+        userGistId: '',
+        props: props
+      });
+
+      if (typeof recordSystemLog === 'function') {
+        recordSystemLog('用戶意見反饋', uid, subject, `聯絡方式: ${contact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, caller);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: mailResult.success ? 'ok' : 'partial_success',
+        success: true,
+        message: '反饋已送達開發團隊！'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 🔗 若 userId 為空或為 default_user，但有帶 Gist ID，透過 Gist ID 反查 LINE 用戶綁定
     if ((!userId || userId === 'default_user' || userId === 'undefined') && incomingGist) {
       const allProps = props.getProperties();
@@ -578,6 +620,90 @@ function doPost(e) {
           message: '身分驗證失敗：維護者帳號或密碼不正確' 
         })).setMimeType(ContentService.MimeType.JSON);
       }
+    }
+
+    // 📬 0.2 Web 用戶反饋 / 問題回報端點 (POST 支援)
+    if (action === 'sendFeedback' || action === 'reportBug') {
+      const subject = data?.subject || e?.parameter?.subject || '用戶意見反饋';
+      const message = data?.message || e?.parameter?.message || '';
+      const contact = data?.contact || e?.parameter?.contact || '';
+      const clientDevice = data?.device || e?.parameter?.device || '';
+      const caller = data?.userName || e?.parameter?.userName || data?.caller || 'Web 訪客';
+      const uid = data?.userId || e?.parameter?.userId || 'web_user';
+
+      if (!message.trim()) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '訊息內容不可為空' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const issueDetails = [
+        message,
+        '',
+        `📱 裝置與環境：${clientDevice || '未知'}`,
+        `📫 聯絡方式：${contact || '未提供'}`
+      ].join('\n');
+
+      const mailResult = sendBugReportNotification({
+        userId: uid,
+        userName: caller,
+        issueDetails: issueDetails,
+        userLang: 'zh',
+        persona: 'tsundere',
+        userGistId: '',
+        props: props
+      });
+
+      if (typeof recordSystemLog === 'function') {
+        recordSystemLog('用戶意見反饋', uid, subject, `聯絡方式: ${contact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, caller);
+      }
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: mailResult.success ? 'ok' : 'partial_success',
+        success: true,
+        message: '反饋已送達開發團隊！'
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 🛡️ 0.3 維護者登入安全遙測與裝置資訊登記 (POST 支援)
+    if (action === 'recordMaintainerLogin') {
+      const incomingToken = data?.token || e?.parameter?.token || '';
+      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
+      if (!configuredPass || incomingToken !== configuredPass) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const ip = data?.ip || e?.parameter?.ip || '未知 IP';
+      const location = data?.location || e?.parameter?.location || '未知位置';
+      const device = data?.device || e?.parameter?.device || '未知裝置';
+      const browser = data?.browser || e?.parameter?.browser || '';
+      const os = data?.os || e?.parameter?.os || '';
+      const userName = data?.userName || data?.user || e?.parameter?.userName || e?.parameter?.user || '系統維護者';
+      const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+
+      const auditRecord = {
+        time: timeStr,
+        userName: userName,
+        ip: ip,
+        location: location,
+        device: device,
+        browser: browser,
+        os: os,
+        tokenPrefix: incomingToken ? incomingToken.substring(0, 12) + '...' : 'none'
+      };
+
+      props.setProperty('LAST_MAINTAINER_LOGIN', JSON.stringify(auditRecord));
+      recordSystemLog(
+        '維護者登入', 
+        'Maintainer', 
+        `IP: ${ip} · 位置: ${location}`, 
+        `OS: ${os} · 瀏覽器: ${browser} · 螢幕: ${device}`, 
+        `✅ 永久通行證已核發 (${timeStr})`, 
+        userName,
+        { ip: ip, location: location, device: `${os} · ${browser}` }
+      );
+
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // 🌟 1. Web App 專屬安全通道：Gemini AI 辨識 API (含防盜刷、時戳驗證與頻率防護)

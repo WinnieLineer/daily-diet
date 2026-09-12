@@ -14,8 +14,12 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
   const [aiRoast, setAiRoast] = useState('');
   const [isRoasting, setIsRoasting] = useState(false);
   
-  const hasCrown = typeof localStorage !== 'undefined' ? localStorage.getItem('panda_sponsor_crown') === 'true' : false;
-  const currentTitle = typeof localStorage !== 'undefined' ? localStorage.getItem('panda_active_title') : null;
+  const hasCrown = (() => {
+    try { return typeof localStorage !== 'undefined' ? localStorage.getItem('panda_sponsor_crown') === 'true' : false; } catch (e) { return false; }
+  })();
+  const currentTitle = (() => {
+    try { return typeof localStorage !== 'undefined' ? localStorage.getItem('panda_active_title') : null; } catch (e) { return null; }
+  })();
 
   const handleGetRoast = async () => {
     if (isRoasting) return;

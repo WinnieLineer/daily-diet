@@ -27,12 +27,12 @@ const PWAInstallPrompt = ({ active = false, deferredPrompt, onPromptUsed }) => {
 
   const dismissLater = () => {
     setShowPrompt(false);
-    sessionStorage.setItem('pwa_prompt_later', 'true');
+    try { sessionStorage.setItem('pwa_prompt_later', 'true'); } catch (e) {}
   };
 
   const dismissNever = () => {
     setShowPrompt(false);
-    localStorage.setItem('pwa_prompt_never', 'true');
+    try { localStorage.setItem('pwa_prompt_never', 'true'); } catch (e) {}
   };
 
   if (isStandalone || !showPrompt) return null;

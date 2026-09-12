@@ -14,7 +14,10 @@ const GEMINI_MODELS = [
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
 function getPersonaInstruction() {
-  const activePersona = typeof localStorage !== 'undefined' ? localStorage.getItem('panda_active_persona') || 'tsundere' : 'tsundere';
+  let activePersona = 'tsundere';
+  try {
+    activePersona = typeof localStorage !== 'undefined' ? (localStorage.getItem('panda_active_persona') || 'tsundere') : 'tsundere';
+  } catch (e) {}
   
   if (activePersona === 'gentle') {
     return `Persona style: Sweet, gentle, supportive, and healing partner (無比溫柔、體貼、溫馨且鼓勵感滿滿的療癒小幫手). Praise user, show empathy, encourage with warm tone. Never use harsh words.`;

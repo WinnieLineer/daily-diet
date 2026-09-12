@@ -12,6 +12,20 @@ import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANALYSIS_DURATION_SECONDS, IMAGE_MAX_DIMENSION, IMAGE_QUALITY } from '../lib/constants';
 
+const safeGetStorage = (key) => {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const safeSetStorage = (key, val) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, val);
+  } catch (e) {}
+};
+
 const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
   const videoRef = useRef(null);
   const canvasRef = useRef(null);
@@ -33,12 +47,12 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
     }
     setupCamera();
 
-    const permissionGranted = localStorage.getItem('location_granted') === 'true';
+    const permissionGranted = safeGetStorage('location_granted') === 'true';
     if (navigator.geolocation && onLocationReady) {
       if (permissionGranted) {
         navigator.geolocation.getCurrentPosition(
           pos => {
-            localStorage.setItem('location_granted', 'true');
+            safeSetStorage('location_granted', 'true');
             onLocationReady(pos.coords);
           },
           () => { },
@@ -142,7 +156,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [isRoastExpanded, setIsRoastExpanded] = useState(false);
   const [showFastingConfirm, setShowFastingConfirm] = useState(false);
   const [pendingLogData, setPendingLogData] = useState(null);
-  const [userInstructions, setUserInstructions] = useState(() => localStorage.getItem('user_ai_instructions') || '');
+  const [userInstructions, setUserInstructions] = useState(() => safeGetStorage('user_ai_instructions') || '');
 
   const checkAndResumeAnalysis = async () => {
     try {
@@ -165,11 +179,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('user_ai_instructions', userInstructions);
+    safeSetStorage('user_ai_instructions', userInstructions);
   }, [userInstructions]);
 
   const [wantsNotification, setWantsNotification] = useState(() => {
-    const saved = localStorage.getItem('wants_notification');
+    const saved = safeGetStorage('wants_notification');
     if (saved !== null) return saved === 'true';
     return typeof Notification !== 'undefined' && Notification.permission === 'granted';
   });
@@ -206,7 +220,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   // Sync ref with state and persist preference
   useEffect(() => {
     wantsNotificationRef.current = wantsNotification;
-    localStorage.setItem('wants_notification', wantsNotification.toString());
+    safeSetStorage('wants_notification', wantsNotification.toString());
   }, [wantsNotification]);
 
   // Recovery Logic
@@ -240,7 +254,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       setFavToast(t('order_updated') || '常用順序已更新！');
       setTimeout(() => setFavToast(null), 1500);
 
-      const effectiveUserId = localStorage.getItem('line_user_id');
+      const effectiveUserId = safeGetStorage('line_user_id');
       const currentGist = getCurrentGistId();
       if (effectiveUserId || currentGist) {
         const orderNames = newFavorites.map(f => f.dish_name).join(',');
@@ -1531,7 +1545,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                             loadFavorites();
 
                             // ☁️ 雙向同步刪除常用餐點
-                            const effectiveUserId = localStorage.getItem('line_user_id');
+                            const effectiveUserId = safeGetStorage('line_user_id');
                             const currentGist = getCurrentGistId();
                             if (effectiveUserId || currentGist) {
                               const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';

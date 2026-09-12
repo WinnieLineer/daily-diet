@@ -61,7 +61,7 @@ const Onboarding = ({ onComplete }) => {
     // 🚀 Handle Name Input Slide
     if (slides[currentSlide].isNameInput) {
       if (name.trim()) {
-        localStorage.setItem('user_name', name.trim());
+        try { localStorage.setItem('user_name', name.trim()); } catch (e) {}
       } else {
         // Optionally prevent proceeding if name is required, 
         // but here we just let them skip if they really want to (it'll be "Guest")
@@ -75,7 +75,7 @@ const Onboarding = ({ onComplete }) => {
         await new Promise((resolve) => {
           navigator.geolocation.getCurrentPosition(
             () => {
-              localStorage.setItem('location_granted', 'true');
+              try { localStorage.setItem('location_granted', 'true'); } catch (e) {}
               resolve();
             },
             () => resolve(),

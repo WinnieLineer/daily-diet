@@ -40,9 +40,13 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
   const isEn = currentLang === 'en';
 
   // 🎭 Active Persona
-  const activePersona = typeof localStorage !== 'undefined' 
-    ? localStorage.getItem('panda_active_persona') || 'tsundere' 
-    : 'tsundere';
+  const activePersona = (() => {
+    try {
+      return typeof localStorage !== 'undefined' ? (localStorage.getItem('panda_active_persona') || 'tsundere') : 'tsundere';
+    } catch (e) {
+      return 'tsundere';
+    }
+  })();
 
   // 🎙️ Speech Rate State (0.96 = natural conversational speed)
   const [speechRate, setSpeechRate] = useState(() => getStoredSpeechRate());

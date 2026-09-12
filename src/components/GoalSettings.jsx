@@ -50,6 +50,18 @@ const safeGetStorage = (key) => {
   }
 };
 
+const safeSetStorage = (key, val) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, val);
+  } catch (e) {}
+};
+
+const safeRemoveStorage = (key) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+  } catch (e) {}
+};
+
 const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed, initialTab = 'profile' }) => {
   // 誠實商店銀行帳戶設定 (在此修改您的收款帳戶資訊即可！)
   const BANK_INFO = {
@@ -63,7 +75,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00', show_carbs_fat: false, carbs: 200, fat: 60, water_reminder_interval: 0 });
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [contactForm, setContactForm] = useState({ subject: t('feedback_subject'), message: '' });
+  const [contactForm, setContactForm] = useState({ subject: t('feedback_subject'), message: '', contact: '' });
   const [newName, setNewName] = useState(userName || '');
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
@@ -115,11 +127,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   const handleSelectTitle = (title) => {
     if (activeTitle === title) {
-      localStorage.removeItem('panda_active_title');
+      safeRemoveStorage('panda_active_title');
       setActiveTitle('');
       window.dispatchEvent(new CustomEvent('panda-title-updated'));
     } else {
-      localStorage.setItem('panda_active_title', title);
+      safeSetStorage('panda_active_title', title);
       setActiveTitle(title);
       window.dispatchEvent(new CustomEvent('panda-title-updated'));
     }
@@ -243,9 +255,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   useEffect(() => {
     const handleTitleChange = () => {
-      try {
-        setActiveTitle(localStorage.getItem('panda_active_title') || '');
-      } catch (e) {}
+      setActiveTitle(safeGetStorage('panda_active_title') || '');
     };
     window.addEventListener('panda-title-updated', handleTitleChange);
     return () => window.removeEventListener('panda-title-updated', handleTitleChange);
@@ -295,7 +305,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   const checkLocationPermission = () => {
     if ("geolocation" in navigator) {
-      if (localStorage.getItem('location_granted') === 'true') setLocationStatus('granted');
+      if (safeGetStorage('location_granted') === 'true') setLocationStatus('granted');
       else setLocationStatus('denied');
     }
   };
@@ -303,8 +313,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const requestLocation = () => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
-        () => { localStorage.setItem('location_granted', 'true'); setLocationStatus('granted'); },
-        () => { localStorage.setItem('location_granted', 'false'); setLocationStatus('denied'); }
+        () => { safeSetStorage('location_granted', 'true'); setLocationStatus('granted'); },
+        () => { safeSetStorage('location_granted', 'false'); setLocationStatus('denied'); }
       );
     }
   };
@@ -370,7 +380,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       }
 
       // ☁️ 雙向同步至雲端 Gist 與 LINE 後端
-      const effectiveUserId = localStorage.getItem('line_user_id');
+      const effectiveUserId = safeGetStorage('line_user_id');
       const currentGist = getCurrentGistId();
       if (effectiveUserId || currentGist) {
         syncGoalsToCloud({ calories: parsedCal, protein: parsedPro, water: parsedWat, carbs: parsedCarb, fat: parsedFat, show_carbs_fat: !!goals.show_carbs_fat }, true);
@@ -383,16 +393,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
               settings: allSettings,
               favorites: []
             }, currentGist);
-          }).catch((e) => {
-            console.warn("[Gist] Background goal sync skipped:", e?.message);
+          }).catch(err => {
+            console.error("Failed to auto-backup settings to Gist:", err);
           });
         }
       }
-      
+
+      onGoalsUpdated();
       setIsOpen(false);
-      if (onGoalsUpdated) {
-        onGoalsUpdated();
-      }
+      alert(t('save_success') || "Settings saved successfully!");
     } catch (error) {
       console.error("Failed to save goals:", error);
       alert("儲存目標時發生錯誤，請重試！\n錯誤原因: " + error.message);
@@ -468,11 +477,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         settings: await db.settings.toArray(),
         favorites: await db.favorites.toArray(),
         localStorage: {
-          user_name: localStorage.getItem('user_name'),
-          app_layout: localStorage.getItem('app_layout'),
-          onboarding_seen: localStorage.getItem('onboarding_seen'),
-          last_seen_version: localStorage.getItem('last_seen_version'),
-          location_granted: localStorage.getItem('location_granted')
+          user_name: safeGetStorage('user_name'),
+          app_layout: safeGetStorage('app_layout'),
+          onboarding_seen: safeGetStorage('onboarding_seen'),
+          last_seen_version: safeGetStorage('last_seen_version'),
+          location_granted: safeGetStorage('location_granted')
         }
       };
       await uploadToGist(data);
@@ -505,7 +514,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         if (data.favorites) await db.favorites.bulkAdd(data.favorites.map(({ id, ...r }) => r));
       });
       if (data.localStorage) {
-        Object.entries(data.localStorage).forEach(([key, value]) => { if (value !== null) localStorage.setItem(key, value); });
+        Object.entries(data.localStorage).forEach(([key, value]) => { if (value !== null) safeSetStorage(key, value); });
       }
       setSyncStatus('success');
       setTimeout(() => window.location.reload(), 1000);
@@ -788,7 +797,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     </button>
                     <button
                       onClick={() => {
-                        localStorage.setItem('panda_position', JSON.stringify({ x: 0, y: 0 }));
+                        safeSetStorage('panda_position', JSON.stringify({ x: 0, y: 0 }));
                         window.dispatchEvent(new CustomEvent('reset-panda-position'));
                         setIsOpen(false);
                       }}
@@ -989,7 +998,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             const newGoals = { ...goals, show_carbs_fat: newVal };
                             setGoals(newGoals);
                             db.settings.put({ key: 'show_carbs_fat', value: newVal });
-                            const _uid = localStorage.getItem('line_user_id');
+                            const _uid = safeGetStorage('line_user_id');
                             const _gid = getCurrentGistId();
                             if (_uid || _gid) syncGoalsToCloud({ ...newGoals, show_carbs_fat: newVal }, true);
                           }}
@@ -1205,7 +1214,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   alert("請輸入有效的 Gist ID！");
                                   return;
                                 }
-                                localStorage.setItem('gist_backup_id', manualGistInput);
+                                safeSetStorage('gist_backup_id', manualGistInput);
                                 setGistId(manualGistInput);
                                 setCurrentGistId(manualGistInput);
                                 setIsEditingGist(false);
@@ -1304,7 +1313,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             </div>
                             <button
                               onClick={() => {
-                                localStorage.setItem('github_pat', githubPat);
+                                safeSetStorage('github_pat', githubPat);
                                 alert('GitHub PAT Saved');
                               }}
                               className="bg-black text-white px-4 rounded-xl font-black italic text-xs active:scale-95"
@@ -1340,6 +1349,18 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             />
                           </div>
                           <div className="space-y-1">
+                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">
+                              {isEn ? 'Your Contact (Email / LINE ID - Optional)' : '聯絡方式 (Email 或 LINE ID - 選填，方便回覆)'}
+                            </label>
+                            <input
+                              type="text"
+                              placeholder={isEn ? 'your.email@example.com' : '您的信箱或 LINE ID'}
+                              value={contactForm.contact || ''}
+                              onChange={e => setContactForm({ ...contactForm, contact: e.target.value })}
+                              className="w-full bg-white border-4 border-black p-3 rounded-xl font-black italic text-sm shadow-neo-xs outline-none focus:bg-amber-100 transition-colors"
+                            />
+                          </div>
+                          <div className="space-y-1">
                             <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{t('contact_message')}</label>
                             <textarea
                               rows={4}
@@ -1355,26 +1376,60 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           onClick={async () => {
                             if (!contactForm.message.trim()) return;
 
-                            // 🚀 WEB3FORMS SUBMISSION (Restored from user snippet)
                             try {
                               setSyncStatus('syncing');
-                              const response = await fetch('https://api.web3forms.com/submit', {
-                                method: 'POST',
-                                headers: { 'Content-Type': 'application/json' },
-                                body: JSON.stringify({
-                                  access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
-                                  subject: `[Daily-Diet v${APP_VERSION}] ${contactForm.subject}`,
+                              let isSuccess = false;
+
+                              // 🚀 1. 優先透過 Web3Forms 發送
+                              try {
+                                const response = await fetch('https://api.web3forms.com/submit', {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'application/json' },
+                                  body: JSON.stringify({
+                                    access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+                                    subject: `[Daily-Diet v${APP_VERSION}] ${contactForm.subject}`,
+                                    message: `【聯絡方式】：${contactForm.contact || '未提供'}\n\n【用戶意見反饋】：\n${contactForm.message}`,
+                                    from_name: contactForm.contact ? `Daily Diet User (${contactForm.contact})` : 'Daily Diet App User',
+                                    device: navigator.userAgent
+                                  })
+                                });
+                                const data = await response.json();
+                                if (data && data.success) {
+                                  isSuccess = true;
+                                }
+                              } catch (web3Err) {
+                                console.warn("Web3Forms submit failed, attempting GAS backend failover:", web3Err);
+                              }
+
+                              // 🚀 2. 若 Web3Forms 失敗或被擋，切換至 GAS 後端 (MailApp/GmailApp) 直送
+                              if (!isSuccess) {
+                                const gasPayload = {
+                                  action: 'sendFeedback',
+                                  subject: `[Daily-Diet Web v${APP_VERSION}] ${contactForm.subject}`,
                                   message: contactForm.message,
-                                  from_name: 'Daily Diet App User',
-                                  device: navigator.userAgent
-                                })
-                              });
-                              const data = await response.json();
-                              if (data.success) {
+                                  contact: contactForm.contact || '',
+                                  device: navigator.userAgent,
+                                  userName: safeGetStorage('user_name') || safeGetStorage('line_user_name') || 'Web 用戶',
+                                  userId: safeGetStorage('line_user_id') || 'web_user',
+                                  client: 'daily-diet-web'
+                                };
+
+                                const gasRes = await fetch(GAS_API_URL, {
+                                  method: 'POST',
+                                  headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+                                  body: JSON.stringify(gasPayload)
+                                });
+                                const gasData = await gasRes.json();
+                                if (gasData && (gasData.status === 'ok' || gasData.success)) {
+                                  isSuccess = true;
+                                }
+                              }
+
+                              if (isSuccess) {
                                 alert(t('contact_success'));
-                                setContactForm({ subject: t('feedback_subject'), message: '' });
+                                setContactForm({ subject: t('feedback_subject'), message: '', contact: '' });
                               } else {
-                                throw new Error('Submission failed');
+                                throw new Error('Submission failed on all channels');
                               }
                             } catch (err) {
                               console.error("Feedback failed", err);
@@ -1564,7 +1619,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               {hasCrown ? (
                                 <button
                                   onClick={() => {
-                                    localStorage.removeItem('panda_sponsor_crown');
+                                    safeRemoveStorage('panda_sponsor_crown');
                                     setHasCrown(false);
                                     window.dispatchEvent(new CustomEvent('panda-crown-updated'));
                                     alert(shopText.crownToastRemove);
@@ -1578,7 +1633,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   onClick={() => {
                                     const confirmUnlock = window.confirm(shopText.crownOath);
                                     if (confirmUnlock) {
-                                      localStorage.setItem('panda_sponsor_crown', 'true');
+                                      safeSetStorage('panda_sponsor_crown', 'true');
                                       setHasCrown(true);
                                       window.dispatchEvent(new CustomEvent('panda-crown-updated'));
                                       alert(shopText.crownToastUnlock);
@@ -1626,13 +1681,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                         alert(shopText.stickerLockTip);
                                         return;
                                       }
-                                      const currentActive = localStorage.getItem('panda_active_sticker');
+                                      const currentActive = safeGetStorage('panda_active_sticker');
                                       if (currentActive === sticker.emoji) {
-                                        localStorage.removeItem('panda_active_sticker');
+                                        safeRemoveStorage('panda_active_sticker');
                                         setActiveSticker('');
                                         alert(isEn ? "Sticker removed 🎋" : "已將貼紙收起囉 🎋");
                                       } else {
-                                        localStorage.setItem('panda_active_sticker', sticker.emoji);
+                                        safeSetStorage('panda_active_sticker', sticker.emoji);
                                         setActiveSticker(sticker.emoji);
                                         alert(isEn 
                                           ? "🎉 Sticker pasted onto Coach Panda! Go back to the main screen to check it out! 🐼✨"
@@ -1680,8 +1735,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               {hasStickers ? (
                                 <button
                                   onClick={() => {
-                                    localStorage.removeItem('panda_stickers_unlocked');
-                                    localStorage.removeItem('panda_active_sticker');
+                                    safeRemoveStorage('panda_stickers_unlocked');
+                                    safeRemoveStorage('panda_active_sticker');
                                     setHasStickers(false);
                                     setActiveSticker('');
                                     window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
@@ -1696,7 +1751,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   onClick={() => {
                                     const confirmUnlock = window.confirm(shopText.stickerDesc);
                                     if (confirmUnlock) {
-                                      localStorage.setItem('panda_stickers_unlocked', 'true');
+                                      safeSetStorage('panda_stickers_unlocked', 'true');
                                       setHasStickers(true);
                                       window.dispatchEvent(new CustomEvent('panda-stickers-updated'));
                                       alert(shopText.stickerToastUnlock);
@@ -1748,7 +1803,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 key={persona.id}
                                 type="button"
                                 onClick={() => {
-                                  localStorage.setItem('panda_active_persona', persona.id);
+                                  safeSetStorage('panda_active_persona', persona.id);
                                   setActivePersona(persona.id);
                                   syncPersonaToCloud(persona.id);
                                   window.dispatchEvent(new CustomEvent('panda-persona-updated'));
