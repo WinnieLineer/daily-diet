@@ -32,13 +32,16 @@ function lazyWithRetry(componentImport) {
         errMsg.includes('error loading dynamically imported module') ||
         errMsg.includes('Failed to fetch')
       ) {
-        const reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
-        if (reloadCount < 2) {
-          sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
-          console.warn('🔄 Dynamic chunk outdated after new deployment, auto-reloading page...');
-          window.location.reload();
-          return new Promise(() => {}); // Wait for reload without throwing
-        }
+        let reloadCount = 0;
+        try {
+          reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
+          if (reloadCount < 2) {
+            sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
+            console.warn('🔄 Dynamic chunk outdated after new deployment, auto-reloading page...');
+            window.location.reload();
+            return new Promise(() => {}); // Wait for reload without throwing
+          }
+        } catch (e) {}
       }
       throw error;
     }
@@ -779,7 +782,9 @@ function App() {
   const [currentView, setCurrentView] = useState(() => checkIsLogRoute() ? 'logs' : 'main');
 
   useEffect(() => {
-    sessionStorage.removeItem('chunk_reload_count');
+    try {
+      sessionStorage.removeItem('chunk_reload_count');
+    } catch (e) {}
     const handleRouteChange = () => {
       setCurrentView(checkIsLogRoute() ? 'logs' : 'main');
     };

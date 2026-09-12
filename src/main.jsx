@@ -95,13 +95,16 @@ class ErrorBoundary extends React.Component {
       errMsg.includes('error loading dynamically imported module') ||
       errMsg.includes('Loading chunk')
     ) {
-      const reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
-      if (reloadCount < 2) {
-        sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
-        console.warn('🔄 Detected outdated chunk from past deployment, auto-refreshing page...');
-        window.location.reload();
-        return;
-      }
+      let reloadCount = 0;
+      try {
+        reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
+        if (reloadCount < 2) {
+          sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
+          console.warn('🔄 Detected outdated chunk from past deployment, auto-refreshing page...');
+          window.location.reload();
+          return;
+        }
+      } catch (e) {}
     }
 
     reportWebErrorToWeb3Forms('React ErrorBoundary Crash', error?.message || error?.toString(), errorInfo?.componentStack);
@@ -151,12 +154,15 @@ class ErrorBoundary extends React.Component {
 // Vite dynamic preload error auto-recovery on new deployment
 window.addEventListener('vite:preloadError', (event) => {
   event.preventDefault();
-  const reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
-  if (reloadCount < 2) {
-    sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
-    console.warn('🔄 Vite preload error (new deployment detected), refreshing...');
-    window.location.reload();
-  }
+  let reloadCount = 0;
+  try {
+    reloadCount = Number(sessionStorage.getItem('chunk_reload_count') || 0);
+    if (reloadCount < 2) {
+      sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
+      console.warn('🔄 Vite preload error (new deployment detected), refreshing...');
+      window.location.reload();
+    }
+  } catch (e) {}
 });
 
 // Global error catcher for non-React errors
