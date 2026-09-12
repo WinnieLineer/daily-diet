@@ -67,9 +67,9 @@ function getSystemInfo() {
 function setMaintainerCredentials() {
   const props = PropertiesService.getScriptProperties();
   
-  // 👉 請將下方密碼替換為您想要設定的管理密碼：
-  const newPassword = '您的自訂密碼';
-  const newAccount = 'Winnie'; // 若想改為 Admin 或其他名稱亦可在此修改
+  // 👉 僅在後端與 Google 雲端設定的專用維護者憑證 (前端代碼完全無此字串)
+  const newPassword = '1qazXCVBNM<>?';
+  const newAccount = 'Winnie';
   
   props.setProperty('MAINTAINER_PASS', newPassword);
   props.setProperty('MAINTAINER_USER', newAccount);
