@@ -917,7 +917,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
 
   return (
-    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 lg:p-8 w-full space-y-5">
+    <div className="min-h-screen bg-[#FFFDF5] p-3 sm:p-6 lg:p-8 w-full max-w-full overflow-x-hidden space-y-5">
       {/* 🏷️ Top Permanent Pass Status Badge */}
       <div className="bg-emerald-50 border-3 border-black rounded-2xl px-4 py-2.5 shadow-neo-xs flex flex-wrap items-center justify-between gap-2 text-xs font-bold text-emerald-950">
         <div className="flex items-center gap-2 flex-wrap">
@@ -1507,300 +1507,476 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               </p>
             </div>
           ) : (
-            <div className="overflow-x-auto custom-scrollbar">
-              <table className="w-full text-left border-collapse">
-                <thead>
-                  <tr className="bg-zinc-900 text-white font-mono text-[11px] font-black uppercase tracking-wider select-none">
-                    <th className="py-3 px-3 w-10 text-center">#</th>
-                    <th className="py-3 px-3 min-w-[155px]">
-                      <span className="flex items-center gap-1">
-                        <Clock size={12} className="text-accent" />
-                        {isEn ? 'Time (@timestamp)' : '時間 (@timestamp)'}
-                      </span>
-                    </th>
-                    <th className="py-3 px-3 min-w-[130px]">
-                      <span>{isEn ? 'Action (Type)' : '操作類型 (Action)'}</span>
-                    </th>
-                    <th className="py-3 px-3 min-w-[145px]">
-                      <span className="flex items-center gap-1">
-                        <User size={12} className="text-accent" />
-                        {isEn ? 'Caller / User' : '調用者 / 用戶'}
-                      </span>
-                    </th>
-                    <th className="py-3 px-3 min-w-[170px]">
-                      <span className="flex items-center gap-1">
-                        <MapPin size={12} className="text-rose-400" />
-                        {isEn ? 'Location / Source' : '來源 / IP 位置'}
-                      </span>
-                    </th>
-                    <th className="py-3 px-4 min-w-[280px]">
-                      <span>{isEn ? 'Payload / Result Preview' : '訊息與執行結果預覽'}</span>
-                    </th>
-                    <th className="py-3 px-3 w-16 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-200 font-sans text-xs">
-                  {filteredLogs.map((log, index) => {
-                    const { time, userName, userId, type, input, aiResult, output, source, ip, location, device } = log;
-                    const isExpanded = expandedRowIds.has(index);
-                    const currentTab = rowInspectorTab[index] || 'table';
+            <>
+              {/* 📱 1.1 Mobile & Small Screen Card Stream (Zero Horizontal Overflow, Action Never Obscured) */}
+              <div className="block md:hidden divide-y-2 divide-zinc-200">
+                {filteredLogs.map((log, index) => {
+                  const { time, userName, userId, type, input, aiResult, output, source, ip, location, device } = log;
+                  const isExpanded = expandedRowIds.has(index);
+                  const currentTab = rowInspectorTab[index] || 'table';
 
-                    const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer';
-                    const isFallback = type.includes('降級') || type.includes('容錯') || type.includes('切換');
-                    const isAlert = (type.includes('異常') || output.includes('失敗') || type.includes('報警') || output.includes('錯誤')) && !isFallback;
-                    const isPhoto = type.includes('照片') || type.includes('Photo');
-                    const isText = type.includes('文字') || type.includes('Text');
-                    const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
-                    const isPortion = type.includes('倍') || type.includes('半') || type.includes('份量');
-                    const isGoal = type.includes('目標');
-                    const isSync = type.includes('Web') || type.includes('同步');
+                  const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer';
+                  const isFallback = type.includes('降級') || type.includes('容錯') || type.includes('切換');
+                  const isAlert = (type.includes('異常') || output.includes('失敗') || type.includes('報警') || output.includes('錯誤')) && !isFallback;
+                  const isPhoto = type.includes('照片') || type.includes('Photo');
+                  const isText = type.includes('文字') || type.includes('Text');
+                  const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
+                  const isPortion = type.includes('倍') || type.includes('半') || type.includes('份量');
+                  const isGoal = type.includes('目標');
+                  const isSync = type.includes('Web') || type.includes('同步');
 
-                    // Badge Styling
-                    let badgeClass = 'bg-zinc-100 text-zinc-800 border-zinc-300';
-                    if (isLogin) badgeClass = 'bg-purple-100 text-purple-900 border-purple-400 font-black';
-                    else if (isFallback) badgeClass = 'bg-amber-100 text-amber-900 border-amber-400 font-black';
-                    else if (isAlert) badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
-                    else if (isPhoto) badgeClass = 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300 font-black';
-                    else if (isText) badgeClass = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
-                    else if (isWater) badgeClass = 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
-                    else if (isPortion) badgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-black';
-                    else if (isGoal) badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
-                    else if (isSync) badgeClass = 'bg-teal-100 text-teal-800 border-teal-300 font-black';
+                  let badgeClass = 'bg-zinc-100 text-zinc-800 border-zinc-300';
+                  if (isLogin) badgeClass = 'bg-purple-100 text-purple-900 border-purple-400 font-black';
+                  else if (isFallback) badgeClass = 'bg-amber-100 text-amber-900 border-amber-400 font-black';
+                  else if (isAlert) badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
+                  else if (isPhoto) badgeClass = 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300 font-black';
+                  else if (isText) badgeClass = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+                  else if (isWater) badgeClass = 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
+                  else if (isPortion) badgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-black';
+                  else if (isGoal) badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+                  else if (isSync) badgeClass = 'bg-teal-100 text-teal-800 border-teal-300 font-black';
 
-                    // Row Background
-                    let rowBg = 'hover:bg-amber-50/40';
-                    if (isLogin) rowBg = 'bg-purple-50/40 hover:bg-purple-100/50';
-                    else if (isAlert) rowBg = 'bg-rose-50/40 hover:bg-rose-100/50';
+                  let cardBg = 'bg-white';
+                  if (isLogin) cardBg = 'bg-purple-50/40';
+                  else if (isAlert) cardBg = 'bg-rose-50/40';
 
-                    // Prepare document object for JSON tab
-                    const docJson = {
-                      "@timestamp": time,
-                      "event": { "action": type, "source": source },
-                      "user": { "name": userName, "id": userId },
-                      "client": { "ip": ip || null, "geo": { "location": location || null }, "device": device || null },
-                      "message": { "input": input || null, "analysis": aiResult || null, "output": output || null }
-                    };
+                  const docJson = {
+                    "@timestamp": time,
+                    "event": { "action": type, "source": source },
+                    "user": { "name": userName, "id": userId },
+                    "client": { "ip": ip || null, "geo": { "location": location || null }, "device": device || null },
+                    "message": { "input": input || null, "analysis": aiResult || null, "output": output || null }
+                  };
 
-                    return (
-                      <React.Fragment key={index}>
-                        <tr 
-                          onClick={() => toggleRowExpansion(index)}
-                          className={`cursor-pointer transition-colors ${rowBg} ${isExpanded ? 'bg-zinc-100/80 font-medium' : ''}`}
-                        >
-                          {/* Expand Toggle */}
-                          <td className="py-3 px-3 text-center text-zinc-400">
-                            {isExpanded ? (
-                              <ChevronDown size={16} className="text-black font-black mx-auto" />
-                            ) : (
-                              <ChevronRight size={16} className="text-zinc-400 mx-auto" />
-                            )}
-                          </td>
-
-                          {/* Time */}
-                          <td className="py-3 px-3 font-mono text-[11px] font-bold text-zinc-700 whitespace-nowrap">
+                  return (
+                    <div key={`mob-${index}`} className={`p-4 transition-colors ${cardBg}`}>
+                      {/* Top Bar: Action badge + Time + Action Button */}
+                      <div className="flex items-center justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span
+                            onClick={() => type && handleSelectActionType(type)}
+                            className={`inline-flex items-center gap-1 text-[10px] px-2.5 py-0.5 rounded-full border cursor-pointer ${badgeClass}`}
+                          >
+                            {isLogin && '🛡️'}
+                            {isFallback && '🔄'}
+                            {isAlert && '🚨'}
+                            {isPhoto && '📸'}
+                            {isText && '💬'}
+                            {isWater && '🚰'}
+                            {isPortion && '⚖️'}
+                            {isSync && '⚡'}
+                            {type || '系統操作'}
+                          </span>
+                          <span className="font-mono text-[11px] font-bold text-zinc-600">
                             {time}
-                          </td>
+                          </span>
+                        </div>
 
-                          {/* Action Badge */}
-                          <td className="py-3 px-3 whitespace-nowrap">
-                            <span 
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                if (type) handleSelectActionType(type);
-                              }}
-                              title={isEn ? `Filter action: "${type}"` : `點擊直接篩選操作類型：「${type}」`}
-                              className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border cursor-pointer hover:ring-2 hover:ring-black transition-all ${badgeClass}`}
-                            >
-                              {isLogin && '🛡️'}
-                              {isFallback && '🔄'}
-                              {isAlert && '🚨'}
-                              {isPhoto && '📸'}
-                              {isText && '💬'}
-                              {isWater && '🚰'}
-                              {isPortion && '⚖️'}
-                              {isSync && '⚡'}
-                              {type || '系統操作'}
+                        {/* Pinned Action Controls: Copy JSON & Expand */}
+                        <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          <button
+                            onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `mob-${index}`)}
+                            className="p-1.5 bg-zinc-100 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-700 transition-colors text-xs font-mono inline-flex items-center gap-1 active:scale-95 shadow-neo-xs"
+                            title="複製 JSON 格式"
+                          >
+                            {copiedId === `mob-${index}` ? <Check size={13} className="text-emerald-500" /> : <Copy size={13} />}
+                            <span className="text-[10px] font-black">JSON</span>
+                          </button>
+                          <button
+                            onClick={() => toggleRowExpansion(index)}
+                            className="p-1.5 bg-zinc-100 hover:bg-zinc-200 rounded-lg border border-black/20 text-zinc-700 transition-colors text-xs inline-flex items-center active:scale-95 shadow-neo-xs"
+                            title="展開詳細資訊"
+                          >
+                            {isExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Middle: User & Location */}
+                      <div className="flex items-center justify-between text-xs text-zinc-700 mb-2 gap-2 flex-wrap">
+                        <div className="flex items-center gap-1.5">
+                          <User size={12} className="text-blue-600" />
+                          <span
+                            onClick={() => setSelectedUser(selectedUser === userName ? 'ALL' : userName)}
+                            className="font-black text-black cursor-pointer hover:underline"
+                          >
+                            {userName}
+                          </span>
+                          {userId && (
+                            <span className="font-mono text-[9px] px-1 py-0.5 rounded border bg-zinc-100 text-zinc-600 font-bold">
+                              {userId === 'Maintainer' ? 'ADMIN' : (userId.startsWith('U') ? `#${userId.slice(-6)}` : userId)}
                             </span>
-                          </td>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1.5 text-[11px] text-zinc-500 font-mono">
+                          <span className={`px-1.5 py-0.5 rounded border text-[9px] font-black ${
+                            source?.includes('Web') ? 'bg-sky-50 text-sky-800 border-sky-300' : 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                          }`}>
+                            {source?.includes('Web') ? '🌐 Web' : '🟢 LINE'}
+                          </span>
+                          {location && location !== '-' && (
+                            <span className="flex items-center gap-0.5 text-zinc-700 font-bold truncate max-w-[130px]">
+                              <MapPin size={10} className="text-rose-500 shrink-0" />
+                              {location}
+                            </span>
+                          )}
+                        </div>
+                      </div>
 
-                          {/* User Name / Caller */}
-                          <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
-                            <div className="flex items-center gap-1.5">
+                      {/* Message / Payload Preview */}
+                      <div
+                        onClick={() => toggleRowExpansion(index)}
+                        className="bg-zinc-50 border border-black/15 p-2.5 rounded-xl font-mono text-xs text-zinc-800 cursor-pointer hover:border-black transition-colors"
+                      >
+                        {isAlert ? (
+                          <span className="text-rose-700 font-bold">
+                            {output || aiResult || input || '⚠️ 系統異常通報'}
+                          </span>
+                        ) : (
+                          <div className="space-y-0.5">
+                            {input && <div><strong className="text-black font-sans">{input}</strong></div>}
+                            {aiResult && <div className="text-purple-700 text-[11px]">➔ {aiResult}</div>}
+                            {output && <div className="text-emerald-700 text-[11px]">💬 {output}</div>}
+                            {!input && !aiResult && !output && <div className="text-zinc-400 italic">—</div>}
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Expanded Document Inspector inside Mobile Card */}
+                      {isExpanded && (
+                        <div className="mt-3 pt-3 border-t-2 border-dashed border-zinc-200">
+                          <div className="bg-white border-2 border-black rounded-2xl shadow-neo-sm overflow-hidden space-y-3">
+                            <div className="bg-zinc-100 border-b-2 border-black px-3 py-2 flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-1 bg-zinc-200 border border-black rounded-xl p-0.5 text-xs">
+                                <button
+                                  onClick={() => setRowTab(index, 'table')}
+                                  className={`px-2 py-0.5 rounded-lg font-black text-[10px] transition-all ${
+                                    currentTab === 'table' ? 'bg-black text-white' : 'text-zinc-600 hover:text-black'
+                                  }`}
+                                >
+                                  Table
+                                </button>
+                                <button
+                                  onClick={() => setRowTab(index, 'json')}
+                                  className={`px-2 py-0.5 rounded-lg font-black text-[10px] transition-all ${
+                                    currentTab === 'json' ? 'bg-black text-white' : 'text-zinc-600 hover:text-black'
+                                  }`}
+                                >
+                                  JSON
+                                </button>
+                              </div>
+                              <button
+                                onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
+                                className="bg-black text-white text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 shadow-neo-xs"
+                              >
+                                {copiedId === `doc-${index}` ? <Check size={10} /> : <Copy size={10} />}
+                                {copiedId === `doc-${index}` ? 'Copied' : 'Copy'}
+                              </button>
+                            </div>
+                            <div className="p-3">
+                              {currentTab === 'table' ? (
+                                <div className="divide-y divide-zinc-100 font-mono text-[11px]">
+                                  {[
+                                    { key: '@timestamp', val: time },
+                                    { key: 'event.action', val: type },
+                                    { key: 'user.name', val: userName },
+                                    { key: 'user.id', val: userId },
+                                    { key: 'client.ip', val: ip || '—' },
+                                    { key: 'client.geo.location', val: location || '—' },
+                                    { key: 'client.device', val: device || '—' },
+                                    { key: 'message.input', val: input || '—' },
+                                    { key: 'message.analysis', val: aiResult || '—' },
+                                    { key: 'message.output', val: output || '—' },
+                                    { key: 'source', val: source || 'LINE Bot' }
+                                  ].map((field) => (
+                                    <div key={field.key} className="py-1.5 flex items-start justify-between gap-2">
+                                      <span className="font-bold text-zinc-500 shrink-0 text-[10px]">{field.key}:</span>
+                                      <span className="font-medium text-black break-all text-right">{field.val}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <div className="bg-zinc-950 text-emerald-400 p-3 rounded-xl font-mono text-[10px] overflow-x-auto border border-black max-h-60 custom-scrollbar">
+                                  <pre>{JSON.stringify(docJson, null, 2)}</pre>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* 💻 1.2 Desktop Responsive Table View (Fits 100% width, Sticky Actions Never Obscured) */}
+              <div className="hidden md:block overflow-x-auto custom-scrollbar">
+                <table className="w-full text-left border-collapse table-auto">
+                  <thead>
+                    <tr className="bg-zinc-900 text-white font-mono text-[11px] font-black uppercase tracking-wider select-none">
+                      <th className="py-3 px-3 w-10 text-center">#</th>
+                      <th className="py-3 px-3 w-36">
+                        <span className="flex items-center gap-1">
+                          <Clock size={12} className="text-accent" />
+                          {isEn ? 'Time (@timestamp)' : '時間 (@timestamp)'}
+                        </span>
+                      </th>
+                      <th className="py-3 px-3 w-32">
+                        <span>{isEn ? 'Action (Type)' : '操作類型 (Action)'}</span>
+                      </th>
+                      <th className="py-3 px-3 w-36">
+                        <span className="flex items-center gap-1">
+                          <User size={12} className="text-accent" />
+                          {isEn ? 'Caller / User' : '調用者 / 用戶'}
+                        </span>
+                      </th>
+                      <th className="py-3 px-3 w-40">
+                        <span className="flex items-center gap-1">
+                          <MapPin size={12} className="text-rose-400" />
+                          {isEn ? 'Location / Source' : '來源 / IP 位置'}
+                        </span>
+                      </th>
+                      <th className="py-3 px-4 min-w-0">
+                        <span>{isEn ? 'Payload / Result Preview' : '訊息與執行結果預覽'}</span>
+                      </th>
+                      <th className="py-3 px-3 w-16 text-center sticky right-0 bg-zinc-900 z-20 border-l border-zinc-800 shadow-[-4px_0_8px_rgba(0,0,0,0.2)]">
+                        Actions
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-200 font-sans text-xs">
+                    {filteredLogs.map((log, index) => {
+                      const { time, userName, userId, type, input, aiResult, output, source, ip, location, device } = log;
+                      const isExpanded = expandedRowIds.has(index);
+                      const currentTab = rowInspectorTab[index] || 'table';
+
+                      const isLogin = type.includes('登入') || type.includes('Login') || userId === 'Maintainer';
+                      const isFallback = type.includes('降級') || type.includes('容錯') || type.includes('切換');
+                      const isAlert = (type.includes('異常') || output.includes('失敗') || type.includes('報警') || output.includes('錯誤')) && !isFallback;
+                      const isPhoto = type.includes('照片') || type.includes('Photo');
+                      const isText = type.includes('文字') || type.includes('Text');
+                      const isWater = type.includes('水') || type.includes('Water') || input.includes('水');
+                      const isPortion = type.includes('倍') || type.includes('半') || type.includes('份量');
+                      const isGoal = type.includes('目標');
+                      const isSync = type.includes('Web') || type.includes('同步');
+
+                      let badgeClass = 'bg-zinc-100 text-zinc-800 border-zinc-300';
+                      if (isLogin) badgeClass = 'bg-purple-100 text-purple-900 border-purple-400 font-black';
+                      else if (isFallback) badgeClass = 'bg-amber-100 text-amber-900 border-amber-400 font-black';
+                      else if (isAlert) badgeClass = 'bg-rose-100 text-rose-800 border-rose-300 font-black';
+                      else if (isPhoto) badgeClass = 'bg-fuchsia-100 text-fuchsia-800 border-fuchsia-300 font-black';
+                      else if (isText) badgeClass = 'bg-blue-100 text-blue-800 border-blue-300 font-black';
+                      else if (isWater) badgeClass = 'bg-cyan-100 text-cyan-800 border-cyan-300 font-black';
+                      else if (isPortion) badgeClass = 'bg-amber-100 text-amber-900 border-amber-300 font-black';
+                      else if (isGoal) badgeClass = 'bg-emerald-100 text-emerald-800 border-emerald-300 font-black';
+                      else if (isSync) badgeClass = 'bg-teal-100 text-teal-800 border-teal-300 font-black';
+
+                      let rowBg = 'hover:bg-amber-50/40 group';
+                      let stickyActionBg = 'bg-white group-hover:bg-[#fffdf5]';
+                      if (isLogin) {
+                        rowBg = 'bg-purple-50/40 hover:bg-purple-100/50 group';
+                        stickyActionBg = 'bg-[#fbf7fe] group-hover:bg-[#f3e8ff]';
+                      } else if (isAlert) {
+                        rowBg = 'bg-rose-50/40 hover:bg-rose-100/50 group';
+                        stickyActionBg = 'bg-[#fff5f5] group-hover:bg-[#fee2e2]';
+                      } else if (isExpanded) {
+                        rowBg = 'bg-zinc-100/80 font-medium group';
+                        stickyActionBg = 'bg-[#f4f4f5]';
+                      }
+
+                      const docJson = {
+                        "@timestamp": time,
+                        "event": { "action": type, "source": source },
+                        "user": { "name": userName, "id": userId },
+                        "client": { "ip": ip || null, "geo": { "location": location || null }, "device": device || null },
+                        "message": { "input": input || null, "analysis": aiResult || null, "output": output || null }
+                      };
+
+                      return (
+                        <React.Fragment key={index}>
+                          <tr 
+                            onClick={() => toggleRowExpansion(index)}
+                            className={`cursor-pointer transition-colors ${rowBg}`}
+                          >
+                            {/* Expand Toggle */}
+                            <td className="py-3 px-3 text-center text-zinc-400">
+                              {isExpanded ? (
+                                <ChevronDown size={16} className="text-black font-black mx-auto" />
+                              ) : (
+                                <ChevronRight size={16} className="text-zinc-400 mx-auto" />
+                              )}
+                            </td>
+
+                            {/* Time */}
+                            <td className="py-3 px-3 font-mono text-[11px] font-bold text-zinc-700 whitespace-nowrap">
+                              {time}
+                            </td>
+
+                            {/* Action Badge */}
+                            <td className="py-3 px-3 whitespace-nowrap">
                               <span 
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  setSelectedUser(selectedUser === userName ? 'ALL' : userName);
+                                  if (type) handleSelectActionType(type);
                                 }}
-                                className={`truncate max-w-[130px] font-black cursor-pointer hover:underline transition-colors ${
-                                  selectedUser === userName ? 'text-blue-600 underline' : 'hover:text-blue-600'
-                                }`}
-                                title={isEn ? `Click to filter logs by ${userName}` : `點擊僅篩選【${userName}】的日誌`}
+                                title={isEn ? `Filter action: "${type}"` : `點擊直接篩選操作類型：「${type}」`}
+                                className={`inline-flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full border cursor-pointer hover:ring-2 hover:ring-black transition-all ${badgeClass}`}
                               >
-                                {userName}
+                                {isLogin && '🛡️'}
+                                {isFallback && '🔄'}
+                                {isAlert && '🚨'}
+                                {isPhoto && '📸'}
+                                {isText && '💬'}
+                                {isWater && '🚰'}
+                                {isPortion && '⚖️'}
+                                {isSync && '⚡'}
+                                {type || '系統操作'}
                               </span>
-                              {userId && (
-                                <span className={`font-mono text-[9px] px-1.5 py-0.5 rounded border ${
-                                  userId === 'Maintainer'
-                                    ? 'bg-purple-100 text-purple-800 border-purple-300 font-black'
-                                    : userId.startsWith('U') && userId.length > 8
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300 font-bold'
-                                    : userId === 'API-Gateway' || userId === 'Gemini-API'
-                                    ? 'bg-amber-50 text-amber-800 border-amber-300 font-bold'
-                                    : 'bg-zinc-100 text-zinc-600 border-zinc-200'
-                                }`}>
-                                  {userId === 'Maintainer'
-                                    ? 'ADMIN'
-                                    : userId.startsWith('U') && userId.length > 8
-                                    ? `#${userId.slice(-6)}`
-                                    : userId === 'API-Gateway' || userId === 'Gemini-API'
-                                    ? 'API'
-                                    : userId === userName
-                                    ? 'USER'
-                                    : userId}
-                                </span>
-                              )}
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Location / Source */}
-                          <td className="py-3 px-3 font-mono text-[11px] text-zinc-700 whitespace-nowrap">
-                            <div className="space-y-1">
-                              {/* Source Channel Badge (LINE vs Web vs System) */}
+                            {/* User Name / Caller */}
+                            <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
                               <div className="flex items-center gap-1.5">
-                                <span className={`inline-flex items-center gap-1 text-[10px] font-black px-2 py-0.5 rounded-md border ${
-                                  source?.includes('Web')
-                                    ? 'bg-sky-50 text-sky-800 border-sky-300'
-                                    : source?.includes('LINE')
-                                    ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                    : 'bg-zinc-100 text-zinc-700 border-zinc-300'
-                                }`}>
-                                  {source?.includes('Web') ? '🌐 Web' : (source?.includes('LINE') ? '🟢 LINE' : '⚡ System')}
+                                {isLogin && <ShieldAlert size={14} className="text-purple-600 shrink-0" />}
+                                <span className="truncate max-w-[120px]" title={userName}>
+                                  {userName || '—'}
                                 </span>
-                                {location && !location.includes('LINE') && !location.includes('Web') && location !== '-' && (
-                                  <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-800">
-                                    <MapPin size={10} className="text-rose-500 shrink-0" />
-                                    <span className="truncate max-w-[130px]">{location}</span>
-                                  </div>
+                                {userId && userId !== 'Maintainer' && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleSelectUser(userId, userName);
+                                    }}
+                                    title={isEn ? `Filter user: ${userName} (${userId})` : `點擊直接篩選用戶：${userName} (${userId})`}
+                                    className="text-[10px] text-zinc-400 hover:text-black font-mono underline ml-0.5"
+                                  >
+                                    ID
+                                  </button>
                                 )}
                               </div>
-                              {ip && ip !== '-' && (
-                                <div className="flex items-center gap-1 text-[10px] text-zinc-500 font-mono">
-                                  <Globe size={10} className="text-purple-600 shrink-0" />
-                                  <span>{ip}</span>
-                                </div>
-                              )}
-                            </div>
-                          </td>
+                            </td>
 
-                          {/* Message Preview */}
-                          <td className="py-3 px-4 max-w-md xl:max-w-2xl 2xl:max-w-4xl">
-                            <div className="font-mono text-[11px] text-zinc-800 truncate">
-                              {isAlert ? (
-                                <span className="text-rose-700 font-bold">
-                                  {output || aiResult || input || '⚠️ 系統異常通報'}
-                                </span>
-                              ) : (
-                                <>
-                                  {input ? (
-                                    <span><strong className="text-black">{input}</strong></span>
-                                  ) : null}
-                                  {aiResult ? (
-                                    <span className="text-purple-700 ml-1">➔ {aiResult}</span>
-                                  ) : null}
-                                  {output ? (
-                                    <span className="text-emerald-700 ml-1">💬 {output}</span>
-                                  ) : null}
-                                  {!input && !aiResult && !output && (
-                                    <span className="text-zinc-400 italic">—</span>
+                            {/* Location / Device / Source */}
+                            <td className="py-3 px-3 text-zinc-600 whitespace-nowrap">
+                              <div className="flex flex-col text-[11px] leading-tight">
+                                <span className="font-bold text-zinc-800 flex items-center gap-1 truncate max-w-[140px]">
+                                  {location ? (
+                                    <>
+                                      <span>📍</span>
+                                      <span title={location}>{location}</span>
+                                    </>
+                                  ) : (
+                                    <span className="text-zinc-400 font-mono text-[10px]">{ip || '—'}</span>
                                   )}
-                                </>
-                              )}
-                            </div>
-                          </td>
+                                </span>
+                                <span className="text-[10px] text-zinc-400 truncate max-w-[140px] flex items-center gap-1">
+                                  {device && <span>📱 {device}</span>}
+                                  {!device && <span>🌐 {source || 'LINE'}</span>}
+                                </span>
+                              </div>
+                            </td>
 
-                          {/* Actions */}
-                          <td className="py-3 px-3 text-right whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
-                            <button
-                              onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `row-${index}`)}
-                              className="p-1.5 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-600 transition-colors text-xs font-mono inline-flex items-center"
-                              title="複製 JSON 格式"
-                            >
-                              {copiedId === `row-${index}` ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                            </button>
-                          </td>
-                        </tr>
+                            {/* Message / Payload Preview */}
+                            <td className="py-3 px-4 max-w-xs md:max-w-md xl:max-w-xl truncate text-zinc-600 font-mono text-[11px]">
+                              <div className="truncate">
+                                {input ? (
+                                  <span className="text-zinc-900 font-sans font-medium">🗣️ {input}</span>
+                                ) : null}
+                                {aiResult ? (
+                                  <span className="text-blue-700 ml-1">🤖 {aiResult}</span>
+                                ) : null}
+                                {output ? (
+                                  <span className="text-emerald-700 ml-1">💬 {output}</span>
+                                ) : null}
+                                {!input && !aiResult && !output && (
+                                  <span className="text-zinc-400 italic">—</span>
+                                )}
+                              </div>
+                            </td>
 
-                        {/* 📑 Kibana Expanded Document Inspector */}
-                        {isExpanded && (
-                          <tr className="bg-zinc-50/90 border-b-2 border-black">
-                            <td colSpan={7} className="p-4 sm:p-6">
-                              <div className="bg-white border-2 border-black rounded-2xl shadow-neo-sm overflow-hidden space-y-3">
-                                {/* Inspector Header Tabs */}
-                                <div className="bg-zinc-100 border-b-2 border-black px-4 py-2 flex items-center justify-between gap-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-black text-xs uppercase tracking-wider text-black flex items-center gap-1">
-                                      <Terminal size={14} className="text-accent" />
-                                      Document Inspector
-                                    </span>
-                                    <div className="flex items-center bg-zinc-200 border border-black rounded-xl p-0.5 text-xs">
-                                      <button
-                                        onClick={() => setRowTab(index, 'table')}
-                                        className={`px-2.5 py-1 rounded-lg font-black text-[11px] transition-all ${
-                                          currentTab === 'table'
-                                            ? 'bg-black text-white'
-                                            : 'text-zinc-600 hover:text-black'
-                                        }`}
-                                      >
-                                        Table (欄位)
-                                      </button>
-                                      <button
-                                        onClick={() => setRowTab(index, 'json')}
-                                        className={`px-2.5 py-1 rounded-lg font-black text-[11px] transition-all ${
-                                          currentTab === 'json'
-                                            ? 'bg-black text-white'
-                                            : 'text-zinc-600 hover:text-black'
-                                        }`}
-                                      >
-                                        JSON (原始)
-                                      </button>
+                            {/* Actions */}
+                            <td className={`py-3 px-3 text-center whitespace-nowrap sticky right-0 z-10 border-l border-zinc-200/80 shadow-[-4px_0_8px_rgba(0,0,0,0.06)] ${stickyActionBg}`} onClick={(e) => e.stopPropagation()}>
+                              <button
+                                onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `row-${index}`)}
+                                className="p-1.5 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-600 transition-colors text-xs font-mono inline-flex items-center bg-white shadow-sm"
+                                title="複製 JSON 格式"
+                              >
+                                {copiedId === `row-${index}` ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                              </button>
+                            </td>
+                          </tr>
+
+                          {/* 📑 Kibana Expanded Document Inspector */}
+                          {isExpanded && (
+                            <tr className="bg-zinc-50/90 border-b-2 border-black">
+                              <td colSpan={7} className="p-4 sm:p-6">
+                                <div className="bg-white border-2 border-black rounded-2xl shadow-neo-sm overflow-hidden space-y-3">
+                                  {/* Inspector Header Tabs */}
+                                  <div className="bg-zinc-100 border-b-2 border-black px-4 py-2 flex items-center justify-between gap-2">
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-black text-xs uppercase tracking-wider text-black flex items-center gap-1">
+                                        <Terminal size={14} className="text-accent" />
+                                        Document Inspector
+                                      </span>
+                                      <div className="flex items-center bg-zinc-200 border border-black rounded-xl p-0.5 text-xs">
+                                        <button
+                                          onClick={() => setRowTab(index, 'table')}
+                                          className={`px-2.5 py-1 rounded-lg font-black text-[11px] transition-all ${
+                                            currentTab === 'table'
+                                              ? 'bg-black text-white'
+                                              : 'text-zinc-600 hover:text-black'
+                                          }`}
+                                        >
+                                          Table (欄位)
+                                        </button>
+                                        <button
+                                          onClick={() => setRowTab(index, 'json')}
+                                          className={`px-2.5 py-1 rounded-lg font-black text-[11px] transition-all ${
+                                            currentTab === 'json'
+                                              ? 'bg-black text-white'
+                                              : 'text-zinc-600 hover:text-black'
+                                          }`}
+                                        >
+                                          JSON (原始)
+                                        </button>
+                                      </div>
                                     </div>
+
+                                    <button
+                                      onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
+                                      className="bg-black text-white text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-neo-xs hover:bg-accent hover:text-black transition-all"
+                                    >
+                                      {copiedId === `doc-${index}` ? <Check size={12} /> : <Copy size={12} />}
+                                      {copiedId === `doc-${index}` ? 'Copied' : 'Copy JSON'}
+                                    </button>
                                   </div>
 
-                                  <button
-                                    onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
-                                    className="bg-black text-white text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-neo-xs hover:bg-accent hover:text-black transition-all"
-                                  >
-                                    {copiedId === `doc-${index}` ? <Check size={12} /> : <Copy size={12} />}
-                                    {copiedId === `doc-${index}` ? 'Copied' : 'Copy JSON'}
-                                  </button>
-                                </div>
-
-                                {/* Inspector Content */}
-                                <div className="p-4">
-                                  {currentTab === 'table' ? (
-                                    <div className="overflow-x-auto">
-                                      <table className="w-full text-left font-mono text-xs border border-zinc-200 rounded-xl overflow-hidden">
-                                        <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 text-[10px] uppercase">
-                                          <tr>
-                                            <th className="py-1.5 px-3 w-48">Field</th>
-                                            <th className="py-1.5 px-3">Value</th>
-                                            <th className="py-1.5 px-3 w-16 text-right">Action</th>
-                                          </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-zinc-100">
-                                          {[
-                                            { key: '@timestamp', val: time },
-                                            { key: 'event.action', val: type },
-                                            { key: 'user.name', val: userName },
-                                            { key: 'user.id', val: userId },
-                                            { key: 'client.ip', val: ip || '—' },
-                                            { key: 'client.geo.location', val: location || '—' },
-                                            { key: 'client.device', val: device || '—' },
-                                            { key: 'message.input', val: input || '—' },
-                                            { key: 'message.analysis', val: aiResult || '—' },
-                                            { key: 'message.output', val: output || '—' },
-                                            { key: 'source', val: source || 'LINE Bot' }
-                                          ].map((field) => (
+                                  {/* Inspector Content */}
+                                  <div className="p-4">
+                                    {currentTab === 'table' ? (
+                                      <div className="overflow-x-auto">
+                                        <table className="w-full text-left font-mono text-xs border border-zinc-200 rounded-xl overflow-hidden">
+                                          <thead className="bg-zinc-50 border-b border-zinc-200 text-zinc-500 text-[10px] uppercase">
+                                            <tr>
+                                              <th className="py-1.5 px-3 w-48">Field</th>
+                                              <th className="py-1.5 px-3">Value</th>
+                                              <th className="py-1.5 px-3 w-16 text-right">Action</th>
+                                            </tr>
+                                          </thead>
+                                          <tbody className="divide-y divide-zinc-100">
+                                            {[
+                                              { key: '@timestamp', val: time },
+                                              { key: 'event.action', val: type },
+                                              { key: 'user.name', val: userName },
+                                              { key: 'user.id', val: userId },
+                                              { key: 'client.ip', val: ip || '—' },
+                                              { key: 'client.geo.location', val: location || '—' },
+                                              { key: 'client.device', val: device || '—' },
+                                              { key: 'message.input', val: input || '—' },
+                                              { key: 'message.analysis', val: aiResult || '—' },
+                                              { key: 'message.output', val: output || '—' },
+                                              { key: 'source', val: source || 'LINE Bot' }
+                                            ].map((field) => (
                                             <tr key={field.key} className="hover:bg-zinc-50">
                                               <td className="py-2 px-3 font-bold text-zinc-500 whitespace-nowrap">{field.key}</td>
                                               <td className="py-2 px-3 font-medium text-black break-words max-w-xl xl:max-w-4xl">{field.val}</td>
@@ -1839,7 +2015,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                   })}
                 </tbody>
               </table>
-            </div>
+              </div>
+            </>
           )}
         </div>
       )}
@@ -1941,6 +2118,24 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                           🌐 {ip}
                         </span>
                       )}
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const cardDocJson = {
+                            "@timestamp": time,
+                            "event": { "action": type, "source": source },
+                            "user": { "name": userName, "id": userId },
+                            "client": { "ip": ip || null, "geo": { "location": location || null } },
+                            "message": { "input": input || null, "analysis": aiResult || null, "output": output || null }
+                          };
+                          copyToClipboard(JSON.stringify(cardDocJson, null, 2), `card-${index}`);
+                        }}
+                        className="p-1 bg-zinc-100 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-700 transition-colors text-xs font-mono inline-flex items-center gap-1 active:scale-95 shadow-neo-xs ml-auto"
+                        title="複製 JSON 格式"
+                      >
+                        {copiedId === `card-${index}` ? <Check size={11} className="text-emerald-500" /> : <Copy size={11} />}
+                        <span className="text-[9px] font-black">JSON</span>
+                      </button>
                     </div>
                   </div>
 
