@@ -741,7 +741,11 @@ function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (isLineEntry()) return false;
-    return !localStorage.getItem('onboarding_seen');
+    try {
+      return !localStorage.getItem('onboarding_seen');
+    } catch (e) {
+      return false;
+    }
   });
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [lastSeenVersionState, setLastSeenVersionState] = useState(null);
@@ -753,7 +757,13 @@ function App() {
     return () => window.removeEventListener('open-whatsnew', handleOpenWhatsNew);
   }, []);
 
-  const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
+  const [userName, setUserName] = useState(() => {
+    try {
+      return localStorage.getItem('user_name') || '';
+    } catch (e) {
+      return '';
+    }
+  });
   const [newVersionAvailable, setNewVersionAvailable] = useState(false);
 
   useEffect(() => {
@@ -1310,14 +1320,14 @@ function App() {
   
   const DEFAULT_LAYOUT = ['panda', 'dashboard', 'detective', 'today', 'weight', 'history'];
   const [layout, setLayout] = useState(() => {
-    const saved = localStorage.getItem('app_layout');
-    if (saved) {
-      try {
+    try {
+      const saved = localStorage.getItem('app_layout');
+      if (saved) {
         const parsed = JSON.parse(saved);
         const combined = Array.from(new Set([...parsed, ...DEFAULT_LAYOUT]));
         return combined.filter(item => DEFAULT_LAYOUT.includes(item));
-      } catch(e) {}
-    }
+      }
+    } catch(e) {}
     return DEFAULT_LAYOUT;
   });
   const [isEditingLayout, setIsEditingLayout] = useState(false);
@@ -1338,7 +1348,9 @@ function App() {
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('app_layout', JSON.stringify(layout));
+    try {
+      localStorage.setItem('app_layout', JSON.stringify(layout));
+    } catch (e) {}
   }, [layout]);
   const [toast, setToast] = useState(null);
 
@@ -1733,7 +1745,9 @@ function App() {
             </div>
             <button
               onClick={() => {
-                sessionStorage.removeItem('chunk_reload_count');
+                try {
+                  sessionStorage.removeItem('chunk_reload_count');
+                } catch (e) {}
                 window.location.reload();
               }}
               className="bg-black text-white px-3 py-1.5 rounded-xl border-2 border-black text-xs font-black shadow-sm active:translate-y-0.5 cursor-pointer hover:bg-neutral-800 transition-colors"
