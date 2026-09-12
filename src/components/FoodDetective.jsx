@@ -381,9 +381,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   };
 
   const getCachedLocation = () => {
-    const cached = localStorage.getItem('last_known_location');
-    if (!cached) return null;
     try {
+      const cached = localStorage.getItem('last_known_location');
+      if (!cached) return null;
       const data = JSON.parse(cached);
       if (Date.now() - data.timestamp < 15 * 60 * 1000) return data.location;
     } catch (e) { }
@@ -392,14 +392,16 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
   const saveLocationToCache = (location) => {
     if (!location) return;
-    localStorage.setItem('last_known_location', JSON.stringify({ location, timestamp: Date.now() }));
+    try {
+      localStorage.setItem('last_known_location', JSON.stringify({ location, timestamp: Date.now() }));
+    } catch (e) {}
   };
 
   const fetchCurrentLocation = () => {
     if (!navigator.geolocation) return;
     setLocationLoading(true);
     navigator.geolocation.getCurrentPosition(async (pos) => {
-      localStorage.setItem('location_granted', 'true');
+      try { localStorage.setItem('location_granted', 'true'); } catch (e) {}
       const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
       setResult(prev => ({ ...prev, location: loc }));
     }, (err) => {

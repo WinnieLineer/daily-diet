@@ -204,25 +204,45 @@ const normalizeLog = (item) => {
   };
 };
 
+const safeGetStorage = (key) => {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const safeSetStorage = (key, val) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, val);
+  } catch (e) {}
+};
+
+const safeRemoveStorage = (key) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+  } catch (e) {}
+};
+
 export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const isEn = lang === 'en';
 
   // 🔐 Permanent Pass Authentication State
   const [isAuthenticated, setIsAuthenticated] = useState(() => {
-    return Boolean(localStorage.getItem(PERMANENT_TOKEN_KEY));
+    return Boolean(safeGetStorage(PERMANENT_TOKEN_KEY));
   });
   const [permanentToken, setPermanentToken] = useState(() => {
-    return localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
+    return safeGetStorage(PERMANENT_TOKEN_KEY) || '';
   });
   const [maintainerName, setMaintainerName] = useState(() => {
-    return localStorage.getItem(MAINTAINER_NAME_KEY) || '';
+    return safeGetStorage(MAINTAINER_NAME_KEY) || '';
   });
   const [maintainerNameInput, setMaintainerNameInput] = useState(() => {
-    return localStorage.getItem(MAINTAINER_NAME_KEY) || '';
+    return safeGetStorage(MAINTAINER_NAME_KEY) || '';
   });
   const [clientInfo, setClientInfo] = useState(() => {
     try {
-      const raw = localStorage.getItem(CLIENT_INFO_KEY);
+      const raw = safeGetStorage(CLIENT_INFO_KEY);
       return raw ? JSON.parse(raw) : null;
     } catch (e) {
       return null;
@@ -345,7 +365,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     try {
       setIsRegisteringAudit(true);
       const name = userNameOverride || maintainerName || info.userName || 'Admin';
-      const currentToken = token || permanentToken || localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
+      const currentToken = token || permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
       const params = new URLSearchParams({
         action: 'recordMaintainerLogin',
         userName: name,
@@ -405,8 +425,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         const validatedToken = data.token || cleanInput;
         const validatedUser = data.userName || cleanName;
 
-        localStorage.setItem(PERMANENT_TOKEN_KEY, validatedToken);
-        localStorage.setItem(MAINTAINER_NAME_KEY, validatedUser);
+        safeSetStorage(PERMANENT_TOKEN_KEY, validatedToken);
+        safeSetStorage(MAINTAINER_NAME_KEY, validatedUser);
         setPermanentToken(validatedToken);
         setMaintainerName(validatedUser);
         setIsAuthenticated(true);
@@ -415,7 +435,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         // Collect device & IP info and record to backend
         const info = await collectDeviceInfo();
         info.userName = validatedUser;
-        localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
+        safeSetStorage(CLIENT_INFO_KEY, JSON.stringify(info));
         setClientInfo(info);
 
         // Instantly inject a local login record so user immediately sees their own login log
@@ -457,12 +477,12 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
   // Revoke Permanent Pass (Sign out)
   const handleRevokePermanentPass = () => {
-    localStorage.removeItem(PERMANENT_TOKEN_KEY);
-    localStorage.removeItem(CLIENT_INFO_KEY);
-    localStorage.removeItem(MAINTAINER_NAME_KEY);
-    localStorage.removeItem('maintainer_custom_pass');
-    localStorage.removeItem('daily_diet_maintainer_permanent_token');
-    sessionStorage.removeItem('maintainer_auth');
+    safeRemoveStorage(PERMANENT_TOKEN_KEY);
+    safeRemoveStorage(CLIENT_INFO_KEY);
+    safeRemoveStorage(MAINTAINER_NAME_KEY);
+    safeRemoveStorage('maintainer_custom_pass');
+    safeRemoveStorage('daily_diet_maintainer_permanent_token');
+    try { sessionStorage.removeItem('maintainer_auth'); } catch (e) {}
     setIsAuthenticated(false);
     setPermanentToken('');
     setClientInfo(null);
@@ -474,7 +494,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     if (!silent) setIsLoading(true);
     setFetchError(null);
     try {
-      const activeToken = explicitToken || permanentToken || localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
+      const activeToken = explicitToken || permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
       const targetUrl = `${GAS_API_URL}?action=getRecentLogs&limit=${customLimit}&days=${customDays}&token=${encodeURIComponent(activeToken)}&_t=${Date.now()}`;
       const res = await fetch(targetUrl);
       if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
@@ -571,7 +591,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       // If permanent token exists but client info is missing, populate it
       if (!clientInfo) {
         collectDeviceInfo().then((info) => {
-          localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
+          safeSetStorage(CLIENT_INFO_KEY, JSON.stringify(info));
           setClientInfo(info);
           recordMaintainerAuditToBackend(info, permanentToken);
         });

@@ -396,9 +396,15 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
   const [isSquished, setIsSquished]     = useState(false);
   const [particles, setParticles]       = useState([]);
   const [isDragging, setIsDragging] = useState(false);
-  const [hasCrown, setHasCrown]     = useState(() => localStorage.getItem('panda_sponsor_crown') === 'true');
-  const [activeSticker, setActiveSticker] = useState(() => localStorage.getItem('panda_active_sticker') || '');
-  const [activeTitle, setActiveTitle] = useState(() => localStorage.getItem('panda_active_title') || '');
+  const [hasCrown, setHasCrown]     = useState(() => {
+    try { return localStorage.getItem('panda_sponsor_crown') === 'true'; } catch(e) { return false; }
+  });
+  const [activeSticker, setActiveSticker] = useState(() => {
+    try { return localStorage.getItem('panda_active_sticker') || ''; } catch(e) { return ''; }
+  });
+  const [activeTitle, setActiveTitle] = useState(() => {
+    try { return localStorage.getItem('panda_active_title') || ''; } catch(e) { return ''; }
+  });
   const [initialPos, setInitialPos] = useState(() => {
     try {
       const saved = localStorage.getItem('panda_position');
@@ -412,13 +418,13 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
   // Listen for crown, sticker & title updates
   useEffect(() => {
     const handleCrownChange = () => {
-      setHasCrown(localStorage.getItem('panda_sponsor_crown') === 'true');
+      try { setHasCrown(localStorage.getItem('panda_sponsor_crown') === 'true'); } catch(e) {}
     };
     const handleStickersChange = () => {
-      setActiveSticker(localStorage.getItem('panda_active_sticker') || '');
+      try { setActiveSticker(localStorage.getItem('panda_active_sticker') || ''); } catch(e) {}
     };
     const handleTitleChange = () => {
-      setActiveTitle(localStorage.getItem('panda_active_title') || '');
+      try { setActiveTitle(localStorage.getItem('panda_active_title') || ''); } catch(e) {}
     };
     window.addEventListener('panda-crown-updated', handleCrownChange);
     window.addEventListener('panda-stickers-updated', handleStickersChange);
@@ -543,7 +549,9 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     const finalY = info.offset.y + initialPos.y;
     
     setInitialPos({ x: finalX, y: finalY });
-    localStorage.setItem('panda_position', JSON.stringify({ x: finalX, y: finalY }));
+    try {
+      localStorage.setItem('panda_position', JSON.stringify({ x: finalX, y: finalY }));
+    } catch (e) {}
 
     setExpression('sad');
     showBubble(getRandom(DIALOGUES[getLanguage()].release), 2500);
