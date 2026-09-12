@@ -38,6 +38,11 @@ import {
   MapPin,
   ShieldAlert,
   Download,
+  Flame,
+  Award,
+  Users,
+  TrendingUp,
+  Sparkles,
   X
 } from 'lucide-react';
 import NeoButton from './NeoButton';
@@ -101,7 +106,7 @@ const normalizeLog = (item) => {
       output: item[6],
       ip: item[7],
       location: item[8],
-      device: '',
+      device: item[9] || '',
       source: ''
     };
   } else {
@@ -128,9 +133,19 @@ const normalizeLog = (item) => {
     const locMatch = inputStr.match(/位置:\s*([^·|]+)/);
     if (locMatch) location = locMatch[1].trim();
   }
-  if (!device && inputStr.includes('OS:')) {
-    const devMatch = inputStr.match(/(?:OS:[^|]+)/);
-    if (devMatch) device = devMatch[0].trim();
+  if (!device) {
+    const targetStr = aiResultStr.includes('OS:') ? aiResultStr : (inputStr.includes('OS:') ? inputStr : '');
+    if (targetStr) {
+      const devMatch = targetStr.match(/OS:\s*([^·|]+)(?:·\s*瀏覽器:\s*([^·|]+))?/);
+      if (devMatch) {
+        const osPart = devMatch[1]?.trim() || '';
+        const browserPart = devMatch[2]?.trim() || '';
+        device = [osPart, browserPart].filter(Boolean).join(' · ');
+      } else {
+        const fallbackMatch = targetStr.match(/OS:[^·|,]+/);
+        if (fallbackMatch) device = fallbackMatch[0].trim();
+      }
+    }
   }
 
   // 決定來源通道 (LINE 智慧助理 vs Web 飲食管家 vs 系統核心)
@@ -276,6 +291,11 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [countdown, setCountdown] = useState(10);
   const [copiedId, setCopiedId] = useState(null);
 
+  // 👥 Active & Heavy Users Analytics States
+  const [userTierFilter, setUserTierFilter] = useState('ALL'); // 'ALL' | 'HEAVY' | 'ACTIVE' | 'TODAY'
+  const [isUserHubExpanded, setIsUserHubExpanded] = useState(true);
+  const [showAllPowerUsers, setShowAllPowerUsers] = useState(false);
+
   // 🎯 操作類型切換與聯動
   const handleSelectActionType = (actType) => {
     setSelectedActionType(actType);
@@ -313,17 +333,40 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     let ip = 'Unknown IP';
     let location = 'Local / Direct';
 
+    // 1. Multi-source IP detection with fallback (resilient to adblockers)
     try {
-      const ipRes = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(3500) });
+      const ipRes = await fetch('https://api.ipify.org?format=json', { signal: AbortSignal.timeout(2500) });
       if (ipRes.ok) {
         const ipData = await ipRes.json();
         if (ipData.ip) ip = ipData.ip;
       }
     } catch (e) {}
 
+    if (ip === 'Unknown IP') {
+      try {
+        const cfRes = await fetch('https://www.cloudflare.com/cdn-cgi/trace', { signal: AbortSignal.timeout(2500) });
+        if (cfRes.ok) {
+          const text = await cfRes.text();
+          const match = text.match(/ip=([^\n]+)/);
+          if (match && match[1]) ip = match[1].trim();
+        }
+      } catch (e) {}
+    }
+
+    if (ip === 'Unknown IP') {
+      try {
+        const ip64Res = await fetch('https://api64.ipify.org?format=json', { signal: AbortSignal.timeout(2500) });
+        if (ip64Res.ok) {
+          const data = await ip64Res.json();
+          if (data.ip) ip = data.ip;
+        }
+      } catch (e) {}
+    }
+
+    // 2. Geo location lookup
     try {
       if (ip !== 'Unknown IP') {
-        const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(3500) });
+        const geoRes = await fetch(`https://ipapi.co/${ip}/json/`, { signal: AbortSignal.timeout(2500) });
         if (geoRes.ok) {
           const geo = await geoRes.json();
           const parts = [geo.city, geo.region, geo.country_name].filter(Boolean);
@@ -332,11 +375,13 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       }
     } catch (e) {}
 
+    // 3. Accurate OS, Device & Browser detection
     const ua = navigator.userAgent;
     let os = 'Unknown OS';
     if (ua.includes('Win')) os = 'Windows';
-    else if (ua.includes('Mac')) os = 'macOS';
-    else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+    else if (ua.includes('Mac')) {
+      os = (navigator.maxTouchPoints > 1) ? 'iPadOS' : 'macOS';
+    } else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
     else if (ua.includes('Android')) os = 'Android';
     else if (ua.includes('Linux')) os = 'Linux';
 
@@ -346,6 +391,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     else if (ua.includes('Chrome')) browser = 'Chrome';
     else if (ua.includes('Safari')) browser = 'Safari';
     else if (ua.includes('Firefox')) browser = 'Firefox';
+
+    const isPwa = window.matchMedia?.('(display-mode: standalone)')?.matches || window.navigator?.standalone;
+    if (isPwa) browser += ' (PWA)';
 
     const device = `${window.screen.width}x${window.screen.height} (${window.devicePixelRatio || 1}x)`;
 
@@ -711,6 +759,126 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     });
     return Object.entries(countMap).sort((a, b) => b[1] - a[1]);
   }, [normalizedLogs, isEn]);
+
+  // 👥 實時深度用戶活躍度與重度使用分析 (Active & Heavy Users Profiling)
+  const userAnalytics = useMemo(() => {
+    if (!normalizedLogs || !normalizedLogs.length) {
+      return {
+        totalUniqueUsers: 0,
+        todayActiveCount: 0,
+        heavyUserCount: 0,
+        activeUserCount: 0,
+        casualUserCount: 0,
+        avgActionsPerUser: '0.0',
+        heavyUsers: [],
+        usersList: []
+      };
+    }
+
+    const todayStr = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD"
+    const userMap = {};
+
+    normalizedLogs.forEach((log) => {
+      const uId = (log.userId || '').trim();
+      const uName = (log.userName || uId || (isEn ? 'Unknown' : '未知用戶')).trim();
+      const isMaintainer = uId === 'Maintainer' || log.type?.includes('維護者') || uName === 'Maintainer';
+
+      const key = (uId && uId.startsWith('U')) ? uId : (uName || uId || 'Unknown');
+
+      if (!userMap[key]) {
+        userMap[key] = {
+          key,
+          name: uName || (uId.startsWith('U') ? `LINE 用戶 #${uId.slice(-4)}` : uId),
+          userId: uId,
+          isMaintainer,
+          isLine: Boolean(log.source?.includes('LINE') || (uId && uId.startsWith('U'))),
+          isWeb: Boolean(log.source?.includes('Web') || log.type?.includes('Web') || uId === 'default_user' || uId.startsWith('web_')),
+          totalActions: 0,
+          mealsCount: 0,
+          waterCount: 0,
+          summaryCount: 0,
+          latestTime: log.time || '',
+          earliestTime: log.time || '',
+          activeDays: new Set(),
+          isTodayActive: false
+        };
+      }
+
+      const u = userMap[key];
+      u.totalActions += 1;
+
+      const timeStr = String(log.time || '');
+      const datePart = timeStr.slice(0, 10);
+      if (datePart) u.activeDays.add(datePart);
+      if (datePart === todayStr) {
+        u.isTodayActive = true;
+      }
+
+      if (!u.latestTime || timeStr.localeCompare(u.latestTime) > 0) {
+        u.latestTime = timeStr;
+      }
+      if (!u.earliestTime || timeStr.localeCompare(u.earliestTime) < 0) {
+        u.earliestTime = timeStr;
+      }
+
+      const t = String(log.type || '');
+      if (t.includes('照片') || t.includes('文字') || t.includes('餐') || t.includes('倍數') || t.includes('常用')) {
+        u.mealsCount += 1;
+      } else if (t.includes('水') || t.includes('Water')) {
+        u.waterCount += 1;
+      } else if (t.includes('總結') || t.includes('週報') || t.includes('清單') || t.includes('目標')) {
+        u.summaryCount += 1;
+      }
+    });
+
+    const list = Object.values(userMap)
+      .filter(u => !u.isMaintainer)
+      .map(u => {
+        const activeDaysCount = u.activeDays.size;
+        let tier = 'CASUAL';
+        if (u.totalActions >= 15 || activeDaysCount >= 3) tier = 'HEAVY';
+        else if (u.totalActions >= 5) tier = 'ACTIVE';
+
+        return {
+          ...u,
+          activeDaysCount,
+          tier
+        };
+      })
+      .sort((a, b) => b.totalActions - a.totalActions);
+
+    const totalUniqueUsers = list.length;
+    const todayActiveCount = list.filter(u => u.isTodayActive).length;
+    const heavyUsers = list.filter(u => u.tier === 'HEAVY');
+    const activeUsers = list.filter(u => u.tier === 'ACTIVE');
+    const casualUsers = list.filter(u => u.tier === 'CASUAL');
+    const totalInteractions = list.reduce((acc, u) => acc + u.totalActions, 0);
+    const avgActionsPerUser = totalUniqueUsers > 0 ? (totalInteractions / totalUniqueUsers).toFixed(1) : '0.0';
+
+    return {
+      totalUniqueUsers,
+      todayActiveCount,
+      heavyUserCount: heavyUsers.length,
+      activeUserCount: activeUsers.length,
+      casualUserCount: casualUsers.length,
+      avgActionsPerUser,
+      heavyUsers,
+      usersList: list
+    };
+  }, [normalizedLogs, isEn]);
+
+  const filteredPowerUsers = useMemo(() => {
+    const list = userAnalytics.usersList || [];
+    if (userTierFilter === 'HEAVY') return list.filter(u => u.tier === 'HEAVY');
+    if (userTierFilter === 'ACTIVE') return list.filter(u => u.tier === 'ACTIVE');
+    if (userTierFilter === 'TODAY') return list.filter(u => u.isTodayActive);
+    return list;
+  }, [userAnalytics, userTierFilter]);
+
+  const displayedPowerUsers = useMemo(() => {
+    if (showAllPowerUsers) return filteredPowerUsers;
+    return filteredPowerUsers.slice(0, 6);
+  }, [filteredPowerUsers, showAllPowerUsers]);
 
   const filteredLogs = useMemo(() => {
     if (!normalizedLogs || !normalizedLogs.length) return [];
@@ -1277,6 +1445,291 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           </div>
         </div>
       )}
+
+      {/* 👥 Active & Heavy Users Analytics Hub (實時用戶活躍度與重度使用分析看板) */}
+      <div className="bg-white border-4 border-black rounded-[2.5rem] p-4 sm:p-6 shadow-neo space-y-4">
+        {/* Header with Title & Expand Toggle */}
+        <div className="flex flex-wrap items-center justify-between gap-3 border-b-2 border-dashed border-zinc-100 pb-3">
+          <div className="flex items-center gap-2.5">
+            <span className="p-2 bg-gradient-to-br from-amber-400 to-rose-500 text-white rounded-2xl border-2 border-black shadow-neo-xs">
+              <Flame size={20} />
+            </span>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base sm:text-xl font-black italic tracking-tight text-black flex items-center gap-1.5">
+                  {isEn ? 'Active & Heavy Users Intelligence' : '👥 活躍人數統計與重度用戶深度畫像'}
+                </h2>
+                <span className="bg-gradient-to-r from-amber-500 to-rose-500 text-white text-[9px] font-black px-2 py-0.5 rounded-full uppercase shadow-neo-xs flex items-center gap-1">
+                  <Sparkles size={10} /> POWER USERS
+                </span>
+              </div>
+              <p className="text-[11px] font-bold text-zinc-500">
+                {isEn 
+                  ? `Based on ${normalizedLogs.length} interactions across ${retentionDays ? `past ${retentionDays} days` : 'all history'}` 
+                  : `基於過去 ${retentionDays ? `${retentionDays} 天` : '全歷史'} 載入之 ${normalizedLogs.length} 筆運作日誌深度歸納`}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setIsUserHubExpanded(!isUserHubExpanded)}
+              className="px-3 py-1.5 bg-zinc-100 hover:bg-zinc-200 border-2 border-black rounded-xl text-xs font-black flex items-center gap-1.5 transition-all active:scale-95 shadow-neo-xs cursor-pointer"
+            >
+              {isUserHubExpanded ? <ChevronDown size={14} /> : <ChevronRight size={14} />}
+              <span>{isUserHubExpanded ? (isEn ? 'Collapse' : '收合統計') : (isEn ? 'Expand' : '展開統計')}</span>
+            </button>
+          </div>
+        </div>
+
+        {isUserHubExpanded && (
+          <div className="space-y-4">
+            {/* 4 Core Active Metrics Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              {/* DAU */}
+              <div 
+                onClick={() => setUserTierFilter(userTierFilter === 'TODAY' ? 'ALL' : 'TODAY')}
+                className={`border-2 border-black rounded-2xl p-3 sm:p-4 cursor-pointer transition-all ${
+                  userTierFilter === 'TODAY' ? 'bg-emerald-100 ring-2 ring-black shadow-neo-xs' : 'bg-emerald-50/70 hover:bg-emerald-100/70 shadow-neo-xs'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-emerald-800">
+                  <span className="flex items-center gap-1"><span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" /> {isEn ? 'Today Active (DAU)' : '今日活躍人數 (DAU)'}</span>
+                </div>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-emerald-950">{userAnalytics.todayActiveCount}</span>
+                  <span className="text-xs font-bold text-emerald-700">{isEn ? 'users today' : '人今日使用'}</span>
+                </div>
+                <p className="text-[9px] font-bold text-emerald-600/90 mt-1 truncate">
+                  {isEn ? 'Active within past 24 hours' : '當日發起過餐點或互動'}
+                </p>
+              </div>
+
+              {/* Heavy / Power Users */}
+              <div 
+                onClick={() => setUserTierFilter(userTierFilter === 'HEAVY' ? 'ALL' : 'HEAVY')}
+                className={`border-2 border-black rounded-2xl p-3 sm:p-4 cursor-pointer transition-all ${
+                  userTierFilter === 'HEAVY' ? 'bg-rose-100 ring-2 ring-black shadow-neo-xs' : 'bg-rose-50/70 hover:bg-rose-100/70 shadow-neo-xs'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-rose-800">
+                  <span className="flex items-center gap-1">🔥 {isEn ? 'Power Users' : '重度核心用戶'}</span>
+                  <span className="text-[9px] bg-rose-200 text-rose-900 px-1.5 py-0.2 rounded font-black">≥15次</span>
+                </div>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-rose-950">{userAnalytics.heavyUserCount}</span>
+                  <span className="text-xs font-bold text-rose-700">{isEn ? 'heavy users' : '位重度用戶'}</span>
+                </div>
+                <p className="text-[9px] font-bold text-rose-600/90 mt-1 truncate">
+                  {isEn ? 'High frequency & continuous tracking' : '連續多日記餐與深度依賴'}
+                </p>
+              </div>
+
+              {/* Active Users */}
+              <div 
+                onClick={() => setUserTierFilter(userTierFilter === 'ACTIVE' ? 'ALL' : 'ACTIVE')}
+                className={`border-2 border-black rounded-2xl p-3 sm:p-4 cursor-pointer transition-all ${
+                  userTierFilter === 'ACTIVE' ? 'bg-blue-100 ring-2 ring-black shadow-neo-xs' : 'bg-blue-50/70 hover:bg-blue-100/70 shadow-neo-xs'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-blue-800">
+                  <span className="flex items-center gap-1">⚡ {isEn ? 'Active Users' : '常態活躍用戶'}</span>
+                  <span className="text-[9px] bg-blue-200 text-blue-900 px-1.5 py-0.2 rounded font-black">5~14次</span>
+                </div>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-blue-950">{userAnalytics.activeUserCount}</span>
+                  <span className="text-xs font-bold text-blue-700">{isEn ? 'active users' : '位活躍用戶'}</span>
+                </div>
+                <p className="text-[9px] font-bold text-blue-600/90 mt-1 truncate">
+                  {isEn ? 'Steady recurring engagement' : '定期記餐與補水互動'}
+                </p>
+              </div>
+
+              {/* Total Unique & Avg */}
+              <div 
+                onClick={() => setUserTierFilter('ALL')}
+                className={`border-2 border-black rounded-2xl p-3 sm:p-4 cursor-pointer transition-all ${
+                  userTierFilter === 'ALL' ? 'bg-amber-100 ring-2 ring-black shadow-neo-xs' : 'bg-amber-50/70 hover:bg-amber-100/70 shadow-neo-xs'
+                }`}
+              >
+                <div className="flex items-center justify-between text-[10px] font-black uppercase text-amber-800">
+                  <span className="flex items-center gap-1">👥 {isEn ? 'Total Unique' : '區間總使用者'}</span>
+                  <span className="text-[9px] bg-amber-200 text-amber-900 px-1.5 py-0.2 rounded font-black">
+                    {userAnalytics.avgActionsPerUser} {isEn ? 'acts/usr' : '次/人均'}
+                  </span>
+                </div>
+                <div className="flex items-baseline gap-1 mt-1">
+                  <span className="text-2xl sm:text-3xl font-black font-mono text-amber-950">{userAnalytics.totalUniqueUsers}</span>
+                  <span className="text-xs font-bold text-amber-700">{isEn ? 'total users' : '人累計互動'}</span>
+                </div>
+                <p className="text-[9px] font-bold text-amber-700/90 mt-1 truncate">
+                  {isEn ? `${userAnalytics.casualUserCount} casual / new users` : `含 ${userAnalytics.casualUserCount} 位新進與輕度用戶`}
+                </p>
+              </div>
+            </div>
+
+            {/* Filter Pills for Leaderboard */}
+            <div className="flex flex-wrap items-center justify-between gap-2 pt-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
+                <span className="text-[11px] font-black text-zinc-500 mr-1">{isEn ? 'Filter Tier:' : '用戶分層：'}</span>
+                {[
+                  { id: 'ALL', label: isEn ? `All (${userAnalytics.usersList.length})` : `全部 (${userAnalytics.usersList.length})` },
+                  { id: 'HEAVY', label: isEn ? `🔥 Power (${userAnalytics.heavyUserCount})` : `🔥 重度核心 (${userAnalytics.heavyUserCount})` },
+                  { id: 'ACTIVE', label: isEn ? `⚡ Active (${userAnalytics.activeUserCount})` : `⚡ 常態活躍 (${userAnalytics.activeUserCount})` },
+                  { id: 'TODAY', label: isEn ? `🟢 Today Active (${userAnalytics.todayActiveCount})` : `🟢 今日在線 (${userAnalytics.todayActiveCount})` }
+                ].map((tier) => (
+                  <button
+                    key={tier.id}
+                    onClick={() => setUserTierFilter(tier.id)}
+                    className={`px-3 py-1 rounded-xl text-xs font-black transition-all border-2 cursor-pointer ${
+                      userTierFilter === tier.id
+                        ? 'bg-black text-white border-black shadow-neo-xs'
+                        : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-black'
+                    }`}
+                  >
+                    {tier.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Selected User Notice */}
+              {selectedUser !== 'ALL' && (
+                <div className="flex items-center gap-1.5 text-xs font-bold bg-blue-50 border border-blue-300 text-blue-900 px-2.5 py-1 rounded-xl">
+                  <span>🎯 目前日誌僅聚焦用戶：<strong>{selectedUser}</strong></span>
+                  <button
+                    onClick={() => setSelectedUser('ALL')}
+                    className="underline text-[10px] font-black hover:text-black ml-1 cursor-pointer"
+                  >
+                    解除篩選
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Power Users Leaderboard Cards Grid */}
+            {displayedPowerUsers.length === 0 ? (
+              <div className="bg-zinc-50 border-2 border-dashed border-zinc-200 rounded-2xl p-6 text-center text-xs font-bold text-zinc-400">
+                {isEn ? 'No users matching the selected activity filter.' : '此分層分類下暫無符合之使用者。'}
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                {displayedPowerUsers.map((u, idx) => {
+                  const isSelected = selectedUser === u.name;
+                  const isTop1 = idx === 0 && userTierFilter === 'ALL';
+                  const isTop2 = idx === 1 && userTierFilter === 'ALL';
+                  const isTop3 = idx === 2 && userTierFilter === 'ALL';
+                  const topCount = userAnalytics.usersList[0]?.totalActions || 1;
+                  const percentOfTop = Math.min(Math.round((u.totalActions / topCount) * 100), 100);
+
+                  return (
+                    <div
+                      key={u.key}
+                      onClick={() => setSelectedUser(isSelected ? 'ALL' : u.name)}
+                      className={`border-3 border-black rounded-2xl p-3.5 space-y-2.5 transition-all cursor-pointer relative ${
+                        isSelected 
+                          ? 'bg-amber-100 ring-4 ring-black shadow-neo' 
+                          : u.tier === 'HEAVY'
+                          ? 'bg-white hover:bg-rose-50/50 shadow-neo-xs hover:shadow-neo'
+                          : 'bg-white hover:bg-zinc-50 shadow-neo-xs'
+                      }`}
+                    >
+                      {/* Card Top: Rank + Name + Tier Badge */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 truncate">
+                          <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 border-2 border-black ${
+                            isTop1 ? 'bg-amber-400 text-black' : isTop2 ? 'bg-zinc-200 text-black' : isTop3 ? 'bg-amber-700 text-white' : 'bg-zinc-100 text-zinc-700'
+                          }`}>
+                            {isTop1 ? '🥇' : isTop2 ? '🥈' : isTop3 ? '🥉' : idx + 1}
+                          </span>
+                          <div className="truncate">
+                            <h4 className="font-black text-sm text-black truncate flex items-center gap-1" title={u.name}>
+                              {u.name}
+                            </h4>
+                            <span className="font-mono text-[10px] text-zinc-400 truncate block">
+                              {u.isLine ? (u.userId.startsWith('U') ? `LINE #${u.userId.slice(-6)}` : '🟢 LINE 用戶') : '🌐 Web 飲食管家'}
+                            </span>
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col items-end shrink-0 gap-1">
+                          <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border border-black ${
+                            u.tier === 'HEAVY' 
+                              ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-neo-xs' 
+                              : u.tier === 'ACTIVE' 
+                              ? 'bg-blue-100 text-blue-900 border-blue-400' 
+                              : 'bg-zinc-100 text-zinc-700'
+                          }`}>
+                            {u.tier === 'HEAVY' ? '🔥 重度核心' : u.tier === 'ACTIVE' ? '⚡ 活躍' : '🌱 輕度'}
+                          </span>
+                          {u.isTodayActive && (
+                            <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-300 flex items-center gap-1">
+                              <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse inline-block" /> 今日在線
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Interaction Progress Bar */}
+                      <div className="space-y-1">
+                        <div className="flex items-baseline justify-between text-xs font-mono font-black">
+                          <span className="text-zinc-500 text-[10px] font-sans">總互動呼叫</span>
+                          <span className="text-black text-sm">{u.totalActions} <span className="text-[10px] font-normal text-zinc-400">次 ({u.activeDaysCount} 天活躍)</span></span>
+                        </div>
+                        <div className="w-full h-2 bg-zinc-100 border border-black rounded-full overflow-hidden">
+                          <div 
+                            className={`h-full ${u.tier === 'HEAVY' ? 'bg-gradient-to-r from-rose-500 to-amber-400' : 'bg-blue-500'}`}
+                            style={{ width: `${percentOfTop}%` }}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Breakdown Badges */}
+                      <div className="grid grid-cols-3 gap-1.5 text-center text-[10px] font-bold pt-0.5">
+                        <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-1">
+                          <span className="text-zinc-400 block text-[9px]">🍽️ 記餐</span>
+                          <span className="font-mono font-black text-black">{u.mealsCount}</span>
+                        </div>
+                        <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-1">
+                          <span className="text-zinc-400 block text-[9px]">🚰 補水</span>
+                          <span className="font-mono font-black text-cyan-700">{u.waterCount}</span>
+                        </div>
+                        <div className="bg-zinc-50 border border-zinc-200 rounded-lg p-1">
+                          <span className="text-zinc-400 block text-[9px]">📊 查詢</span>
+                          <span className="font-mono font-black text-purple-700">{u.summaryCount}</span>
+                        </div>
+                      </div>
+
+                      {/* Card Bottom: Last active & 1-click filter button */}
+                      <div className="flex items-center justify-between text-[10px] pt-1 border-t border-dashed border-zinc-200 text-zinc-500">
+                        <span className="font-mono truncate max-w-[140px]" title={`最後互動：${u.latestTime}`}>
+                          🕒 {u.latestTime ? u.latestTime.slice(5, 16) : '—'}
+                        </span>
+                        <span className="font-black text-black underline hover:text-rose-600">
+                          {isSelected ? '✕ 解除篩選' : '🔍 篩選日誌 ➔'}
+                        </span>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Expand / Collapse All Users Button if > 6 */}
+            {filteredPowerUsers.length > 6 && (
+              <div className="text-center pt-2">
+                <button
+                  onClick={() => setShowAllPowerUsers(!showAllPowerUsers)}
+                  className="px-4 py-2 bg-zinc-100 hover:bg-black hover:text-white border-2 border-black rounded-xl text-xs font-black transition-all shadow-neo-xs cursor-pointer"
+                >
+                  {showAllPowerUsers 
+                    ? (isEn ? '▲ Show Top 6 Users Only' : '▲ 僅顯示前 6 名用戶') 
+                    : (isEn ? `▼ Show All ${filteredPowerUsers.length} Users` : `▼ 展開查看全部 ${filteredPowerUsers.length} 位用戶`)}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* 🔍 Search & Category Filter & View Mode Toolbar (Kibana Discover Bar) */}
       <div className="bg-white border-4 border-black rounded-[2rem] p-4 shadow-neo space-y-3">
