@@ -19,27 +19,39 @@ const PREFERRED_RATE_KEY = 'panda_preferred_speech_rate';
 
 export function getStoredVoiceName() {
   if (typeof localStorage === 'undefined') return null;
-  return localStorage.getItem(PREFERRED_VOICE_KEY);
+  try {
+    return localStorage.getItem(PREFERRED_VOICE_KEY);
+  } catch (e) {
+    return null;
+  }
 }
 
 export function setStoredVoiceName(name) {
   if (typeof localStorage === 'undefined') return;
-  if (name) {
-    localStorage.setItem(PREFERRED_VOICE_KEY, name);
-  } else {
-    localStorage.removeItem(PREFERRED_VOICE_KEY);
-  }
+  try {
+    if (name) {
+      localStorage.setItem(PREFERRED_VOICE_KEY, name);
+    } else {
+      localStorage.removeItem(PREFERRED_VOICE_KEY);
+    }
+  } catch (e) {}
 }
 
 export function getStoredSpeechRate() {
   if (typeof localStorage === 'undefined') return 0.96;
-  const saved = localStorage.getItem(PREFERRED_RATE_KEY);
-  return saved ? Number(saved) : 0.96;
+  try {
+    const saved = localStorage.getItem(PREFERRED_RATE_KEY);
+    return saved ? Number(saved) : 0.96;
+  } catch (e) {
+    return 0.96;
+  }
 }
 
 export function setStoredSpeechRate(rate) {
   if (typeof localStorage === 'undefined') return;
-  localStorage.setItem(PREFERRED_RATE_KEY, String(rate));
+  try {
+    localStorage.setItem(PREFERRED_RATE_KEY, String(rate));
+  } catch (e) {}
 }
 
 /**

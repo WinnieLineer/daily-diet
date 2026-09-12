@@ -235,7 +235,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   useEffect(() => {
     const handleTitleChange = () => {
-      setActiveTitle(localStorage.getItem('panda_active_title') || '');
+      try {
+        setActiveTitle(localStorage.getItem('panda_active_title') || '');
+      } catch (e) {}
     };
     window.addEventListener('panda-title-updated', handleTitleChange);
     return () => window.removeEventListener('panda-title-updated', handleTitleChange);

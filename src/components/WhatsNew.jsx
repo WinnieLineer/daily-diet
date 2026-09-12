@@ -18,12 +18,14 @@ const FeatureItem = ({ icon: Icon, title, description, color }) => (
 
 export const isNewer = (newVer, oldVer) => {
   if (!oldVer) return true;
-  if (newVer === oldVer) return false;
-  const n = String(newVer).split('.').map(Number);
-  const o = String(oldVer).split('.').map(Number);
+  const cleanNew = String(newVer || '').replace(/^[vV]/, '').trim();
+  const cleanOld = String(oldVer || '').replace(/^[vV]/, '').trim();
+  if (cleanNew === cleanOld) return false;
+  const n = cleanNew.split('.').map(Number);
+  const o = cleanOld.split('.').map(Number);
   for (let i = 0; i < Math.max(n.length, o.length); i++) {
-    const nVal = n[i] || 0;
-    const oVal = o[i] || 0;
+    const nVal = isNaN(n[i]) ? 0 : n[i];
+    const oVal = isNaN(o[i]) ? 0 : o[i];
     if (nVal > oVal) return true;
     if (nVal < oVal) return false;
   }
