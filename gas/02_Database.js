@@ -1626,6 +1626,164 @@ function getRecentLogsData(limit, days) {
   return targetLimit > 0 ? allLogs.slice(0, targetLimit) : allLogs;
 }
 
+// ========================================================
+// 🧠 AI 模型動態權重調度與 RPD 配額熔斷機制 (Dynamic Model Re-weighting & Circuit Breaker)
+// ========================================================
+
+/**
+ * 判定模型錯誤是否屬於速率限制或每日配額耗盡 (429 / RESOURCE_EXHAUSTED / RPD limit)
+ */
+function isRateLimitOrQuotaError(statusCode, errSnippet, errObj) {
+  if (statusCode === 429) return true;
+  if (errObj && (errObj.error?.status === 'RESOURCE_EXHAUSTED' || errObj.error?.code === 429)) return true;
+  const text = String(errSnippet || '').toLowerCase();
+  return text.includes('resource_exhausted') || 
+         text.includes('quota exceeded') || 
+         text.includes('rate limit') || 
+         text.includes('requests per day') ||
+         text.includes('requestsperday') ||
+         text.includes('too many requests');
+}
+
+/**
+ * 讀取今日已被熔斷（標記耗盡）的模型名單
+ * 天然依賴當日日期 key (AI_EXHAUSTED_YYYY-MM-DD)，跨午夜 00:00 自動無縫重置清空
+ */
+function getTodayExhaustedModels(props) {
+  try {
+    const today = getTodayDateString();
+    const cache = CacheService.getScriptCache();
+    const cacheKey = 'AI_EXHAUSTED_' + today;
+    
+    // 1. 優先從記憶體快取極速讀取
+    const cached = cache.get(cacheKey);
+    if (cached) {
+      try {
+        return JSON.parse(cached);
+      } catch (ce) {}
+    }
+    
+    // 2. 從 ScriptProperties 持久層讀取
+    const p = props || PropertiesService.getScriptProperties();
+    const raw = p.getProperty(cacheKey);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      try {
+        cache.put(cacheKey, raw, 21600); // 緩存 6 小時
+      } catch (ce) {}
+      return parsed;
+    }
+    return {};
+  } catch (e) {
+    console.warn('讀取今日耗盡模型失敗:', e);
+    return {};
+  }
+}
+
+/**
+ * 將指定模型標記為今日熔斷（耗盡），動態降權至備援序列末端
+ */
+function markModelExhausted(model, reason, props, userId) {
+  if (!model) return;
+  try {
+    const today = getTodayDateString();
+    const p = props || PropertiesService.getScriptProperties();
+    const cache = CacheService.getScriptCache();
+    const cacheKey = 'AI_EXHAUSTED_' + today;
+
+    let exhaustedMap = getTodayExhaustedModels(p);
+    if (!exhaustedMap) exhaustedMap = {};
+
+    // 今日已標記過則略過，避免重複寫入
+    if (exhaustedMap[model]) return;
+
+    const timestamp = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    exhaustedMap[model] = {
+      exhaustedAt: timestamp,
+      reason: String(reason || 'HTTP 429 Quota Exceeded').slice(0, 200),
+      status: 'EXHAUSTED_TODAY'
+    };
+
+    const serialized = JSON.stringify(exhaustedMap);
+    p.setProperty(cacheKey, serialized);
+    try {
+      cache.put(cacheKey, serialized, 21600);
+    } catch (ce) {}
+
+    // 同步更新當日配額 stats 的 exhaustedModels 欄位，供後台直接讀取
+    try {
+      const quotaKey = 'AI_QUOTA_' + today;
+      const rawQuota = p.getProperty(quotaKey);
+      let quotaStats = rawQuota ? JSON.parse(rawQuota) : { count: 0, success: 0, fail: 0, models: {}, recentErrors: [] };
+      quotaStats.exhaustedModels = exhaustedMap;
+      p.setProperty(quotaKey, JSON.stringify(quotaStats));
+    } catch (qe) {}
+
+    // 系統日誌記錄動態調度事件
+    if (typeof recordSystemLog === 'function') {
+      recordSystemLog(
+        '模型配額動態調度',
+        userId || 'SYSTEM',
+        `[${model}] 觸發配額上限 (429/RPD)，已自動降權至備用序列末端`,
+        `觸發原因: ${String(reason || '配額超量').slice(0, 150)}`,
+        `今日後續請求將優先使用其餘健康模型，換日 (00:00) 自動回歸初始優先級`
+      );
+    }
+  } catch (e) {
+    console.warn('標記模型耗盡失敗:', e);
+  }
+}
+
+/**
+ * 動態計算模型呼叫優先順序 (Dynamic Model Priority Re-weighting)
+ * 將健康模型置於最前線優先調用，今日已達 429/RPD 額滿之模型自動移至最末位作為備援
+ */
+function getDynamicModelOrder(baseModels, props) {
+  if (!Array.isArray(baseModels) || baseModels.length === 0) {
+    return baseModels || [];
+  }
+  try {
+    const exhaustedMap = getTodayExhaustedModels(props);
+    const exhaustedKeys = Object.keys(exhaustedMap || {});
+    if (exhaustedKeys.length === 0) {
+      return baseModels.slice(); // 今日無模型熔斷，保持初始最佳配置
+    }
+
+    const healthy = [];
+    const exhausted = [];
+
+    baseModels.forEach(function(m) {
+      if (exhaustedMap[m]) {
+        exhausted.push(m);
+      } else {
+        healthy.push(m);
+      }
+    });
+
+    // 健康模型優先呼叫；額滿模型置於末端作為極限保底
+    return healthy.concat(exhausted);
+  } catch (e) {
+    return baseModels.slice();
+  }
+}
+
+/**
+ * 統一處理 AI 模型調用失敗：若觸發 429/RPD 額滿自動熔斷降權，並記錄嘗試次數
+ */
+function handleAiModelFailure(model, statusCode, errSnippet, errObj, props, userId) {
+  try {
+    if (typeof isRateLimitOrQuotaError === 'function' && isRateLimitOrQuotaError(statusCode, errSnippet, errObj)) {
+      if (typeof markModelExhausted === 'function') {
+        markModelExhausted(model, `HTTP ${statusCode || 'ERR'}: ${String(errSnippet || '').slice(0, 120)}`, props, userId);
+      }
+    }
+    if (typeof recordAiUsageAttempt === 'function') {
+      recordAiUsageAttempt(model, false, props);
+    }
+  } catch (e) {
+    console.warn('handleAiModelFailure 處理異常:', e);
+  }
+}
 
 function recordAiUsageAttempt(model, isSuccess, props) {
   try {
@@ -1799,6 +1957,9 @@ function getAiQuotaStats(props) {
     const totalCalls = successCount + failCount;
     const successRate = totalCalls > 0 ? Math.round((successCount / totalCalls) * 100) : (failCount === 0 ? 100 : 0);
 
+    const exhaustedModels = getTodayExhaustedModels(p);
+    const exhaustedList = Object.keys(exhaustedModels || {});
+
     return {
       today: today,
       currentRpm: currentRpm,
@@ -1815,10 +1976,12 @@ function getAiQuotaStats(props) {
       remaining: remaining,
       successRate: successRate,
       models: stats.models || {},
+      exhaustedModels: exhaustedModels || {},
+      exhaustedList: exhaustedList,
       recentErrors: stats.recentErrors || [],
       lastUpdated: stats.lastUpdated || Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-      currentModel: stats.currentModel || (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-2.5-flash-lite',
-      lastSuccessfulModel: stats.lastSuccessfulModel || stats.currentModel || (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-2.5-flash-lite'
+      currentModel: stats.currentModel || (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-3.5-flash-lite',
+      lastSuccessfulModel: stats.lastSuccessfulModel || stats.currentModel || (PRIMARY_GEMINI_MODELS && PRIMARY_GEMINI_MODELS[0]) || 'gemini-3.5-flash-lite'
     };
   } catch (e) {
     return {
@@ -1837,10 +2000,12 @@ function getAiQuotaStats(props) {
       remaining: 1500,
       successRate: 100,
       models: {},
+      exhaustedModels: {},
+      exhaustedList: [],
       recentErrors: [],
       lastUpdated: Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss"),
-      currentModel: 'gemini-2.5-flash-lite',
-      lastSuccessfulModel: 'gemini-2.5-flash-lite'
+      currentModel: 'gemini-3.5-flash-lite',
+      lastSuccessfulModel: 'gemini-3.5-flash-lite'
     };
   }
 }

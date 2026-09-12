@@ -140,9 +140,12 @@ function sanitizeAndBalanceNutrition(data, dishName = '') {
 // ========================================================
 
 function analyzeMealWithGemini(base64Image, apiKey, userId, props, userGistId, pat) {
-  const models = (typeof VISION_GEMINI_MODELS !== 'undefined' && VISION_GEMINI_MODELS.length) 
+  const baseModels = (typeof VISION_GEMINI_MODELS !== 'undefined' && VISION_GEMINI_MODELS.length) 
     ? VISION_GEMINI_MODELS 
     : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
+  const models = (typeof getDynamicModelOrder === 'function') 
+    ? getDynamicModelOrder(baseModels, props) 
+    : baseModels;
 
   const userPersona = getUserPersona(userId, props, userGistId, pat);
   const userLang = getUserLanguage(userId, props, userGistId, pat);
@@ -248,14 +251,19 @@ ${schemaBlock}`;
       const statusCode = res.getResponseCode();
       if (statusCode !== 200) {
         let errSnippet = '';
+        let errObj = null;
         try {
-          const errObj = JSON.parse(res.getContentText());
+          errObj = JSON.parse(res.getContentText());
           errSnippet = errObj?.error?.message || res.getContentText();
         } catch (je) {
           errSnippet = res.getContentText();
         }
         failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
-        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+        if (typeof handleAiModelFailure === 'function') {
+          handleAiModelFailure(model, statusCode, errSnippet, errObj, props, userId);
+        } else if (typeof recordAiUsageAttempt === 'function') {
+          recordAiUsageAttempt(model, false, props);
+        }
         continue;
       }
 
@@ -316,8 +324,13 @@ ${schemaBlock}`;
         failed_attempts: failedAttempts
       };
     } catch (err) {
-      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
-      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+      const errMsg = err.message || '未知異常';
+      failedAttempts.push({ model: model, status: 'EXC', error: errMsg.slice(0, 150) });
+      if (typeof handleAiModelFailure === 'function') {
+        handleAiModelFailure(model, 0, errMsg, null, props, userId);
+      } else if (typeof recordAiUsageAttempt === 'function') {
+        recordAiUsageAttempt(model, false, props);
+      }
     }
   }
 
@@ -337,9 +350,12 @@ ${schemaBlock}`;
 // ========================================================
 
 function parseTextWithGemini(text, apiKey, userId, props, userGistId, pat) {
-  const models = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
+  const baseModels = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
     ? TEXT_GEMINI_MODELS 
     : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
+  const models = (typeof getDynamicModelOrder === 'function') 
+    ? getDynamicModelOrder(baseModels, props) 
+    : baseModels;
 
   const userPersona = getUserPersona(userId, props, userGistId, pat);
   const userLang = getUserLanguage(userId, props, userGistId, pat);
@@ -454,14 +470,19 @@ Do NOT wrap in markdown backticks.`;
       const statusCode = res.getResponseCode();
       if (statusCode !== 200) {
         let errSnippet = '';
+        let errObj = null;
         try {
-          const errObj = JSON.parse(res.getContentText());
+          errObj = JSON.parse(res.getContentText());
           errSnippet = errObj?.error?.message || res.getContentText();
         } catch (je) {
           errSnippet = res.getContentText();
         }
         failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
-        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+        if (typeof handleAiModelFailure === 'function') {
+          handleAiModelFailure(model, statusCode, errSnippet, errObj, props, userId);
+        } else if (typeof recordAiUsageAttempt === 'function') {
+          recordAiUsageAttempt(model, false, props);
+        }
         continue;
       }
 
@@ -551,8 +572,13 @@ Do NOT wrap in markdown backticks.`;
         failed_attempts: failedAttempts
       };
     } catch (e) {
-      failedAttempts.push({ model: model, status: 'EXC', error: (e.message || '未知異常').slice(0, 150) });
-      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+      const errMsg = e.message || '未知異常';
+      failedAttempts.push({ model: model, status: 'EXC', error: errMsg.slice(0, 150) });
+      if (typeof handleAiModelFailure === 'function') {
+        handleAiModelFailure(model, 0, errMsg, null, props, userId);
+      } else if (typeof recordAiUsageAttempt === 'function') {
+        recordAiUsageAttempt(model, false, props);
+      }
       console.warn("文字辨識單次解析失敗:", e);
     }
   }
@@ -581,9 +607,12 @@ Do NOT wrap in markdown backticks.`;
 // ========================================================
 
 function handleGoalSettingWithAI(replyToken, userId, userText, userGistId, pat, props, liffId, channelAccessToken, apiKey, lang) {
-  const models = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
+  const baseModels = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
     ? TEXT_GEMINI_MODELS 
     : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
+  const models = (typeof getDynamicModelOrder === 'function') 
+    ? getDynamicModelOrder(baseModels, props) 
+    : baseModels;
 
   const userLang = lang || getUserLanguage(userId, props, userGistId, pat);
   const isEn = userLang === 'en';
@@ -717,14 +746,19 @@ Do NOT wrap in markdown backticks.`
       const statusCode = res.getResponseCode();
       if (statusCode !== 200) {
         let errSnippet = '';
+        let errObj = null;
         try {
-          const errObj = JSON.parse(res.getContentText());
+          errObj = JSON.parse(res.getContentText());
           errSnippet = errObj?.error?.message || res.getContentText();
         } catch (je) {
           errSnippet = res.getContentText();
         }
         failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
-        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+        if (typeof handleAiModelFailure === 'function') {
+          handleAiModelFailure(model, statusCode, errSnippet, errObj, props, userId);
+        } else if (typeof recordAiUsageAttempt === 'function') {
+          recordAiUsageAttempt(model, false, props);
+        }
         continue;
       }
 
@@ -784,8 +818,13 @@ Do NOT wrap in markdown backticks.`
       replyFlexMessage(replyToken, goalFlex, channelAccessToken, userId, props);
       return true;
     } catch (e) {
-      failedAttempts.push({ model: model, status: 'EXC', error: (e.message || '未知異常').slice(0, 150) });
-      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false, props);
+      const errMsg = e.message || '未知異常';
+      failedAttempts.push({ model: model, status: 'EXC', error: errMsg.slice(0, 150) });
+      if (typeof handleAiModelFailure === 'function') {
+        handleAiModelFailure(model, 0, errMsg, null, props, userId);
+      } else if (typeof recordAiUsageAttempt === 'function') {
+        recordAiUsageAttempt(model, false, props);
+      }
       console.error("設定目標單次嘗試失敗:", e);
     }
   }
@@ -815,9 +854,12 @@ Do NOT wrap in markdown backticks.`
 // ========================================================
 
 function analyzeMealWithGeminiFull(base64Image, apiKey, context, language, callerInfo) {
-  const models = (typeof VISION_GEMINI_MODELS !== 'undefined' && VISION_GEMINI_MODELS.length) 
+  const baseModels = (typeof VISION_GEMINI_MODELS !== 'undefined' && VISION_GEMINI_MODELS.length) 
     ? VISION_GEMINI_MODELS 
     : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
+  const models = (typeof getDynamicModelOrder === 'function') 
+    ? getDynamicModelOrder(baseModels) 
+    : baseModels;
 
   const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
   const prompt = `Analyze this food image. Return STRICTLY a raw JSON object with keys:
@@ -863,14 +905,20 @@ No markdown backticks.`;
       const statusCode = res.getResponseCode();
       if (statusCode !== 200) {
         let errSnippet = '';
+        let errObj = null;
         try {
-          const errObj = JSON.parse(res.getContentText());
+          errObj = JSON.parse(res.getContentText());
           errSnippet = errObj?.error?.message || res.getContentText();
         } catch (je) {
           errSnippet = res.getContentText();
         }
         failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
-        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        const cUserId = callerInfo?.userId || 'web_user';
+        if (typeof handleAiModelFailure === 'function') {
+          handleAiModelFailure(model, statusCode, errSnippet, errObj, null, cUserId);
+        } else if (typeof recordAiUsageAttempt === 'function') {
+          recordAiUsageAttempt(model, false);
+        }
         continue;
       }
 
@@ -892,8 +940,14 @@ No markdown backticks.`;
       parsedObj.failed_attempts = failedAttempts;
       return parsedObj;
     } catch (err) {
-      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
-      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+      const errMsg = err.message || '未知異常';
+      failedAttempts.push({ model: model, status: 'EXC', error: errMsg.slice(0, 150) });
+      const cUserId = callerInfo?.userId || 'web_user';
+      if (typeof handleAiModelFailure === 'function') {
+        handleAiModelFailure(model, 0, errMsg, null, null, cUserId);
+      } else if (typeof recordAiUsageAttempt === 'function') {
+        recordAiUsageAttempt(model, false);
+      }
     }
   }
 
@@ -908,9 +962,12 @@ No markdown backticks.`;
 }
 
 function parseTextWithGeminiFull(text, apiKey, context, language, callerInfo) {
-  const models = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
+  const baseModels = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
     ? TEXT_GEMINI_MODELS 
     : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
+  const models = (typeof getDynamicModelOrder === 'function') 
+    ? getDynamicModelOrder(baseModels) 
+    : baseModels;
 
   const safeText = String(text || '').slice(0, 500).replace(/[<>{}]/g, ' ');
   const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
@@ -954,14 +1011,20 @@ No markdown backticks.`;
       const statusCode = res.getResponseCode();
       if (statusCode !== 200) {
         let errSnippet = '';
+        let errObj = null;
         try {
-          const errObj = JSON.parse(res.getContentText());
+          errObj = JSON.parse(res.getContentText());
           errSnippet = errObj?.error?.message || res.getContentText();
         } catch (je) {
           errSnippet = res.getContentText();
         }
         failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
-        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        const cUserId = callerInfo?.userId || 'web_user';
+        if (typeof handleAiModelFailure === 'function') {
+          handleAiModelFailure(model, statusCode, errSnippet, errObj, null, cUserId);
+        } else if (typeof recordAiUsageAttempt === 'function') {
+          recordAiUsageAttempt(model, false);
+        }
         continue;
       }
 
@@ -983,8 +1046,14 @@ No markdown backticks.`;
       parsedObj.failed_attempts = failedAttempts;
       return parsedObj;
     } catch (err) {
-      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
-      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+      const errMsg = err.message || '未知異常';
+      failedAttempts.push({ model: model, status: 'EXC', error: errMsg.slice(0, 150) });
+      const cUserId = callerInfo?.userId || 'web_user';
+      if (typeof handleAiModelFailure === 'function') {
+        handleAiModelFailure(model, 0, errMsg, null, null, cUserId);
+      } else if (typeof recordAiUsageAttempt === 'function') {
+        recordAiUsageAttempt(model, false);
+      }
     }
   }
 
@@ -999,9 +1068,12 @@ No markdown backticks.`;
 }
 
 function generateGeminiText(prompt, apiKey) {
-  const models = (typeof ADVICE_GEMINI_MODELS !== 'undefined' && ADVICE_GEMINI_MODELS.length) 
+  const baseModels = (typeof ADVICE_GEMINI_MODELS !== 'undefined' && ADVICE_GEMINI_MODELS.length) 
     ? ADVICE_GEMINI_MODELS 
-    : ['gemini-2.5-flash-lite', 'gemini-2.5-flash', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite'];
+    : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite', 'gemini-2.5-flash'];
+  const models = (typeof getDynamicModelOrder === 'function') 
+    ? getDynamicModelOrder(baseModels) 
+    : baseModels;
 
   const payload = {
     contents: [{ parts: [{ text: prompt }] }],
@@ -1023,14 +1095,19 @@ function generateGeminiText(prompt, apiKey) {
       const statusCode = res.getResponseCode();
       if (statusCode !== 200) {
         let errSnippet = '';
+        let errObj = null;
         try {
-          const errObj = JSON.parse(res.getContentText());
+          errObj = JSON.parse(res.getContentText());
           errSnippet = errObj?.error?.message || res.getContentText();
         } catch (je) {
           errSnippet = res.getContentText();
         }
         failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
-        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        if (typeof handleAiModelFailure === 'function') {
+          handleAiModelFailure(model, statusCode, errSnippet, errObj, null, 'web_coach');
+        } else if (typeof recordAiUsageAttempt === 'function') {
+          recordAiUsageAttempt(model, false);
+        }
         continue;
       }
 
@@ -1042,8 +1119,13 @@ function generateGeminiText(prompt, apiKey) {
       }
       return data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
     } catch (e) {
-      failedAttempts.push({ model: model, status: 'EXC', error: (e.message || '未知異常').slice(0, 150) });
-      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+      const errMsg = e.message || '未知異常';
+      failedAttempts.push({ model: model, status: 'EXC', error: errMsg.slice(0, 150) });
+      if (typeof handleAiModelFailure === 'function') {
+        handleAiModelFailure(model, 0, errMsg, null, null, 'web_coach');
+      } else if (typeof recordAiUsageAttempt === 'function') {
+        recordAiUsageAttempt(model, false);
+      }
     }
   }
 
@@ -1059,9 +1141,12 @@ function generateGeminiText(prompt, apiKey) {
 // ========================================================
 
 function transcribeAudioWithGemini(base64Audio, mimeType, apiKey) {
-  const models = (typeof AUDIO_GEMINI_MODELS !== 'undefined' && AUDIO_GEMINI_MODELS.length)
+  const baseModels = (typeof AUDIO_GEMINI_MODELS !== 'undefined' && AUDIO_GEMINI_MODELS.length)
     ? AUDIO_GEMINI_MODELS
     : ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-3.5-transcribe', 'gemini-3.5-flash', 'gemini-2.5-flash'];
+  const models = (typeof getDynamicModelOrder === 'function') 
+    ? getDynamicModelOrder(baseModels) 
+    : baseModels;
 
   let cleanMimeType = mimeType || 'audio/mp4';
   if (cleanMimeType.includes('m4a') || cleanMimeType.includes('octet-stream')) {
@@ -1111,14 +1196,19 @@ CRITICAL RULES:
       const statusCode = res.getResponseCode();
       if (statusCode !== 200) {
         let errSnippet = '';
+        let errObj = null;
         try {
-          const errObj = JSON.parse(res.getContentText());
+          errObj = JSON.parse(res.getContentText());
           errSnippet = errObj?.error?.message || res.getContentText();
         } catch (je) {
           errSnippet = res.getContentText();
         }
         failedAttempts.push({ model: model, status: statusCode, error: errSnippet.slice(0, 150) });
-        if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+        if (typeof handleAiModelFailure === 'function') {
+          handleAiModelFailure(model, statusCode, errSnippet, errObj, null, 'transcription');
+        } else if (typeof recordAiUsageAttempt === 'function') {
+          recordAiUsageAttempt(model, false);
+        }
         continue;
       }
 
@@ -1131,8 +1221,13 @@ CRITICAL RULES:
       const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || '';
       return text.trim();
     } catch (err) {
-      failedAttempts.push({ model: model, status: 'EXC', error: (err.message || '未知異常').slice(0, 150) });
-      if (typeof recordAiUsageAttempt === 'function') recordAiUsageAttempt(model, false);
+      const errMsg = err.message || '未知異常';
+      failedAttempts.push({ model: model, status: 'EXC', error: errMsg.slice(0, 150) });
+      if (typeof handleAiModelFailure === 'function') {
+        handleAiModelFailure(model, 0, errMsg, null, null, 'transcription');
+      } else if (typeof recordAiUsageAttempt === 'function') {
+        recordAiUsageAttempt(model, false);
+      }
     }
   }
 

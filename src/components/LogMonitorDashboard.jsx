@@ -1090,6 +1090,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const maxRpm = aiQuota?.rpmLimit || aiQuota?.maxRpm || 15;
   const rpmPercent = Math.min(Math.round((currentRpm / maxRpm) * 100), 100);
   const models = aiQuota?.models || {};
+  const exhaustedModels = aiQuota?.exhaustedModels || {};
+  const exhaustedList = Array.isArray(aiQuota?.exhaustedList) ? aiQuota.exhaustedList : Object.keys(exhaustedModels);
   const recentErrors = Array.isArray(aiQuota?.recentErrors) ? aiQuota.recentErrors : [];
 
   return (
@@ -1371,32 +1373,64 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                   ✅ {aiQuota.lastSuccessfulModel}
                 </span>
               )}
+              {exhaustedList.length > 0 && (
+                <span className="text-[9px] font-black bg-amber-100 text-amber-800 border border-amber-300 px-1.5 py-0.5 rounded-md" title="今日已達 RPD 上限並自動降權之模型">
+                  ⚡ {exhaustedList.length} 款降權
+                </span>
+              )}
               <span className="text-[10px] font-black bg-purple-100 text-purple-800 border border-purple-300 px-2 py-0.5 rounded-full">
                 {Object.keys(models).length} {isEn ? 'Models' : '款模型'}
               </span>
             </div>
           </div>
 
-          <div className="space-y-1.5 max-h-[70px] overflow-y-auto custom-scrollbar pr-1">
+          <div className="space-y-1.5 max-h-[85px] overflow-y-auto custom-scrollbar pr-1">
             {Object.keys(models).length === 0 ? (
               <p className="text-xs font-bold text-zinc-400 italic pt-2">
                 {isEn ? 'No model calls recorded yet today.' : '今日尚無模型調用紀錄'}
               </p>
             ) : (
-              Object.entries(models).map(([mName, mStats]) => (
-                <div key={mName} className={`flex items-center justify-between text-xs font-bold border rounded-lg px-2 py-1 ${mName === aiQuota?.lastSuccessfulModel ? 'bg-emerald-50/80 border-emerald-300' : 'bg-zinc-50 border-black/10'}`}>
-                  <span className="font-mono text-[10px] truncate max-w-[120px] flex items-center gap-1">
-                    {mName === aiQuota?.lastSuccessfulModel && <span className="text-emerald-600 font-black">●</span>}
-                    {mName}
-                  </span>
-                  <div className="flex items-center gap-1 font-mono text-[10px]">
-                    <span className="bg-black text-white px-1.5 py-0.2 rounded font-black">{mStats.count || 0}</span>
-                    {mStats.fail > 0 && <span className="text-rose-600 font-black">({mStats.fail}x)</span>}
+              Object.entries(models).map(([mName, mStats]) => {
+                const isExhausted = Boolean(exhaustedModels[mName]);
+                const isCurrent = mName === aiQuota?.lastSuccessfulModel;
+                return (
+                  <div 
+                    key={mName} 
+                    className={`flex items-center justify-between text-xs font-bold border rounded-lg px-2 py-1 transition-all ${
+                      isExhausted 
+                        ? 'bg-amber-50/80 border-amber-300' 
+                        : isCurrent 
+                        ? 'bg-emerald-50/80 border-emerald-300' 
+                        : 'bg-zinc-50 border-black/10'
+                    }`}
+                  >
+                    <div className="flex items-center gap-1.5 truncate max-w-[170px]">
+                      {isCurrent && <span className="text-emerald-600 font-black text-xs">●</span>}
+                      {isExhausted && <span className="text-amber-500 font-black text-xs" title="今日 RPD 額滿，已移至末位">⚠️</span>}
+                      <span className={`font-mono text-[10px] truncate ${isExhausted ? 'line-through text-zinc-500' : ''}`}>
+                        {mName}
+                      </span>
+                      {isExhausted && (
+                        <span className="text-[8px] bg-amber-200 text-amber-900 px-1 py-0.2 rounded font-black whitespace-nowrap">
+                          {isEn ? 'RPD Max' : 'RPD 額滿降權'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-1 font-mono text-[10px]">
+                      <span className="bg-black text-white px-1.5 py-0.2 rounded font-black">{mStats.count || 0}</span>
+                      {mStats.fail > 0 && <span className="text-rose-600 font-black">({mStats.fail}x)</span>}
+                    </div>
                   </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
+          {exhaustedList.length > 0 && (
+            <p className="text-[9px] font-bold text-amber-700 bg-amber-50/80 border border-amber-200 rounded-md px-2 py-0.5 flex items-center justify-between">
+              <span>⚡ {isEn ? `${exhaustedList.length} model(s) hit RPD, moved to fallback tail` : `今日 ${exhaustedList.length} 款模型 RPD 額滿已降權至候補末位`}</span>
+              <span className="text-zinc-500 font-normal">{isEn ? 'resets 00:00' : '明日 00:00 重置'}</span>
+            </p>
+          )}
         </div>
       </div>
 

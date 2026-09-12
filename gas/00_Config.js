@@ -26,13 +26,13 @@ const TEXT_GEMINI_MODELS = [
   'gemini-2.5-flash-lite'
 ];
 
-// 🐼 教練諮詢與即時通話模型清單 (極速回應優先，採用秒級 gemini-2.5-flash-lite / gemini-2.5-flash)
+// 🐼 教練諮詢與即時通話模型清單 (優先使用 RPD 500 之 3.5-flash-lite / 3.1-flash-lite，次選 2.5 系列)
 const ADVICE_GEMINI_MODELS = [
-  'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
   'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
-  'gemini-3.5-flash'
+  'gemini-3.5-flash',
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash'
 ];
 
 // 🎙️ 語音多模態辨識模型清單 (必須支援 Audio 多模態輸入，優先使用 RPD 500 之 3.5-flash-lite / 3.1-flash-lite)
