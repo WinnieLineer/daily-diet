@@ -288,8 +288,12 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
   };
 
   // Get active title stickers worn currently
-  const currentTitle = localStorage.getItem('panda_active_title');
-  const hasCrown = localStorage.getItem('panda_sponsor_crown') === 'true';
+  let currentTitle = '';
+  let hasCrown = false;
+  try {
+    currentTitle = localStorage.getItem('panda_active_title') || '';
+    hasCrown = localStorage.getItem('panda_sponsor_crown') === 'true';
+  } catch (e) {}
 
   if (!isOpen) return null;
 

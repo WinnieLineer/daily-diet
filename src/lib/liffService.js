@@ -69,8 +69,10 @@ export const liffService = {
       }
     } catch (e) {}
     this.profile = null;
-    localStorage.removeItem('line_user_id');
-    localStorage.removeItem('line_user_name');
+    try {
+      localStorage.removeItem('line_user_id');
+      localStorage.removeItem('line_user_name');
+    } catch (e) {}
     window.location.reload();
   },
 

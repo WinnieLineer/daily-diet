@@ -42,6 +42,14 @@ const VERSION_HISTORY = [
   { version: '1.5.0', date: '2026-03-10', features: ['全新 Neo-brutalism UI', '熊貓營養師登場'] }
 ];
 
+const safeGetStorage = (key) => {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
 const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed, initialTab = 'profile' }) => {
   // 誠實商店銀行帳戶設定 (在此修改您的收款帳戶資訊即可！)
   const BANK_INFO = {
@@ -59,7 +67,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [newName, setNewName] = useState(userName || '');
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
-  const [githubPat, setGithubPat] = useState(localStorage.getItem('github_pat') || '');
+  const [githubPat, setGithubPat] = useState(safeGetStorage('github_pat') || '');
   const [copiedGistId, setCopiedGistId] = useState(false);
   const [showCalculator, setShowCalculator] = useState(false);
   const [calcResult, setCalcResult] = useState(null);
@@ -71,18 +79,18 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [showGithubPat, setShowGithubPat] = useState(false);
 
   // 誠實支持商店擴展狀態
-  const [hasCrown, setHasCrown] = useState(localStorage.getItem('panda_sponsor_crown') === 'true');
-  const [hasStickers, setHasStickers] = useState(localStorage.getItem('panda_stickers_unlocked') === 'true');
-  const [activeSticker, setActiveSticker] = useState(() => localStorage.getItem('panda_active_sticker') || '');
+  const [hasCrown, setHasCrown] = useState(safeGetStorage('panda_sponsor_crown') === 'true');
+  const [hasStickers, setHasStickers] = useState(safeGetStorage('panda_stickers_unlocked') === 'true');
+  const [activeSticker, setActiveSticker] = useState(() => safeGetStorage('panda_active_sticker') || '');
   const [selectedQr, setSelectedQr] = useState(null);
 
   // 飲控里程碑與頭銜貼紙狀態
   const [currentStreak, setCurrentStreak] = useState(0);
-  const [activeTitle, setActiveTitle] = useState(() => localStorage.getItem('panda_active_title') || '');
-  const [hasPersonas, setHasPersonas] = useState(localStorage.getItem('panda_persona_unlocked') === 'true');
-  const [activePersona, setActivePersona] = useState(() => localStorage.getItem('panda_active_persona') || 'tsundere');
+  const [activeTitle, setActiveTitle] = useState(() => safeGetStorage('panda_active_title') || '');
+  const [hasPersonas, setHasPersonas] = useState(safeGetStorage('panda_persona_unlocked') === 'true');
+  const [activePersona, setActivePersona] = useState(() => safeGetStorage('panda_active_persona') || 'tsundere');
   const [lineProfile, setLineProfile] = useState(null);
-  const [currentGistId, setCurrentGistId] = useState(() => localStorage.getItem('gist_backup_id') || getCurrentGistId() || '');
+  const [currentGistId, setCurrentGistId] = useState(() => safeGetStorage('gist_backup_id') || getCurrentGistId() || '');
   const [copiedGist, setCopiedGist] = useState(false);
   const [isEditingGist, setIsEditingGist] = useState(false);
   const [manualGistInput, setManualGistInput] = useState('');
