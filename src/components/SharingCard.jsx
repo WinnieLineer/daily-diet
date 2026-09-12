@@ -7,6 +7,7 @@ import { getPandaAdvice } from '../lib/groq';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { t, getLanguage } from '../lib/translations';
+import { getLocalDateString } from '../lib/constants';
 
 const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName }) => {
   const cardRef = useRef(null);
@@ -67,7 +68,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
       const canvas = await generateCanvas();
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `daily-diet-summary-${new Date().toISOString().split('T')[0]}.png`;
+      link.download = `daily-diet-summary-${getLocalDateString()}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -85,7 +86,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
       const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
       if (!blob) return;
       
-      const file = new File([blob], `daily-diet-summary-${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+      const file = new File([blob], `daily-diet-summary-${getLocalDateString()}.png`, { type: 'image/png' });
       
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
@@ -97,7 +98,7 @@ const SharingCard = ({ isOpen, onClose, summary, goals, streak, advice, userName
         // Fallback to download
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `daily-diet-summary-${new Date().toISOString().split('T')[0]}.png`;
+        link.download = `daily-diet-summary-${getLocalDateString()}.png`;
         link.href = dataUrl;
         link.click();
       }

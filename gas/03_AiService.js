@@ -5,6 +5,34 @@
  */
 
 // ========================================================
+// 🛠️ 輔助函式：強韌 JSON 提取與解析器
+// ========================================================
+
+/**
+ * 堅固的 JSON 解析器：自動過濾 Markdown 區塊、提取 outermost { ... } 或 [ ... ]
+ * 防止模型輸出額外前綴/後綴時導致 JSON.parse 拋出 SyntaxError
+ */
+function extractAndParseJson(text) {
+  if (!text) return {};
+  let str = String(text).trim();
+  const blockMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (blockMatch && blockMatch[1]) {
+    str = blockMatch[1].trim();
+  }
+  const firstBrace = str.indexOf('{');
+  const lastBrace = str.lastIndexOf('}');
+  const firstBracket = str.indexOf('[');
+  const lastBracket = str.lastIndexOf(']');
+
+  if (firstBrace !== -1 && lastBrace > firstBrace && (firstBracket === -1 || firstBrace < firstBracket)) {
+    str = str.substring(firstBrace, lastBrace + 1);
+  } else if (firstBracket !== -1 && lastBracket > firstBracket) {
+    str = str.substring(firstBracket, lastBracket + 1);
+  }
+  return JSON.parse(str);
+}
+
+// ========================================================
 // 🎭 教練性格與語氣提示字元
 // ========================================================
 
@@ -231,8 +259,7 @@ ${schemaBlock}`;
 
       const data = JSON.parse(res.getContentText());
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractAndParseJson(rawText);
 
       if (typeof recordAiUsageSuccess === 'function') {
         recordAiUsageSuccess(model, props, { userId: userId, operation: '照片辨識', failedAttempts: failedAttempts });
@@ -332,12 +359,16 @@ DO NOT use any Chinese characters, even if the user typed in Chinese (e.g. if us
 - "calculation_note": 計算過程簡述 (繁體中文，例如: 陽春麵1碗約350卡 + 滷蛋1顆約75卡 = 總計425卡).
 - "panda_comment": 繁體中文 35 字以內，符合性格設定。`;
 
+  const safeText = String(text || '').slice(0, 500).replace(/[<>{}]/g, ' ');
+
   const prompt = isEn
-    ? `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
+    ? `You are a professional nutrition expert panda for a diet tracking app. The user has submitted a message enclosed in <user_input>:
+<user_input>
+${safeText}
+</user_input>
+Analyze this input and determine if the user is describing food, a drink, or a meal they ate/drank.
 ${personaInstruction}
 ${langDirective}
-
-Determine if the user is describing food, a drink, or a meal they ate/drank.
 
 If it IS food/meal/drink:
 Return ONLY raw JSON:
@@ -368,11 +399,13 @@ Return ONLY raw JSON:
   "reply": "A friendly, witty Panda reply in English matching selected persona (${userPersona}), reminding the user they can send food photos or type what they ate to log it 🐼"
 }
 Do NOT wrap in markdown backticks.`
-    : `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
+    : `You are a professional nutrition expert panda for a diet tracking app. The user has submitted a message enclosed in <user_input>:
+<user_input>
+${safeText}
+</user_input>
+Analyze this input and determine if the user is describing food, a drink, or a meal they ate/drank.
 ${personaInstruction}
 ${langDirective}
-
-Determine if the user is describing food, a drink, or a meal they ate/drank.
 
 If it IS food/meal/drink:
 Return ONLY raw JSON:
@@ -432,8 +465,7 @@ Do NOT wrap in markdown backticks.`;
 
       const data = JSON.parse(res.getContentText());
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractAndParseJson(rawText);
 
       if (typeof recordAiUsageSuccess === 'function') {
         recordAiUsageSuccess(model, props, { userId: userId, operation: '文字記餐', failedAttempts: failedAttempts });
@@ -696,8 +728,7 @@ Do NOT wrap in markdown backticks.`
 
       const data = JSON.parse(res.getContentText());
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractAndParseJson(rawText);
 
       if (typeof recordAiUsageSuccess === 'function') {
         recordAiUsageSuccess(model, props, { userId: userId, operation: '目標推薦', failedAttempts: failedAttempts });
@@ -843,13 +874,12 @@ No markdown backticks.`;
 
       const data = JSON.parse(res.getContentText());
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       if (typeof recordAiUsageSuccess === 'function') {
         recordAiUsageSuccess(model, null, callerInfo);
       } else if (typeof recordAiUsage === 'function') {
         recordAiUsage(model, true, null, null, callerInfo);
       }
-      const parsedObj = JSON.parse(cleanJson);
+      const parsedObj = extractAndParseJson(rawText);
       const balanced = sanitizeAndBalanceNutrition(parsedObj, parsedObj.dish_name);
       parsedObj.calories = balanced.calories;
       parsedObj.protein = balanced.protein;
@@ -880,9 +910,13 @@ function parseTextWithGeminiFull(text, apiKey, context, language, callerInfo) {
     ? TEXT_GEMINI_MODELS 
     : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-2.5-flash-lite'];
 
+  const safeText = String(text || '').slice(0, 500).replace(/[<>{}]/g, ' ');
   const langDisplay = language === 'en' ? 'English' : 'Traditional Chinese';
-  const prompt = `You are an expert nutritionist panda. Analyze: "${text}".
-Return STRICTLY a raw JSON object with keys:
+  const prompt = `You are an expert nutritionist panda. The user entered the food description enclosed in <user_input>:
+<user_input>
+${safeText}
+</user_input>
+Analyze this food entry. Return STRICTLY a raw JSON object with keys:
 "dish_name" (${langDisplay}),
 "calories" (integer kcal),
 "protein" (integer grams),
@@ -931,13 +965,12 @@ No markdown backticks.`;
 
       const data = JSON.parse(res.getContentText());
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
       if (typeof recordAiUsageSuccess === 'function') {
         recordAiUsageSuccess(model, null, callerInfo);
       } else if (typeof recordAiUsage === 'function') {
         recordAiUsage(model, true, null, null, callerInfo);
       }
-      const parsedObj = JSON.parse(cleanJson);
+      const parsedObj = extractAndParseJson(rawText);
       const balanced = sanitizeAndBalanceNutrition(parsedObj, parsedObj.dish_name);
       parsedObj.calories = balanced.calories;
       parsedObj.protein = balanced.protein;

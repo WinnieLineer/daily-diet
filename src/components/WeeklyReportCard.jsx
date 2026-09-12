@@ -8,6 +8,7 @@ import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db } from '../db';
 import { t, getLanguage } from '../lib/translations';
+import { getLocalDateString } from '../lib/constants';
 
 // Incredibly funny, context-aware fallback roasts in full Taiwanese slang
 const FALLBACK_ROASTS = {
@@ -67,7 +68,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
       for (let i = 6; i >= 0; i--) {
         const d = new Date();
         d.setDate(today.getDate() - i);
-        dates.push(d.toISOString().split('T')[0]);
+        dates.push(getLocalDateString(d));
       }
 
       // Query logs in Dexie
@@ -241,7 +242,8 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
       const canvas = await generateCanvas();
       const dataUrl = canvas.toDataURL('image/png');
       const link = document.createElement('a');
-      link.download = `daily-diet-weekly-report-${new Date().toISOString().split('T')[0]}.png`;
+      const dateStr = getLocalDateString();
+      link.download = `daily-diet-weekly-report-${dateStr}.png`;
       link.href = dataUrl;
       link.click();
     } catch (err) {
@@ -259,7 +261,8 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
       const blob = await new Promise(r => canvas.toBlob(r, 'image/png'));
       if (!blob) return;
 
-      const file = new File([blob], `daily-diet-weekly-report-${new Date().toISOString().split('T')[0]}.png`, { type: 'image/png' });
+      const dateStr = getLocalDateString();
+      const file = new File([blob], `daily-diet-weekly-report-${dateStr}.png`, { type: 'image/png' });
 
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
@@ -271,7 +274,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
         // Fallback to download
         const dataUrl = canvas.toDataURL('image/png');
         const link = document.createElement('a');
-        link.download = `daily-diet-weekly-report-${new Date().toISOString().split('T')[0]}.png`;
+        link.download = `daily-diet-weekly-report-${dateStr}.png`;
         link.href = dataUrl;
         link.click();
       }

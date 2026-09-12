@@ -6,11 +6,12 @@ import { db } from '../db';
 import { Plus, Trash2, ChevronDown, ChevronUp, History, Pencil, Clock } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../lib/translations';
+import { getLocalDateString } from '../lib/constants';
 
 const WeightTracker = ({ pointerEventsNone }) => {
   const [activeTab, setActiveTab] = useState('weight'); // 'weight' or 'poop'
   const [weight, setWeight] = useState('');
-  const [weightDate, setWeightDate] = useState(() => new Date().toISOString().split('T')[0]);
+  const [weightDate, setWeightDate] = useState(() => getLocalDateString());
   
   const [poopTime, setPoopTime] = useState(() => {
     const now = new Date();

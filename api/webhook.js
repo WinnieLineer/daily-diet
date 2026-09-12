@@ -345,6 +345,29 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken) {
   }
 }
 
+/**
+ * Robust JSON extractor & parser: strips markdown code fences and isolates outermost JSON object/array
+ */
+function extractAndParseJson(text) {
+  if (!text) return {};
+  let str = String(text).trim();
+  const blockMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (blockMatch && blockMatch[1]) {
+    str = blockMatch[1].trim();
+  }
+  const firstBrace = str.indexOf('{');
+  const lastBrace = str.lastIndexOf('}');
+  const firstBracket = str.indexOf('[');
+  const lastBracket = str.lastIndexOf(']');
+
+  if (firstBrace !== -1 && lastBrace > firstBrace && (firstBracket === -1 || firstBrace < firstBracket)) {
+    str = str.substring(firstBrace, lastBrace + 1);
+  } else if (firstBracket !== -1 && lastBracket > firstBracket) {
+    str = str.substring(firstBracket, lastBracket + 1);
+  }
+  return JSON.parse(str);
+}
+
 function getPersonaInstruction(persona) {
   if (persona === 'gentle') {
     return `Persona Style: Sweet, gentle, supportive, and healing partner (無比溫柔、體貼、溫馨且鼓勵感滿滿的療癒小幫手熊貓). Praise user, show empathy, encourage with warm tone, never use harsh words.`;
@@ -459,8 +482,7 @@ Required Schema:
       }
 
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractAndParseJson(rawText);
 
       const dishName = parsed.dish_name || "美味餐點";
       const cal = Number(parsed.calories) || 450;
@@ -506,7 +528,11 @@ async function parseTextWithGemini(text, apiKey, persona = 'tsundere') {
 
   const personaInstruction = getPersonaInstruction(persona);
 
-  const prompt = `You are a professional nutrition expert panda for a diet tracking app. Analyze this user message: "${text}".
+  const safeText = String(text || '').slice(0, 500).replace(/[<>{}]/g, ' ');
+  const prompt = `You are a professional nutrition expert panda for a diet tracking app. The user submitted a meal description enclosed in <user_input>:
+<user_input>
+${safeText}
+</user_input>
 ${personaInstruction}
 
 Return ONLY a raw JSON object with keys:
@@ -540,8 +566,7 @@ Do NOT wrap in markdown backticks.`;
       }
 
       const rawText = data?.candidates?.[0]?.content?.parts?.[0]?.text || '{}';
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractAndParseJson(rawText);
 
       const dishName = parsed.dish_name || text;
       const cal = Number(parsed.calories) || 350;

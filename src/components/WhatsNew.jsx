@@ -55,10 +55,10 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
-  const hasAnyFeatures = show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
+  const hasAnyFeatures = show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
 
   // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
-  const isBugFixOnly = !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 

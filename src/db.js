@@ -1,4 +1,5 @@
 import Dexie from 'dexie';
+import { getLocalDateString } from './lib/constants';
 
 export const db = new Dexie('dailyDietDB');
 
@@ -56,8 +57,8 @@ export async function calculateStreak() {
   // Sort dates descending
   const dates = allLogs.sort((a, b) => new Date(b) - new Date(a));
   
-  const today = new Date().toISOString().split('T')[0];
-  const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
+  const today = getLocalDateString(new Date());
+  const yesterday = getLocalDateString(new Date(Date.now() - 86400000));
   
   // If the most recent log isn't today or yesterday, streak is broken
   if (dates[0] !== today && dates[0] !== yesterday) return 0;
@@ -68,7 +69,7 @@ export async function calculateStreak() {
   for (let i = 0; i < dates.length; i++) {
     const expectedDate = new Date(currentDate);
     expectedDate.setDate(currentDate.getDate() - i);
-    const expectedStr = expectedDate.toISOString().split('T')[0];
+    const expectedStr = getLocalDateString(expectedDate);
     
     if (dates[i] === expectedStr) {
       streak++;

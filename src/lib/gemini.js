@@ -26,6 +26,29 @@ function getPersonaInstruction() {
   return `Persona style: Tsundere Elite Registered Dietitian. Witty, professional, sarcastic and tsundere (毒舌且傲嬌，口嫌體正直，犀利吐槽但給予專家建議與貼心叮嚀).`;
 }
 
+/**
+ * Robust JSON extractor & parser: strips markdown code fences and isolates outermost JSON object/array
+ */
+function extractAndParseJson(text) {
+  if (!text) return {};
+  let str = String(text).trim();
+  const blockMatch = str.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+  if (blockMatch && blockMatch[1]) {
+    str = blockMatch[1].trim();
+  }
+  const firstBrace = str.indexOf('{');
+  const lastBrace = str.lastIndexOf('}');
+  const firstBracket = str.indexOf('[');
+  const lastBracket = str.lastIndexOf(']');
+
+  if (firstBrace !== -1 && lastBrace > firstBrace && (firstBracket === -1 || firstBrace < firstBracket)) {
+    str = str.substring(firstBrace, lastBrace + 1);
+  } else if (firstBracket !== -1 && lastBracket > firstBracket) {
+    str = str.substring(firstBracket, lastBracket + 1);
+  }
+  return JSON.parse(str);
+}
+
 function sanitizeKey(key) {
   if (!key) return null;
   let clean = key.trim();
@@ -252,8 +275,7 @@ History Today: ${foodStrip || 'None'}`;
       };
 
       const rawText = await callGeminiDirect(payload, apiKey);
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractAndParseJson(rawText);
       if (parsed && !parsed.dish_name) {
         parsed.dish_name = language === 'zh' ? "美味餐點" : "Delicious Meal";
       }
@@ -292,7 +314,12 @@ export async function analyzeFoodText(textInstruction, context = {}, language = 
   const foodStrip = foodLogs.map(l => l.dish_name).join(', ');
   const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
 
-  const customPrompt = `You are a professional nutrition expert panda. The user has entered: "${textInstruction}".
+  const safeTextInstruction = String(textInstruction || '').slice(0, 500).replace(/[<>{}]/g, ' ');
+
+  const customPrompt = `You are a professional nutrition expert panda. The user has entered the following meal description enclosed in <user_meal_text>:
+<user_meal_text>
+${safeTextInstruction}
+</user_meal_text>
 Analyze this meal and estimate its nutritional facts. Return STRICTLY a raw JSON object. NO MARKDOWN.
 ${getPersonaInstruction()}
 
@@ -328,8 +355,7 @@ History Today: ${foodStrip || 'None'}`;
       };
 
       const rawText = await callGeminiDirect(payload, apiKey);
-      const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
-      const parsed = JSON.parse(cleanJson);
+      const parsed = extractAndParseJson(rawText);
       if (parsed && !parsed.dish_name) {
         parsed.dish_name = language === 'zh' ? "美味餐點" : "Delicious Meal";
       }
@@ -365,7 +391,7 @@ export async function suggestGoals(weight) {
         generationConfig: { response_mime_type: "application/json" }
       };
       const raw = await callGeminiDirect(payload, apiKey);
-      return JSON.parse(raw.replace(/```json/g, '').replace(/```/g, '').trim());
+      return extractAndParseJson(raw);
     } catch (e) {}
   }
 

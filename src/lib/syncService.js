@@ -4,6 +4,8 @@
  * 具備請求防抖 (Debounce) 與 序列化防衝突 (Queue & Idempotency) 機制
  */
 
+import { getLocalDateString } from './constants';
+
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
 function getEffectiveIds() {
@@ -86,7 +88,7 @@ export async function syncMealToCloud(meal) {
     fat: String(meal.fat || 0),
     category: meal.category || '',
     comment: meal.comment || meal.advice || '',
-    date: meal.date || new Date().toISOString().split('T')[0],
+    date: meal.date || getLocalDateString(),
     time: nowTime,
     id: String(meal.timestamp || meal.id || Date.now())
   });

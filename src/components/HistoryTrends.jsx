@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, Refere
 import { getDailySummary } from '../db';
 import { Activity } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
+import { getLocalDateString } from '../lib/constants';
 
 const HistoryTrends = ({ goals, summary }) => {
   const [trendData, setTrendData] = useState([]);
@@ -19,7 +20,7 @@ const HistoryTrends = ({ goals, summary }) => {
       for (let i = range - 1; i >= 0; i--) {
         const d = new Date();
         d.setDate(d.getDate() - i);
-        dates.push(d.toISOString().split('T')[0]);
+        dates.push(getLocalDateString(d));
       }
 
       const data = await Promise.all(dates.map(async date => {
