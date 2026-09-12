@@ -40,7 +40,10 @@ export default async function handler(req, res) {
       .update(rawBody)
       .digest('base64');
 
-    if (hash !== signature) {
+    const hashBuffer = Buffer.from(hash, 'utf8');
+    const sigBuffer = Buffer.from(signature, 'utf8');
+
+    if (hashBuffer.length !== sigBuffer.length || !crypto.timingSafeEqual(hashBuffer, sigBuffer)) {
       console.error('🚨 LINE Signature mismatch! Request rejected.');
       return res.status(403).json({ error: 'Invalid LINE signature' });
     }

@@ -12,11 +12,12 @@
 /**
  * 🛡️ 驗證維護者與管理端點權限
  * 支援藉由 URL 參數 token, adminKey, pass, password 驗證
- * 若環境中尚未特別設定 MAINTAINER_PASS，則 fallback 至預設密碼 '1qaZXCVBNM<>?'
+ * 遵循安全原則：若環境中尚未設定 MAINTAINER_PASS，一律拒絕存取 (Fail-Closed)
  */
 function verifyAdminAccess(e, props) {
   if (!props) props = PropertiesService.getScriptProperties();
-  const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD') || '1qaZXCVBNM<>?';
+  const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
+  if (!configuredPass) return false;
   const incomingToken = e?.parameter?.token || e?.parameter?.adminKey || e?.parameter?.pass || e?.parameter?.password;
   if (!incomingToken) return false;
   return incomingToken === configuredPass;
@@ -37,8 +38,16 @@ function doGet(e) {
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
       const incomingPass = e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
       const incomingUser = e?.parameter?.user || e?.parameter?.userName || 'Winnie';
-      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD') || '1qaZXCVBNM<>?';
+      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
       const configuredUser = props.getProperty('MAINTAINER_USER') || 'Winnie';
+
+      if (!configuredPass) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          authenticated: false, 
+          message: '後端尚未配置維護者密碼 (MAINTAINER_PASS)，為維護安全已拒絕存取。請於 GAS 屬性中設定 MAINTAINER_PASS。' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
 
       if (incomingPass === configuredPass && (!configuredUser || incomingUser.toLowerCase() === configuredUser.toLowerCase())) {
         return ContentService.createTextOutput(JSON.stringify({ 
@@ -529,6 +538,37 @@ function doPost(e) {
 
     const action = e.parameter?.action || data?.action;
     const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
+
+    // 🛡️ 0.1 維護者登入安全校驗端點 (POST 支援，避免密碼出現於 GET URL 日誌)
+    if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
+      const incomingPass = data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
+      const incomingUser = data?.user || data?.userName || e?.parameter?.user || e?.parameter?.userName || 'Winnie';
+      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
+      const configuredUser = props.getProperty('MAINTAINER_USER') || 'Winnie';
+
+      if (!configuredPass) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          authenticated: false, 
+          message: '後端尚未配置維護者密碼 (MAINTAINER_PASS)，為維護安全已拒絕存取。請於 GAS 屬性中設定 MAINTAINER_PASS。' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      if (incomingPass === configuredPass && (!configuredUser || incomingUser.toLowerCase() === configuredUser.toLowerCase())) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'ok', 
+          authenticated: true, 
+          token: configuredPass, 
+          userName: incomingUser 
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          authenticated: false, 
+          message: '身分驗證失敗：維護者帳號或密碼不正確' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
 
     // 🌟 1. Web App 專屬安全通道：Gemini AI 辨識 API (含防盜刷、時戳驗證與頻率防護)
     if (action === 'analyzeMeal' || action === 'analyzeFoodImage' || action === 'analyzeText' || action === 'analyzeFoodText' || action === 'completeText' || action === 'getPandaAdvice') {

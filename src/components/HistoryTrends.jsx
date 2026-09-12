@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { t } from '../lib/translations';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, ReferenceLine } from 'recharts';
-import { getDailySummary } from '../db';
+import { db } from '../db';
 import { Activity } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { getLocalDateString } from '../lib/constants';
@@ -16,23 +16,38 @@ const HistoryTrends = ({ goals, summary }) => {
   useEffect(() => {
     let isMounted = true;
     const fetchTrendData = async () => {
+      const now = new Date();
+      const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
       const dates = [];
       for (let i = range - 1; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(d.getDate() - i);
+        const d = new Date(base);
+        d.setDate(base.getDate() - i);
         dates.push(getLocalDateString(d));
       }
 
-      const data = await Promise.all(dates.map(async date => {
-        const s = await getDailySummary(date);
+      // ⚡ 單次批次查詢取代多達 30 次循序 IndexedDB query
+      const allLogs = await db.dietLogs.where('date').anyOf(dates).toArray();
+      const summaryByDate = {};
+      for (const log of allLogs) {
+        if (!summaryByDate[log.date]) {
+          summaryByDate[log.date] = { calories: 0, protein: 0 };
+        }
+        summaryByDate[log.date].calories += Number(log.calories) || 0;
+        summaryByDate[log.date].protein += Number(log.protein) || 0;
+      }
+
+      const data = dates.map(date => {
+        const s = summaryByDate[date] || { calories: 0, protein: 0 };
+        const cal = Math.round(s.calories);
+        const pro = Math.round(s.protein * 10) / 10;
         return {
           name: date.substring(8),
           dateFull: date,
-          calories: s.calories || 0,
-          protein: (s.protein || 0) * 10,
-          rawProtein: s.protein || 0,
+          calories: cal,
+          protein: pro * 10,
+          rawProtein: pro,
         };
-      }));
+      });
 
       const filteredData = data.filter(d => d.calories > 0 || d.rawProtein > 0);
       if (isMounted) setTrendData(filteredData);

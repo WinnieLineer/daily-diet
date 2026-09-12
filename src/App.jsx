@@ -742,7 +742,7 @@ function App() {
   });
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [lastSeenVersionState, setLastSeenVersionState] = useState(null);
-  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '20:00', fasting_end: '12:00' });
+  const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00' });
 
   useEffect(() => {
     const handleOpenWhatsNew = () => setShowWhatsNew(true);
@@ -1427,8 +1427,8 @@ function App() {
       protein: proGoal ? proGoal.value : 100,
       water: watGoal ? watGoal.value : 2500,
       fasting_enabled: fEnabled ? fEnabled.value : false,
-      fasting_start: fStart ? fStart.value : '20:00',
-      fasting_end: fEnd ? fEnd.value : '12:00',
+      fasting_start: fStart ? fStart.value : '12:00',
+      fasting_end: fEnd ? fEnd.value : '20:00',
       show_carbs_fat: showCarbs ? showCarbs.value : false,
       carbs: carbsGoal ? carbsGoal.value : 200,
       fat: fatGoal ? fatGoal.value : 60

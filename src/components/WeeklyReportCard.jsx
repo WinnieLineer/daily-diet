@@ -62,12 +62,13 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
     setLoading(true);
     setAiRoast('');
     try {
-      const today = new Date();
+      const now = new Date();
+      const base = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
       const dates = [];
       // Generate past 7 days (including today)
       for (let i = 6; i >= 0; i--) {
-        const d = new Date();
-        d.setDate(today.getDate() - i);
+        const d = new Date(base);
+        d.setDate(base.getDate() - i);
         dates.push(getLocalDateString(d));
       }
 

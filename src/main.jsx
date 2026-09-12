@@ -10,13 +10,17 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
     if (
       combinedMsg.includes('__firefox__') ||
       combinedMsg.includes('__gCrWeb') ||
+      combinedMsg.includes('__brave__') ||
+      combinedMsg.includes('__ddg_') ||
       combinedMsg.includes('ResizeObserver') ||
       combinedMsg.includes('Script error') ||
       combinedMsg.includes('chrome-extension') ||
       combinedMsg.includes('safari-extension') ||
       combinedMsg.includes('safari-web-extension') ||
       combinedMsg.includes('moz-extension') ||
-      combinedMsg.includes('webkit.messageHandlers')
+      combinedMsg.includes('webkit.messageHandlers') ||
+      /global code@.*:1:\d+/.test(combinedMsg) ||
+      (combinedMsg.includes("Can't find variable: __") && /iphone|ipad|ipod/i.test(navigator.userAgent || ''))
     ) {
       console.debug('Suppressed third-party browser / extension noise:', title, message);
       return;
@@ -159,8 +163,18 @@ window.addEventListener('vite:preloadError', (event) => {
 window.addEventListener('error', (event) => {
   const message = event.message || '';
   const stack = event.error?.stack || `${event.filename}:${event.lineno}`;
+  const filename = event.filename || '';
 
-  // Ignore benign browser/extension noise, iOS browser injected scripts and dynamic module load errors
+  // 1. 忽略 iOS WebKit 外部包裹瀏覽器注入的使用者腳本 (如 Brave/Firefox iOS 的 global code@...:1:12)
+  const isRootInjectedScript = (event.lineno === 1 && (event.colno || 0) < 150) &&
+    (!filename || filename === window.location.href || filename.endsWith('/') || filename.includes('index.html'));
+
+  if (isRootInjectedScript) {
+    console.debug('Suppressed root injected browser user script error:', message);
+    return;
+  }
+
+  // 2. Ignore benign browser/extension noise, iOS browser injected scripts and dynamic module load errors
   const combined = `${message} ${stack}`;
   if (
     combined.includes('ResizeObserver') ||
@@ -171,9 +185,13 @@ window.addEventListener('error', (event) => {
     combined.includes('moz-extension') ||
     combined.includes('__firefox__') ||
     combined.includes('__gCrWeb') ||
+    combined.includes('__brave__') ||
+    combined.includes('__ddg_') ||
     combined.includes('webkit.messageHandlers') ||
     combined.includes('dynamically imported module') ||
-    combined.includes('Importing a module script failed')
+    combined.includes('Importing a module script failed') ||
+    /global code@.*:1:\d+/.test(combined) ||
+    (combined.includes("Can't find variable: __") && /iphone|ipad|ipod/i.test(navigator.userAgent || ''))
   ) {
     return;
   }
@@ -198,6 +216,8 @@ window.addEventListener('unhandledrejection', (event) => {
   if (
     combined.includes('__firefox__') ||
     combined.includes('__gCrWeb') ||
+    combined.includes('__brave__') ||
+    combined.includes('__ddg_') ||
     combined.includes('chrome-extension') ||
     combined.includes('safari-extension') ||
     combined.includes('safari-web-extension') ||

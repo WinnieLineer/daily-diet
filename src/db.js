@@ -54,8 +54,8 @@ export async function calculateStreak() {
   const allLogs = await db.dietLogs.orderBy('date').uniqueKeys();
   if (!allLogs || allLogs.length === 0) return 0;
 
-  // Sort dates descending
-  const dates = allLogs.sort((a, b) => new Date(b) - new Date(a));
+  // Sort dates descending (string comparison for YYYY-MM-DD is exact and immune to Date timezone issues)
+  const dates = allLogs.sort((a, b) => b.localeCompare(a));
   
   const today = getLocalDateString(new Date());
   const yesterday = getLocalDateString(new Date(Date.now() - 86400000));
@@ -64,11 +64,13 @@ export async function calculateStreak() {
   if (dates[0] !== today && dates[0] !== yesterday) return 0;
   
   let streak = 0;
-  let currentDate = new Date(dates[0]);
+  // Parse YYYY-MM-DD into local noon (12:00:00) to prevent UTC midnight timezone shifts
+  const [y, m, d] = dates[0].split('-').map(Number);
+  const baseDate = new Date(y, m - 1, d, 12, 0, 0);
   
   for (let i = 0; i < dates.length; i++) {
-    const expectedDate = new Date(currentDate);
-    expectedDate.setDate(currentDate.getDate() - i);
+    const expectedDate = new Date(baseDate);
+    expectedDate.setDate(baseDate.getDate() - i);
     const expectedStr = getLocalDateString(expectedDate);
     
     if (dates[i] === expectedStr) {

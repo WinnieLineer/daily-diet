@@ -380,11 +380,28 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     setAuthError('');
 
     try {
-      const verifyUrl = `${GAS_API_URL}?action=verifyMaintainerAuth&user=${encodeURIComponent(cleanName)}&pass=${encodeURIComponent(cleanInput)}&_t=${Date.now()}`;
-      const res = await fetch(verifyUrl);
-      const data = await res.json();
+      let data = null;
+      try {
+        // 優先以 POST 發送，避免維護者密碼被記錄至瀏覽器歷史或 GET URL 日誌中
+        const postRes = await fetch(GAS_API_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'verifyMaintainerAuth',
+            user: cleanName,
+            pass: cleanInput,
+            timestamp: Date.now()
+          })
+        });
+        data = await postRes.json();
+      } catch (postErr) {
+        // 若 POST 因網路環境異常，優雅 fallback 至 GET
+        const verifyUrl = `${GAS_API_URL}?action=verifyMaintainerAuth&user=${encodeURIComponent(cleanName)}&pass=${encodeURIComponent(cleanInput)}&_t=${Date.now()}`;
+        const res = await fetch(verifyUrl);
+        data = await res.json();
+      }
 
-      if (data.status === 'ok' && data.authenticated) {
+      if (data && data.status === 'ok' && data.authenticated) {
         const validatedToken = data.token || cleanInput;
         const validatedUser = data.userName || cleanName;
 

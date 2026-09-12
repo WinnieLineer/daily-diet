@@ -41,10 +41,7 @@ const WeightTracker = ({ pointerEventsNone }) => {
     
     // Create a Set of YYYY-MM-DD dates where poop logs exist
     const poopDates = new Set(
-      pLogs.map(p => {
-        const d = new Date(p.timestamp);
-        return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-      })
+      pLogs.map(p => getLocalDateString(new Date(p.timestamp)))
     );
     
     const cData = wLogs.slice(-30).map(l => ({ 
@@ -62,8 +59,8 @@ const WeightTracker = ({ pointerEventsNone }) => {
     e.preventDefault();
     if (!weight) return;
 
-    const d = new Date(weightDate);
-    d.setHours(12, 0, 0, 0);
+    const [y, m, day] = weightDate.split('-').map(Number);
+    const d = new Date(y, m - 1, day, 12, 0, 0);
 
     await db.weightLogs.add({
       weight: parseFloat(weight),
