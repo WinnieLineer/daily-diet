@@ -140,7 +140,8 @@ export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
   if (gistId) params.append('gistId', gistId);
 
   try {
-    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步刪除異常:', e?.message));
     console.log(`🗑️ [Web ➔ LINE Sync] 即時同步刪除餐點: ${dishName || targetId}`);
   } catch (err) {}
 }
@@ -167,7 +168,8 @@ function doSyncGoals(goals) {
   if (gistId) params.append('gistId', gistId);
 
   try {
-    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步目標異常:', e?.message));
     console.log(`🎯 [Web ➔ LINE Sync] 即時同步體態目標: ${goals.calories}卡 / ${goals.protein}g蛋 / 碳水:${goals.carbs || 200}g / 脂肪:${goals.fat || 60}g (開啟:${!!goals.show_carbs_fat})`);
   } catch (err) {}
 }
@@ -202,7 +204,8 @@ function doSyncPersona(persona) {
   if (gistId) params.append('gistId', gistId);
 
   try {
-    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步性格異常:', e?.message));
     console.log(`🎭 [Web ➔ LINE Sync] 即時同步教練性格: ${persona}`);
   } catch (err) {}
 }
@@ -238,7 +241,8 @@ function doSyncLanguage(lang) {
   if (gistId) params.append('gistId', gistId);
 
   try {
-    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步語言異常:', e?.message));
     console.log(`🌐 [Web ➔ LINE Sync] 即時同步語言設定: ${validLang} (已向 LINE 後端發出選單與回覆語言切換指令)`);
   } catch (err) {}
 }

@@ -46,7 +46,19 @@ function extractAndParseJson(text) {
   } else if (firstBracket !== -1 && lastBracket > firstBracket) {
     str = str.substring(firstBracket, lastBracket + 1);
   }
-  return JSON.parse(str);
+
+  try {
+    return JSON.parse(str);
+  } catch (err) {
+    try {
+      // Clean trailing commas before closing braces/brackets e.g. {"a": 1,} -> {"a": 1}
+      const relaxed = str.replace(/,\s*([}\]])/g, '$1');
+      return JSON.parse(relaxed);
+    } catch (err2) {
+      console.warn("extractAndParseJson parsing failed:", err2.message, "raw string:", str);
+      return {};
+    }
+  }
 }
 
 function sanitizeKey(key) {

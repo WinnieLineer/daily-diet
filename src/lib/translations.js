@@ -995,17 +995,21 @@ let currentLang = null;
 
 export const setLanguage = (lang) => {
   currentLang = lang;
-  localStorage.setItem('daily_diet_lang', lang);
+  try {
+    localStorage.setItem('daily_diet_lang', lang);
+  } catch (e) {}
 };
 
 export const getLanguage = () => {
   if (currentLang) return currentLang;
-  const saved = localStorage.getItem('daily_diet_lang');
-  if (saved) {
-    currentLang = saved;
-    return saved;
-  }
-  const lang = navigator.language || navigator.userLanguage || 'zh';
+  try {
+    const saved = localStorage.getItem('daily_diet_lang');
+    if (saved) {
+      currentLang = saved;
+      return saved;
+    }
+  } catch (e) {}
+  const lang = (typeof navigator !== 'undefined' && (navigator.language || navigator.userLanguage)) || 'zh';
   currentLang = lang.startsWith('zh') ? 'zh' : 'zh'; // Default to zh for rich TW experience
   return currentLang;
 };
