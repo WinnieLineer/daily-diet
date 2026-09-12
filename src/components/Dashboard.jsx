@@ -105,8 +105,8 @@ const Dashboard = ({ summary, goals }) => {
           
           {/* Row 3: Macronutrient Calorie Distribution Donut Chart */}
           <div className="pt-4 border-t-2 border-dashed border-black/5 flex items-center justify-between gap-4">
-            <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 relative flex items-center justify-center bg-zinc-50 border-2 border-black rounded-full shadow-neo-sm-flat">
-              <ResponsiveContainer width="100%" height="100%">
+            <div className="w-24 h-24 sm:w-28 sm:h-28 shrink-0 relative flex items-center justify-center bg-zinc-50 border-2 border-black rounded-full shadow-neo-sm-flat min-w-0">
+              <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={0}>
                 <PieChart>
                   <Pie
                     data={chartData}
