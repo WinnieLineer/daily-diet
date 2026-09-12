@@ -3,6 +3,9 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
+let memoryLastAlertSig = '';
+let memoryLastAlertTime = 0;
+
 function reportWebErrorToWeb3Forms(title, message, stack) {
   try {
     const combinedMsg = `${message || ""} ${stack || ""}`;
@@ -36,11 +39,21 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
     const errSig = `${title}_${message}`;
     const lastSentKey = 'last_web3_alert_sig';
     const lastTimeKey = 'last_web3_alert_time';
-    const lastSig = sessionStorage.getItem(lastSentKey);
-    const lastTime = Number(sessionStorage.getItem(lastTimeKey) || 0);
+    let lastSig = memoryLastAlertSig;
+    let lastTime = memoryLastAlertTime;
+    try {
+      lastSig = sessionStorage.getItem(lastSentKey) || memoryLastAlertSig;
+      lastTime = Number(sessionStorage.getItem(lastTimeKey) || memoryLastAlertTime);
+    } catch (e) {}
+
     if (lastSig === errSig && Date.now() - lastTime < 60000) return;
-    sessionStorage.setItem(lastSentKey, errSig);
-    sessionStorage.setItem(lastTimeKey, String(Date.now()));
+
+    memoryLastAlertSig = errSig;
+    memoryLastAlertTime = Date.now();
+    try {
+      sessionStorage.setItem(lastSentKey, errSig);
+      sessionStorage.setItem(lastTimeKey, String(Date.now()));
+    } catch (e) {}
 
     const currentUrl = typeof window !== 'undefined' ? window.location.href : 'N/A';
     const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A';

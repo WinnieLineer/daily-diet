@@ -540,8 +540,17 @@ function doPost(e) {
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
       const incomingPass = data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
       const incomingUser = data?.user || data?.userName || e?.parameter?.user || e?.parameter?.userName || '';
-      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD') || '1qazXCVBNM<>?';
+      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
       const configuredUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+
+      if (!configuredPass) {
+        console.warn('⚠️ MAINTAINER_PASS 尚未於指令碼屬性中設定，身分驗證被拒絕。');
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          authenticated: false, 
+          message: '系統安全提醒：維護者密碼尚未於指令碼屬性中設定，請聯繫管理員配置。' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
 
       const isUserMatch = incomingUser && incomingUser.trim().toLowerCase() === configuredUser.toLowerCase();
       const isPassMatch = incomingPass && incomingPass === configuredPass;

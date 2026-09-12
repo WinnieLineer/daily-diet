@@ -8,6 +8,10 @@ import crypto from 'crypto';
 // - GIST_ID
 // - VITE_LINE_LIFF_ID
 
+// 🛡️ Webhook 訊息去重快取 (防止 LINE Retry 導致重複辨識與重複記帳)
+const processedEventCache = new Map();
+const DEDUP_TTL_MS = 60 * 1000;
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(200).send('Daily Diet LINE Bot Webhook Engine is running! 🐼');
@@ -59,6 +63,24 @@ export default async function handler(req, res) {
   for (const event of events) {
     const replyToken = event.replyToken;
     if (!replyToken) continue;
+
+    // 🛑【LINE 去重防重試機制】以 webhookEventId / message.id / postback.data 結合建立 Idempotency Key
+    const userId = event.source?.userId || 'default_user';
+    const eventUniqueId = event.webhookEventId || event.message?.id || (event.postback ? `${userId}_${event.postback.data}_${event.timestamp}` : null);
+    if (eventUniqueId) {
+      const now = Date.now();
+      // 清理超過 60 秒之快取項目
+      for (const [key, timestamp] of processedEventCache.entries()) {
+        if (now - timestamp > DEDUP_TTL_MS) {
+          processedEventCache.delete(key);
+        }
+      }
+      if (processedEventCache.has(eventUniqueId)) {
+        console.warn(`⚠️ [LINE 重試防護] 偵測到重複事件 ${eventUniqueId}，已自動阻擋避免重複記帳！`);
+        continue;
+      }
+      processedEventCache.set(eventUniqueId, now);
+    }
 
     try {
       console.log(`處理事件: ${event.type}, 訊息類型: ${event.message?.type || 'N/A'}`);
