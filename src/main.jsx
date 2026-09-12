@@ -238,6 +238,7 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
               newWorker.addEventListener('statechange', () => {
                 if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
                   console.log('🔄 New app version available in ServiceWorker cache');
+                  window.dispatchEvent(new CustomEvent('dd:new-version-available'));
                 }
               });
             }

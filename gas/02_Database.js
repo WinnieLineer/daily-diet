@@ -501,8 +501,55 @@ function updateMealInUserGist(updatedMeal, gistId, pat) {
   }
 }
 
+/**
+ * 🛡️ 自動清理過期的每日餐點快取 (防範 PropertiesService 500KB 總配額耗盡)
+ * 歷史日誌已完整同步保存於 GitHub Gist，GAS Properties 僅需保留最近 48 小時快取
+ * 藉由 CacheService 設置 12 小時防抖鎖，避免高頻請求重複執行
+ */
+function cleanExpiredDailyDietLogs(props) {
+  try {
+    const cache = CacheService.getScriptCache();
+    const lockKey = 'CLEAN_EXPIRED_DIET_LOGS_LOCK';
+    if (cache.get(lockKey)) return;
+
+    if (!props) props = PropertiesService.getScriptProperties();
+    const allProps = props.getProperties();
+    const todayStr = getTodayDateString();
+    
+    // 計算昨天的日期字串 YYYY-MM-DD
+    const yesterday = new Date();
+    yesterday.setDate(yesterday.getDate() - 1);
+    const yesterdayStr = getTodayDateString(yesterday);
+
+    let deletedCount = 0;
+    for (const key in allProps) {
+      if (key.startsWith('DIET_LOGS_')) {
+        const lastUnderscore = key.lastIndexOf('_');
+        if (lastUnderscore !== -1) {
+          const datePart = key.substring(lastUnderscore + 1);
+          if (/^\d{4}-\d{2}-\d{2}$/.test(datePart)) {
+            if (datePart !== todayStr && datePart !== yesterdayStr) {
+              props.deleteProperty(key);
+              deletedCount++;
+            }
+          }
+        }
+      }
+    }
+
+    if (deletedCount > 0) {
+      console.log(`🧹 [配額防護] 已成功清除 ${deletedCount} 筆超過 48 小時之過期每日餐點快取`);
+    }
+
+    cache.put(lockKey, 'done', 12 * 3600);
+  } catch (err) {
+    console.warn('⚠️ 自動清理過期每日餐點快取失敗:', err);
+  }
+}
+
 function getTodayLogs(userId, dateStr, props, userGistId) {
   if (!props) props = PropertiesService.getScriptProperties();
+  cleanExpiredDailyDietLogs(props);
   const todayKey = `DIET_LOGS_${userId}_${dateStr}`;
   let localLogs = [];
   try {

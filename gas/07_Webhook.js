@@ -1155,7 +1155,20 @@ function doPost(e) {
           const messageId = event.message.id;
           console.log(`📸 [收到餐點照片] Message ID: ${messageId}`);
           const imageBlob = getLineImageBlob(messageId, CHANNEL_ACCESS_TOKEN);
-          const base64Image = Utilities.base64Encode(imageBlob.getBytes());
+          if (!imageBlob) {
+            replyTextMessage(replyToken, isEn ? '⚠️ Could not download photo from LINE. Please try again!' : '⚠️ 無法自 LINE 下載照片，請稍候再傳一次！', CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+          const imgBytes = imageBlob.getBytes();
+          if (imgBytes.length > 5 * 1024 * 1024) {
+            const sizeMb = (imgBytes.length / (1024 * 1024)).toFixed(1);
+            const sizeWarn = isEn
+              ? `📸 Photo is too large (${sizeMb} MB, exceeds 5MB limit). Please send a standard quality or cropped photo! 🐼`
+              : `📸 照片檔案過大（約 ${sizeMb} MB，超過 5MB 上限），為避免辨識超時或失敗，請嘗試以標準畫質傳送或稍微裁切後再傳一次喔！🐼`;
+            replyTextMessage(replyToken, sizeWarn, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+          const base64Image = Utilities.base64Encode(imgBytes);
 
           const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
           console.log(`🤖 [照片 AI 辨識結果]`, JSON.stringify(analysis));

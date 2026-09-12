@@ -751,6 +751,13 @@ function App() {
   }, []);
 
   const [userName, setUserName] = useState(() => localStorage.getItem('user_name') || '');
+  const [newVersionAvailable, setNewVersionAvailable] = useState(false);
+
+  useEffect(() => {
+    const handleNewVersion = () => setNewVersionAvailable(true);
+    window.addEventListener('dd:new-version-available', handleNewVersion);
+    return () => window.removeEventListener('dd:new-version-available', handleNewVersion);
+  }, []);
   const [showNamePrompt, setShowNamePrompt] = useState(false);
   const [favoriteUpdateTrigger, setFavoriteUpdateTrigger] = useState(0);
   const [incomingMeal, setIncomingMeal] = useState(null);
@@ -1701,6 +1708,33 @@ function App() {
               </div>
               {toast}
             </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* PWA New Version Floating Banner */}
+      <AnimatePresence>
+        {newVersionAvailable && (
+          <motion.div
+            key="pwa-version-banner"
+            initial={{ opacity: 0, y: 50, scale: 0.9 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 50, scale: 0.9 }}
+            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[250] bg-yellow-300 text-black px-4 py-3 rounded-2xl font-black text-sm shadow-neo border-4 border-black flex items-center gap-3 w-max max-w-[94vw] justify-between"
+          >
+            <div className="flex items-center gap-2 text-xs sm:text-sm">
+              <span className="text-lg">🎉</span>
+              <span>{currentLang === 'en' ? 'New version available!' : '熊貓教練有最新版本囉！'}</span>
+            </div>
+            <button
+              onClick={() => {
+                sessionStorage.removeItem('chunk_reload_count');
+                window.location.reload();
+              }}
+              className="bg-black text-white px-3 py-1.5 rounded-xl border-2 border-black text-xs font-black shadow-sm active:translate-y-0.5 cursor-pointer hover:bg-neutral-800 transition-colors"
+            >
+              {currentLang === 'en' ? 'Update Now' : '立即更新'}
+            </button>
+          </motion.div>
         )}
       </AnimatePresence>
 
