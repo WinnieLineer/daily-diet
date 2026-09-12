@@ -926,9 +926,17 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const logAiStats = useMemo(() => {
     let success = 0;
     let fail = 0;
+    let fallbackCount = 0;
+    let fatalCount = 0;
     (normalizedLogs || []).forEach(log => {
       const t = String(log.type || '');
       const out = String(log.output || '');
+      if (t.includes('降級') || t.includes('容錯') || t.includes('切換')) {
+        fallbackCount++;
+      }
+      if (t.includes('調用異常') || t.includes('報警') || out.includes('所有模型嘗試皆失敗')) {
+        fatalCount++;
+      }
       const isAiOp = t.includes('辨識') || t.includes('記餐') || t.includes('AI') || t.includes('智能') || t.includes('模型');
       if (isAiOp) {
         if (t.includes('異常') || t.includes('失敗') || out.includes('失敗') || out.includes('異常')) {
@@ -938,7 +946,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         }
       }
     });
-    return { success, fail };
+    return { success, fail, fallbackCount, fatalCount };
   }, [normalizedLogs]);
 
   const copyToClipboard = (text, id) => {
@@ -1334,7 +1342,19 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             </div>
           </div>
           <p className="text-[9px] font-bold text-zinc-400">
-            {failCount > 0 ? `⚠️ ${failCount} 次請求遇到伺服端或模型異常` : '🟢 所有調用正常執行，無故障通報'}
+            {failCount > 0 ? (
+              (logAiStats.fatalCount > 0 || recentErrors.length > 0) ? (
+                isEn 
+                  ? `⚠️ ${failCount} model errors (${Math.max(logAiStats.fatalCount, recentErrors.length)} fatal, others auto-recovered via fallback)` 
+                  : `⚠️ ${failCount} 次底層模型異常（含 ${Math.max(logAiStats.fatalCount, recentErrors.length)} 次最終失敗，其餘已自動降級成功）`
+              ) : (
+                isEn 
+                  ? `🔄 ${failCount} fallback retries (all auto-recovered by backup models, 0 fatal)` 
+                  : `🔄 ${failCount} 次單一模型異常（均已由備援模型自動降級救回，最終 100% 成功）`
+              )
+            ) : (
+              isEn ? '🟢 All calls executed smoothly with zero errors' : '🟢 所有調用正常執行，無故障通報'
+            )}
           </p>
         </div>
 
