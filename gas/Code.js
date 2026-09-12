@@ -92,3 +92,48 @@ function listAllScriptProperties() {
     console.log(`- [${k}]: ${val}`);
   });
 }
+
+/**
+ * 🧹 一鍵清除被誤設為「餐點名」的用戶暱稱快取，並重新向 LINE Profile API 同步正確暱稱
+ */
+function fixPoisonedUserNames() {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  const allProps = props.getProperties();
+  let fixedCount = 0;
+  
+  for (const k in allProps) {
+    if (k.startsWith('USER_NAME_')) {
+      const currentVal = allProps[k];
+      const isFoodLike = /[\+＋]|蛋|水|飯|麵|湯|排|奶|茶|肉|咖啡|便當|吐司/.test(currentVal);
+      const uid = k.replace('USER_NAME_', '');
+      
+      if (uid.startsWith('U')) {
+        if (token) {
+          try {
+            const res = UrlFetchApp.fetch(`https://api.line.me/v2/bot/profile/${uid}`, {
+              headers: { Authorization: `Bearer ${token}` },
+              muteHttpExceptions: true
+            });
+            if (res.getResponseCode() === 200) {
+              const profile = JSON.parse(res.getContentText());
+              if (profile.displayName) {
+                props.setProperty(k, profile.displayName);
+                console.log(`✅ 已修復用戶 [${uid}]: 原為「${currentVal}」➔ 已更正為 LINE 暱稱「${profile.displayName}」`);
+                fixedCount++;
+                continue;
+              }
+            }
+          } catch (e) {
+            console.warn(`修復 ${uid} 失敗:`, e);
+          }
+        }
+      } else if (isFoodLike) {
+        props.deleteProperty(k);
+        console.log(`🗑️ 已清除異常快取 [${k}]: 「${currentVal}」`);
+        fixedCount++;
+      }
+    }
+  }
+  console.log(`🎉 暱稱修復程序完成！共更正/清除了 ${fixedCount} 筆異常名稱。`);
+}

@@ -1221,7 +1221,9 @@ function getUserDisplayName(userId, channelAccessToken, props) {
 
   const cacheKey = `USER_NAME_${userId}`;
   const cachedName = props.getProperty(cacheKey);
-  if (cachedName) return cachedName;
+  // 🛡️ 異常餐點名過濾防護：若快取中被誤寫為餐點名稱 (含有 + 號或特定餐點名)，強制忽略快取並重新向 LINE Profile 獲取真實名字
+  const isSuspiciousFoodName = cachedName && (/[\+＋]/.test(cachedName) || /美式咖啡|茶葉蛋|雞胸|便當|吐司|沙拉|地瓜|香蕉|蘋果|優格|拿鐵|蛋餅|水餃|鍋貼|乾麵|牛肉麵|炒飯|白飯/.test(cachedName));
+  if (cachedName && !isSuspiciousFoodName) return cachedName;
 
   if (!channelAccessToken) channelAccessToken = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (channelAccessToken && typeof userId === 'string' && userId.startsWith('U')) {
@@ -1248,19 +1250,21 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
   const props = PropertiesService.getScriptProperties();
   const time = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
 
+  const isFoodName = (name) => name && (/[\+＋]/.test(name) || /美式咖啡|茶葉蛋|雞胸|便當|吐司|沙拉|地瓜|香蕉|蘋果|優格|拿鐵|蛋餅|水餃|鍋貼|乾麵|牛肉麵|炒飯|白飯/.test(name));
+
   let displayName = userName;
-  if (!displayName) {
+  if (!displayName || isFoodName(displayName)) {
     displayName = props.getProperty(`USER_NAME_${userId}`);
-    if (!displayName && typeof userId === 'string' && userId.startsWith('U')) {
+    if ((!displayName || isFoodName(displayName)) && typeof userId === 'string' && userId.startsWith('U')) {
       const channelToken = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
       displayName = getUserDisplayName(userId, channelToken, props);
     }
   }
   // Web 用戶 caller 的名稱拿不到就用他的名字
-  if (!displayName && userId && !userId.startsWith('U') && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api'].includes(userId)) {
+  if ((!displayName || isFoodName(displayName)) && userId && !userId.startsWith('U') && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api'].includes(userId)) {
     displayName = userId;
   }
-  if (!displayName) {
+  if (!displayName || isFoodName(displayName)) {
     if (userId === 'default_user' || userId === 'web_user' || userId === 'web_client') {
       displayName = 'Web 用戶';
     } else if (userId && userId.length > 8 && userId.startsWith('U')) {
@@ -1290,7 +1294,7 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
   const logItem = {
     time: time,
     userName: displayName,
-    userId: displayName,
+    userId: userId || displayName,
     rawUserId: (userId || 'unknown').slice(-6),
     type: type,
     input: typeof input === 'object' ? JSON.stringify(input) : String(input || ''),

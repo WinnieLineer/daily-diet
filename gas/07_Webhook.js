@@ -28,7 +28,8 @@ function doGet(e) {
     const action = e?.parameter?.action;
     let userId = e?.parameter?.userId;
     const incomingGist = e?.parameter?.gistId;
-    const incomingCaller = e?.parameter?.caller || e?.parameter?.userName || e?.parameter?.name || '';
+    // 🛡️ 僅接收 caller 與 userName，絕不使用 name (因為 name 常用於表示菜名/餐點名，避免用戶名字被污染為餐點名稱)
+    const incomingCaller = e?.parameter?.caller || e?.parameter?.userName || '';
 
     const props = PropertiesService.getScriptProperties();
     const pat = props.getProperty('GITHUB_PAT');
@@ -77,8 +78,9 @@ function doGet(e) {
     }
     if (!userId) userId = 'default_user';
 
+    // 🛡️ LINE 原生用戶 (U 開頭) 的名稱由 LINE Profile API 取得，不可被 Web 請求參數覆寫
     const webCallerName = incomingCaller || (!userId.startsWith('U') && userId !== 'default_user' ? userId : (props.getProperty(`USER_NAME_${userId}`) || ''));
-    if (webCallerName && userId && userId !== 'default_user') {
+    if (webCallerName && userId && !userId.startsWith('U') && userId !== 'default_user') {
       props.setProperty(`USER_NAME_${userId}`, webCallerName);
     }
 
@@ -570,14 +572,15 @@ function doPost(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      const incomingCallerName = data?.caller || data?.userName || data?.name || e?.parameter?.caller || e?.parameter?.userName || '';
+      // 🛡️ 僅接收 caller 與 userName，絕不使用 name 避免餐點名稱污染用戶暱稱
+      const incomingCallerName = data?.caller || data?.userName || e?.parameter?.caller || e?.parameter?.userName || '';
       let webUserId = data?.userId || e?.parameter?.userId || '';
       if ((!webUserId || webUserId === 'web_user' || webUserId === 'default_user') && incomingCallerName) {
         webUserId = incomingCallerName;
       }
       if (!webUserId) webUserId = 'web_user';
       const webCaller = incomingCallerName || (!webUserId.startsWith('U') && webUserId !== 'web_user' ? webUserId : (props.getProperty(`USER_NAME_${webUserId}`) || 'Web 用戶'));
-      if (webCaller && webUserId && webUserId !== 'web_user') {
+      if (webCaller && webUserId && !webUserId.startsWith('U') && webUserId !== 'web_user') {
         props.setProperty(`USER_NAME_${webUserId}`, webCaller);
       }
       const aiCallerInfo = { userId: webUserId, userName: webCaller, caller: webCaller };
