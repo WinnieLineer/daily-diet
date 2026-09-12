@@ -402,16 +402,17 @@ function doGet(e) {
       );
 
       try {
-        sendErrorAlertToWeb3Forms({
-          error: { message: `【維護者登入安全通知】維護者: ${userName} | IP: ${ip} (${location}) 於 ${timeStr} 成功登入監控中心` },
-          userId: 'Maintainer',
+        sendMaintainerLoginNotification({
           userName: userName,
-          operation: '維護者後台登入',
-          userInput: `維護者: ${userName} | IP: ${ip} | 地理位置: ${location} | 作業系統: ${os} | 瀏覽器: ${browser} | 螢幕規格: ${device}`,
+          ip: ip,
+          location: location,
+          device: device,
+          browser: browser,
+          os: os,
           source: 'Web 維護者後台 (#/admin)'
         });
       } catch (mailErr) {
-        console.warn('發送登入通知失敗:', mailErr);
+        console.warn('發送登入安全通知失敗:', mailErr);
       }
 
       return ContentService.createTextOutput(JSON.stringify({ 
@@ -2312,6 +2313,106 @@ function sendErrorAlertToWeb3Forms(info) {
     }
   } catch (err) {
     console.warn("⚠️ 處理異常通報失敗:", err);
+  }
+}
+
+
+/**
+ * 🛡️ 發送維護者登入安全通知 (呈現為後台安全驗證審核通知，不作為系統異常)
+ */
+function sendMaintainerLoginNotification(info) {
+  try {
+    const props = PropertiesService.getScriptProperties();
+    const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    const userName = info.userName || '系統維護者';
+    const ip = info.ip || '未知 IP';
+    const location = info.location || '未知位置';
+    const device = info.device || '未知裝置';
+    const browser = info.browser || '';
+    const os = info.os || '';
+    const source = info.source || 'Web 維護者後台 (#/admin)';
+
+    // 避免短時間內重複觸發 (30 秒防抖)
+    const alertKey = `LAST_LOGIN_ALERT_${userName}_${ip}`;
+    const lastAlertTime = Number(props.getProperty(alertKey) || 0);
+    const nowMs = Date.now();
+    if (nowMs - lastAlertTime < 30000) {
+      console.log(`⏳ 30秒內已發送過登入通知，略過重複發送: ${userName} (${ip})`);
+      return;
+    }
+    props.setProperty(alertKey, String(nowMs));
+
+    const envParts = [];
+    if (os) envParts.push(os);
+    if (browser) envParts.push(browser);
+    const envSummary = envParts.length > 0 ? envParts.join(' · ') : '未知環境';
+    const deviceDetail = device && device !== '未知裝置' ? ` (螢幕規格: ${device})` : '';
+
+    const subject = `🛡️ [Daily-Diet 安全通知] 維護者 ${userName} 成功登入後台`;
+
+    const messageContent = [
+      `🛡️ 【Daily-Diet 熊貓教練維護者登入安全通知】`,
+      `----------------------------------------`,
+      `⏰ 登入時間：${timeStr} (台灣時間 GMT+8)`,
+      `👤 維護者身分：${userName}`,
+      `🌐 登入 IP：${ip} (${location})`,
+      `💻 登入環境：${envSummary}${deviceDetail}`,
+      `🕹️ 執行操作：後台維護者身分驗證與登入`,
+      `🧭 觸發來源：${source}`,
+      `----------------------------------------`,
+      `✅ 驗證狀態：維護者身分驗證成功，通行憑證已核發。`,
+      `💡 安全提醒：此通知為系統安全審核紀錄。若非您本人操作，請儘速檢查維護密鑰與帳號權限。`
+    ].join('\n');
+
+    // 1. Google 原生 MailApp 直送開發者信箱
+    try {
+      const candidateEmails = [
+        props && props.getProperty('ADMIN_EMAIL'),
+        props && props.getProperty('DEVELOPER_EMAIL'),
+        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space'
+      ];
+      try {
+        const effectiveUser = Session.getEffectiveUser().getEmail();
+        if (effectiveUser && effectiveUser.includes('@')) candidateEmails.push(effectiveUser);
+      } catch (e) {}
+      const validEmails = [...new Set(candidateEmails.filter(Boolean))];
+      if (validEmails.length > 0) {
+        MailApp.sendEmail({
+          to: validEmails.join(','),
+          subject: subject,
+          body: messageContent
+        });
+        console.log(`📧 [MailApp] 成功寄送維護者登入安全通知至: ${validEmails.join(',')}`);
+      }
+    } catch (mailErr) {
+      console.warn("⚠️ [MailApp] 發送登入安全通知郵件失敗:", mailErr);
+    }
+
+    // 2. Web3Forms 備援
+    try {
+      UrlFetchApp.fetch('https://api.web3forms.com/submit', {
+        method: 'post',
+        contentType: 'application/json',
+        payload: JSON.stringify({
+          access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+          subject: subject,
+          from_name: '🛡️ Daily-Diet 安全守門員',
+          time: timeStr,
+          user_name: userName,
+          ip: ip,
+          location: location,
+          environment: `${envSummary}${deviceDetail}`,
+          operation: '維護者後台登入',
+          status: '驗證成功',
+          message: messageContent
+        }),
+        muteHttpExceptions: true
+      });
+    } catch (alertErr) {
+      console.warn("⚠️ 發送 Web3Forms 登入安全回報失敗:", alertErr);
+    }
+  } catch (err) {
+    console.warn("⚠️ 處理登入安全通報失敗:", err);
   }
 }
 

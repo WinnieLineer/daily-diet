@@ -5,6 +5,22 @@ import './index.css'
 
 function reportWebErrorToWeb3Forms(title, message, stack) {
   try {
+    const combinedMsg = `${message || ""} ${stack || ""}`;
+    // 忽略第三方瀏覽器內部注入腳本 (如 Firefox/Brave iOS 的 __firefox__) 與外掛雜訊
+    if (
+      combinedMsg.includes('__firefox__') ||
+      combinedMsg.includes('__gCrWeb') ||
+      combinedMsg.includes('ResizeObserver') ||
+      combinedMsg.includes('Script error') ||
+      combinedMsg.includes('chrome-extension') ||
+      combinedMsg.includes('safari-extension') ||
+      combinedMsg.includes('safari-web-extension') ||
+      combinedMsg.includes('moz-extension') ||
+      combinedMsg.includes('webkit.messageHandlers')
+    ) {
+      console.debug('Suppressed third-party browser / extension noise:', title, message);
+      return;
+    }
     let userName = 'Web 訪客';
     let userId = 'web_guest';
     try {
@@ -144,13 +160,20 @@ window.addEventListener('error', (event) => {
   const message = event.message || '';
   const stack = event.error?.stack || `${event.filename}:${event.lineno}`;
 
-  // Ignore benign browser/extension noise and dynamic module load errors
+  // Ignore benign browser/extension noise, iOS browser injected scripts and dynamic module load errors
+  const combined = `${message} ${stack}`;
   if (
-    message.includes('ResizeObserver') ||
-    message.includes('Script error') ||
-    message.includes('chrome-extension') ||
-    message.includes('dynamically imported module') ||
-    message.includes('Importing a module script failed')
+    combined.includes('ResizeObserver') ||
+    combined.includes('Script error') ||
+    combined.includes('chrome-extension') ||
+    combined.includes('safari-extension') ||
+    combined.includes('safari-web-extension') ||
+    combined.includes('moz-extension') ||
+    combined.includes('__firefox__') ||
+    combined.includes('__gCrWeb') ||
+    combined.includes('webkit.messageHandlers') ||
+    combined.includes('dynamically imported module') ||
+    combined.includes('Importing a module script failed')
   ) {
     return;
   }
@@ -164,13 +187,22 @@ window.addEventListener('unhandledrejection', (event) => {
   const reason = event.reason;
   const reasonStr = String(reason?.message || reason || '');
   const stack = reason?.stack || '';
+  const combined = `${reasonStr} ${stack}`;
 
   // Filter out harmless browser/security noise:
   // 1. ServiceWorker registration rejection in Incognito / Private Browsing / enterprise restrictions
   // 2. AbortError / user cancelled fetch
   // 3. Network or ad-blocker blocked tracking
   // 4. Stale dynamic import chunks after new deployment
+  // 5. Browser injected scripts (Firefox iOS, Chrome iOS, WebKit extensions)
   if (
+    combined.includes('__firefox__') ||
+    combined.includes('__gCrWeb') ||
+    combined.includes('chrome-extension') ||
+    combined.includes('safari-extension') ||
+    combined.includes('safari-web-extension') ||
+    combined.includes('moz-extension') ||
+    combined.includes('ResizeObserver') ||
     reasonStr.includes('Rejected') ||
     reasonStr.includes('ServiceWorker') ||
     reasonStr.includes('AbortError') ||
