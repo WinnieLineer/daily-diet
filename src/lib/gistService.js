@@ -7,23 +7,37 @@ const BACKUP_FILENAME = 'daily-diet-backup.json';
  * Get GitHub PAT (from env or user settings in IndexedDB)
  */
 function getGistToken() {
-  // Localhost dev or manual backup: check localStorage for manually entered token
-  const localToken = typeof localStorage !== 'undefined' ? localStorage.getItem('github_pat') : null;
-  return localToken || null;
+  try {
+    const localToken = typeof localStorage !== 'undefined' ? localStorage.getItem('github_pat') : null;
+    return localToken || null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
  * Get stored Gist ID for this device
  */
 function getStoredGistId() {
-  return localStorage.getItem('gist_backup_id');
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem('gist_backup_id') : null;
+  } catch (e) {
+    return null;
+  }
 }
 
 /**
  * Save Gist ID for this device
  */
 function setStoredGistId(id) {
-  localStorage.setItem('gist_backup_id', id);
+  try {
+    if (typeof localStorage === 'undefined') return;
+    if (id) {
+      localStorage.setItem('gist_backup_id', id);
+    } else {
+      localStorage.removeItem('gist_backup_id');
+    }
+  } catch (e) {}
 }
 
 /**
@@ -61,7 +75,9 @@ export async function getBackupInfo() {
     if (!res.ok) {
       if (res.status === 404) {
         // Gist was deleted, clear stored ID
-        localStorage.removeItem('gist_backup_id');
+        try {
+          localStorage.removeItem('gist_backup_id');
+        } catch (e) {}
         return null;
       }
       return null;
@@ -129,7 +145,9 @@ export async function uploadToGist(jsonData, explicitGistId = null) {
     // 🛡️ Auto-Recovery: If PATCH fails because Gist is deleted (404), unmodifiable (422), forbidden (403), or "cannot be updated"
     if (method === 'PATCH' && (res.status === 404 || res.status === 422 || res.status === 403 || errMsg.includes('cannot be updated') || errMsg.includes('Not Found'))) {
       console.warn(`[Gist] Stored gist ${gistId} cannot be updated (${errMsg || res.status}), self-healing by creating a fresh backup gist...`);
-      localStorage.removeItem('gist_backup_id');
+      try {
+        localStorage.removeItem('gist_backup_id');
+      } catch (e) {}
       return uploadToGist(jsonData, null);
     }
 
@@ -170,7 +188,9 @@ export async function downloadFromGist(explicitGistId = null) {
 
   if (!res.ok) {
     if (res.status === 404) {
-      localStorage.removeItem('gist_backup_id');
+      try {
+        localStorage.removeItem('gist_backup_id');
+      } catch (e) {}
       throw new Error("Backup gist not found. It may have been deleted.");
     }
     throw new Error(`Failed to download from Gist (${res.status})`);
@@ -190,5 +210,9 @@ export async function downloadFromGist(explicitGistId = null) {
     content = await rawRes.text();
   }
 
-  return JSON.parse(content);
+  try {
+    return JSON.parse(content);
+  } catch (e) {
+    throw new Error("Backup file content in Gist is corrupted or not valid JSON.");
+  }
 }
