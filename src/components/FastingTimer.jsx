@@ -91,7 +91,7 @@ export default function FastingTimer({ goals }) {
   const { eatingLen, fastingLen } = getWindowLengths();
   const totalWindowSecs = data.isFasting ? fastingLen : eatingLen;
   const elapsedSecs = Math.max(0, totalWindowSecs - data.totalSeconds);
-  const progressPercent = Math.min(100, Math.round((elapsedSecs / totalWindowSecs) * 100));
+  const progressPercent = totalWindowSecs > 0 ? Math.min(100, Math.round((elapsedSecs / totalWindowSecs) * 100)) : 0;
 
   return (
     <AnimatePresence>

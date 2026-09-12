@@ -4,7 +4,9 @@ import { t } from '../lib/translations';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 const ProgressRing = ({ value, max, label }) => {
-  const percentage = Math.round((value / max) * 100);
+  const safeValue = Number(value) || 0;
+  const safeMax = Number(max) || 0;
+  const percentage = safeMax > 0 ? Math.round((safeValue / safeMax) * 100) : 0;
   const displayPercentage = Math.min(percentage, 100);
   
   let ringColor = "#000000";

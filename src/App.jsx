@@ -783,13 +783,14 @@ function App() {
     const handleRouteChange = () => {
       setCurrentView(checkIsLogRoute() ? 'logs' : 'main');
     };
+    const handleOpenAdminLogs = () => setCurrentView('logs');
     window.addEventListener('hashchange', handleRouteChange);
     window.addEventListener('popstate', handleRouteChange);
-    window.addEventListener('open-admin-logs', () => setCurrentView('logs'));
+    window.addEventListener('open-admin-logs', handleOpenAdminLogs);
     return () => {
       window.removeEventListener('hashchange', handleRouteChange);
       window.removeEventListener('popstate', handleRouteChange);
-      window.removeEventListener('open-admin-logs', () => setCurrentView('logs'));
+      window.removeEventListener('open-admin-logs', handleOpenAdminLogs);
     };
   }, []);
 

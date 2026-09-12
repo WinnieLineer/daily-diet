@@ -1,3 +1,5 @@
+import { getLocalDateString } from './constants';
+
 const GITHUB_API = 'https://api.github.com/gists';
 const BACKUP_FILENAME = 'daily-diet-backup.json';
 
@@ -90,7 +92,7 @@ export async function uploadToGist(jsonData, explicitGistId = null) {
   const gistId = explicitGistId || getStoredGistId();
 
   const gistPayload = {
-    description: `Daily Diet Backup - ${new Date().toISOString().split('T')[0]}`,
+    description: `Daily Diet Backup - ${getLocalDateString()}`,
     public: false,
     files: {
       [BACKUP_FILENAME]: {

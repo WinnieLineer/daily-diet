@@ -100,7 +100,7 @@ export async function syncMealToCloud(meal) {
 
   const task = async () => {
     try {
-      fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
+      await fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
       console.log(`📤 [Web ➔ LINE Sync] 即時同步餐點成功: ${meal.dish_name} (${meal.calories} kcal)`);
     } catch (err) {
       console.warn("[Web ➔ LINE Sync] 同步失敗:", err);

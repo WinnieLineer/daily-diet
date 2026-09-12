@@ -625,10 +625,13 @@ async function saveLogToGist(logEntry, pat, gistId) {
 
   // 2. Append new log
   if (!backupData.logs) backupData.logs = [];
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('sv-SE', { timeZone: 'Asia/Taipei' });
+  const timeStr = now.toLocaleTimeString('zh-TW', { timeZone: 'Asia/Taipei', hour: '2-digit', minute: '2-digit', hour12: false });
   const newLog = {
     id: Date.now(),
-    date: new Date().toISOString().split('T')[0],
-    time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }),
+    date: dateStr,
+    time: timeStr,
     timestamp: Date.now(),
     dish_name: logEntry.dish_name,
     calories: Number(logEntry.calories) || 0,

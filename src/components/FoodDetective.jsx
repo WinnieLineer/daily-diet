@@ -7,7 +7,6 @@ import { analyzeFoodImage, analyzeFoodText } from '../lib/groq';
 import { db } from '../db';
 import { getCurrentGistId, uploadToGist } from '../lib/gistService';
 import { syncMealToCloud } from '../lib/syncService';
-import exifr from 'exifr';
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -605,8 +604,10 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     });
     setPreview(base64);
     const locationPromise = (async () => {
-      // 1. Try EXIF GPS & Date (fast, local)
+      // 1. Try EXIF GPS & Date (fast, local, dynamic load)
       try {
+        const exifrModule = await import('exifr');
+        const exifr = exifrModule.default || exifrModule;
         const exifData = await exifr.parse(file);
         if (exifData && exifData.DateTimeOriginal) {
           const dt = new Date(exifData.DateTimeOriginal);
