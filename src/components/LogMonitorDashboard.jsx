@@ -43,8 +43,7 @@ import {
 import NeoButton from './NeoButton';
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-const REQUIRED_MAINTAINER_USER = 'Winnie';
-const REQUIRED_MAINTAINER_PASS = '1qaZXCVBNM<>?';
+const DEFAULT_MAINTAINER_USER = 'Winnie';
 const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_token_v2';
 const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
 const MAINTAINER_NAME_KEY = 'daily_diet_maintainer_name';
@@ -346,6 +345,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     try {
       setIsRegisteringAudit(true);
       const name = userNameOverride || maintainerName || info.userName || 'Admin';
+      const currentToken = token || permanentToken || localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
       const params = new URLSearchParams({
         action: 'recordMaintainerLogin',
         userName: name,
@@ -354,9 +354,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         device: info.device || '',
         browser: info.browser || '',
         os: info.os || '',
-        token: token || ''
+        token: currentToken
       });
-      await fetch(`${GAS_API_URL}?${params.toString()}`, { method: 'GET', mode: 'no-cors' });
+      await fetch(`${GAS_API_URL}?${params.toString()}`);
       console.log('✅ [Maintainer Audit] 登入日誌已記錄 (含使用者名字、位置與 IP)');
     } catch (err) {
       console.warn('⚠️ 記錄維護者登入日誌失敗:', err);
@@ -365,54 +365,76 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     }
   };
 
-  // Handle Login & Issue Permanent Pass
+  // Handle Login & Issue Permanent Pass (透過後端 GAS 進行動態身分安全校驗)
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     const cleanInput = passwordInput.trim();
-    const cleanName = maintainerNameInput.trim();
+    const cleanName = maintainerNameInput.trim() || DEFAULT_MAINTAINER_USER;
 
-    const isUserValid = cleanName.toLowerCase() === REQUIRED_MAINTAINER_USER.toLowerCase();
-    const isPassValid = cleanInput === REQUIRED_MAINTAINER_PASS;
+    if (!cleanInput) {
+      setAuthError(isEn ? 'Please enter password' : '請輸入維護者密碼');
+      return;
+    }
 
-    if (isUserValid && isPassValid) {
-      // Generate permanent pass token
-      const newToken = `PANDA_PASS_${Date.now()}_${Math.random().toString(36).substring(2, 10)}`;
-      localStorage.setItem(PERMANENT_TOKEN_KEY, newToken);
-      localStorage.setItem(MAINTAINER_NAME_KEY, REQUIRED_MAINTAINER_USER);
-      setPermanentToken(newToken);
-      setMaintainerName(REQUIRED_MAINTAINER_USER);
-      setIsAuthenticated(true);
-      setAuthError('');
+    setIsRegisteringAudit(true);
+    setAuthError('');
 
-      // Collect device & IP info and record to backend
-      const info = await collectDeviceInfo();
-      info.userName = REQUIRED_MAINTAINER_USER;
-      localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
-      setClientInfo(info);
+    try {
+      const verifyUrl = `${GAS_API_URL}?action=verifyMaintainerAuth&user=${encodeURIComponent(cleanName)}&pass=${encodeURIComponent(cleanInput)}&_t=${Date.now()}`;
+      const res = await fetch(verifyUrl);
+      const data = await res.json();
 
-      // Instantly inject a local login record so user immediately sees their own login log
-      const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
-      const instantLoginLog = {
-        time: nowStr,
-        userName: REQUIRED_MAINTAINER_USER,
-        userId: 'Maintainer',
-        type: '維護者登入',
-        input: `IP: ${info.ip} · 位置: ${info.location}`,
-        aiResult: `OS: ${info.os} · 瀏覽器: ${info.browser} · 螢幕: ${info.device}`,
-        output: `✅ 永久通行證已核發 (${nowStr})`,
-        source: 'Web 維護者後台 (#/admin)',
-        ip: info.ip,
-        location: info.location,
-        device: `${info.os} · ${info.browser}`
-      };
-      setRawLogs((prev) => [instantLoginLog, ...prev]);
+      if (data.status === 'ok' && data.authenticated) {
+        const validatedToken = data.token || cleanInput;
+        const validatedUser = data.userName || cleanName;
 
-      // Report to GAS
-      recordMaintainerAuditToBackend(info, newToken, REQUIRED_MAINTAINER_USER);
-    } else {
-      setAuthError(isEn ? 'Incorrect account or password. Access denied.' : '帳號或密碼不正確，存取被拒絕。');
+        localStorage.setItem(PERMANENT_TOKEN_KEY, validatedToken);
+        localStorage.setItem(MAINTAINER_NAME_KEY, validatedUser);
+        setPermanentToken(validatedToken);
+        setMaintainerName(validatedUser);
+        setIsAuthenticated(true);
+        setAuthError('');
+
+        // Collect device & IP info and record to backend
+        const info = await collectDeviceInfo();
+        info.userName = validatedUser;
+        localStorage.setItem(CLIENT_INFO_KEY, JSON.stringify(info));
+        setClientInfo(info);
+
+        // Instantly inject a local login record so user immediately sees their own login log
+        const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
+        const instantLoginLog = {
+          time: nowStr,
+          userName: validatedUser,
+          userId: 'Maintainer',
+          type: '維護者登入',
+          input: `IP: ${info.ip} · 位置: ${info.location}`,
+          aiResult: `OS: ${info.os} · 瀏覽器: ${info.browser} · 螢幕: ${info.device}`,
+          output: `✅ 永久通行證已核發 (${nowStr})`,
+          source: 'Web 維護者後台 (#/admin)',
+          ip: info.ip,
+          location: info.location,
+          device: `${info.os} · ${info.browser}`
+        };
+        setRawLogs((prev) => [instantLoginLog, ...prev]);
+
+        // Report to GAS with verified token
+        await recordMaintainerAuditToBackend(info, validatedToken, validatedUser);
+
+        // Fetch dashboard data with new token
+        fetchDashboardData(false, retentionDays, logLimit, validatedToken);
+      } else {
+        setAuthError(data.message || (isEn ? 'Incorrect account or password. Access denied.' : '帳號或密碼不正確，存取被拒絕。'));
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 600);
+      }
+    } catch (err) {
+      console.error('維護者身分驗證失敗:', err);
+      setAuthError(isEn ? 'Network error or service unavailable. Please retry.' : '連線失敗或後端未回應，請檢查網路後再試。');
       setIsShaking(true);
       setTimeout(() => setIsShaking(false), 600);
+    } finally {
+      setIsRegisteringAudit(false);
     }
   };
 
@@ -430,15 +452,23 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     setPasswordInput('');
   };
 
-  // Fetch Dashboard Logs and Quota from GAS (支援自訂留存天數與筆數)
-  const fetchDashboardData = async (silent = false, customDays = retentionDays, customLimit = logLimit) => {
+  // Fetch Dashboard Logs and Quota from GAS (支援自訂留存天數與筆數，攜帶後端權杖)
+  const fetchDashboardData = async (silent = false, customDays = retentionDays, customLimit = logLimit, explicitToken = null) => {
     if (!silent) setIsLoading(true);
     setFetchError(null);
     try {
-      const targetUrl = `${GAS_API_URL}?action=getRecentLogs&limit=${customLimit}&days=${customDays}&_t=${Date.now()}`;
+      const activeToken = explicitToken || permanentToken || localStorage.getItem(PERMANENT_TOKEN_KEY) || '';
+      const targetUrl = `${GAS_API_URL}?action=getRecentLogs&limit=${customLimit}&days=${customDays}&token=${encodeURIComponent(activeToken)}&_t=${Date.now()}`;
       const res = await fetch(targetUrl);
       if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
       const data = await res.json();
+
+      if (data.code === 'UNAUTHORIZED' || (data.status === 'error' && String(data.message).includes('Forbidden'))) {
+        handleRevokePermanentPass();
+        setAuthError(isEn ? 'Session expired or invalid token. Please log in again.' : '登入憑證已失效或未經授權，請重新輸入密碼登入。');
+        return;
+      }
+
       if (data.status === 'ok') {
         const fetchedLogs = Array.isArray(data.logs) ? data.logs : [];
 

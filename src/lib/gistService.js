@@ -5,12 +5,8 @@ const BACKUP_FILENAME = 'daily-diet-backup.json';
  * Get GitHub PAT (from env or user settings in IndexedDB)
  */
 function getGistToken() {
-  // Production: env var; localhost: user may set via settings
-  const envToken = import.meta.env.VITE_GITHUB_PAT;
-  if (envToken) return envToken;
-
-  // Fallback: check localStorage for manually entered token (localhost dev)
-  const localToken = localStorage.getItem('github_pat');
+  // Localhost dev or manual backup: check localStorage for manually entered token
+  const localToken = typeof localStorage !== 'undefined' ? localStorage.getItem('github_pat') : null;
   return localToken || null;
 }
 

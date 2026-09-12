@@ -1136,7 +1136,9 @@ function verifyWebAIRequest(data, e) {
 
   try {
     const cache = CacheService.getScriptCache();
-    const rateKey = `RATE_AI_${String(nonce).substring(0, 4)}`;
+    // 🛡️ 以實際呼叫端標識進行頻率限制（避免使用隨機 nonce 導致限流失效）
+    const callerId = (data?.userId || e?.parameter?.userId || data?.caller || 'web_user').toString().replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
+    const rateKey = `RATE_AI_${callerId || 'guest'}`;
     const currentCount = Number(cache.get(rateKey) || 0);
     if (currentCount > 30) {
       return { valid: false, reason: '調用頻率過高，請稍候 (Rate Limit Exceeded)' };

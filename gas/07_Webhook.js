@@ -9,6 +9,19 @@
 // 🌐 1. doGet(e) - Web App 雙向同步、管理日誌與部署端點
 // ========================================================
 
+/**
+ * 🛡️ 驗證維護者與管理端點權限
+ * 支援藉由 URL 參數 token, adminKey, pass, password 驗證
+ * 若環境中尚未特別設定 MAINTAINER_PASS，則 fallback 至預設密碼 '1qaZXCVBNM<>?'
+ */
+function verifyAdminAccess(e, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD') || '1qaZXCVBNM<>?';
+  const incomingToken = e?.parameter?.token || e?.parameter?.adminKey || e?.parameter?.pass || e?.parameter?.password;
+  if (!incomingToken) return false;
+  return incomingToken === configuredPass;
+}
+
 function doGet(e) {
   try {
     const action = e?.parameter?.action;
@@ -18,6 +31,30 @@ function doGet(e) {
 
     const props = PropertiesService.getScriptProperties();
     const pat = props.getProperty('GITHUB_PAT');
+    const isAdmin = verifyAdminAccess(e, props);
+
+    // 🛡️ 0.1 維護者登入安全校驗端點 (供 Web 前端進行身分校驗，避免在前端暴露密碼)
+    if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
+      const incomingPass = e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
+      const incomingUser = e?.parameter?.user || e?.parameter?.userName || 'Winnie';
+      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD') || '1qaZXCVBNM<>?';
+      const configuredUser = props.getProperty('MAINTAINER_USER') || 'Winnie';
+
+      if (incomingPass === configuredPass && (!configuredUser || incomingUser.toLowerCase() === configuredUser.toLowerCase())) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'ok', 
+          authenticated: true, 
+          token: configuredPass, 
+          userName: incomingUser 
+        })).setMimeType(ContentService.MimeType.JSON);
+      } else {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          authenticated: false, 
+          message: '身分驗證失敗：維護者帳號或密碼不正確' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
 
     // 🔗 若 userId 為空或為 default_user，但有帶 Gist ID，透過 Gist ID 反查 LINE 用戶綁定
     if ((!userId || userId === 'default_user' || userId === 'undefined') && incomingGist) {
@@ -41,8 +78,12 @@ function doGet(e) {
       props.setProperty(`USER_NAME_${userId}`, webCallerName);
     }
 
-    // 🚀 0. 觸發一鍵部署原生相機圖文選單 (支援中英文雙語選單)
+    // 🚀 0.2 觸發一鍵部署原生相機圖文選單 (需管理員權限)
     if (action === 'deployRichMenu' || action === 'setupRichMenu') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
       const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
       try {
@@ -66,6 +107,10 @@ function doGet(e) {
     }
 
     if (action === 'deployEnglishRichMenu') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
       const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
       try {
@@ -260,8 +305,15 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 11. 實時運作日誌 API (提供 JSON，預設回傳至少 30 天/最多 1000 筆紀錄，100% 伺服端私有儲存)
+    // 11. 實時運作日誌 API (限維護者授權存取)
     if (action === 'getRecentLogs') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          code: 'UNAUTHORIZED',
+          message: 'Forbidden: 維護者身分驗證失敗，請先登入後台' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
       const limit = Number(e?.parameter?.limit) || 1000;
       const days = typeof e?.parameter?.days !== 'undefined' ? Number(e?.parameter?.days) : 30;
       // 確保自動永久清除系統 Gist
@@ -287,8 +339,12 @@ function doGet(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 11.1 綁定/設定系統日誌 Google 試算表 ID
+    // 11.1 綁定/設定系統日誌 Google 試算表 ID (限維護者授權存取)
     if (action === 'bindLogSheet' || action === 'setLogSheet') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       const input = (e?.parameter?.url || e?.parameter?.sheetId || e?.parameter?.id || '').trim();
       let cleanId = input;
       const match = input.match(/\/spreadsheets\/d\/([a-zA-Z0-9-_]+)/);
@@ -331,8 +387,12 @@ function doGet(e) {
         .setXFrameOptionsMode(HtmlService.XFrameOptionsMode.ALLOWALL);
     }
 
-    // 13. 測試郵件發送診斷端點 (方便開發者直接透過瀏覽器驗證 MailApp 權限與連線)
+    // 13. 測試郵件發送診斷端點 (限維護者授權存取)
     if (action === 'testMail' || action === 'testEmail') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       const targetEmail = e?.parameter?.email || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space';
       const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
       const testSub = `🐼 Daily-Diet 郵件發送診斷測試 (${timeNow})`;
@@ -368,8 +428,12 @@ function doGet(e) {
       }
     }
 
-    // 14. 維護者登入安全遙測與裝置資訊登記 (核發永久通行證)
+    // 14. 維護者登入安全遙測與裝置資訊登記 (限維護者授權存取)
     if (action === 'recordMaintainerLogin') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
       const ip = e?.parameter?.ip || '未知 IP';
       const location = e?.parameter?.location || '未知位置';
       const device = e?.parameter?.device || '未知裝置';
@@ -550,10 +614,11 @@ function doPost(e) {
 
     // 🛡️ LINE Webhook 事件安全驗證
     const CHANNEL_SECRET = props.getProperty('LINE_CHANNEL_SECRET');
+    const REQUIRE_WEBHOOK_SECRET = props.getProperty('REQUIRE_WEBHOOK_SECRET') === 'true';
     if (CHANNEL_SECRET) {
       const incomingSecret = e.parameter?.secret || e.parameter?.token;
-      if (incomingSecret && incomingSecret !== CHANNEL_SECRET) {
-        console.warn("🚨 [安全攔截] 收到未經授權的 Webhook 請求！URL Secret 不符。");
+      if ((REQUIRE_WEBHOOK_SECRET && !incomingSecret) || (incomingSecret && incomingSecret !== CHANNEL_SECRET)) {
+        console.warn("🚨 [安全攔截] 收到未經授權的 Webhook 請求！URL Secret 不符或缺失。");
         recordSystemLog('安全攔截', 'unknown', '偽造Webhook請求', 'HTTP 403', '已拒絕處理');
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: 'Forbidden: Invalid secret' }))
           .setMimeType(ContentService.MimeType.JSON);

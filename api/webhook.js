@@ -27,9 +27,13 @@ export default async function handler(req, res) {
     eventsCount: req.body?.events?.length || 0
   });
 
-  // 1. Verify LINE Signature (Log warning if mismatch due to Vercel body-parser)
+  // 1. Verify LINE Signature
   const signature = req.headers['x-line-signature'];
-  if (channelSecret && signature) {
+  if (channelSecret) {
+    if (!signature) {
+      console.error('❌ Missing x-line-signature header!');
+      return res.status(403).json({ error: 'Missing LINE signature header' });
+    }
     const rawBody = typeof req.body === 'string' ? req.body : JSON.stringify(req.body);
     const hash = crypto
       .createHmac('sha256', channelSecret)
@@ -37,7 +41,8 @@ export default async function handler(req, res) {
       .digest('base64');
 
     if (hash !== signature) {
-      console.warn('⚠️ LINE Signature mismatch (often caused by JSON parser re-serialization). Continuing with execution...');
+      console.error('🚨 LINE Signature mismatch! Request rejected.');
+      return res.status(403).json({ error: 'Invalid LINE signature' });
     }
   }
 
