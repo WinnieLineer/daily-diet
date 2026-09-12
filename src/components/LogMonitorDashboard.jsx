@@ -733,6 +733,26 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     });
   }, [normalizedLogs, selectedCategory, selectedActionType, selectedUser, searchQuery]);
 
+  // ⚡ 智能對齊：從實際日誌中統計 AI 運算記錄，確保即使後端計數器重置或有前序重試，成功率亦能精準反映現況
+  // 遵守 React 頂層 Hooks 調用規則：必須置於任何條件 return 之前
+  const logAiStats = useMemo(() => {
+    let success = 0;
+    let fail = 0;
+    (normalizedLogs || []).forEach(log => {
+      const t = String(log.type || '');
+      const out = String(log.output || '');
+      const isAiOp = t.includes('辨識') || t.includes('記餐') || t.includes('AI') || t.includes('智能') || t.includes('模型');
+      if (isAiOp) {
+        if (t.includes('異常') || t.includes('失敗') || out.includes('失敗') || out.includes('異常')) {
+          fail++;
+        } else {
+          success++;
+        }
+      }
+    });
+    return { success, fail };
+  }, [normalizedLogs]);
+
   const copyToClipboard = (text, id) => {
     navigator.clipboard.writeText(text);
     setCopiedId(id);
@@ -862,25 +882,6 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // ==========================================
   // 📊 Render Main Dashboard Screen
   // ==========================================
-  // ⚡ 智能對齊：從實際日誌中統計 AI 運算記錄，確保即使後端計數器重置或有前序重試，成功率亦能精準反映現況
-  const logAiStats = useMemo(() => {
-    let success = 0;
-    let fail = 0;
-    (normalizedLogs || []).forEach(log => {
-      const t = String(log.type || '');
-      const out = String(log.output || '');
-      const isAiOp = t.includes('辨識') || t.includes('記餐') || t.includes('AI') || t.includes('智能') || t.includes('模型');
-      if (isAiOp) {
-        if (t.includes('異常') || t.includes('失敗') || out.includes('失敗') || out.includes('異常')) {
-          fail++;
-        } else {
-          success++;
-        }
-      }
-    });
-    return { success, fail };
-  }, [normalizedLogs]);
-
   const successCount = Math.max(aiQuota?.successCount || 0, logAiStats.success);
   const failCount = Math.max(aiQuota?.failCount || 0, logAiStats.fail);
   const totalCalls = successCount + failCount;
