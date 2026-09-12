@@ -732,6 +732,26 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
   );
 };
 
+const safeGetStorage = (key) => {
+  try {
+    return typeof localStorage !== 'undefined' ? localStorage.getItem(key) : null;
+  } catch (e) {
+    return null;
+  }
+};
+
+const safeSetStorage = (key, val) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.setItem(key, val);
+  } catch (e) {}
+};
+
+const safeRemoveStorage = (key) => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(key);
+  } catch (e) {}
+};
+
 function App() {
   const isLineEntry = () => {
     const query = getAppQueryParams();
@@ -741,11 +761,7 @@ function App() {
   const [summary, setSummary] = useState({ calories: 0, protein: 0, water: 0 });
   const [showOnboarding, setShowOnboarding] = useState(() => {
     if (isLineEntry()) return false;
-    try {
-      return !localStorage.getItem('onboarding_seen');
-    } catch (e) {
-      return false;
-    }
+    return !safeGetStorage('onboarding_seen');
   });
   const [showWhatsNew, setShowWhatsNew] = useState(false);
   const [lastSeenVersionState, setLastSeenVersionState] = useState(null);
@@ -758,11 +774,7 @@ function App() {
   }, []);
 
   const [userName, setUserName] = useState(() => {
-    try {
-      return localStorage.getItem('user_name') || '';
-    } catch (e) {
-      return '';
-    }
+    return safeGetStorage('user_name') || '';
   });
   const [newVersionAvailable, setNewVersionAvailable] = useState(false);
 
@@ -839,13 +851,13 @@ function App() {
         });
       } else if (query.name && !query.user) {
         // If not editing a meal, treat query.name as username login
-        localStorage.setItem('user_name', query.name);
+        safeSetStorage('user_name', query.name);
         setUserName(query.name);
         console.log(`📥 Set username from URL query: ${query.name}`);
       }
 
       if (query.user) {
-        localStorage.setItem('user_name', query.user);
+        safeSetStorage('user_name', query.user);
         setUserName(query.user);
       }
 
@@ -871,15 +883,15 @@ function App() {
         profile = await liffService.init();
         if (profile) {
           if (profile.displayName) {
-            localStorage.setItem('user_name', profile.displayName);
+            safeSetStorage('user_name', profile.displayName);
             setUserName(profile.displayName);
           }
-          localStorage.setItem('onboarding_seen', 'true');
+          safeSetStorage('onboarding_seen', 'true');
           setShowOnboarding(false);
           setShowNamePrompt(false);
 
           if (profile.userId) {
-            localStorage.setItem('line_user_id', profile.userId);
+            safeSetStorage('line_user_id', profile.userId);
           }
         }
       } catch (err) {
@@ -887,12 +899,12 @@ function App() {
       }
 
       // 3. Realtime Synchronize with Google Apps Script Backend (LINE Bot sync)
-      const effectiveUserId = query.userId || query.user || profile?.userId || localStorage.getItem('line_user_id');
+      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id');
       const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
       if (effectiveUserId) {
         try {
-          const localGist = localStorage.getItem('gist_backup_id') || query.gistId || '';
+          const localGist = safeGetStorage('gist_backup_id') || query.gistId || '';
           const localCal = (await db.settings.get('calorie_goal'))?.value;
           const localPro = (await db.settings.get('protein_goal'))?.value;
           const localWat = (await db.settings.get('water_goal'))?.value;
@@ -910,7 +922,7 @@ function App() {
           if (res.ok) {
             const gasData = await res.json();
             if (gasData.gistId) {
-              localStorage.setItem('gist_backup_id', gasData.gistId);
+              safeSetStorage('gist_backup_id', gasData.gistId);
             }
             if (gasData.goals) {
               const cal = Number(gasData.goals.calories) || 2000;
@@ -1046,10 +1058,10 @@ function App() {
       }
 
       // 4. Historical Gist Sync (if Gist ID is available)
-      const effectiveGistId = query.gistId || localStorage.getItem('gist_backup_id');
+      const effectiveGistId = query.gistId || safeGetStorage('gist_backup_id');
       if (effectiveGistId) {
         if (query.gistId) {
-          localStorage.setItem('gist_backup_id', query.gistId);
+          safeSetStorage('gist_backup_id', query.gistId);
         }
         try {
           const cloudData = await downloadFromGist(effectiveGistId);
@@ -1178,21 +1190,21 @@ function App() {
 
   useEffect(() => {
     // If onboarding is seen but no name is set, it's an existing user who needs a name update prompt
-    if (localStorage.getItem('onboarding_seen') === 'true' && !userName) {
+    if (safeGetStorage('onboarding_seen') === 'true' && !userName) {
       setShowNamePrompt(true);
     }
   }, [userName]);
 
   const handleNameSave = (name) => {
-    localStorage.setItem('user_name', name);
+    safeSetStorage('user_name', name);
     setUserName(name);
     setShowNamePrompt(false);
   };
   
   const handleOnboardingComplete = () => {
-    localStorage.setItem('onboarding_seen', 'true');
-    localStorage.setItem('last_seen_version', APP_VERSION); // 🚀 Mark version as seen to prevent immediate What's New modal
-    setUserName(localStorage.getItem('user_name') || '');
+    safeSetStorage('onboarding_seen', 'true');
+    safeSetStorage('last_seen_version', APP_VERSION); // 🚀 Mark version as seen to prevent immediate What's New modal
+    setUserName(safeGetStorage('user_name') || '');
     setShowOnboarding(false);
   };
   
@@ -1218,19 +1230,19 @@ function App() {
           console.log(`[VersionCheck] Mismatch! Remote: ${remoteVersion}, Local: ${APP_VERSION}`);
           
           // 強制檢查：即使版本不對，如果是 2.0.8 用戶也要先看到公告
-          const lastSeen = localStorage.getItem('last_seen_version');
+          const lastSeen = safeGetStorage('last_seen_version');
           if (lastSeen === '2.0.8') {
             console.log("[VersionCheck] Emergency trigger for 2.0.8 patch notes!");
             setLastSeenVersionState(lastSeen);
             setShowWhatsNew(true);
           }
 
-          const lastReloadAttempt = localStorage.getItem('last_reload_version');
+          const lastReloadAttempt = safeGetStorage('last_reload_version');
           if (lastReloadAttempt === remoteVersion) {
             console.log('Already attempted reload for this version, skipping.');
           } else {
             console.log('Attempting reload...');
-            localStorage.setItem('last_reload_version', remoteVersion);
+            safeSetStorage('last_reload_version', remoteVersion);
             
             // 1. Clear Service Worker caches if possible
             if ('caches' in window) {
@@ -1247,19 +1259,19 @@ function App() {
             }
 
             // 3. Clear stale AI model fallback state
-            localStorage.removeItem('ai_fallback_date');
-            localStorage.removeItem('ai_fallback_model');
+            safeRemoveStorage('ai_fallback_date');
+            safeRemoveStorage('ai_fallback_model');
              
             // 4. Final Hard Reload (forcing a fresh hit to the server by appending version)
             window.location.href = window.location.origin + window.location.pathname + '?v=' + remoteVersion;
           }
         } else {
           // If version matches, check if we should show the "What's New" intro
-          const lastSeenVersion = localStorage.getItem('last_seen_version');
+          const lastSeenVersion = safeGetStorage('last_seen_version');
           console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
           
           // 🚀 Always immediately persist current version to prevent repeated triggers on visibility/focus/interval
-          localStorage.setItem('last_seen_version', APP_VERSION);
+          safeSetStorage('last_seen_version', APP_VERSION);
 
           if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
@@ -1321,7 +1333,7 @@ function App() {
   const DEFAULT_LAYOUT = ['panda', 'dashboard', 'detective', 'today', 'weight', 'history'];
   const [layout, setLayout] = useState(() => {
     try {
-      const saved = localStorage.getItem('app_layout');
+      const saved = safeGetStorage('app_layout');
       if (saved) {
         const parsed = JSON.parse(saved);
         const combined = Array.from(new Set([...parsed, ...DEFAULT_LAYOUT]));
@@ -1348,9 +1360,7 @@ function App() {
   }, []);
 
   useEffect(() => {
-    try {
-      localStorage.setItem('app_layout', JSON.stringify(layout));
-    } catch (e) {}
+    safeSetStorage('app_layout', JSON.stringify(layout));
   }, [layout]);
   const [toast, setToast] = useState(null);
 
@@ -1384,7 +1394,7 @@ function App() {
       const diffHrs = (nowMs - lastWaterTimestamp) / (3600 * 1000);
 
       if (diffHrs >= intervalVal) {
-        const lastNotifiedStr = localStorage.getItem('last_hydration_notified') || '0';
+        const lastNotifiedStr = safeGetStorage('last_hydration_notified') || '0';
         const lastNotified = parseInt(lastNotifiedStr, 10);
         
         if (lastNotified < lastWaterTimestamp || (nowMs - lastNotified) >= (intervalVal * 3600 * 1000)) {
@@ -1395,7 +1405,7 @@ function App() {
                 icon: `${import.meta.env.BASE_URL || '/'}water.png`,
                 tag: 'hydration-reminder'
               });
-              localStorage.setItem('last_hydration_notified', nowMs.toString());
+              safeSetStorage('last_hydration_notified', nowMs.toString());
             } else if (Notification.permission === 'default') {
               Notification.requestPermission();
             }
@@ -1618,12 +1628,12 @@ function App() {
     showToast(t('added_to_favorites'));
 
     // ☁️ 雙向同步常用餐點至 GAS 與 Gist
-    const effectiveUserId = localStorage.getItem('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
+    const effectiveUserId = safeGetStorage('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
     const currentGist = getCurrentGistId();
     if (effectiveUserId || currentGist) {
       const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
       try {
-        fetch(`${GAS_URL}?action=addFavorite&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&name=${encodeURIComponent(log.dish_name)}&cal=${log.calories || 0}&pro=${log.protein || 0}&wat=${log.water || 0}`, { mode: 'no-cors' });
+        fetch(`${GAS_URL}?action=addFavorite&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&name=${encodeURIComponent(log.dish_name)}&cal=${log.calories || 0}&pro=${log.protein || 0}&wat=${log.water || 0}`, { mode: 'no-cors' }).catch(() => {});
       } catch (e) {}
 
       if (currentGist) {
@@ -1699,7 +1709,7 @@ function App() {
               lastSeenVersion={lastSeenVersionState}
               onClose={() => {
                 setShowWhatsNew(false);
-                localStorage.setItem('last_seen_version', APP_VERSION);
+                safeSetStorage('last_seen_version', APP_VERSION);
               }}
             />
           )}
