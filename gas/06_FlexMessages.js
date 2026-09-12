@@ -627,12 +627,16 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   const fatGoal = goals.fat || 60;
   const showCarbsFat = !!goals.show_carbs_fat;
   const remainingCal = Math.max(0, calGoal - totalCal);
-  const calPercent = Math.min(100, Math.round((totalCal / calGoal) * 100));
+  const calPercent = calGoal > 0 ? Math.round((totalCal / calGoal) * 100) : 0;
+  const isOverCal = calGoal > 0 && totalCal > calGoal;
 
   let coachTip = isEn ? "Building your healthy diet habit, keep it up! 🐼" : "飲食紀錄養成中，繼續保持！🐼";
   if (isToday) {
-    if (totalCal > calGoal) {
-      coachTip = isEn ? "Daily calorie goal reached! Drink plenty of water and take a walk! 🔥" : "今日熱量已達標，晚點多喝水散步消化喔！🔥";
+    if (isOverCal) {
+      const overCal = totalCal - calGoal;
+      coachTip = isEn 
+        ? `Daily calorie goal exceeded by ${overCal} kcal (${calPercent}%)! Drink plenty of water and take a walk! 🔥` 
+        : `今日熱量已超過目標 ${overCal} kcal (${calPercent}%)，晚點多喝水散步消化喔！🔥`;
     } else if (remainingCal <= 400) {
       coachTip = isEn ? "Calorie intake is well-balanced, almost hitting your target! 💪" : "熱量控制得非常剛好，即將完美達標！💪";
     } else {
@@ -649,8 +653,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   return {
     type: "flex",
     altText: isToday
-      ? (isEn ? `📊 Today's Summary: ${totalCal} / ${calGoal} kcal` : `📊 今日飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`)
-      : (isEn ? `📅 ${todayStr} Summary: ${totalCal} / ${calGoal} kcal` : `📅 ${todayStr} 飲食總結：已攝取 ${totalCal} / ${calGoal} kcal`),
+      ? (isEn ? `📊 Today's Summary: ${totalCal} / ${calGoal} kcal (${calPercent}%)` : `📊 今日飲食總結：已攝取 ${totalCal} / ${calGoal} kcal (${calPercent}%)`)
+      : (isEn ? `📅 ${todayStr} Summary: ${totalCal} / ${calGoal} kcal (${calPercent}%)` : `📅 ${todayStr} 飲食總結：已攝取 ${totalCal} / ${calGoal} kcal (${calPercent}%)`),
     contents: {
       type: "bubble",
       size: "mega",
@@ -693,12 +697,12 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
               contents: [
                 {
                   type: "box", layout: "vertical",
-                  backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2.5px",
+                  backgroundColor: isOverCal ? "#FFE4E6" : "#FFF1F2", borderColor: isOverCal ? "#BE123C" : "#000000", borderWidth: "2.5px",
                   cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "🔥 Cal" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold", wrap: false }
+                    { type: "text", text: isEn ? (isOverCal ? "⚠️ Cal" : "🔥 Cal") : (isOverCal ? "⚠️ 熱量" : "🔥 熱量"), size: "xxs", color: isOverCal ? "#BE123C" : "#E11D48", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: isOverCal ? "#BE123C" : "#000000", margin: "xs" },
+                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: isOverCal ? "#9F1239" : "#881337", weight: "bold", wrap: false }
                   ]
                 },
                 {
@@ -756,12 +760,12 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
               contents: [
                 {
                   type: "box", layout: "vertical",
-                  backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2.5px",
+                  backgroundColor: isOverCal ? "#FFE4E6" : "#FFF1F2", borderColor: isOverCal ? "#BE123C" : "#000000", borderWidth: "2.5px",
                   cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "🔥 Calories" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: "#881337", weight: "bold" }
+                    { type: "text", text: isEn ? (isOverCal ? "⚠️ Calories" : "🔥 Calories") : (isOverCal ? "⚠️ 熱量" : "🔥 熱量"), size: "xxs", color: isOverCal ? "#BE123C" : "#E11D48", weight: "bold", wrap: false },
+                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: isOverCal ? "#BE123C" : "#000000", margin: "xs" },
+                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: isOverCal ? "#9F1239" : "#881337", weight: "bold" }
                   ]
                 },
                 {
