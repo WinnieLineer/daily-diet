@@ -55,3 +55,40 @@ function getSystemInfo() {
     ]
   };
 }
+
+// ========================================================
+// 🛠️ 屬性管理輔助函式 (當 GAS 介面屬性超過 50 個唯讀時使用)
+// ========================================================
+
+/**
+ * 🔑 透過程式碼直接設定維護者密碼與帳號
+ * 解決 GAS 後台網頁介面因「指令碼具有 50 個以上的屬性」而變成唯讀的問題
+ */
+function setMaintainerCredentials() {
+  const props = PropertiesService.getScriptProperties();
+  
+  // 👉 請將下方密碼替換為您想要設定的管理密碼：
+  const newPassword = '您的自訂密碼';
+  const newAccount = 'Winnie'; // 若想改為 Admin 或其他名稱亦可在此修改
+  
+  props.setProperty('MAINTAINER_PASS', newPassword);
+  props.setProperty('MAINTAINER_USER', newAccount);
+  
+  console.log('🎉 維護者憑證已成功寫入指令碼屬性！');
+  console.log('👤 維護者帳號：', props.getProperty('MAINTAINER_USER'));
+  console.log('🔒 維護者密碼：', props.getProperty('MAINTAINER_PASS') ? '****** (已成功設定)' : '設定失敗');
+}
+
+/**
+ * 📋 檢視目前所有指令碼屬性清單 (可於 GAS「執行紀錄」中查看完整清單)
+ */
+function listAllScriptProperties() {
+  const props = PropertiesService.getScriptProperties().getProperties();
+  const keys = Object.keys(props);
+  console.log(`📊 系統目前總共有 ${keys.length} 個屬性：`);
+  keys.forEach(k => {
+    const isSensitive = k.includes('PASS') || k.includes('PAT') || k.includes('TOKEN') || k.includes('SECRET') || k.includes('KEY');
+    const val = isSensitive ? '******' : props[k];
+    console.log(`- [${k}]: ${val}`);
+  });
+}
