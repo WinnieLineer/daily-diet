@@ -64,12 +64,17 @@ function getSystemInfo() {
  * 🔑 透過程式碼直接設定維護者密碼與帳號
  * 解決 GAS 後台網頁介面因「指令碼具有 50 個以上的屬性」而變成唯讀的問題
  */
-function setMaintainerCredentials() {
+function setMaintainerCredentials(customAccount, customPassword) {
   const props = PropertiesService.getScriptProperties();
   
-  // 👉 僅在後端與 Google 雲端設定的專用維護者憑證 (前端代碼完全無此字串)
-  const newPassword = '1qazXCVBNM<>?';
-  const newAccount = 'Winnie';
+  // 👉 安全憑證設定：優先使用傳入之參數或保留既有設定，避免明文密碼留存在版本控制中
+  const newAccount = customAccount || props.getProperty('MAINTAINER_USER') || 'Winnie';
+  const newPassword = customPassword || props.getProperty('MAINTAINER_PASS');
+  
+  if (!newPassword) {
+    console.warn('⚠️ 請傳入自訂密碼執行：setMaintainerCredentials("帳號", "密碼")');
+    return;
+  }
   
   props.setProperty('MAINTAINER_PASS', newPassword);
   props.setProperty('MAINTAINER_USER', newAccount);

@@ -282,13 +282,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         const waterShort = goals.water - summary.water;
         const isNight = new Date().getHours() >= 21;
 
-        items = items.sort((a, b) => {
-          const aText = a.fact.toLowerCase();
-          if (isNight && (aText.includes('消化') || aText.includes('代謝') || aText.includes('睡眠'))) return -1;
-          if (proteinShort > 20 && (aText.includes('蛋') || aText.includes('肉') || aText.includes('肌肉'))) return -1;
-          if (waterShort > 800 && (aText.includes('水') || aText.includes('代謝'))) return -1;
-          return 0;
-        });
+        const getFactScore = (item) => {
+          const text = (item?.fact || '').toLowerCase();
+          let score = 0;
+          if (isNight && (text.includes('消化') || text.includes('代謝') || text.includes('睡眠'))) score += 10;
+          if (proteinShort > 20 && (text.includes('蛋') || text.includes('肉') || text.includes('肌肉'))) score += 10;
+          if (waterShort > 800 && (text.includes('水') || text.includes('代謝'))) score += 10;
+          return score;
+        };
+        items = items.sort((a, b) => getFactScore(b) - getFactScore(a));
         setNutritionFacts(items);
       };
       fetchFacts();
@@ -407,26 +409,30 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   };
 
   const compressImage = (base64) => {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
       const img = new Image();
       img.onload = () => {
         const canvas = document.createElement('canvas');
         const MAX_WIDTH = IMAGE_MAX_DIMENSION;
         const MAX_HEIGHT = IMAGE_MAX_DIMENSION;
-        let width = img.width;
-        let height = img.height;
+        let width = img.width || 1;
+        let height = img.height || 1;
         if (width > height) {
           if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
         } else {
           if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
         }
-        canvas.width = width;
-        canvas.height = height;
+        canvas.width = Math.round(width);
+        canvas.height = Math.round(height);
         const ctx = canvas.getContext('2d');
-        ctx.drawImage(img, 0, 0, width, height);
+        if (!ctx) {
+          resolve(base64);
+          return;
+        }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
         resolve(canvas.toDataURL('image/jpeg', IMAGE_QUALITY));
       };
-      img.onerror = reject;
+      img.onerror = () => resolve(base64); // Fallback to raw base64 if decoding fails
       img.src = base64;
     });
   };
@@ -595,46 +601,54 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   };
 
   const handleImageUpload = async (e) => {
-    const file = e.target.files[0];
+    const file = e.target.files?.[0];
     if (!file) return;
-    const base64 = await new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onloadend = () => resolve(reader.result);
-      reader.readAsDataURL(file);
-    });
-    setPreview(base64);
-    const locationPromise = (async () => {
-      // 1. Try EXIF GPS & Date (fast, local, dynamic load)
-      try {
-        const exifrModule = await import('exifr');
-        const exifr = exifrModule.default || exifrModule;
-        const exifData = await exifr.parse(file);
-        if (exifData && exifData.DateTimeOriginal) {
-          const dt = new Date(exifData.DateTimeOriginal);
-          if (!isNaN(dt.getTime())) {
-            const tzoffset = dt.getTimezoneOffset() * 60000;
-            setLogTime(new Date(dt - tzoffset).toISOString().slice(0, 16));
-          }
-        }
-        const gps = await exifr.gps(file);
-        if (gps?.latitude && gps?.longitude) return await reverseGeocode(gps.latitude, gps.longitude);
-      } catch (err) { }
-      if (navigator.geolocation) {
+    try {
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onloadend = () => resolve(reader.result);
+        reader.onerror = () => reject(new Error('Failed to read image file'));
+        reader.readAsDataURL(file);
+      });
+      // Reset input value so re-selecting the same image triggers onChange
+      e.target.value = '';
+      setPreview(base64);
+      const locationPromise = (async () => {
+        // 1. Try EXIF GPS & Date (fast, local, dynamic load)
         try {
-          const permission = await navigator.permissions.query({ name: 'geolocation' });
-          if (permission.state === 'granted') {
-            return await new Promise((resolve) => {
-              navigator.geolocation.getCurrentPosition(
-                async (pos) => resolve(await reverseGeocode(pos.coords.latitude, pos.coords.longitude)),
-                () => resolve(null), { timeout: 5000 }
-              );
-            });
+          const exifrModule = await import('exifr');
+          const exifr = exifrModule.default || exifrModule;
+          const exifData = await exifr.parse(file);
+          if (exifData && exifData.DateTimeOriginal) {
+            const dt = new Date(exifData.DateTimeOriginal);
+            if (!isNaN(dt.getTime())) {
+              const tzoffset = dt.getTimezoneOffset() * 60000;
+              setLogTime(new Date(dt - tzoffset).toISOString().slice(0, 16));
+            }
           }
+          const gps = await exifr.gps(file);
+          if (gps?.latitude && gps?.longitude) return await reverseGeocode(gps.latitude, gps.longitude);
         } catch (err) { }
-      }
-      return null;
-    })();
-    handleAnalysis(base64, locationPromise);
+        if (navigator.geolocation) {
+          try {
+            const permission = await navigator.permissions.query({ name: 'geolocation' });
+            if (permission.state === 'granted') {
+              return await new Promise((resolve) => {
+                navigator.geolocation.getCurrentPosition(
+                  async (pos) => resolve(await reverseGeocode(pos.coords.latitude, pos.coords.longitude)),
+                  () => resolve(null), { timeout: 5000 }
+                );
+              });
+            }
+          } catch (err) { }
+        }
+        return null;
+      })();
+      handleAnalysis(base64, locationPromise);
+    } catch (err) {
+      console.error("Image upload error:", err);
+      try { e.target.value = ''; } catch (_) {}
+    }
   };
 
   const handleCameraCapture = async (base64) => {

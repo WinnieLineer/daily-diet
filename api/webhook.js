@@ -224,7 +224,7 @@ async function replyLineMealConfirm(replyToken, analysis, accessToken, savedLogI
 
   const flexMessage = {
     type: 'flex',
-    altText: `🍱 AI 辨識完成：${analysis.dish_name} (${analysis.calories} kcal) - 已記錄入帳`,
+    altText: `🍱 AI 辨識完成：${analysis.dish_name || '餐點'} (${analysis.calories || 0} kcal) - 已記錄入帳`.slice(0, 400),
     contents: {
       type: 'bubble',
       size: 'mega',
@@ -761,7 +761,7 @@ async function replyLineMessage(replyToken, text, accessToken) {
     },
     body: JSON.stringify({
       replyToken,
-      messages: [{ type: 'text', text }]
+      messages: [{ type: 'text', text: typeof text === 'string' ? text.slice(0, 5000) : String(text || '') }]
     })
   });
 
