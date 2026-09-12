@@ -69,7 +69,7 @@ function setMaintainerCredentials(customAccount, customPassword) {
   
   // 👉 安全憑證設定：優先使用傳入之參數或保留既有設定，避免明文密碼留存在版本控制中
   const newAccount = customAccount || props.getProperty('MAINTAINER_USER') || 'Winnie';
-  const newPassword = customPassword || props.getProperty('MAINTAINER_PASS');
+  const newPassword = customPassword || props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
   
   if (!newPassword) {
     console.warn('⚠️ 請傳入自訂密碼執行：setMaintainerCredentials("帳號", "密碼")');
@@ -77,11 +77,12 @@ function setMaintainerCredentials(customAccount, customPassword) {
   }
   
   props.setProperty('MAINTAINER_PASS', newPassword);
+  props.setProperty('MAINTAINER_PASSWORD', newPassword);
   props.setProperty('MAINTAINER_USER', newAccount);
   
   console.log('🎉 維護者憑證已成功寫入指令碼屬性！');
   console.log('👤 維護者帳號：', props.getProperty('MAINTAINER_USER'));
-  console.log('🔒 維護者密碼：', props.getProperty('MAINTAINER_PASS') ? '****** (已成功設定)' : '設定失敗');
+  console.log('🔒 維護者密碼：', (props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD')) ? '****** (已成功設定)' : '設定失敗');
 }
 
 /**
