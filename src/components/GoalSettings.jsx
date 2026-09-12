@@ -616,6 +616,65 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         ))}
                       </div>
                     </div>
+
+                    {/* 🎭 熊貓多重性格切換 */}
+                    <div className="p-5 border-4 border-black rounded-[2.2rem] bg-white shadow-neo relative overflow-hidden text-left animate-fade-in">
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">🎭</span>
+                          <div>
+                            <h4 className="font-black italic text-sm text-black">熊貓教練語氣與性格切換</h4>
+                            <span className="text-[8px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full inline-block mt-0.5 uppercase">
+                              COACH PERSONA
+                            </span>
+                          </div>
+                        </div>
+
+                        <p className="text-[10px] text-zinc-600 font-bold leading-relaxed">
+                          可直接點選下方頭像切換教練在聊天室與分析時的語氣與性格：
+                        </p>
+
+                        {/* Personas Grid */}
+                        <div className="grid grid-cols-3 gap-2">
+                          {[
+                            { id: 'tsundere', emoji: '🐼😤', label: '傲嬌教練', desc: '口嫌體正直、毒舌但關心你' },
+                            { id: 'gentle', emoji: '🐼🥰', label: '治癒天使', desc: '溫柔鼓勵、滿滿正能量' },
+                            { id: 'hardcore', emoji: '🐼🔥', label: '魔鬼士官長', desc: '熱血嚴格、斯巴達式紀律' }
+                          ].map((persona) => {
+                            const isActive = activePersona === persona.id;
+                            return (
+                              <button
+                                key={persona.id}
+                                type="button"
+                                onClick={() => {
+                                  safeSetStorage('panda_active_persona', persona.id);
+                                  setActivePersona(persona.id);
+                                  syncPersonaToCloud(persona.id);
+                                  window.dispatchEvent(new CustomEvent('panda-persona-updated'));
+                                  alert(`🎉 已成功切換為【${persona.label}】！快去跟教練對話看看吧 🐼✨`);
+                                }}
+                                className={`relative p-3 rounded-2xl border-2 border-black flex flex-col items-center justify-between text-center transition-all ${
+                                  isActive
+                                    ? 'bg-indigo-100 ring-2 ring-indigo-400 scale-105 shadow-neo-sm rotate-1 cursor-pointer'
+                                    : 'bg-white hover:-translate-y-1 shadow-neo-xs cursor-pointer active:scale-95'
+                                }`}
+                              >
+                                <span className="text-3xl mb-1">{persona.emoji}</span>
+                                <span className="text-[9px] font-black text-black">{persona.label}</span>
+                                <span className="text-[7px] font-bold text-zinc-400 leading-tight mt-1">{persona.desc}</span>
+
+                                {/* Active Star Sparkle */}
+                                {isActive && (
+                                  <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-400 border border-black rounded-full flex items-center justify-center text-[7px] font-black shadow-neo-xs animate-bounce z-10">
+                                    ✨
+                                  </div>
+                                )}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    </div>
                     {/* LINE Integration Status */}
                     <div className="space-y-3 border-4 border-black p-4 rounded-[2rem] bg-accent/10 shadow-neo-sm">
                       <div className="flex items-center gap-2">
@@ -1773,64 +1832,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     )}
 
-                    {/* 🎭 熊貓多重性格切換 (保留切換語氣功能) */}
-                    <div className="p-5 border-4 border-black rounded-[2.2rem] bg-white shadow-neo relative overflow-hidden text-left mt-6 animate-fade-in">
-                      <div className="space-y-4">
-                        <div className="flex items-center gap-2">
-                          <span className="text-xl">🎭</span>
-                          <div>
-                            <h4 className="font-black italic text-sm text-black">熊貓教練語氣與性格切換</h4>
-                            <span className="text-[8px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full inline-block mt-0.5 uppercase">
-                              COACH PERSONA
-                            </span>
-                          </div>
-                        </div>
 
-                        <p className="text-[10px] text-zinc-600 font-bold leading-relaxed">
-                          可直接點選下方頭像切換教練在聊天室與分析時的語氣與性格：
-                        </p>
-
-                        {/* Personas Grid */}
-                        <div className="grid grid-cols-3 gap-2">
-                          {[
-                            { id: 'tsundere', emoji: '🐼😤', label: '傲嬌教練', desc: '口嫌體正直、毒舌但關心你' },
-                            { id: 'gentle', emoji: '🐼🥰', label: '治癒天使', desc: '溫柔鼓勵、滿滿正能量' },
-                            { id: 'hardcore', emoji: '🐼🔥', label: '魔鬼士官長', desc: '熱血嚴格、斯巴達式紀律' }
-                          ].map((persona) => {
-                            const isActive = activePersona === persona.id;
-                            return (
-                              <button
-                                key={persona.id}
-                                type="button"
-                                onClick={() => {
-                                  safeSetStorage('panda_active_persona', persona.id);
-                                  setActivePersona(persona.id);
-                                  syncPersonaToCloud(persona.id);
-                                  window.dispatchEvent(new CustomEvent('panda-persona-updated'));
-                                  alert(`🎉 已成功切換為【${persona.label}】！快去跟教練對話看看吧 🐼✨`);
-                                }}
-                                className={`relative p-3 rounded-2xl border-2 border-black flex flex-col items-center justify-between text-center transition-all ${
-                                  isActive
-                                    ? 'bg-indigo-100 ring-2 ring-indigo-400 scale-105 shadow-neo-sm rotate-1 cursor-pointer'
-                                    : 'bg-white hover:-translate-y-1 shadow-neo-xs cursor-pointer active:scale-95'
-                                }`}
-                              >
-                                <span className="text-3xl mb-1">{persona.emoji}</span>
-                                <span className="text-[9px] font-black text-black">{persona.label}</span>
-                                <span className="text-[7px] font-bold text-zinc-400 leading-tight mt-1">{persona.desc}</span>
-
-                                {/* Active Star Sparkle */}
-                                {isActive && (
-                                  <div className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-indigo-400 border border-black rounded-full flex items-center justify-center text-[7px] font-black shadow-neo-xs animate-bounce z-10">
-                                    ✨
-                                  </div>
-                                )}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 )}
 
