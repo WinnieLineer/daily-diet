@@ -4,8 +4,10 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../lib/translations';
 import { Clock, Zap, Heart } from 'lucide-react';
 
+const isValidTimeStr = (str) => typeof str === 'string' && /^([01]\d|2[0-3]):([0-5]\d)$/.test(str);
+
 const isOutsideEatingWindow = (nowDate, startStr, endStr) => {
-  if (!startStr || !endStr) return false;
+  if (!isValidTimeStr(startStr) || !isValidTimeStr(endStr)) return false;
   const hourMin = nowDate.getHours() * 60 + nowDate.getMinutes();
   const [sH, sM] = startStr.split(':').map(Number);
   const startMins = sH * 60 + sM;
@@ -20,6 +22,9 @@ const isOutsideEatingWindow = (nowDate, startStr, endStr) => {
 };
 
 const getCountdown = (nowDate, startStr, endStr) => {
+  if (!isValidTimeStr(startStr) || !isValidTimeStr(endStr)) {
+    return { isFasting: false, hours: 0, minutes: 0, seconds: 0, totalSeconds: 0 };
+  }
   const isOutside = isOutsideEatingWindow(nowDate, startStr, endStr);
   const targetStr = isOutside ? startStr : endStr;
   const nowMs = nowDate.getTime();
@@ -64,7 +69,7 @@ export default function FastingTimer({ goals }) {
     return () => clearInterval(interval);
   }, [fasting_enabled]);
 
-  if (!fasting_enabled || !fasting_start || !fasting_end) return null;
+  if (!fasting_enabled || !isValidTimeStr(fasting_start) || !isValidTimeStr(fasting_end)) return null;
 
   const data = getCountdown(now, fasting_start, fasting_end);
 
