@@ -7,9 +7,16 @@ import { Plus, Trash2, ChevronDown, ChevronUp, History, Pencil, Clock } from 'lu
 import { motion, AnimatePresence } from 'framer-motion';
 import { t } from '../lib/translations';
 import { getLocalDateString } from '../lib/constants';
+import { syncWeightToCloud, syncPoopToCloud } from '../lib/syncService';
 
 const WeightTracker = ({ pointerEventsNone }) => {
-  const [activeTab, setActiveTab] = useState('weight'); // 'weight' or 'poop'
+  const [activeTab, setActiveTab] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const q = new URLSearchParams(window.location.search);
+      if (q.get('tab') === 'poop') return 'poop';
+    }
+    return 'weight';
+  });
   const [weight, setWeight] = useState('');
   const [weightDate, setWeightDate] = useState(() => getLocalDateString());
   
@@ -26,6 +33,9 @@ const WeightTracker = ({ pointerEventsNone }) => {
 
   useEffect(() => {
     fetchHistory();
+    const handleSync = () => fetchHistory();
+    window.addEventListener('diet-sync-complete', handleSync);
+    return () => window.removeEventListener('diet-sync-complete', handleSync);
   }, []);
 
   const fetchHistory = async () => {
@@ -74,11 +84,14 @@ const WeightTracker = ({ pointerEventsNone }) => {
     const [y, m, day] = weightDate.split('-').map(Number);
     const d = new Date(y, m - 1, day, 12, 0, 0);
 
-    await db.weightLogs.add({
+    const newWeightLog = {
       weight: parseFloat(weight),
       date: weightDate,
       timestamp: d.getTime()
-    });
+    };
+
+    await db.weightLogs.add(newWeightLog);
+    syncWeightToCloud(newWeightLog);
 
     setWeight('');
     fetchHistory();
@@ -87,7 +100,13 @@ const WeightTracker = ({ pointerEventsNone }) => {
   const addPoop = async (e) => {
     e.preventDefault();
     const d = new Date(poopTime);
-    await db.poopLogs.add({ timestamp: d.getTime() });
+    const newPoopLog = {
+      timestamp: d.getTime(),
+      date: getLocalDateString(d)
+    };
+
+    await db.poopLogs.add(newPoopLog);
+    syncPoopToCloud(newPoopLog);
     
     const now = new Date();
     const tzoffset = now.getTimezoneOffset() * 60000;
@@ -108,18 +127,20 @@ const WeightTracker = ({ pointerEventsNone }) => {
 
   const editItem = async (log) => {
     if (log.type === 'weight') {
-      const newWeight = prompt((t('edit') || 'Edit') + ' (KG):', log.weight);
-      if (newWeight && !isNaN(newWeight)) {
+      const newWeight = prompt(t('edit_weight_prompt') || 'Enter new weight (kg):', log.weight);
+      if (newWeight && !isNaN(parseFloat(newWeight))) {
         await db.weightLogs.update(log.id, { weight: parseFloat(newWeight) });
         fetchHistory();
       }
     } else {
-      const currentIso = new Date(log.timestamp - new Date().getTimezoneOffset() * 60000).toISOString().slice(0, 16);
-      const newTimeStr = prompt((t('edit') || 'Edit') + ' (YYYY-MM-DDTHH:mm):', currentIso);
-      if (newTimeStr) {
-        const d = new Date(newTimeStr);
-        if (!isNaN(d.getTime())) {
-          await db.poopLogs.update(log.id, { timestamp: d.getTime() });
+      const d = new Date(log.timestamp);
+      const tzoffset = d.getTimezoneOffset() * 60000;
+      const curStr = new Date(log.timestamp - tzoffset).toISOString().slice(0, 16);
+      const newTime = prompt(t('edit_poop_prompt') || 'Enter new date & time (YYYY-MM-DDTHH:mm):', curStr);
+      if (newTime) {
+        const parsed = new Date(newTime).getTime();
+        if (!isNaN(parsed)) {
+          await db.poopLogs.update(log.id, { timestamp: parsed });
           fetchHistory();
         }
       }
@@ -127,7 +148,7 @@ const WeightTracker = ({ pointerEventsNone }) => {
   };
 
   return (
-    <NeoCard className="space-y-4">
+    <NeoCard id="weight-tracker" className="space-y-4">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-black italic">⚖️/💩 {t('weight_tracker_title')}</h2>
       </div>

@@ -259,3 +259,57 @@ export function syncLanguageToCloud(lang, immediate = false) {
     debouncedLanguageSync(lang);
   }
 }
+
+/**
+ * 即時同步單筆體重至 LINE 後端與 Gist
+ */
+export async function syncWeightToCloud(weightLog) {
+  const { userId, userName, gistId } = getEffectiveIds();
+  if (!weightLog || !weightLog.weight) return;
+
+  const params = new URLSearchParams({
+    action: 'saveWeight',
+    userId,
+    weight: String(weightLog.weight),
+    date: weightLog.date || getLocalDateString(),
+    timestamp: String(weightLog.timestamp || Date.now())
+  });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
+  if (gistId) params.append('gistId', gistId);
+
+  try {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步體重異常:', e?.message));
+    console.log(`⚖️ [Web ➔ LINE Sync] 即時同步體重成功: ${weightLog.weight} kg (${weightLog.date})`);
+  } catch (err) {}
+}
+
+/**
+ * 即時同步單筆排便打卡至 LINE 後端與 Gist
+ */
+export async function syncPoopToCloud(poopLog) {
+  const { userId, userName, gistId } = getEffectiveIds();
+  if (!poopLog) return;
+
+  const params = new URLSearchParams({
+    action: 'savePoop',
+    userId,
+    timestamp: String(poopLog.timestamp || Date.now()),
+    date: poopLog.date || getLocalDateString()
+  });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
+  if (gistId) params.append('gistId', gistId);
+
+  try {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步排便異常:', e?.message));
+    console.log(`💩 [Web ➔ LINE Sync] 即時同步排便打卡成功: ${poopLog.timestamp}`);
+  } catch (err) {}
+}
+

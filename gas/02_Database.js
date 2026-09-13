@@ -892,6 +892,260 @@ function deleteMealFromUserGist(targetMeal, gistId, pat) {
 }
 
 // ========================================================
+// ⚖️ 體重紀錄與 💩 排便紀錄 (Weight & Poop Logs)
+// ========================================================
+
+function saveWeightLog(userId, weightVal, dateStr, userGistId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const weight = Number(parseFloat(weightVal).toFixed(1));
+  const date = dateStr || getTodayDateString();
+  const timestamp = new Date(date + 'T12:00:00+08:00').getTime();
+  const logId = Date.now();
+
+  const weightItem = {
+    id: logId,
+    weight: weight,
+    date: date,
+    timestamp: timestamp
+  };
+
+  const key = `WEIGHT_LOGS_${userId}`;
+  let logs = [];
+  try {
+    const raw = props.getProperty(key);
+    if (raw) logs = JSON.parse(raw);
+  } catch (e) { logs = []; }
+
+  // 取得前一次記錄的體重用以比對
+  let prevWeight = null;
+  if (logs.length > 0) {
+    const prev = logs.find(l => l.date !== date && Number(l.weight) > 0) || logs[0];
+    if (prev && prev.weight) prevWeight = Number(prev.weight);
+  }
+
+  const existIdx = logs.findIndex(l => l.date === date);
+  if (existIdx !== -1) {
+    logs[existIdx] = weightItem;
+  } else {
+    logs.unshift(weightItem);
+  }
+  logs.sort((a, b) => b.timestamp - a.timestamp);
+  props.setProperty(key, JSON.stringify(logs.slice(0, 90))); // 保留最近 90 筆
+
+  // 同步個人 Gist
+  if (pat && userGistId) {
+    try {
+      syncWeightToUserGist(weightItem, userGistId, pat);
+    } catch (e) {
+      console.warn("同步體重至 Gist 失敗:", e);
+    }
+  }
+
+  const diff = prevWeight !== null ? Number((weight - prevWeight).toFixed(1)) : 0;
+  return {
+    weight: weight,
+    prevWeight: prevWeight,
+    diff: diff,
+    date: date,
+    item: weightItem
+  };
+}
+
+function savePoopLog(userId, timestampVal, userGistId, pat, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const ts = timestampVal ? Number(timestampVal) : Date.now();
+  const dateStr = getTodayDateString(new Date(ts));
+  const logId = Date.now();
+
+  const poopItem = {
+    id: logId,
+    timestamp: ts,
+    date: dateStr
+  };
+
+  const key = `POOP_LOGS_${userId}`;
+  let logs = [];
+  try {
+    const raw = props.getProperty(key);
+    if (raw) logs = JSON.parse(raw);
+  } catch (e) { logs = []; }
+
+  let prevTimestamp = null;
+  if (logs.length > 0) {
+    prevTimestamp = logs[0].timestamp;
+  }
+
+  logs.unshift(poopItem);
+  logs.sort((a, b) => b.timestamp - a.timestamp);
+  props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+
+  // 同步個人 Gist
+  if (pat && userGistId) {
+    try {
+      syncPoopToUserGist(poopItem, userGistId, pat);
+    } catch (e) {
+      console.warn("同步排便至 Gist 失敗:", e);
+    }
+  }
+
+  let elapsedHours = null;
+  if (prevTimestamp) {
+    elapsedHours = Math.round((ts - prevTimestamp) / (1000 * 60 * 60));
+  }
+
+  return {
+    timestamp: ts,
+    prevTimestamp: prevTimestamp,
+    elapsedHours: elapsedHours,
+    date: dateStr,
+    item: poopItem
+  };
+}
+
+function getUserWeightHistory(userId, days, props, userGistId) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const key = `WEIGHT_LOGS_${userId}`;
+  let logs = [];
+  try {
+    const raw = props.getProperty(key);
+    if (raw) logs = JSON.parse(raw);
+  } catch (e) { logs = []; }
+
+  if ((!logs || logs.length === 0) && userGistId) {
+    const pat = props.getProperty('GITHUB_PAT');
+    if (pat) {
+      try {
+        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${userGistId}`, {
+          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (gistRes.getResponseCode() === 200) {
+          const content = JSON.parse(gistRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+          if (content) {
+            const data = JSON.parse(content);
+            if (Array.isArray(data.weightLogs) && data.weightLogs.length > 0) {
+              logs = data.weightLogs;
+              props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+            }
+          }
+        }
+      } catch (err) {}
+    }
+  }
+
+  logs.sort((a, b) => a.timestamp - b.timestamp);
+  if (days && days > 0) {
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    return logs.filter(l => (l.timestamp || new Date(l.date).getTime()) >= cutoff);
+  }
+  return logs;
+}
+
+function getUserPoopHistory(userId, days, props, userGistId) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const key = `POOP_LOGS_${userId}`;
+  let logs = [];
+  try {
+    const raw = props.getProperty(key);
+    if (raw) logs = JSON.parse(raw);
+  } catch (e) { logs = []; }
+
+  if ((!logs || logs.length === 0) && userGistId) {
+    const pat = props.getProperty('GITHUB_PAT');
+    if (pat) {
+      try {
+        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${userGistId}`, {
+          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+          muteHttpExceptions: true
+        });
+        if (gistRes.getResponseCode() === 200) {
+          const content = JSON.parse(gistRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+          if (content) {
+            const data = JSON.parse(content);
+            if (Array.isArray(data.poopLogs) && data.poopLogs.length > 0) {
+              logs = data.poopLogs;
+              props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+            }
+          }
+        }
+      } catch (err) {}
+    }
+  }
+
+  logs.sort((a, b) => a.timestamp - b.timestamp);
+  if (days && days > 0) {
+    const cutoff = Date.now() - (days * 24 * 60 * 60 * 1000);
+    return logs.filter(l => l.timestamp >= cutoff);
+  }
+  return logs;
+}
+
+function syncWeightToUserGist(weightItem, gistId, pat) {
+  const gistUrl = `https://api.github.com/gists/${gistId}`;
+  const getRes = UrlFetchApp.fetch(gistUrl, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+    muteHttpExceptions: true
+  });
+
+  if (getRes.getResponseCode() === 200) {
+    let backupData = { dietLogs: [], weightLogs: [], poopLogs: [], settings: [], favorites: [] };
+    const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+    if (content) {
+      try { backupData = JSON.parse(content); } catch (e) {}
+    }
+    if (!Array.isArray(backupData.weightLogs)) backupData.weightLogs = [];
+    if (!Array.isArray(backupData.poopLogs)) backupData.poopLogs = [];
+
+    const existIdx = backupData.weightLogs.findIndex(l => l.date === weightItem.date);
+    if (existIdx !== -1) {
+      backupData.weightLogs[existIdx] = weightItem;
+    } else {
+      backupData.weightLogs.push(weightItem);
+    }
+    backupData.weightLogs.sort((a, b) => (a.timestamp || 0) - (b.timestamp || 0));
+
+    UrlFetchApp.fetch(gistUrl, {
+      method: 'patch',
+      headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+      payload: JSON.stringify({
+        files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+      }),
+      muteHttpExceptions: true
+    });
+  }
+}
+
+function syncPoopToUserGist(poopItem, gistId, pat) {
+  const gistUrl = `https://api.github.com/gists/${gistId}`;
+  const getRes = UrlFetchApp.fetch(gistUrl, {
+    headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+    muteHttpExceptions: true
+  });
+
+  if (getRes.getResponseCode() === 200) {
+    let backupData = { dietLogs: [], weightLogs: [], poopLogs: [], settings: [], favorites: [] };
+    const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+    if (content) {
+      try { backupData = JSON.parse(content); } catch (e) {}
+    }
+    if (!Array.isArray(backupData.weightLogs)) backupData.weightLogs = [];
+    if (!Array.isArray(backupData.poopLogs)) backupData.poopLogs = [];
+
+    backupData.poopLogs.push(poopItem);
+    backupData.poopLogs.sort((a, b) => a.timestamp - b.timestamp);
+
+    UrlFetchApp.fetch(gistUrl, {
+      method: 'patch',
+      headers: { 'Authorization': `Bearer ${pat}`, 'Content-Type': 'application/json' },
+      payload: JSON.stringify({
+        files: { 'daily-diet-backup.json': { content: JSON.stringify(backupData, null, 2) } }
+      }),
+      muteHttpExceptions: true
+    });
+  }
+}
+
+// ========================================================
 // ⭐ 常用餐點 CRUD (Favorites)
 // ========================================================
 

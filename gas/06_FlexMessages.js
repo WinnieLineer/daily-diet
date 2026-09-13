@@ -1902,6 +1902,678 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
 }
 
 // ========================================================
+// ⚖️ 4.1 體重記錄確認卡片 (Weight Confirm Flex)
+// ========================================================
+
+function generateWeightConfirmFlex(userId, weightData, liffId, userGistId, props, lang) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const userLang = lang || getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
+  const weight = weightData.weight || 0;
+  const diff = weightData.diff !== undefined ? weightData.diff : 0;
+  const prevWeight = weightData.prevWeight;
+  const webUrl = liffId ? `https://liff.line.me/${liffId}?tab=weight` : 'https://winnie-lin.space/daily-diet/?tab=weight';
+
+  let diffBadgeText = isEn ? "✨ Initial Record" : "✨ 初始記錄";
+  let diffColor = "#2563EB";
+  let diffBg = "#EFF6FF";
+  if (prevWeight !== null && prevWeight !== undefined) {
+    if (diff < 0) {
+      diffBadgeText = isEn ? `📉 Down ${Math.abs(diff)} kg` : `📉 較前次 ↓ ${Math.abs(diff)} kg`;
+      diffColor = "#059669";
+      diffBg = "#ECFDF5";
+    } else if (diff > 0) {
+      diffBadgeText = isEn ? `📈 Up ${diff} kg` : `📈 較前次 ↑ ${diff} kg`;
+      diffColor = "#DC2626";
+      diffBg = "#FEF2F2";
+    } else {
+      diffBadgeText = isEn ? "⚖️ Maintained" : "⚖️ 與前次持平";
+      diffColor = "#4B5563";
+      diffBg = "#F3F4F6";
+    }
+  }
+
+  return {
+    type: "flex",
+    altText: isEn ? `⚖️ Weight Logged: ${weight} kg` : `⚖️ 體重記錄成功：${weight} kg`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "horizontal",
+        backgroundColor: "#10B981",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "text",
+            text: isEn ? "⚖️ Weight Tracker" : "⚖️ 體重打卡記錄",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "18px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            alignItems: "center",
+            spacing: "xs",
+            contents: [
+              {
+                type: "text",
+                text: `${weight}`,
+                size: "4xl",
+                weight: "bold",
+                color: "#000000"
+              },
+              {
+                type: "text",
+                text: "kg (公斤)",
+                size: "xs",
+                color: "#71717A",
+                weight: "bold"
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            justifyContent: "center",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: diffBg,
+                cornerRadius: "8px",
+                paddingStart: "10px",
+                paddingEnd: "10px",
+                paddingTop: "4px",
+                paddingBottom: "4px",
+                contents: [
+                  {
+                    type: "text",
+                    text: diffBadgeText,
+                    size: "xs",
+                    color: diffColor,
+                    weight: "bold"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: isEn 
+              ? "🐼 Panda Coach: Regular tracking keeps your metabolism transparent! Keep up the great work!"
+              : "🐼 熊貓教練：「穩定追蹤體重是控制體態最關鍵的習慣！早晨空腹測量最準確喔 ✨」",
+            size: "xxs",
+            color: "#52525B",
+            wrap: true,
+            margin: "sm"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          createNeoFlexButton({
+            label: isEn ? "📈 View Weight Trend" : "📈 查看體重與體態曲線",
+            variant: "accent",
+            size: "md",
+            action: {
+              type: "message",
+              label: isEn ? "Weight Trend" : "體重趨勢",
+              text: isEn ? "weight chart" : "體重紀錄"
+            }
+          }),
+          createNeoFlexButton({
+            label: isEn ? "💩 Log Bowel Movement" : "💩 順便記排便打卡",
+            variant: "white",
+            size: "md",
+            action: {
+              type: "message",
+              label: isEn ? "Log Poop" : "記排便",
+              text: "💩"
+            }
+          }),
+          createNeoFlexButton({
+            label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 互動圖表",
+            variant: "black",
+            size: "md",
+            action: {
+              type: "uri",
+              label: isEn ? "Web Chart" : "Web 圖表",
+              uri: webUrl
+            }
+          })
+        ]
+      }
+    }
+  };
+}
+
+// ========================================================
+// 💩 4.2 排便打卡確認卡片 (Poop Confirm Flex)
+// ========================================================
+
+function generatePoopConfirmFlex(userId, poopData, liffId, userGistId, props, lang) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const userLang = lang || getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
+  const elapsedHours = poopData.elapsedHours;
+  const webUrl = liffId ? `https://liff.line.me/${liffId}?tab=weight` : 'https://winnie-lin.space/daily-diet/?tab=weight';
+
+  let intervalText = isEn ? "✨ First Log Recorded Today" : "✨ 今日排便打卡成功！";
+  if (elapsedHours !== null && elapsedHours !== undefined) {
+    intervalText = isEn 
+      ? `⏱️ Approx. ${elapsedHours} hrs since last log` 
+      : `⏱️ 距離前次排便約 ${elapsedHours} 小時`;
+  }
+
+  const persona = getUserPersona(userId, props, userGistId);
+  let coachQuote = "🐼「腸道通順代表腸道菌叢與代謝健康運作中，棒棒的！✨」";
+  if (isEn) {
+    coachQuote = "🐼 \"Great gut motility means a healthy microbiome and high metabolic rate! Keep drinking water! ✨\"";
+  } else if (persona === 'tsundere') {
+    coachQuote = "🐼「哼！排便通順是基本的好嗎！今天水要給我喝足、蔬菜多吃點，保持下去！✨」";
+  } else if (persona === 'hardcore') {
+    coachQuote = "🐼「體內代謝障礙排除！戰鬥循環持續全開，多喝溫水保持強健體態！🔥」";
+  }
+
+  return {
+    type: "flex",
+    altText: isEn ? "💩 Bowel Movement Logged!" : "💩 排便打卡成功！",
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "horizontal",
+        backgroundColor: "#FEF3C7",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "text",
+            text: isEn ? "💩 Gut Health Tracker" : "💩 腸道排便打卡",
+            color: "#92400E",
+            weight: "bold",
+            size: "md"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "18px",
+        contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            alignItems: "center",
+            spacing: "xs",
+            contents: [
+              {
+                type: "text",
+                text: "💩",
+                size: "4xl"
+              },
+              {
+                type: "text",
+                text: isEn ? "Logged Successfully!" : "順暢打卡成功！",
+                size: "md",
+                weight: "bold",
+                color: "#000000"
+              },
+              {
+                type: "text",
+                text: intervalText,
+                size: "xs",
+                color: "#059669",
+                weight: "bold"
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: coachQuote,
+            size: "xxs",
+            color: "#52525B",
+            wrap: true,
+            margin: "sm"
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          createNeoFlexButton({
+            label: isEn ? "📊 View Health Chart" : "📊 查看體態紀錄與趨勢",
+            variant: "accent",
+            size: "md",
+            action: {
+              type: "message",
+              label: isEn ? "Trend Chart" : "體態紀錄",
+              text: isEn ? "weight chart" : "體重紀錄"
+            }
+          }),
+          createNeoFlexButton({
+            label: isEn ? "⚖️ Log Weight" : "⚖️ 順便記錄體重",
+            variant: "white",
+            size: "md",
+            action: {
+              type: "message",
+              label: isEn ? "Log Weight" : "記體重",
+              text: isEn ? "weight " : "體重 "
+            }
+          }),
+          createNeoFlexButton({
+            label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 互動圖表",
+            variant: "black",
+            size: "md",
+            action: {
+              type: "uri",
+              label: isEn ? "Web Chart" : "Web 圖表",
+              uri: webUrl
+            }
+          })
+        ]
+      }
+    }
+  };
+}
+
+// ========================================================
+// 📈 4.3 體重與排便雙軌趨勢圖表卡片 (Weight & Poop Chart Flex)
+// ========================================================
+
+function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const userLang = lang || getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
+  const webUrl = liffId ? `https://liff.line.me/${liffId}?tab=weight` : 'https://winnie-lin.space/daily-diet/?tab=weight';
+
+  const weightHistory = getUserWeightHistory(userId, 14, props, userGistId);
+  const poopHistory = getUserPoopHistory(userId, 14, props, userGistId);
+
+  // 產生近 10 天日期陣列 (由舊至新)
+  const daysCount = 10;
+  const dateList = [];
+  const now = new Date();
+  for (let i = daysCount - 1; i >= 0; i--) {
+    const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+    dateList.push(getTodayDateString(d));
+  }
+
+  const weightMap = {};
+  weightHistory.forEach(w => {
+    if (w.date) weightMap[w.date] = w.weight;
+  });
+
+  const poopDates = new Set();
+  poopHistory.forEach(p => {
+    if (p.date) poopDates.add(p.date);
+    else if (p.timestamp) poopDates.add(getTodayDateString(new Date(p.timestamp)));
+  });
+
+  const labels = [];
+  const chartWeights = [];
+  let latestWeight = null;
+  let firstWeight = null;
+
+  dateList.forEach(d => {
+    labels.push(d.slice(5).replace('-', '/'));
+    const w = weightMap[d];
+    if (w !== undefined && w !== null && Number(w) > 0) {
+      const num = Number(w);
+      chartWeights.push(num);
+      if (firstWeight === null) firstWeight = num;
+      latestWeight = num;
+    } else {
+      chartWeights.push(null);
+    }
+  });
+
+  // 若目前沒有記錄到任何體重，回傳溫馨引導卡片
+  if (latestWeight === null) {
+    return {
+      type: "flex",
+      altText: isEn ? "⚖️ No weight logs yet" : "⚖️ 尚未有體重記錄",
+      contents: {
+        type: "bubble",
+        size: "kilo",
+        header: {
+          type: "box",
+          layout: "horizontal",
+          backgroundColor: "#FDE047",
+          paddingAll: "16px",
+          contents: [
+            {
+              type: "text",
+              text: isEn ? "⚖️ Weight & Gut Tracker" : "⚖️ 體重與排便健康追蹤",
+              weight: "bold",
+              color: "#000000",
+              size: "md"
+            }
+          ]
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          spacing: "md",
+          paddingAll: "18px",
+          contents: [
+            {
+              type: "text",
+              text: isEn 
+                ? "You haven't logged any weight yet!\nType \"weight 65\" or tap below to start tracking your body transformation 🐼✨"
+                : "您目前尚未記錄過體重喔！\n直接輸入「體重 65」或點擊下方按鈕，即可開始繪製您的體態曲線 🐼✨",
+              size: "sm",
+              wrap: true,
+              color: "#3F3F46"
+            }
+          ]
+        },
+        footer: {
+          type: "box",
+          layout: "vertical",
+          spacing: "sm",
+          paddingAll: "14px",
+          contents: [
+            createNeoFlexButton({
+              label: isEn ? "⚖️ Log Weight Now" : "⚖️ 馬下記錄體重",
+              variant: "accent",
+              size: "md",
+              action: {
+                type: "message",
+                label: isEn ? "Log Weight" : "記體重",
+                text: isEn ? "weight " : "體重 "
+              }
+            }),
+            createNeoFlexButton({
+              label: isEn ? "💩 Log Bowel Movement" : "💩 記錄排便",
+              variant: "white",
+              size: "md",
+              action: {
+                type: "message",
+                label: isEn ? "Log Poop" : "記排便",
+                text: "💩"
+              }
+            }),
+            createNeoFlexButton({
+              label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 互動圖表",
+              variant: "black",
+              size: "md",
+              action: {
+                type: "uri",
+                label: isEn ? "Web Chart" : "Web 圖表",
+                uri: webUrl
+              }
+            })
+          ]
+        }
+      }
+    };
+  }
+
+  // 計算體重淨增減
+  const weightChange = (firstWeight !== null && latestWeight !== null) 
+    ? Number((latestWeight - firstWeight).toFixed(1)) 
+    : 0;
+
+  // 計算近期排便總次數
+  const recentPoopCount = poopHistory.length;
+
+  // 構建 QuickChart API 圖表 URL
+  const chartConfig = {
+    type: 'line',
+    data: {
+      labels: labels,
+      datasets: [
+        {
+          label: isEn ? 'Weight (kg)' : '體重 (kg)',
+          data: chartWeights,
+          borderColor: '#10B981',
+          backgroundColor: 'rgba(16, 185, 129, 0.12)',
+          fill: true,
+          tension: 0.35,
+          pointRadius: 5,
+          pointBackgroundColor: '#10B981',
+          pointBorderColor: '#000000',
+          pointBorderWidth: 1.5,
+          spanGaps: true
+        }
+      ]
+    },
+    options: {
+      legend: { display: false },
+      title: {
+        display: true,
+        text: isEn ? '⚖️ Weight Trend (Past 10 Days)' : '⚖️ 近 10 日體重走勢 (kg)',
+        fontSize: 13,
+        fontColor: '#18181B'
+      },
+      layout: {
+        padding: { left: 10, right: 15, top: 10, bottom: 5 }
+      },
+      scales: {
+        yAxes: [{
+          ticks: {
+            fontColor: '#71717A',
+            fontSize: 11,
+            precision: 1
+          },
+          gridLines: { color: '#F4F4F5' }
+        }],
+        xAxes: [{
+          ticks: {
+            fontColor: '#71717A',
+            fontSize: 10
+          },
+          gridLines: { display: false }
+        }]
+      }
+    }
+  };
+
+  const quickChartUrl = `https://quickchart.io/chart?c=${encodeURIComponent(JSON.stringify(chartConfig))}&w=500&h=260&bkg=%23FFFFFF&devicePixelRatio=2`;
+
+  // 構建近 7 日排便標記行
+  const recent7Days = dateList.slice(-7);
+  const poopIndicatorBoxes = recent7Days.map(d => {
+    const hasPoop = poopDates.has(d);
+    const label = d.slice(5).replace('-', '/');
+    return {
+      type: "box",
+      layout: "vertical",
+      alignItems: "center",
+      spacing: "none",
+      flex: 1,
+      contents: [
+        {
+          type: "text",
+          text: hasPoop ? "💩" : "·",
+          size: hasPoop ? "md" : "xl",
+          color: hasPoop ? "#000000" : "#D4D4D8",
+          align: "center"
+        },
+        {
+          type: "text",
+          text: label,
+          size: "xxs",
+          color: "#71717A",
+          align: "center"
+        }
+      ]
+    };
+  });
+
+  let changeColor = "#059669";
+  let changeText = `📉 變化: ${weightChange} kg`;
+  if (weightChange > 0) {
+    changeColor = "#DC2626";
+    changeText = `📈 變化: +${weightChange} kg`;
+  } else if (weightChange === 0) {
+    changeColor = "#4B5563";
+    changeText = `⚖️ 變化: 持平`;
+  }
+
+  return {
+    type: "flex",
+    altText: isEn ? `📈 Weight Trend: ${latestWeight} kg` : `📈 體重與排便紀錄：最新 ${latestWeight} kg`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      hero: {
+        type: "image",
+        url: quickChartUrl,
+        size: "full",
+        aspectRatio: "20:11",
+        aspectMode: "cover"
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "md",
+        paddingAll: "16px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#ECFDF5",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "Latest Weight" : "⚖️ 最新體重", size: "xxs", color: "#059669", weight: "bold" },
+                  { type: "text", text: `${latestWeight} kg`, size: "sm", weight: "bold", color: "#000000", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF3C7",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "Poop Count" : "💩 近期排便", size: "xxs", color: "#92400E", weight: "bold" },
+                  { type: "text", text: isEn ? `${recentPoopCount} times` : `${recentPoopCount} 次`, size: "sm", weight: "bold", color: "#000000", margin: "xs" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F4F4F5",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "Trend" : "走勢變化", size: "xxs", color: "#52525B", weight: "bold" },
+                  { type: "text", text: changeText, size: "xxs", weight: "bold", color: changeColor, margin: "xs", wrap: true }
+                ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FAFAFA",
+            cornerRadius: "10px",
+            paddingAll: "8px",
+            borderColor: "#E4E4E7",
+            borderWidth: "1px",
+            spacing: "xs",
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "💩 Past 7 Days Bowel Movement:" : "💩 近 7 日排便標記：",
+                size: "xxs",
+                color: "#71717A",
+                weight: "bold"
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: poopIndicatorBoxes
+              }
+            ]
+          }
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          createNeoFlexButton({
+            label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 完整放大圖表",
+            variant: "accent",
+            size: "md",
+            action: {
+              type: "uri",
+              label: isEn ? "Web Chart" : "Web 圖表",
+              uri: webUrl
+            }
+          }),
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              createNeoFlexButton({
+                label: isEn ? "⚖️ Log Weight" : "⚖️ 記體重",
+                variant: "white",
+                size: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: isEn ? "Weight" : "記體重",
+                  text: isEn ? "weight " : "體重 "
+                }
+              }),
+              createNeoFlexButton({
+                label: isEn ? "💩 Log Poop" : "💩 記排便",
+                variant: "white",
+                size: "sm",
+                flex: 1,
+                action: {
+                  type: "message",
+                  label: isEn ? "Poop" : "記排便",
+                  text: "💩"
+                }
+              })
+            ]
+          }
+        ]
+      }
+    }
+  };
+}
+
+// ========================================================
 // 📋 5. 餐點管理清單卡片 (支援修改/刪除/清空)
 // ========================================================
 
@@ -3787,6 +4459,41 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                       max: todayStr
                     },
                     "#EFF6FF"
+                  )
+                ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: isEn ? "⚖️ Weight & Digestion" : "⚖️ 體態與排便紀錄", weight: "bold", size: "xs", color: "#000000" },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  buildMenuBtn(
+                    isEn ? "💩 Log Poop" : "💩 便便打卡",
+                    {
+                      type: "postback",
+                      label: isEn ? "Log Poop" : "便便打卡",
+                      data: JSON.stringify({ action: 'logPoop' }),
+                      displayText: isEn ? "💩 Log Poop" : "💩 便便打卡"
+                    },
+                    "#FEF3C7"
+                  ),
+                  buildMenuBtn(
+                    isEn ? "📈 Weight Chart" : "📈 體重圖表",
+                    {
+                      type: "postback",
+                      label: isEn ? "Weight Chart" : "體重圖表",
+                      data: JSON.stringify({ action: 'weightTrend' }),
+                      displayText: isEn ? "📈 Weight Chart" : "📈 體重圖表"
+                    },
+                    "#EDE9FE"
                   )
                 ]
               }

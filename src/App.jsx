@@ -1051,6 +1051,62 @@ function App() {
                 await refreshData('none');
               }
             }
+
+            // ⚖️ 體重紀錄同步 (GAS ➔ Web)
+            if (Array.isArray(gasData.weightLogs) && gasData.weightLogs.length > 0) {
+              try {
+                const localWeights = await db.weightLogs.toArray();
+                const localWeightDates = new Set(localWeights.map(w => w.date));
+                let weightAdded = false;
+                for (const rw of gasData.weightLogs) {
+                  if (rw.date && !localWeightDates.has(rw.date)) {
+                    await db.weightLogs.add({
+                      weight: Number(rw.weight),
+                      date: rw.date,
+                      timestamp: Number(rw.timestamp) || new Date(rw.date).getTime()
+                    });
+                    localWeightDates.add(rw.date);
+                    weightAdded = true;
+                  }
+                }
+                if (weightAdded) {
+                  console.log("⚖️ [GAS Sync] 體重紀錄同步完成");
+                }
+              } catch (wErr) {
+                console.warn("[Weight Sync] 同步體重失敗:", wErr);
+              }
+            }
+
+            // 💩 排便打卡紀錄同步 (GAS ➔ Web)
+            if (Array.isArray(gasData.poopLogs) && gasData.poopLogs.length > 0) {
+              try {
+                let localPoops = [];
+                try {
+                  localPoops = await db.poopLogs.toArray();
+                } catch (pe) {}
+                const localPoopTimes = new Set(localPoops.map(p => p.timestamp));
+                let poopAdded = false;
+                for (const rp of gasData.poopLogs) {
+                  const pTime = Number(rp.timestamp);
+                  if (pTime && !localPoopTimes.has(pTime)) {
+                    try {
+                      await db.poopLogs.add({
+                        timestamp: pTime
+                      });
+                      localPoopTimes.add(pTime);
+                      poopAdded = true;
+                    } catch (pe) {}
+                  }
+                }
+                if (poopAdded) {
+                  console.log("💩 [GAS Sync] 排便紀錄同步完成");
+                }
+              } catch (pErr) {
+                console.warn("[Poop Sync] 同步排便失敗:", pErr);
+              }
+            }
+
+            window.dispatchEvent(new CustomEvent('diet-sync-complete'));
           }
         } catch (gasErr) {
           console.log("[GAS Sync] Skipped:", gasErr.message);
@@ -1117,11 +1173,48 @@ function App() {
                 await db.dietLogs.bulkAdd(newLogs);
               }
             }
+
+            // 同步雲端體重歷史
+            if (cloudData.weightLogs && Array.isArray(cloudData.weightLogs) && cloudData.weightLogs.length > 0) {
+              try {
+                const localWeights = await db.weightLogs.toArray();
+                const localWeightDates = new Set(localWeights.map(w => w.date));
+                const newWeights = cloudData.weightLogs.filter(w => !localWeightDates.has(w.date));
+                if (newWeights.length > 0) {
+                  await db.weightLogs.bulkAdd(newWeights.map(({ id, ...rest }) => rest));
+                }
+              } catch (we) {}
+            }
+
+            // 同步雲端排便歷史
+            if (cloudData.poopLogs && Array.isArray(cloudData.poopLogs) && cloudData.poopLogs.length > 0) {
+              try {
+                let localPoops = [];
+                try { localPoops = await db.poopLogs.toArray(); } catch(e){}
+                const localPoopTimes = new Set(localPoops.map(p => p.timestamp));
+                const newPoops = cloudData.poopLogs.filter(p => !localPoopTimes.has(p.timestamp));
+                if (newPoops.length > 0) {
+                  await db.poopLogs.bulkAdd(newPoops.map(({ id, ...rest }) => rest));
+                }
+              } catch(pe) {}
+            }
+
+            window.dispatchEvent(new CustomEvent('diet-sync-complete'));
             await refreshData('none');
           }
         } catch (syncErr) {
           console.log("[Gist] Auto-sync skipped:", syncErr.message);
         }
+      }
+
+      // 深度連結滑動 (例如 LINE 點擊趨勢直接開至體態排便記錄卡片)
+      if (query.tab === 'weight' || query.tab === 'poop') {
+        setTimeout(() => {
+          const el = document.getElementById('weight-tracker');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 600);
       }
 
       // Clean up URL parameters so they don't stay in the address bar
@@ -1162,11 +1255,14 @@ function App() {
         try {
           const allDietLogs = await db.dietLogs.toArray();
           const allWeightLogs = await db.weightLogs.toArray();
+          let allPoopLogs = [];
+          try { allPoopLogs = await db.poopLogs.toArray(); } catch (pe) {}
           const allSettings = await db.settings.toArray();
           const allFavorites = await db.favorites.toArray();
           await uploadToGist({
             dietLogs: allDietLogs,
             weightLogs: allWeightLogs,
+            poopLogs: allPoopLogs,
             settings: allSettings,
             favorites: allFavorites
           });
@@ -1637,14 +1733,19 @@ function App() {
       } catch (e) {}
 
       if (currentGist) {
-        uploadToGist({
-          dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
-          weightLogs: await db.weightLogs.toArray(),
-          settings: await db.settings.toArray(),
-          favorites: await db.favorites.toArray()
-        }, currentGist).catch((e) => {
-          console.warn("[Gist] Background favorite sync skipped:", e?.message);
-        });
+        (async () => {
+          let allPoopLogs = [];
+          try { allPoopLogs = await db.poopLogs.toArray(); } catch (pe) {}
+          uploadToGist({
+            dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
+            weightLogs: await db.weightLogs.toArray(),
+            poopLogs: allPoopLogs,
+            settings: await db.settings.toArray(),
+            favorites: await db.favorites.toArray()
+          }, currentGist).catch((e) => {
+            console.warn("[Gist] Background favorite sync skipped:", e?.message);
+          });
+        })();
       }
     }
   };

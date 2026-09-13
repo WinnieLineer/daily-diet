@@ -211,11 +211,16 @@ function doGet(e) {
       const persona = getUserPersona(userId, props, incomingGist, pat);
       const userLanguage = getUserLanguage(userId, props, incomingGist, pat);
 
+      const weightLogs = (typeof getUserWeightHistory === 'function') ? getUserWeightHistory(userId, 30, props, incomingGist) : [];
+      const poopLogs = (typeof getUserPoopHistory === 'function') ? getUserPoopHistory(userId, 30, props, incomingGist) : [];
+
       return ContentService.createTextOutput(JSON.stringify({
         status: 'ok',
         userId,
         gistId,
         todayLogs,
+        weightLogs,
+        poopLogs,
         goals,
         persona,
         language: userLanguage,
@@ -359,6 +364,33 @@ function doGet(e) {
 
       recordSystemLog('Web更新語言', rawUserId || lastLineUser || 'unknown', updated, '', `已更新用戶語言為「${updated}」並同步切換 LINE 選單`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', language: updated, lineUserId: lastLineUser }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 10.5 Web App 觸發記錄體重
+    if (action === 'saveWeight' && userId) {
+      const weight = Number(e?.parameter?.weight || e?.parameter?.val || 0);
+      const date = e?.parameter?.date || getTodayDateString();
+      const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
+      let res = {};
+      if (typeof saveWeightLog === 'function') {
+        res = saveWeightLog(userId, weight, date, userGistId, pat, props);
+      }
+      recordSystemLog('Web同步體重', userId, `${weight} kg`, `日期: ${date}`, `已同步體重：${weight} kg`, webCallerName || userId);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', ...res }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 10.6 Web App 觸發記錄排便打卡
+    if (action === 'savePoop' && userId) {
+      const timestamp = Number(e?.parameter?.timestamp) || Date.now();
+      const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
+      let res = {};
+      if (typeof savePoopLog === 'function') {
+        res = savePoopLog(userId, timestamp, userGistId, pat, props);
+      }
+      recordSystemLog('Web同步排便', userId, '便便打卡', '', `已同步排便打卡`, webCallerName || userId);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', ...res }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -1009,6 +1041,28 @@ function doPost(e) {
             : `🎭 已成功將熊貓教練性格切換為【${pName}】！\n現在傳送餐點照片或輸入食物，教練就會以全新性格為您專業分析與吐槽囉 🐼✨`;
           recordSystemLog('切換性格', userId, newPersona, '', `回傳確認：${replyMsg.slice(0, 120)}`);
           replyTextMessage(replyToken, replyMsg, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
+        // 💩 點擊排便打卡
+        if (payload.action === 'logPoop') {
+          console.log(`💩 [按鈕排便打卡] 用戶: ${userId}`);
+          let poopRes = {};
+          if (typeof savePoopLog === 'function') {
+            poopRes = savePoopLog(userId, Date.now(), userGistId, GITHUB_PAT, props);
+          }
+          recordSystemLog('按鈕排便打卡', userId, '便便打卡', poopRes.elapsedHours ? `間隔 ${poopRes.elapsedHours} 小時` : '初次打卡', '回傳排便打卡確認卡片');
+          const poopFlex = generatePoopConfirmFlex(userId, poopRes, LIFF_ID, userGistId, props, userLang);
+          replyFlexMessage(replyToken, poopFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
+        // 📈 體態與排便圖表 / 趨勢
+        if (payload.action === 'weightTrend' || payload.action === 'poopTrend' || payload.action === 'bodyTrend') {
+          console.log(`📈 [查看體重/排便趨勢] 用戶: ${userId}`);
+          recordSystemLog('查看體重排便趨勢', userId, '圖表查看', '', '回傳體重與排便趨勢圖表卡片');
+          const chartFlex = generateWeightPoopChartFlex(userId, LIFF_ID, userGistId, props, userLang);
+          replyFlexMessage(replyToken, chartFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -1711,6 +1765,49 @@ function doPost(e) {
             recordSystemLog('文字喝水', userId, userText, `+${amount}ml 水分`, `回傳補水卡片：已記錄補水 +${amount}ml (今日累計 ${totWat}ml)`);
             const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // ⚖️ 體重打卡記錄 (例如: "體重 65.2", "量體重 64.5kg", "weight 65.2", "65.5kg", "體重: 60")
+          const weightMatch = userText.match(/^(?:體重|量體重|測體重|weight|w)[\s:：]*(\d{2,3}(?:\.\d{1,2})?)\s*(?:kg|公斤)?$/i)
+            || userText.match(/^(\d{2,3}(?:\.\d{1,2})?)\s*(?:kg|公斤)$/i);
+          if (weightMatch) {
+            const weightVal = parseFloat(weightMatch[1]);
+            if (weightVal >= 25 && weightVal <= 300) {
+              const dateStr = getTodayDateString();
+              let weightRes = { weight: weightVal, date: dateStr };
+              if (typeof saveWeightLog === 'function') {
+                weightRes = saveWeightLog(userId, weightVal, dateStr, userGistId, GITHUB_PAT, props);
+              }
+              const logDiffText = weightRes.diff != null ? ` (${weightRes.diff > 0 ? '+' : ''}${weightRes.diff} kg)` : '';
+              recordSystemLog('文字記錄體重', userId, userText, `${weightVal} kg${logDiffText}`, '回傳體重確認卡片');
+              const weightFlex = generateWeightConfirmFlex(userId, weightRes, LIFF_ID, userGistId, props, userLang);
+              replyFlexMessage(replyToken, weightFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
+          }
+
+          // 💩 便便打卡記錄 (例如: "排便", "大便", "便便", "便便打卡", "💩", "poop", "上廁所")
+          const poopMatch = userText.match(/^(?:排便|大便|便便|便便打卡|便便紀錄|上廁所|poop|pooped|💩)(?:\s*(.+))?$/i);
+          if (poopMatch) {
+            let poopRes = { timestamp: Date.now() };
+            if (typeof savePoopLog === 'function') {
+              poopRes = savePoopLog(userId, Date.now(), userGistId, GITHUB_PAT, props);
+            }
+            const intervalDesc = poopRes.elapsedHours != null ? `間隔 ${poopRes.elapsedHours} 小時` : '初次打卡';
+            recordSystemLog('文字排便打卡', userId, userText, intervalDesc, '回傳排便確認卡片');
+            const poopFlex = generatePoopConfirmFlex(userId, poopRes, LIFF_ID, userGistId, props, userLang);
+            replyFlexMessage(replyToken, poopFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 📈 體態與排便圖表 / 趨勢 (例如: "體重趨勢", "體重紀錄", "體重圖表", "排便紀錄", "便便紀錄", "體態紀錄", "體重曲線", "weight chart", "poop chart")
+          const trendMatch = userText.match(/^(?:體重趨勢|體重紀錄|體重記錄|體重圖表|體態趨勢|體態紀錄|排便紀錄|排便記錄|便便紀錄|便便記錄|排便趨勢|體重曲線|看體重|weight\s*(?:chart|trend|history)|poop\s*(?:chart|trend|history))$/i);
+          const isJustWeight = /^(?:體重|量體重|我的體重|weight)$/i.test(userText);
+          if (trendMatch || isJustWeight) {
+            recordSystemLog('文字查看體重排便趨勢', userId, userText, '', '回傳體重與排便趨勢圖表卡片');
+            const chartFlex = generateWeightPoopChartFlex(userId, LIFF_ID, userGistId, props, userLang);
+            replyFlexMessage(replyToken, chartFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
