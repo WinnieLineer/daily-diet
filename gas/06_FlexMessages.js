@@ -5396,29 +5396,30 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     contents: [
                       {
                         type: "text",
-                        text: isEn ? "🌙 Sleep & Fat Loss Tip" : "🌙 睡前悄悄話・好眠更容易瘦",
+                        text: isEn ? "🌙 Sleep & Fat Loss" : "🌙 睡前悄悄話",
                         weight: "bold",
                         size: "sm",
                         color: "#000000",
-                        flex: 1,
-                        wrap: true
+                        flex: 1
                       },
                       {
                         type: "box",
                         layout: "vertical",
                         backgroundColor: "#7C3AED",
                         cornerRadius: "10px",
-                        paddingTop: "2px",
-                        paddingBottom: "2px",
-                        paddingStart: "6px",
-                        paddingEnd: "6px",
+                        width: isEn ? "48px" : "38px",
+                        height: "20px",
+                        alignItems: "center",
+                        justifyContent: "center",
                         contents: [
                           {
                             type: "text",
-                            text: isEn ? "NIGHT" : "晚安暖心",
+                            text: isEn ? "REST" : "晚安",
                             size: "xxs",
                             color: "#FFFFFF",
-                            weight: "bold"
+                            weight: "bold",
+                            align: "center",
+                            gravity: "center"
                           }
                         ]
                       }
@@ -5427,8 +5428,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                   {
                     type: "text",
                     text: isEn
-                      ? "Tonight, put down your phone early! Deep sleep is your body's natural fat burner. Do a quick 3-min stretch, relax your mind, and sweet dreams ✨"
-                      : "看完了新功能，今晚早點放下手機吧！優質深層睡眠才是天然最強燃脂劑 ✨ 睡前推薦花 3 分鐘做做舒緩放鬆，祝大家美夢、減脂順利～晚安！💤🌙",
+                      ? "Put down your phone early tonight! Deep sleep is your natural fat burner ✨ Try this 3-min relaxing stretch, sweet dreams and fat loss! 💤🌙"
+                      : "今晚早點放下手機吧！高質量深層睡眠才是天然最強燃脂劑 ✨ 睡前花 3 分鐘做做舒緩伸展放鬆，祝大家好夢、減脂順利～晚安！💤🌙",
                     size: "xs",
                     color: "#4C1D95",
                     margin: "xs",
@@ -5440,12 +5441,12 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     margin: "sm",
                     contents: [
                       createNeoFlexButton({
-                        label: isEn ? "🧘‍♀️ 3-min Bedtime Stretch Reel" : "🧘‍♀️ 點我看 3分鐘睡前舒緩短影音",
+                        label: isEn ? "🧘‍♀️ 3-min Relaxation Reel" : "🧘‍♀️ 3分鐘睡前舒緩短影音",
                         variant: "accent",
                         size: "sm",
                         action: {
                           type: "uri",
-                          label: isEn ? "Watch Reel" : "睡前舒緩短影音",
+                          label: isEn ? "Watch Reel" : "舒緩短影音",
                           uri: "https://www.instagram.com/reels/Dc3vGMrPcDx/"
                         }
                       })
