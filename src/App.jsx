@@ -866,7 +866,22 @@ function App() {
       if (query.tab && validSettingsTabs.includes(query.tab)) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: query.tab } }));
-        }, 400);
+        }, 300);
+      }
+
+      // 1.6 深度連結極速滑動 (如點擊體重趨勢或排便卡片，DOM 就緒第一時間立即平滑滑動，不延遲等待後續 Gist/LIFF 網路請求)
+      if (query.tab === 'weight' || query.tab === 'poop') {
+        let attempts = 0;
+        const tryScroll = () => {
+          const el = document.getElementById('weight-tracker');
+          if (el) {
+            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          } else if (attempts < 20) {
+            attempts++;
+            setTimeout(tryScroll, 50);
+          }
+        };
+        setTimeout(tryScroll, 50);
       }
 
       // Check stored language preference from local db
@@ -1208,15 +1223,6 @@ function App() {
         }
       }
 
-      // 深度連結滑動 (例如 LINE 點擊趨勢直接開至體態排便記錄卡片)
-      if (query.tab === 'weight' || query.tab === 'poop') {
-        setTimeout(() => {
-          const el = document.getElementById('weight-tracker');
-          if (el) {
-            el.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }, 600);
-      }
 
       // Clean up URL parameters so they don't stay in the address bar
       if (window.location.search || (window.location.hash && window.location.hash.includes('?'))) {
