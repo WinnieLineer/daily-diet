@@ -5344,34 +5344,6 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         spacing: "md",
         paddingAll: "14px",
         contents: [
-          buildFeatureCard(
-            "⚖️",
-            isEn ? "Weight Log & Delta" : "LINE 體重快速記錄",
-            isEn ? "Just type \"Weight 65.2\" or \"65kg\". Auto-computes diff vs previous log with coach tips!" : "輸入「體重 65.2」或「65kg」秒記！自動計算與前次增減差額，教練即時給予建議！",
-            isEn ? "NEW" : "全新",
-            "#EFF6FF"
-          ),
-          buildFeatureCard(
-            "💩",
-            isEn ? "Poop & Digestion Tracker" : "便便排便打卡",
-            isEn ? "Send \"Poop\" or \"💩\". Auto-tracks elapsed time since last log to monitor gut health!" : "輸入「便便」、「排便」或「💩」打卡！自動統計距離上次相隔時長，掌握腸道健康！",
-            isEn ? "NEW" : "全新",
-            "#FEF3C7"
-          ),
-          buildFeatureCard(
-            "📈",
-            isEn ? "Visual Weight & Poop Chart" : "LINE 專屬走勢圖表",
-            isEn ? "Type \"Weight chart\" to render 10-day curve & 7-day poop badges right inside LINE!" : "輸入「體重趨勢」或「體重紀錄」，直接在 LINE 對話框繪製近 10 天折線圖與 7 日便便狀態！",
-            isEn ? "CHART" : "圖表",
-            "#F3E8FF"
-          ),
-          buildFeatureCard(
-            "🔄",
-            isEn ? "Seamless Cloud Sync" : "Web & LINE 雙向同步",
-            isEn ? "Logged data flows instantly between LINE, Web App, and your private Gist backup." : "LINE 與 Web 紀錄即時雙向連動，並無縫備份至個人專屬 Gist 雲端！",
-            isEn ? "SYNC" : "同步",
-            "#DCFCE7"
-          ),
           {
             type: "box",
             layout: "vertical",
@@ -5396,7 +5368,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     contents: [
                       {
                         type: "text",
-                        text: isEn ? "🌙 Sleep & Fat Loss" : "🌙 睡前悄悄話",
+                        text: isEn ? "🌙 Good Night & Sleep Well" : "🌙 晚安！睡前貼心叮嚀",
                         weight: "bold",
                         size: "sm",
                         color: "#000000",
@@ -5428,8 +5400,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                   {
                     type: "text",
                     text: isEn
-                      ? "Put down your phone early tonight! Deep sleep is your natural fat burner ✨ Try this 3-min relaxing stretch, sweet dreams and fat loss! 💤🌙"
-                      : "今晚早點放下手機吧！高質量深層睡眠才是天然最強燃脂劑 ✨ 睡前花 3 分鐘做做舒緩伸展放鬆，祝大家好夢、減脂順利～晚安！💤🌙",
+                      ? "Put down your phone and wind down tonight! Deep sleep is your body's natural fat burner ✨ Try this 3-min stretch to relax. Plus, Coach Panda quietly rolled out new upgrades for you below! 👇"
+                      : "今晚早點放下手機好好睡一覺吧！優質深層睡眠才是身體天然最強燃脂劑 ✨ 睡前花 3 分鐘跟著短影音舒緩放鬆～另外，教練今晚也為大家悄悄升級了超實用的全新功能喔！👇",
                     size: "xs",
                     color: "#4C1D95",
                     margin: "xs",
@@ -5455,7 +5427,35 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 ]
               }
             ]
-          }
+          },
+          buildFeatureCard(
+            "⚖️",
+            isEn ? "Weight Log & Delta" : "LINE 體重快速記錄",
+            isEn ? "Just type \"Weight 65.2\" or \"65kg\". Auto-computes diff vs previous log with coach tips!" : "輸入「體重 65.2」或「65kg」秒記！自動計算與前次增減差額，教練即時給予建議！",
+            isEn ? "NEW" : "全新",
+            "#EFF6FF"
+          ),
+          buildFeatureCard(
+            "💩",
+            isEn ? "Poop & Digestion Tracker" : "便便排便打卡",
+            isEn ? "Send \"Poop\" or \"💩\". Auto-tracks elapsed time since last log to monitor gut health!" : "輸入「便便」、「排便」或「💩」打卡！自動統計距離上次相隔時長，掌握腸道健康！",
+            isEn ? "NEW" : "全新",
+            "#FEF3C7"
+          ),
+          buildFeatureCard(
+            "📈",
+            isEn ? "Visual Weight & Poop Chart" : "LINE 專屬走勢圖表",
+            isEn ? "Type \"Weight chart\" to render 10-day curve & 7-day poop badges right inside LINE!" : "輸入「體重趨勢」或「體重紀錄」，直接在 LINE 對話框繪製近 10 天折線圖與 7 日便便狀態！",
+            isEn ? "CHART" : "圖表",
+            "#F3E8FF"
+          ),
+          buildFeatureCard(
+            "🔄",
+            isEn ? "Seamless Cloud Sync" : "Web & LINE 雙向同步",
+            isEn ? "Logged data flows instantly between LINE, Web App, and your private Gist backup." : "LINE 與 Web 紀錄即時雙向連動，並無縫備份至個人專屬 Gist 雲端！",
+            isEn ? "SYNC" : "同步",
+            "#DCFCE7"
+          )
         ]
       },
       footer: {
