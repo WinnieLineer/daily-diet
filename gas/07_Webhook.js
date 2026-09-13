@@ -439,7 +439,7 @@ function doGet(e) {
         const bRes = broadcastFlexMessage(flexMsg, token);
         res = { status: bRes.success ? 'ok' : 'error', type: 'broadcast', details: bRes };
       }
-      recordSystemLog('管理員推播公告', 'admin', action, JSON.stringify(res), '執行功能更新推播', webCallerName || userId);
+      recordSystemLog('管理員推播公告', 'admin', action, JSON.stringify(res), '執行功能更新推播', '管理員');
       return ContentService.createTextOutput(JSON.stringify(res))
         .setMimeType(ContentService.MimeType.JSON);
     }

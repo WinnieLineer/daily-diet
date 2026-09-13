@@ -1574,19 +1574,24 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
   const isFoodName = (name) => name && (/[\+＋]/.test(name) || /美式咖啡|茶葉蛋|雞胸|便當|吐司|沙拉|地瓜|香蕉|蘋果|優格|拿鐵|蛋餅|水餃|鍋貼|乾麵|牛肉麵|炒飯|白飯/.test(name));
 
   let displayName = userName;
-  if (!displayName || isFoodName(displayName)) {
+  // 🛡️ 管理員/維護者統一標示為「管理員」
+  if (userId === 'admin' || userId === 'Maintainer' || userName === 'admin' || (type && (type.includes('管理員') || type.includes('維護者')))) {
+    displayName = '管理員';
+  } else if (!displayName || isFoodName(displayName) || displayName === 'default_user') {
     displayName = props.getProperty(`USER_NAME_${userId}`);
-    if ((!displayName || isFoodName(displayName)) && typeof userId === 'string' && userId.startsWith('U')) {
+    if ((!displayName || isFoodName(displayName) || displayName === 'default_user') && typeof userId === 'string' && userId.startsWith('U')) {
       const channelToken = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
       displayName = getUserDisplayName(userId, channelToken, props);
     }
   }
   // Web 用戶 caller 的名稱拿不到就用他的名字
-  if ((!displayName || isFoodName(displayName)) && userId && !userId.startsWith('U') && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api'].includes(userId)) {
+  if ((!displayName || isFoodName(displayName) || displayName === 'default_user') && userId && !userId.startsWith('U') && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api', 'admin'].includes(userId)) {
     displayName = userId;
   }
-  if (!displayName || isFoodName(displayName)) {
-    if (userId === 'default_user' || userId === 'web_user' || userId === 'web_client') {
+  if (!displayName || isFoodName(displayName) || displayName === 'default_user') {
+    if (userId === 'admin' || userId === 'Maintainer') {
+      displayName = '管理員';
+    } else if (userId === 'default_user' || userId === 'web_user' || userId === 'web_client') {
       displayName = 'Web 用戶';
     } else if (userId && userId.length > 8 && userId.startsWith('U')) {
       displayName = `LINE 用戶 (${userId.slice(-4)})`;

@@ -224,18 +224,25 @@ const normalizeLog = (item) => {
     }
   }
 
-  // Web 用戶 caller 的名稱拿不到就用他的名字（自動清理歷史殘留的「用戶 (user)」）
+  // 🛡️ 管理員/維護者統一標示為「管理員」
+  const isAdminLog = userId === 'admin' || userId === 'Maintainer' || type.includes('管理員') || type.includes('維護者') || userName === 'admin' || userName === 'Maintainer';
   let finalUserName = userName;
-  if (isWeb || finalUserName.includes('(user)') || finalUserName.includes('(ient)')) {
+  if (isAdminLog) {
+    finalUserName = '管理員';
+  } else if (isWeb || finalUserName.includes('(user)') || finalUserName.includes('(ient)')) {
     if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client', '用戶 (user)', '用戶 (ient)', '用戶 (Web)'].includes(finalUserName) || finalUserName.startsWith('用戶 (')) {
-      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient', '用戶 (Web)'].includes(userId)) {
+      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient', '用戶 (Web)', 'admin'].includes(userId)) {
         finalUserName = userId; // 用他的名字
-      } else if (raw.name) {
+      } else if (raw.name && raw.name !== 'default_user') {
         finalUserName = raw.name;
       } else {
         finalUserName = 'Web 用戶';
       }
     }
+  }
+
+  if (finalUserName === 'default_user' || !finalUserName) {
+    finalUserName = isAdminLog ? '管理員' : (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'));
   }
 
   const resolvedUserName = String(finalUserName || (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'))).trim();
