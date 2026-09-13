@@ -2376,20 +2376,18 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                             <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
                               <div className="flex items-center gap-1.5">
                                 {isLogin && <ShieldAlert size={14} className="text-purple-600 shrink-0" />}
-                                <span className="truncate max-w-[120px]" title={userName}>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    setSelectedUser(selectedUser === userName ? 'ALL' : userName);
+                                  }}
+                                  title={isEn ? `Filter by user: ${userName}` : `點擊篩選用戶：${userName}`}
+                                  className="truncate max-w-[120px] text-left font-bold text-black hover:underline hover:text-blue-700 transition-colors cursor-pointer"
+                                >
                                   {userName || '—'}
-                                </span>
-                                {userId && userId !== 'Maintainer' && (
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleSelectUser(userId, userName);
-                                    }}
-                                    title={isEn ? `Filter user: ${userName} (${userId})` : `點擊直接篩選用戶：${userName} (${userId})`}
-                                    className="text-[10px] text-zinc-400 hover:text-black font-mono underline ml-0.5"
-                                  >
-                                    ID
-                                  </button>
+                                </button>
+                                {selectedUser === userName && (
+                                  <span className="text-[9px] font-black text-blue-700 bg-blue-50 border border-blue-300 px-1 py-0.2 rounded">篩選中</span>
                                 )}
                               </div>
                             </td>
