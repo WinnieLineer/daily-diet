@@ -5063,18 +5063,15 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             { type: "text", text: `${emoji} ${title}`, weight: "bold", size: "sm", color: "#000000", flex: 1, wrap: true },
             {
               type: "box",
-              layout: "horizontal",
+              layout: "vertical",
               backgroundColor: "#000000",
-              cornerRadius: "99px",
-              paddingStart: "8px",
-              paddingEnd: "8px",
-              paddingTop: "3px",
-              paddingBottom: "3px",
-              flex: 0,
+              cornerRadius: "10px",
+              width: isEn ? "52px" : "44px",
+              height: "20px",
               alignItems: "center",
               justifyContent: "center",
               contents: [
-                { type: "text", text: tag, size: "xxs", color: "#FDE047", weight: "bold" }
+                { type: "text", text: tag, size: "xxs", color: "#FDE047", weight: "bold", align: "center", gravity: "center" }
               ]
             }
           ]
