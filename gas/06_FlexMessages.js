@@ -5314,7 +5314,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
 
   return {
     type: "flex",
-    altText: isEn ? "🌙 Remember to sleep early tonight! Good night! 🐼✨" : "🌙 今天要早點睡喔！晚安！🐼✨",
+    altText: isEn ? "Remember to sleep early tonight! Good night!" : "今天要早點睡喔 ! 晚安!",
     contents: {
       type: "bubble",
       size: "mega",
