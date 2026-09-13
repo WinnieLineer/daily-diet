@@ -1538,6 +1538,16 @@ function doPost(e) {
           currentUserInput = userText;
           console.log(`💬 [收到用戶文字] "${userText}"`);
 
+          // 🆔 查詢當前用戶 LINE User ID
+          if (userText === '我的id' || userText === '我的ID' || userText === '我的userid' || userText === '用戶id' || userText.toLowerCase() === 'userid' || userText.toLowerCase() === 'my id' || userText.toLowerCase() === 'uid') {
+            const idMsg = isEn
+              ? `🆔 Your LINE User ID:\n${userId}\n\n(Tap & hold to copy)`
+              : `🆔 您的專屬 LINE User ID：\n${userId}\n\n💡 提示：長按即可複製此 ID，可用於維護者測試推播或連動設定！`;
+            recordSystemLog('查詢用戶ID', userId, userText, userId, '回傳當前用戶 LINE User ID');
+            replyTextMessage(replyToken, idMsg, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
           // 🚀 查看新功能 / 更新公告
           if (userText === '新功能' || userText === '更新' || userText === '更新通知' || userText === '更新說明' || userText === '最新功能' || userText === '功能更新' || userText.toLowerCase() === 'whatsnew' || userText.toLowerCase() === "what's new" || userText.toLowerCase() === 'news') {
             recordSystemLog('查看新功能通知', userId, userText, '', '回傳最新版本功能升級卡片');
