@@ -3,11 +3,7 @@ import path from 'path';
 import { execSync } from 'child_process';
 
 const chromePath = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome';
-const outDir = './public';
 const scratchDir = './scratch';
-
-if (!fs.existsSync(scratchDir)) fs.mkdirSync(scratchDir, { recursive: true });
-
 const pandaB64 = fs.readFileSync(path.resolve(scratchDir, 'panda_b64.txt'), 'utf8');
 
 function getHtml(isEn = false) {
@@ -188,45 +184,20 @@ function getHtml(isEn = false) {
 </html>`;
 }
 
-// 1. 寫入中、英 HTML
-const zhHtmlPath = path.resolve(scratchDir, 'richmenu-zh.html');
-const enHtmlPath = path.resolve(scratchDir, 'richmenu-en.html');
+// 1. 生成中文版 HTML
+const htmlZh = getHtml(false);
+fs.writeFileSync(path.resolve(scratchDir, 'refined_b_zh.html'), htmlZh, 'utf8');
 
-fs.writeFileSync(zhHtmlPath, getHtml(false), 'utf8');
-fs.writeFileSync(enHtmlPath, getHtml(true), 'utf8');
-console.log('✅ Generated refined HTML templates in scratch/');
+// 2. 生成英文版 HTML
+const htmlEn = getHtml(true);
+fs.writeFileSync(path.resolve(scratchDir, 'refined_b_en.html'), htmlEn, 'utf8');
 
-// 2. Headless Chrome 截圖至 public 目錄
-const targets = [
-  {
-    html: zhHtmlPath,
-    outs: [
-      path.resolve(outDir, 'richmenu-2500x1686.jpg'),
-      path.resolve(outDir, 'rich-menu-2500x1686.jpg'),
-      path.resolve(outDir, 'richmenu-6grid.jpg'),
-      path.resolve(outDir, 'rich-menu-banner.jpg')
-    ]
-  },
-  {
-    html: enHtmlPath,
-    outs: [
-      path.resolve(outDir, 'richmenu-en-2500x1686.jpg')
-    ]
-  }
-];
+console.log('Rendering screenshots for Refined Option B (Black, White, Yellow, No tiny text)...');
+const shotZh = path.resolve(scratchDir, 'preview_option_b_refined.jpg');
+const shotEn = path.resolve(scratchDir, 'preview_option_b_refined_en.jpg');
 
-for (const t of targets) {
-  const tmpOut = path.resolve(scratchDir, `shot_${Date.now()}.jpg`);
-  const cmd = `"${chromePath}" --headless --disable-gpu --hide-scrollbars --window-size=2500,1686 --screenshot="${tmpOut}" "file://${t.html}"`;
-  console.log(`📸 Capturing screenshot for ${path.basename(t.html)}...`);
-  execSync(cmd, { stdio: 'pipe' });
+execSync(`"${chromePath}" --headless --disable-gpu --hide-scrollbars --window-size=2500,1686 --screenshot="${shotZh}" "file://${path.resolve(scratchDir, 'refined_b_zh.html')}"`);
+console.log('Saved Refined Option B (ZH):', shotZh);
 
-  for (const dest of t.outs) {
-    fs.copyFileSync(tmpOut, dest);
-    const stat = fs.statSync(dest);
-    console.log(`  ➔ Saved: ${dest} (${(stat.size / 1024).toFixed(1)} KB)`);
-  }
-  fs.unlinkSync(tmpOut);
-}
-
-console.log('🎉 All Rich Menu Neo-Brutalist images generated and deployed to public/ successfully!');
+execSync(`"${chromePath}" --headless --disable-gpu --hide-scrollbars --window-size=2500,1686 --screenshot="${shotEn}" "file://${path.resolve(scratchDir, 'refined_b_en.html')}"`);
+console.log('Saved Refined Option B (EN):', shotEn);
