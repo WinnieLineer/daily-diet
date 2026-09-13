@@ -115,7 +115,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             <div className="space-y-5">
               {show330 && (
                 <div className="space-y-3">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v330_header')}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v330_header')}</div>
                   
                   <FeatureItem 
                     icon={Scale}
@@ -145,7 +145,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
               )}
               {show320 && (
                 <div className="space-y-3">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v320_header')}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v320_header')}</div>
                   
                   <FeatureItem 
                     icon={Mic}
@@ -163,7 +163,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
               )}
               {show310 && (
                 <div className="space-y-3">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v310_header')}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v310_header')}</div>
                   
                   <FeatureItem 
                     icon={Wrench}
@@ -193,7 +193,7 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
               )}
               {show300 && (
                 <div className="space-y-3">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v300_header')}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v300_header')}</div>
                   
                   {/* Sincere Apology & Gratitude Card */}
                   <div className="p-4 bg-amber-50 border-4 border-black rounded-2xl shadow-neo-sm space-y-2">
