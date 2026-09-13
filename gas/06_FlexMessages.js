@@ -5314,7 +5314,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
 
   return {
     type: "flex",
-    altText: isEn ? "🚀 Daily Diet Major Update: Weight, Poop & Chart Tracking!" : "🚀 Daily Diet 全新升級：體重紀錄、便便打卡與走勢圖表！",
+    altText: isEn ? "🌙 Remember to sleep early tonight! Good night! 🐼✨" : "🌙 今天要早點睡喔！晚安！🐼✨",
     contents: {
       type: "bubble",
       size: "mega",
@@ -5328,13 +5328,13 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🚀 DAILY DIET UPDATE", color: "#FDE047", weight: "bold", size: "xs", flex: 0 },
-              { type: "text", text: isEn ? "v3.3.0 Major Release" : "全新功能重磅上線", color: "#A1A1AA", size: "xxs", align: "end" }
+              { type: "text", text: isEn ? "🌙 BEDTIME NOTE & UPDATE" : "🌙 睡前悄悄話與貼心升級", color: "#FDE047", weight: "bold", size: "xs", flex: 0 },
+              { type: "text", text: isEn ? "v3.3.0 Release" : "熊貓教練暖心問候", color: "#A1A1AA", size: "xxs", align: "end" }
             ]
           },
           {
             type: "text",
-            text: isEn ? "🎉 Weight, Poop & Chart Tracking is Live!" : "🎉 體重追蹤、便便打卡與視覺化走勢全新登場！",
+            text: isEn ? "✨ Sleep well tonight & explore your new tools below 🐼" : "✨ 今天要早點睡喔！晚安～教練今晚也為您悄悄準備了實用新升級 🐼",
             color: "#FFFFFF",
             weight: "bold",
             size: "sm",
