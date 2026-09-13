@@ -5156,7 +5156,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
   const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + (userId || '') + (userGistId ? '&gistId=' + userGistId : '') + '&tab=weight';
 
   function buildFeatureCard(emoji, title, desc, tag, bgColor, borderColor = "#000000") {
-    return {
+    const innerCard = {
       type: "box",
       layout: "vertical",
       backgroundColor: bgColor,
@@ -5196,6 +5196,16 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         }
       ]
     };
+
+    return {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#000000",
+      cornerRadius: "14px",
+      paddingBottom: "3px",
+      paddingEnd: "3px",
+      contents: [innerCard]
+    };
   }
 
   return {
@@ -5232,7 +5242,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
       body: {
         type: "box",
         layout: "vertical",
-        spacing: "sm",
+        spacing: "md",
         paddingAll: "14px",
         contents: [
           buildFeatureCard(
@@ -5271,90 +5281,59 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         spacing: "sm",
         paddingAll: "14px",
         contents: [
+          createNeoFlexButton({
+            label: isEn ? "📱 Open Web Full Tracker" : "📱 開啟 Web 完整記錄",
+            variant: "accent",
+            size: "md",
+            action: {
+              type: "uri",
+              label: isEn ? "Open Web" : "開啟 Web",
+              uri: appTargetUrl
+            }
+          }),
           {
             type: "box",
             layout: "horizontal",
             spacing: "sm",
             contents: [
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#EFF6FF",
-                borderColor: "#000000",
-                borderWidth: "2px",
-                cornerRadius: "10px",
-                paddingTop: "9px",
-                paddingBottom: "9px",
+              createNeoFlexButton({
+                label: isEn ? "⚖️ Weight" : "⚖️ 記體重",
+                variant: "white",
+                size: "sm",
                 flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
                 action: {
                   type: "postback",
                   label: isEn ? "Weight" : "記體重",
                   data: JSON.stringify({ action: 'promptWeight' }),
                   inputOption: "openKeyboard",
                   fillInText: isEn ? "Weight 60.0" : "體重 60.0"
-                },
-                contents: [
-                  { type: "text", text: isEn ? "⚖️ Weight" : "⚖️ 記體重", weight: "bold", size: "xs", color: "#000000" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#FED7AA",
-                borderColor: "#000000",
-                borderWidth: "2px",
-                cornerRadius: "10px",
-                paddingTop: "9px",
-                paddingBottom: "9px",
+                }
+              }),
+              createNeoFlexButton({
+                label: isEn ? "💩 Poop" : "💩 便便打卡",
+                variant: "white",
+                size: "sm",
                 flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
                 action: {
                   type: "postback",
                   label: isEn ? "Poop" : "便便打卡",
                   data: JSON.stringify({ action: 'logPoop' }),
                   displayText: isEn ? "💩 Log Poop" : "💩 便便打卡"
-                },
-                contents: [
-                  { type: "text", text: isEn ? "💩 Poop" : "💩 便便打卡", weight: "bold", size: "xs", color: "#000000" }
-                ]
-              },
-              {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#FEF08A",
-                borderColor: "#000000",
-                borderWidth: "2px",
-                cornerRadius: "10px",
-                paddingTop: "9px",
-                paddingBottom: "9px",
+                }
+              }),
+              createNeoFlexButton({
+                label: isEn ? "📈 Chart" : "📈 體重走勢",
+                variant: "white",
+                size: "sm",
                 flex: 1,
-                alignItems: "center",
-                justifyContent: "center",
                 action: {
                   type: "postback",
                   label: isEn ? "Chart" : "體重趨勢",
                   data: JSON.stringify({ action: 'weightTrend' }),
                   displayText: isEn ? "📈 Weight Chart" : "📈 體重趨勢"
-                },
-                contents: [
-                  { type: "text", text: isEn ? "📈 Chart" : "📈 體重走勢", weight: "bold", size: "xs", color: "#000000" }
-                ]
-              }
+                }
+              })
             ]
-          },
-          {
-            type: "button",
-            action: {
-              type: "uri",
-              label: isEn ? "📱 Open Web Full Tracker" : "📱 開啟 Web 完整記錄",
-              uri: appTargetUrl
-            },
-            style: "primary",
-            color: "#000000",
-            height: "sm"
           }
         ]
       }
