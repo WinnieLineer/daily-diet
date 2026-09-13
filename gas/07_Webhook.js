@@ -1112,6 +1112,42 @@ function doPost(e) {
           continue;
         }
 
+        // 📸 拍照指引 Postback (點擊功能手冊或指令中的「拍照指引」按鈕)
+        if (payload.action === 'guideCamera' || payload.action === 'cameraGuide') {
+          const cameraGuideText = isEn
+            ? "📸 Please tap the 【📷 Open Camera】button below to take a photo, or choose from your album! AI Panda will analyze calories and nutrients immediately! 🐼✨"
+            : "📸 請點擊下方快捷按鈕【📷 開啟相機】直接拍照，或從【🖼️ 挑選照片】選取餐點傳送！AI 熊貓立刻為您分析熱量與營養素！🐼✨";
+          recordSystemLog('拍照引導', userId, '點擊拍照指引按鈕', '', `回傳指引與相機按鈕：${cameraGuideText.slice(0, 80)}`);
+          const cameraQuickReply = {
+            items: [
+              {
+                type: "action",
+                action: {
+                  type: "camera",
+                  label: isEn ? "📷 Open Camera" : "📷 開啟相機"
+                }
+              },
+              {
+                type: "action",
+                action: {
+                  type: "cameraRoll",
+                  label: isEn ? "🖼️ Camera Roll" : "🖼️ 挑選照片"
+                }
+              }
+            ]
+          };
+          replyTextMessage(replyToken, cameraGuideText, CHANNEL_ACCESS_TOKEN, userId, props, cameraQuickReply);
+          continue;
+        }
+
+        // ⭐ 常用餐點與補水輪播庫 Postback (點擊功能手冊中的「常用餐點」按鈕)
+        if (payload.action === 'viewFavorites' || payload.action === 'favorites') {
+          recordSystemLog('常用輪播', userId, '點擊常用餐點按鈕', '', '回傳常用餐點與補水快捷輪播卡片');
+          const favCarousel = generateFavoritesCarouselFlex(userId, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, favCarousel, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 💩 點擊排便打卡
         if (payload.action === 'logPoop') {
           console.log(`💩 [按鈕排便打卡] 用戶: ${userId}`);
@@ -1742,10 +1778,28 @@ function doPost(e) {
           // 📸 拍照記帳導引
           if (userText === '拍照' || userText === '拍照辨識' || userText === '拍照記帳' || userText === '拍餐點' || userText.toLowerCase() === 'camera' || userText.toLowerCase() === 'ai camera') {
             const cameraGuideText = isEn
-              ? "📸 Please tap the 【📷 Camera】or 【🖼️ Album】icon to the left of the message input box to send a meal photo! AI Panda will analyze calories and nutrients immediately! 🐼✨"
-              : "📸 請點擊下方輸入框左側的【📷 相機】或【🖼️ 相簿】圖示，直接拍照或挑選餐點照片傳給我，AI 熊貓立刻為您分析熱量與營養素！🐼✨";
+              ? "📸 Please tap the 【📷 Open Camera】button below to take a photo, or choose from your album! AI Panda will analyze calories and nutrients immediately! 🐼✨"
+              : "📸 請點擊下方快捷按鈕【📷 開啟相機】直接拍照，或從【🖼️ 挑選照片】選取餐點傳送！AI 熊貓立刻為您分析熱量與營養素！🐼✨";
             recordSystemLog('拍照引導', userId, userText, '', `回傳指引提示：${cameraGuideText.slice(0, 100)}`);
-            replyTextMessage(replyToken, cameraGuideText, CHANNEL_ACCESS_TOKEN, userId, props);
+            const cameraQuickReply = {
+              items: [
+                {
+                  type: "action",
+                  action: {
+                    type: "camera",
+                    label: isEn ? "📷 Open Camera" : "📷 開啟相機"
+                  }
+                },
+                {
+                  type: "action",
+                  action: {
+                    type: "cameraRoll",
+                    label: isEn ? "🖼️ Camera Roll" : "🖼️ 挑選照片"
+                  }
+                }
+              ]
+            };
+            replyTextMessage(replyToken, cameraGuideText, CHANNEL_ACCESS_TOKEN, userId, props, cameraQuickReply);
             continue;
           }
 

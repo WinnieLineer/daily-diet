@@ -339,11 +339,13 @@ function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
 /**
  * 回覆 LINE 純文字訊息
  */
-function replyTextMessage(replyToken, text, accessToken, userId, props) {
+function replyTextMessage(replyToken, text, accessToken, userId, props, customQuickReply) {
   try {
     const safeText = (typeof text === 'string' && text.length > 5000) ? (text.slice(0, 4997) + '...') : String(text || '');
     const textMsg = { type: "text", text: safeText };
-    if (userId && props) {
+    if (customQuickReply) {
+      textMsg.quickReply = customQuickReply;
+    } else if (userId && props) {
       attachQuickReply(textMsg, userId, props);
     }
     const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
