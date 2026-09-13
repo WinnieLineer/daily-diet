@@ -29,30 +29,42 @@ const WeightTracker = ({ pointerEventsNone }) => {
   }, []);
 
   const fetchHistory = async () => {
-    const wLogs = await db.weightLogs.orderBy('timestamp').toArray();
-    const pLogs = await db.poopLogs.orderBy('timestamp').toArray();
-    
-    const combined = [
-      ...wLogs.map(l => ({ ...l, type: 'weight', dateFormatted: l.date.split('-').slice(1).join('/') })),
-      ...pLogs.map(l => ({ ...l, type: 'poop' }))
-    ].sort((a, b) => b.timestamp - a.timestamp);
-    
-    setHistory(combined.slice(0, 50));
-    
-    // Create a Set of YYYY-MM-DD dates where poop logs exist
-    const poopDates = new Set(
-      pLogs.map(p => getLocalDateString(new Date(p.timestamp)))
-    );
-    
-    const cData = wLogs.slice(-30).map(l => ({ 
-      ...l, 
-      dateFormatted: l.date.split('-').slice(1).join('/'),
-      hasPoop: poopDates.has(l.date)
-    }));
-    setChartData(cData);
+    try {
+      const wLogs = await db.weightLogs.orderBy('timestamp').toArray();
 
-    const lastP = pLogs.length > 0 ? pLogs[pLogs.length - 1].timestamp : null;
-    setLastPoop(lastP);
+      // poopLogs 在 db v9 才加入，若用戶 IndexedDB 仍為舊版 schema，
+      // 直接查詢會拋出 "Unable to open cursor"，以 fallback 空陣列保護
+      let pLogs = [];
+      try {
+        pLogs = await db.poopLogs.orderBy('timestamp').toArray();
+      } catch (poopErr) {
+        console.warn('[WeightTracker] poopLogs store 不可用（可能是舊版 schema）:', poopErr?.message);
+      }
+
+      const combined = [
+        ...wLogs.map(l => ({ ...l, type: 'weight', dateFormatted: l.date.split('-').slice(1).join('/') })),
+        ...pLogs.map(l => ({ ...l, type: 'poop' }))
+      ].sort((a, b) => b.timestamp - a.timestamp);
+
+      setHistory(combined.slice(0, 50));
+
+      // Create a Set of YYYY-MM-DD dates where poop logs exist
+      const poopDates = new Set(
+        pLogs.map(p => getLocalDateString(new Date(p.timestamp)))
+      );
+
+      const cData = wLogs.slice(-30).map(l => ({
+        ...l,
+        dateFormatted: l.date.split('-').slice(1).join('/'),
+        hasPoop: poopDates.has(l.date)
+      }));
+      setChartData(cData);
+
+      const lastP = pLogs.length > 0 ? pLogs[pLogs.length - 1].timestamp : null;
+      setLastPoop(lastP);
+    } catch (err) {
+      console.error('[WeightTracker] fetchHistory 失敗:', err);
+    }
   };
 
   const addWeight = async (e) => {
