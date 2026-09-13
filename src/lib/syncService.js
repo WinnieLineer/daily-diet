@@ -159,7 +159,10 @@ function doSyncGoals(goals) {
     water: String(goals.water || 2500),
     carbs: String(goals.carbs || 200),
     fat: String(goals.fat || 60),
-    show_carbs_fat: String(!!goals.show_carbs_fat)
+    show_carbs_fat: String(!!goals.show_carbs_fat),
+    fasting_enabled: String(!!goals.fasting_enabled),
+    fasting_start: String(goals.fasting_start || '12:00'),
+    fasting_end: String(goals.fasting_end || '20:00')
   });
   if (userName) {
     params.append('userName', userName);
@@ -170,7 +173,7 @@ function doSyncGoals(goals) {
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
       .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步目標異常:', e?.message));
-    console.log(`🎯 [Web ➔ LINE Sync] 即時同步體態目標: ${goals.calories}卡 / ${goals.protein}g蛋 / 碳水:${goals.carbs || 200}g / 脂肪:${goals.fat || 60}g (開啟:${!!goals.show_carbs_fat})`);
+    console.log(`🎯 [Web ➔ LINE Sync] 即時同步體態與進食窗口目標: ${goals.calories}卡 / ${goals.protein}g蛋 / 碳水:${goals.carbs || 200}g / 脂肪:${goals.fat || 60}g | 進食窗口:${goals.fasting_start || '12:00'}~${goals.fasting_end || '20:00'} (開啟:${!!goals.fasting_enabled})`);
   } catch (err) {}
 }
 

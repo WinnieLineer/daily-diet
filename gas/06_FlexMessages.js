@@ -1656,6 +1656,97 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 ]
               }
             ]
+          },
+          ...(goals.show_carbs_fat ? [{
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FFF7ED",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "🍞 Daily Carbs" : "🍞 每日碳水", size: "xxs", color: "#EA580C", weight: "bold", wrap: true },
+                  { type: "text", text: `${goals.carbs || 200}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#9A3412", weight: "bold" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F0FDF4",
+                cornerRadius: "10px",
+                paddingAll: "8px",
+                flex: 1,
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "🥑 Daily Fat" : "🥑 每日脂肪", size: "xxs", color: "#16A34A", weight: "bold", wrap: true },
+                  { type: "text", text: `${goals.fat || 60}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#166534", weight: "bold" }
+                ]
+              }
+            ]
+          }] : []),
+          {
+            type: "box",
+            layout: "horizontal",
+            backgroundColor: goals.fasting_enabled ? "#FEF3C7" : "#F4F4F5",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            alignItems: "center",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                flex: 1,
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "⏰ Eating Window (16:8)" : "⏰ 16:8 進食窗口",
+                    size: "xs",
+                    weight: "bold",
+                    color: "#000000"
+                  },
+                  {
+                    type: "text",
+                    text: goals.fasting_enabled 
+                      ? `${goals.fasting_start || '12:00'} ~ ${goals.fasting_end || '20:00'}` 
+                      : (isEn ? "Not enabled (tap Settings to turn on)" : "未開啟 (點擊設定開啟輕斷食)"),
+                    size: "xxs",
+                    color: "#71717A",
+                    margin: "xs"
+                  }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: goals.fasting_enabled ? "#16A34A" : "#71717A",
+                cornerRadius: "10px",
+                width: isEn ? "52px" : "44px",
+                height: "20px",
+                alignItems: "center",
+                justifyContent: "center",
+                contents: [
+                  {
+                    type: "text",
+                    text: goals.fasting_enabled ? (isEn ? "ACTIVE" : "已開啟") : (isEn ? "OFF" : "未開啟"),
+                    size: "xxs",
+                    color: "#FFFFFF",
+                    weight: "bold",
+                    align: "center",
+                    gravity: "center"
+                  }
+                ]
+              }
+            ]
           }
         ]
       },

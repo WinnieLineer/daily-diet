@@ -54,6 +54,11 @@ const DEFAULT_WATER_GOAL = 2500;   // ml
 const DEFAULT_CARBS_GOAL = 200;    // grams
 const DEFAULT_FAT_GOAL = 60;       // grams
 
+// ⏰ 預設進食窗口設定 (16:8 輕斷食)
+const DEFAULT_FASTING_ENABLED = false;
+const DEFAULT_FASTING_START = '12:00';
+const DEFAULT_FASTING_END = '20:00';
+
 // 🎨 預設教練性格與語系
 const DEFAULT_PERSONA = 'tsundere'; // 'tsundere' | 'gentle' | 'hardcore'
 const DEFAULT_LANGUAGE = 'zh';      // 'zh' | 'en'

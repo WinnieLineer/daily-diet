@@ -194,8 +194,13 @@ function getUserGoals(userId, props, userGistId) {
   let showCarbsRaw = props.getProperty(`SHOW_CARBS_FAT_${userId}`);
   let showCarbs = showCarbsRaw === 'true' ? true : (showCarbsRaw === 'false' ? false : null);
 
+  let fastingEnabledRaw = props.getProperty(`FASTING_ENABLED_${userId}`);
+  let fastingEnabled = fastingEnabledRaw === 'true' ? true : (fastingEnabledRaw === 'false' ? false : null);
+  let fastingStart = props.getProperty(`FASTING_START_${userId}`);
+  let fastingEnd = props.getProperty(`FASTING_END_${userId}`);
+
   // 若尚未儲存目標，向 Gist 雲端資料庫拉取
-  if (!cal || !pro || !wat || !carbs || !fat || showCarbs === null) {
+  if (!cal || !pro || !wat || !carbs || !fat || showCarbs === null || fastingEnabled === null || !fastingStart || !fastingEnd) {
     const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
     const pat = props.getProperty('GITHUB_PAT');
     if (gistId && pat) {
@@ -216,6 +221,10 @@ function getUserGoals(userId, props, userGistId) {
               const gCarbs = backupData.settings.find(s => s.key === 'carbs_goal')?.value;
               const gFat = backupData.settings.find(s => s.key === 'fat_goal')?.value;
               const gShowCarbs = backupData.settings.find(s => s.key === 'show_carbs_fat')?.value;
+              const gFastEn = backupData.settings.find(s => s.key === 'fasting_enabled')?.value;
+              const gFastSt = backupData.settings.find(s => s.key === 'fasting_start')?.value;
+              const gFastEnd = backupData.settings.find(s => s.key === 'fasting_end')?.value;
+
               if (gCal && !cal) { cal = Number(gCal); props.setProperty(`CALORIE_GOAL_${userId}`, String(cal)); }
               if (gPro && !pro) { pro = Number(gPro); props.setProperty(`PROTEIN_GOAL_${userId}`, String(pro)); }
               if (gWat && !wat) { wat = Number(gWat); props.setProperty(`WATER_GOAL_${userId}`, String(wat)); }
@@ -224,6 +233,18 @@ function getUserGoals(userId, props, userGistId) {
               if (gShowCarbs !== undefined && showCarbs === null) {
                 showCarbs = (gShowCarbs === true || gShowCarbs === 'true');
                 props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbs));
+              }
+              if (gFastEn !== undefined && fastingEnabled === null) {
+                fastingEnabled = (gFastEn === true || gFastEn === 'true');
+                props.setProperty(`FASTING_ENABLED_${userId}`, String(fastingEnabled));
+              }
+              if (gFastSt && !fastingStart) {
+                fastingStart = String(gFastSt);
+                props.setProperty(`FASTING_START_${userId}`, fastingStart);
+              }
+              if (gFastEnd && !fastingEnd) {
+                fastingEnd = String(gFastEnd);
+                props.setProperty(`FASTING_END_${userId}`, fastingEnd);
               }
             }
           }
@@ -240,7 +261,10 @@ function getUserGoals(userId, props, userGistId) {
     water: wat || DEFAULT_WATER_GOAL,
     carbs: carbs || DEFAULT_CARBS_GOAL,
     fat: fat || DEFAULT_FAT_GOAL,
-    show_carbs_fat: showCarbs === true
+    show_carbs_fat: showCarbs === true,
+    fasting_enabled: fastingEnabled === true,
+    fasting_start: fastingStart || (typeof DEFAULT_FASTING_START !== 'undefined' ? DEFAULT_FASTING_START : '12:00'),
+    fasting_end: fastingEnd || (typeof DEFAULT_FASTING_END !== 'undefined' ? DEFAULT_FASTING_END : '20:00')
   };
 }
 
@@ -287,6 +311,12 @@ function setUserCarbsFatToggle(userId, enable, userGistId, pat, props) {
 
 function syncGoalsToUserGist(goals, pat, gistId) {
   if (!pat || !gistId) return;
+  // 🛡️ 防禦參數順序顛倒 (pat vs gistId)
+  if (typeof pat === 'string' && pat.length <= 36 && typeof gistId === 'string' && (gistId.startsWith('gh') || gistId.length > 36)) {
+    const tmp = pat;
+    pat = gistId;
+    gistId = tmp;
+  }
   const gistUrl = `https://api.github.com/gists/${gistId}`;
   try {
     const getRes = UrlFetchApp.fetch(gistUrl, {
@@ -311,6 +341,9 @@ function syncGoalsToUserGist(goals, pat, gistId) {
       if (goals.carbs) setVal('carbs_goal', goals.carbs);
       if (goals.fat) setVal('fat_goal', goals.fat);
       if (goals.show_carbs_fat !== undefined) setVal('show_carbs_fat', !!goals.show_carbs_fat);
+      if (goals.fasting_enabled !== undefined) setVal('fasting_enabled', !!goals.fasting_enabled);
+      if (goals.fasting_start) setVal('fasting_start', String(goals.fasting_start));
+      if (goals.fasting_end) setVal('fasting_end', String(goals.fasting_end));
 
       UrlFetchApp.fetch(gistUrl, {
         method: 'patch',
@@ -323,6 +356,40 @@ function syncGoalsToUserGist(goals, pat, gistId) {
     }
   } catch (err) {
     console.error("同步目標至 Gist 失敗:", err);
+  }
+}
+
+/**
+ * ⏰ 檢查指定時間（預設為當前台北時間 UTC+8）是否在進食窗口之外（即處於斷食狀態）
+ * @param {Date} [dateObj] 時間物件
+ * @param {string} startStr 進食開始時間 (HH:mm)
+ * @param {string} endStr 進食結束時間 (HH:mm)
+ * @returns {boolean} true 表示處於非進食/斷食時段
+ */
+function isOutsideEatingWindow(dateObj, startStr, endStr) {
+  if (!startStr || !endStr) return false;
+  const d = dateObj || new Date();
+  let timeStr = '';
+  try {
+    timeStr = Utilities.formatDate(d, "Asia/Taipei", "HH:mm");
+  } catch (e) {
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    timeStr = `${hh}:${mm}`;
+  }
+  const parts = timeStr.split(':').map(Number);
+  const curM = (parts[0] || 0) * 60 + (parts[1] || 0);
+  const sParts = startStr.split(':').map(Number);
+  const startM = (sParts[0] || 0) * 60 + (sParts[1] || 0);
+  const eParts = endStr.split(':').map(Number);
+  const endM = (eParts[0] || 0) * 60 + (eParts[1] || 0);
+
+  if (startM < endM) {
+    // 正常當天區間 (如 12:00 ~ 20:00)
+    return curM < startM || curM >= endM;
+  } else {
+    // 跨夜區間 (如 20:00 ~ 04:00)
+    return curM < startM && curM >= endM;
   }
 }
 

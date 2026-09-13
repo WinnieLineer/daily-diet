@@ -312,7 +312,7 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 8. Web App 觸發更新個人飲食目標
+    // 8. Web App 觸發更新個人飲食目標與進食窗口
     if (action === 'updateGoals' && userId) {
       const calories = Number(e?.parameter?.calories);
       const protein = Number(e?.parameter?.protein);
@@ -321,18 +321,44 @@ function doGet(e) {
       const fat = Number(e?.parameter?.fat);
       const showCarbsFatRaw = e?.parameter?.show_carbs_fat;
       const showCarbsFat = showCarbsFatRaw === 'true';
+
+      const fastingEnabledRaw = e?.parameter?.fasting_enabled;
+      const fastingStart = e?.parameter?.fasting_start;
+      const fastingEnd = e?.parameter?.fasting_end;
+
       if (calories) props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
       if (protein) props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
       if (water) props.setProperty(`WATER_GOAL_${userId}`, String(water));
       if (carbs) props.setProperty(`CARBS_GOAL_${userId}`, String(carbs));
       if (fat) props.setProperty(`FAT_GOAL_${userId}`, String(fat));
       if (showCarbsFatRaw !== undefined) props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbsFat));
+
+      let fastingLogStr = '';
+      let isFastingEnabled = false;
+      if (fastingEnabledRaw !== undefined) {
+        isFastingEnabled = fastingEnabledRaw === 'true';
+        props.setProperty(`FASTING_ENABLED_${userId}`, String(isFastingEnabled));
+        if (fastingStart) props.setProperty(`FASTING_START_${userId}`, String(fastingStart));
+        if (fastingEnd) props.setProperty(`FASTING_END_${userId}`, String(fastingEnd));
+        fastingLogStr = ` / 窗口:${fastingStart || '12:00'}~${fastingEnd || '20:00'} (${isFastingEnabled ? '開啟' : '關閉'})`;
+      }
+
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       if (pat && userGistId) {
-        syncGoalsToUserGist({ calories, protein, water, carbs, fat, show_carbs_fat: showCarbsFat }, userGistId, pat);
+        syncGoalsToUserGist({
+          calories,
+          protein,
+          water,
+          carbs,
+          fat,
+          show_carbs_fat: showCarbsFat,
+          fasting_enabled: fastingEnabledRaw !== undefined ? isFastingEnabled : undefined,
+          fasting_start: fastingStart,
+          fasting_end: fastingEnd
+        }, pat, userGistId);
       }
       const carbsStatus = showCarbsFatRaw !== undefined ? ` / 碳水:${carbs}g 脂肪:${fat}g (顯示:${showCarbsFat})` : '';
-      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水${carbsStatus}`, '', `已更新體態目標：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml`, webCallerName || userId);
+      recordSystemLog('Web更新目標', userId, `${calories}卡 / ${protein}g蛋 / ${water}ml水${carbsStatus}${fastingLogStr}`, '', `已更新體態與進食窗口目標：每日熱量 ${calories} kcal · 蛋白質 ${protein}g · 水分 ${water}ml${fastingLogStr}`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -1465,6 +1491,20 @@ function doPost(e) {
           console.log(`🤖 [照片 AI 辨識結果]`, JSON.stringify(analysis));
 
           const usedModel = analysis.model_used || 'Gemini';
+
+          // ⏰ 檢查是否處於進食窗口之外 (斷食提醒)
+          const userGoals = getUserGoals(userId, props, userGistId);
+          if (userGoals.fasting_enabled && isOutsideEatingWindow(new Date(), userGoals.fasting_start, userGoals.fasting_end)) {
+            const fastingNotice = isEn
+              ? `\n\n⏰ Notice: You're outside your eating window (${userGoals.fasting_start}~${userGoals.fasting_end}). This meal broke your fast!`
+              : `\n\n⏰ 提醒：目前為斷食時段（設定窗口 ${userGoals.fasting_start} ~ ${userGoals.fasting_end}），此餐已打破斷食喔！`;
+            if (analysis.panda_comment) {
+              analysis.panda_comment += fastingNotice;
+            } else {
+              analysis.panda_comment = fastingNotice.trim();
+            }
+          }
+
           const meal = {
             id: Date.now(),
             date: getTodayDateString(),
@@ -2118,6 +2158,49 @@ function doPost(e) {
             continue;
           }
 
+          // ⏰ 1.5 查看/設定進食窗口 (例如: "進食窗口", "進食時間", "斷食", "斷食時間", "斷食時段", "窗口", "fasting")
+          if (
+            userText === '進食窗口' || 
+            userText === '進食時間' || 
+            userText === '斷食' || 
+            userText === '斷食時間' || 
+            userText === '斷食時段' || 
+            userText === '窗口' || 
+            userText.toLowerCase() === 'fasting' || 
+            userText.toLowerCase() === 'fasting window' ||
+            userText.toLowerCase() === 'eating window'
+          ) {
+            const goals = getUserGoals(userId, props, userGistId);
+            const isOutside = goals.fasting_enabled ? isOutsideEatingWindow(new Date(), goals.fasting_start, goals.fasting_end) : false;
+            let statusText = '';
+            if (isEn) {
+              statusText = goals.fasting_enabled 
+                ? `⏰ Eating Window Status (16:8 Fasting):\n\n` +
+                  `• Status: Enabled ✅\n` +
+                  `• Eating Window: ${goals.fasting_start} ~ ${goals.fasting_end}\n` +
+                  `• Current: ${isOutside ? '⏳ FASTING (Outside window)' : '🍽️ EATING (Inside window)'}\n\n` +
+                  `💡 Tip: To adjust times, open "Settings" in the Web App — changes sync to LINE automatically!`
+                : `⏰ Eating Window Status:\n\n` +
+                  `• Status: Disabled ⚪\n` +
+                  `• Recommended: 12:00 ~ 20:00 (16:8)\n\n` +
+                  `💡 Tip: Open "Settings" in the Web App to enable Eating Window and track fasting intervals!`;
+            } else {
+              statusText = goals.fasting_enabled 
+                ? `⏰ 16:8 進食窗口狀態：\n\n` +
+                  `• 功能狀態：已開啟 ✅\n` +
+                  `• 進食窗口：${goals.fasting_start} ~ ${goals.fasting_end}\n` +
+                  `• 當前狀態：${isOutside ? '⏳ 斷食中 (非進食時段)' : '🍽️ 進食中 (進食時段內)'}\n\n` +
+                  `💡 提示：如需調整進食時段或開關，點擊「⚙️ 設定」前往 Web 端調整，將自動即時同步至 LINE！`
+                : `⏰ 16:8 進食窗口狀態：\n\n` +
+                  `• 功能狀態：未開啟 ⚪\n` +
+                  `• 建議時段：12:00 ~ 20:00 (16:8 輕斷食)\n\n` +
+                  `💡 提示：點擊「⚙️ 設定」即可開啟進食窗口模式，享有斷食狀態提醒！`;
+            }
+            recordSystemLog('查詢進食窗口', userId, userText, `${goals.fasting_enabled ? '已開啟' : '未開啟'} (${goals.fasting_start}~${goals.fasting_end})`, `回傳進食窗口狀態提示`);
+            replyTextMessage(replyToken, statusText, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
           // 🎯 2. 設定目標導引
           const isGoalGuideRequest = userText === '設定目標' ||
             userText === '改目標' ||
@@ -2360,6 +2443,19 @@ function doPost(e) {
             recordSystemLog(event._isAudioInput ? '語音對話' : '日常對話', userId, event._isAudioInput ? `🎙️ 語音: "${userText}"` : userText, `[${usedModel}${fallbackNote}] 非食物訊息`, `[模型: ${usedModel}] 回傳文字：${finalReply}`);
             replyTextMessage(replyToken, finalReply, CHANNEL_ACCESS_TOKEN, userId, props);
           } else {
+            // ⏰ 檢查是否處於進食窗口之外 (斷食提醒)
+            const userGoals = getUserGoals(userId, props, userGistId);
+            if (userGoals.fasting_enabled && isOutsideEatingWindow(new Date(), userGoals.fasting_start, userGoals.fasting_end)) {
+              const fastingNotice = isEn
+                ? `\n\n⏰ Notice: You're outside your eating window (${userGoals.fasting_start}~${userGoals.fasting_end}). This meal broke your fast!`
+                : `\n\n⏰ 提醒：目前為斷食時段（設定窗口 ${userGoals.fasting_start} ~ ${userGoals.fasting_end}），此餐已打破斷食喔！`;
+              if (analysis.panda_comment) {
+                analysis.panda_comment += fastingNotice;
+              } else {
+                analysis.panda_comment = fastingNotice.trim();
+              }
+            }
+
             const meal = {
               id: Date.now(),
               date: targetMealDate,

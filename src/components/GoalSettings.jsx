@@ -383,7 +383,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       const effectiveUserId = safeGetStorage('line_user_id');
       const currentGist = getCurrentGistId();
       if (effectiveUserId || currentGist) {
-        syncGoalsToCloud({ calories: parsedCal, protein: parsedPro, water: parsedWat, carbs: parsedCarb, fat: parsedFat, show_carbs_fat: !!goals.show_carbs_fat }, true);
+        syncGoalsToCloud({
+          calories: parsedCal,
+          protein: parsedPro,
+          water: parsedWat,
+          carbs: parsedCarb,
+          fat: parsedFat,
+          show_carbs_fat: !!goals.show_carbs_fat,
+          fasting_enabled: !!goals.fasting_enabled,
+          fasting_start: goals.fasting_start || '12:00',
+          fasting_end: goals.fasting_end || '20:00'
+        }, true);
 
         if (currentGist) {
           db.settings.toArray().then((allSettings) => {
