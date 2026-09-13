@@ -437,6 +437,24 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 11.2 刪除指定異常用戶名之日誌列 (限維護者授權存取)
+    if (action === 'deleteInvalidLogs' || action === 'purgeInvalidLogs') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          code: 'UNAUTHORIZED', 
+          message: 'Forbidden: Unauthorized' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+      const result = deleteInvalidUserNameLogs(props);
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'ok', 
+        deletedCount: result.deletedCount, 
+        samples: result.samples,
+        message: `已成功自 Google Sheets 實體刪除 ${result.deletedCount} 筆異常用戶名日誌！` 
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 12. 實時運作日誌儀表板 (已全面遷移至 Web 前端專屬維護者密碼保護端點，自動轉導)
     if (action === 'logs' || action === 'viewLogs' || action === 'log') {
       return HtmlService.createHtmlOutput(generateDashboardHtml())

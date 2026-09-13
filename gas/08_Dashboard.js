@@ -245,3 +245,76 @@ function fixLegacyFoodNameUsers() {
     Logger.log('ℹ️  沒有找到需要修復的食物名稱用戶資料。');
   }
 }
+
+/**
+ * ========================================================
+ * 🗑️ 實體刪除 Google Sheets 中指定異常用戶名的日誌列
+ *    包含：食物名稱、line_api、未檢測到食物、純數字 18 等
+ *
+ * ⚠️  使用方式：
+ *    1. 可直接在 GAS 編輯器中執行此函式 deleteInvalidUserNameLogs()
+ *    2. 亦可由管理員儀表板頂部「清理異常用戶日誌」按鈕一鍵觸發
+ * ========================================================
+ */
+function deleteInvalidUserNameLogs(props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const TARGET_NAMES = [
+    '美式咖啡+茶葉蛋蛋水 19',
+    '綜合水果珍珠豆花刨冰',
+    'line_api',
+    '未檢測到食物',
+    '清炒空心菜',
+    '18',
+    '原萃綠茶 (玉露入り)',
+    '蒜香炒空心菜'
+  ];
+
+  const ss = getOrCreateLogSheet(props);
+  let deletedCount = 0;
+  const deletedSamples = [];
+
+  if (ss) {
+    const sheet = ss.getSheets()[0];
+    const lastRow = sheet.getLastRow();
+    if (lastRow >= 2) {
+      // ⚠️ 必須從最底列往上掃描刪除，避免列索引在刪除後位移造成漏刪
+      for (let r = lastRow; r >= 2; r--) {
+        const uName = String(sheet.getRange(r, 2).getValue() || '').trim();
+        const uId = String(sheet.getRange(r, 3).getValue() || '').trim();
+
+        const isMatch = TARGET_NAMES.some(function(target) {
+          return uName === target || uId === target;
+        });
+
+        if (isMatch) {
+          if (deletedSamples.length < 30) {
+            deletedSamples.push(`Row ${r}: "${uName}" (userId: ${uId})`);
+          }
+          sheet.deleteRow(r);
+          deletedCount++;
+        }
+      }
+    }
+  }
+
+  // 同步清理伺服端 Multi-Slot 快取中的該些紀錄
+  try {
+    const currentLogs = getLocalCachedLogs(props);
+    const cleanedLogs = currentLogs.filter(function(l) {
+      const uName = String(l.userName || l[1] || '').trim();
+      const uId = String(l.userId || l[2] || '').trim();
+      return !TARGET_NAMES.some(function(target) {
+        return uName === target || uId === target;
+      });
+    });
+    saveCleanedCachedLogs(cleanedLogs, props);
+  } catch (cacheErr) {
+    Logger.log('⚠️ 快取清理失敗: ' + cacheErr.message);
+  }
+
+  Logger.log(`🗑️ 刪除完成！共自 Google Sheets 實體刪除 ${deletedCount} 列異常用戶日誌。`);
+  if (deletedSamples.length > 0) {
+    Logger.log('📋 刪除明細前 30 筆：\n' + deletedSamples.join('\n'));
+  }
+  return { deletedCount: deletedCount, samples: deletedSamples };
+}

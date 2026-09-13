@@ -41,8 +41,8 @@ import {
   Flame,
   Award,
   Users,
-  TrendingUp,
   Sparkles,
+  Trash2,
   X
 } from 'lucide-react';
 import NeoButton from './NeoButton';
@@ -52,6 +52,18 @@ const DEFAULT_MAINTAINER_USER = 'Winnie';
 const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_token_v2';
 const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
 const MAINTAINER_NAME_KEY = 'daily_diet_maintainer_name';
+
+// 🛑 需徹底過濾/刪除的異常用戶名清單（食物名稱、line_api、純數字等）
+export const INVALID_USER_NAMES = new Set([
+  '美式咖啡+茶葉蛋蛋水 19',
+  '綜合水果珍珠豆花刨冰',
+  'line_api',
+  '未檢測到食物',
+  '清炒空心菜',
+  '18',
+  '原萃綠茶 (玉露入り)',
+  '蒜香炒空心菜'
+]);
 
 // 統一時間戳記格式化工具：保證所有日誌一律為 YYYY-MM-DD HH:mm:ss
 const formatUnifiedTimestamp = (rawTime) => {
@@ -117,6 +129,18 @@ const normalizeLog = (item) => {
   const userId = String(raw.userId || raw.rawUserId || '');
   const caller = String(raw.caller || raw.callerName || '');
   let userName = String(raw.userName || caller || raw.name || '');
+
+  // 🛑 若用戶名或識別碼為指定的無效/食物名稱，直接剔除該筆日誌
+  const trimmedName = userName.trim();
+  const trimmedCaller = caller.trim();
+  const trimmedUserId = userId.trim();
+  if (
+    INVALID_USER_NAMES.has(trimmedName) || 
+    INVALID_USER_NAMES.has(trimmedCaller) || 
+    INVALID_USER_NAMES.has(trimmedUserId)
+  ) {
+    return null;
+  }
   const inputStr = String(raw.input || raw.query || '');
   const aiResultStr = String(raw.aiResult || raw.nutrients || '');
   const outputStr = String(raw.output || raw.result || '');
@@ -202,9 +226,14 @@ const normalizeLog = (item) => {
     }
   }
 
+  const resolvedUserName = String(finalUserName || (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'))).trim();
+  if (INVALID_USER_NAMES.has(resolvedUserName)) {
+    return null;
+  }
+
   return {
     time: formatUnifiedTimestamp(raw.time),
-    userName: String(finalUserName || (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'))),
+    userName: resolvedUserName,
     userId: String(raw.rawUserId || raw.userId || 'user'),
     type: type,
     input: inputStr,
@@ -627,6 +656,35 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       setFetchError(err.message || String(err));
     } finally {
       if (!silent) setIsLoading(false);
+    }
+  };
+
+  const [isPurgingInvalid, setIsPurgingInvalid] = useState(false);
+
+  const handlePurgeInvalidLogs = async () => {
+    const confirmMsg = isEn 
+      ? 'Are you sure you want to permanently delete rows with invalid user names (food names, line_api, numbers, etc.) from Google Sheets and server cache?'
+      : '確定要自 Google Sheets 試算表與伺服端快取中，徹底刪除指定之 8 個異常用戶名（食物名稱、line_api、純數字等）日誌列嗎？';
+    if (!window.confirm(confirmMsg)) return;
+
+    setIsPurgingInvalid(true);
+    try {
+      const activeToken = permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
+      const res = await fetch(`${GAS_API_URL}?action=deleteInvalidLogs&token=${encodeURIComponent(activeToken)}`);
+      const data = await res.json();
+      if (data.status === 'ok') {
+        alert(isEn 
+          ? `Successfully deleted ${data.deletedCount || 0} invalid log rows!` 
+          : `✅ 已成功自 Google Sheets 實體刪除 ${data.deletedCount || 0} 列異常用戶名日誌！`
+        );
+        fetchDashboardData(false);
+      } else {
+        alert(data.message || (isEn ? 'Failed to delete logs' : '刪除失敗'));
+      }
+    } catch (err) {
+      alert(isEn ? `Failed: ${err.message}` : `執行失敗：${err.message}`);
+    } finally {
+      setIsPurgingInvalid(false);
     }
   };
 
@@ -1265,6 +1323,17 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             >
               <Download size={14} />
               <span className="hidden sm:inline">JSON</span>
+            </button>
+
+            {/* Purge Invalid User Logs */}
+            <button
+              onClick={handlePurgeInvalidLogs}
+              disabled={isPurgingInvalid}
+              className="h-10 px-3 bg-rose-50 hover:bg-rose-100 border-2 border-black rounded-2xl flex items-center gap-1.5 text-xs font-black text-rose-800 transition-colors shadow-neo-xs disabled:opacity-50"
+              title="一鍵自 Google Sheets 實體刪除 8 個異常用戶名（如食物名、line_api、18等）日誌列"
+            >
+              <Trash2 size={14} className={isPurgingInvalid ? 'animate-spin' : ''} />
+              <span className="hidden sm:inline">{isPurgingInvalid ? (isEn ? 'Cleaning...' : '清理中...') : (isEn ? 'Purge Invalid' : '清理異常用戶日誌')}</span>
             </button>
           </div>
         </div>

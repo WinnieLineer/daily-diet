@@ -1426,6 +1426,25 @@ function appendToLocalCachedLogs(logItem, props) {
   } catch (e) {}
 }
 
+function saveCleanedCachedLogs(cleanedLogs, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const trimmed = deduplicateLogs(cleanedLogs).slice(0, 450);
+  const chunkSize = 30;
+
+  for (let i = 0; i < LOG_SLOT_COUNT; i++) {
+    const chunk = trimmed.slice(i * chunkSize, (i + 1) * chunkSize);
+    if (chunk.length > 0) {
+      props.setProperty(`${LOG_SLOT_PREFIX}${i}`, JSON.stringify(chunk));
+    } else {
+      props.deleteProperty(`${LOG_SLOT_PREFIX}${i}`);
+    }
+  }
+
+  try {
+    props.setProperty('SYSTEM_RECENT_LOGS', JSON.stringify(trimmed.slice(0, 20)));
+  } catch (e) {}
+}
+
 /**
  * 徹底自 GitHub 刪除系統審計 Gist，確保零個資暴露與 100% 隱私安全
  */
@@ -1611,6 +1630,25 @@ function getRecentLogsData(limit, days) {
     }
     allLogs = deduplicateLogs(allLogs);
   } catch (e) {}
+
+  // 3.5 排除指定異常用戶名日誌（食物名稱、line_api、純數字等）
+  const EXCLUDED_USER_NAMES = [
+    '美式咖啡+茶葉蛋蛋水 19',
+    '綜合水果珍珠豆花刨冰',
+    'line_api',
+    '未檢測到食物',
+    '清炒空心菜',
+    '18',
+    '原萃綠茶 (玉露入り)',
+    '蒜香炒空心菜'
+  ];
+  allLogs = allLogs.filter(function(l) {
+    const uName = String(l.userName || l[1] || '').trim();
+    const uId = String(l.userId || l[2] || '').trim();
+    return !EXCLUDED_USER_NAMES.some(function(target) {
+      return uName === target || uId === target;
+    });
+  });
 
   // 4. 依照 targetDays 過濾 (預設 30 天)
   const now = Date.now();
