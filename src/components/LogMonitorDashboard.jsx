@@ -191,14 +191,13 @@ const normalizeLog = (item) => {
   // Web 用戶 caller 的名稱拿不到就用他的名字（自動清理歷史殘留的「用戶 (user)」）
   let finalUserName = userName;
   if (isWeb || finalUserName.includes('(user)') || finalUserName.includes('(ient)')) {
-    if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client', '用戶 (user)', '用戶 (ient)'].includes(finalUserName) || finalUserName.startsWith('用戶 (')) {
-      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient'].includes(userId)) {
+    if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client', '用戶 (user)', '用戶 (ient)', '用戶 (Web)'].includes(finalUserName) || finalUserName.startsWith('用戶 (')) {
+      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient', '用戶 (Web)'].includes(userId)) {
         finalUserName = userId; // 用他的名字
       } else if (raw.name) {
         finalUserName = raw.name;
       } else {
-        const currentName = (typeof localStorage !== 'undefined' && (localStorage.getItem('line_user_name') || localStorage.getItem('user_name'))) || '';
-        finalUserName = currentName || 'Web 用戶';
+        finalUserName = 'Web 用戶';
       }
     }
   }
@@ -782,9 +781,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     const OWNER_LINE_USER_ID_PREFIX = 'U497266'; // Winnie 本人的 LINE userId 前綴
     const OWNER_CANONICAL_KEY = '__owner_winnie__';
     const OWNER_DISPLAY_NAME = 'Winnie Lin';
-    // Winnie 本人所有已知的名稱變體（userName 或 userId 可能用這些值記錄）
-    const OWNER_NAME_ALIASES = new Set(['Winnie Lin', 'Winnie', 'winnie']);
-    const OWNER_USER_ID_ALIASES = new Set(['Winnie', 'winnie']); // Web userId 別名
+    const OWNER_NAME_ALIASES = new Set(['Winnie Lin']);
 
     const userMap = {};
 
@@ -794,16 +791,13 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       const isMaintainer = uId === 'Maintainer' || log.type?.includes('維護者') || uName === 'Maintainer';
 
       // ── 決定此 log 的 canonical key
-      // 將 Winnie 所有管道與名稱變體的記錄合併至同一張卡片
+      // 僅針對 Winnie 本人的 LINE 帳號或明確的 'Winnie Lin' 進行歸戶
       let key;
       if (uId && uId.startsWith(OWNER_LINE_USER_ID_PREFIX)) {
         // Winnie 本人的 LINE userId
         key = OWNER_CANONICAL_KEY;
       } else if (OWNER_NAME_ALIASES.has(uName)) {
-        // Winnie 本人的 userName 變體（'Winnie Lin' / 'Winnie' / 'winnie'）
-        key = OWNER_CANONICAL_KEY;
-      } else if (OWNER_USER_ID_ALIASES.has(uId)) {
-        // Winnie 本人的 userId 變體（'Winnie' 等 Web 系統預設值）
+        // Winnie 本人的 Web 記錄（userName = 'Winnie Lin'）
         key = OWNER_CANONICAL_KEY;
       } else if (uId && uId.startsWith('U')) {
         // 其他 LINE 用戶 → 以 userId 為 key

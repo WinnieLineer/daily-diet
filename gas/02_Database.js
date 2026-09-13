@@ -1570,7 +1570,7 @@ function getRecentLogsData(limit, days) {
     const todayStr = getTodayDateString();
     const knownGists = [
       { userId: 'Winnie Lin', gistId: props.getProperty('USER_GIST_U1f5434ad962dfd74e5223a8dfc497c66') || '9a48b4604260e1a58a6d976f38c544b5', isLine: true },
-      { userId: '用戶 (Web)', gistId: props.getProperty('USER_GIST_default_user') || '9141ec7d6457090e66188c67c1351eed', isLine: false }
+      { userId: 'Web 用戶', gistId: props.getProperty('USER_GIST_default_user') || '9141ec7d6457090e66188c67c1351eed', isLine: false }
     ];
 
     for (const g of knownGists) {

@@ -216,17 +216,24 @@ function fixLegacyFoodNameUsers() {
     const userId   = String(values[i][1] || '').trim();
 
     if (isFoodLike(userName)) {
-      // 修正 B 欄 userName
-      sheet.getRange(rowNum, 2).setValue(CORRECT_NAME);
+      let resolvedName = 'Web 用戶';
+      if (userId && userId.startsWith('U')) {
+        resolvedName = props.getProperty(`USER_NAME_${userId}`) || `LINE 用戶 (${userId.slice(-4)})`;
+      } else if (userId && !isFoodLike(userId) && !['web_user', 'default_user', 'web_client'].includes(userId)) {
+        resolvedName = userId;
+      }
 
-      // 若 C 欄 userId 也是食物名，一併修正
+      // 修正 B 欄 userName
+      sheet.getRange(rowNum, 2).setValue(resolvedName);
+
+      // 若 C 欄 userId 也是食物名，一併修正為預設 web_user
       if (isFoodLike(userId)) {
-        sheet.getRange(rowNum, 3).setValue(CORRECT_USER_ID_FALLBACK);
+        sheet.getRange(rowNum, 3).setValue('web_user');
       }
 
       fixCount++;
       if (fixedSamples.length < 20) {
-        fixedSamples.push(`Row ${rowNum}: "${userName}" → "${CORRECT_NAME}"`);
+        fixedSamples.push(`Row ${rowNum}: "${userName}" → "${resolvedName}"`);
       }
     }
   }
