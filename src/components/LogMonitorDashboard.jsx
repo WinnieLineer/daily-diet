@@ -782,6 +782,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     const OWNER_LINE_USER_ID_PREFIX = 'U497266'; // Winnie 本人的 LINE userId 前綴
     const OWNER_CANONICAL_KEY = '__owner_winnie__';
     const OWNER_DISPLAY_NAME = 'Winnie Lin';
+    // Winnie 本人所有已知的名稱變體（userName 或 userId 可能用這些值記錄）
+    const OWNER_NAME_ALIASES = new Set(['Winnie Lin', 'Winnie', 'winnie']);
+    const OWNER_USER_ID_ALIASES = new Set(['Winnie', 'winnie']); // Web userId 別名
 
     const userMap = {};
 
@@ -791,13 +794,16 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       const isMaintainer = uId === 'Maintainer' || log.type?.includes('維護者') || uName === 'Maintainer';
 
       // ── 決定此 log 的 canonical key
-      // 將 Winnie 的 LINE 與 Web 兩種記錄合併至同一張卡片
+      // 將 Winnie 所有管道與名稱變體的記錄合併至同一張卡片
       let key;
       if (uId && uId.startsWith(OWNER_LINE_USER_ID_PREFIX)) {
         // Winnie 本人的 LINE userId
         key = OWNER_CANONICAL_KEY;
-      } else if (uName === OWNER_DISPLAY_NAME) {
-        // Winnie 本人的 Web 記錄（userName = 'Winnie Lin'）
+      } else if (OWNER_NAME_ALIASES.has(uName)) {
+        // Winnie 本人的 userName 變體（'Winnie Lin' / 'Winnie' / 'winnie'）
+        key = OWNER_CANONICAL_KEY;
+      } else if (OWNER_USER_ID_ALIASES.has(uId)) {
+        // Winnie 本人的 userId 變體（'Winnie' 等 Web 系統預設值）
         key = OWNER_CANONICAL_KEY;
       } else if (uId && uId.startsWith('U')) {
         // 其他 LINE 用戶 → 以 userId 為 key
