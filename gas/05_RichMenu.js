@@ -6,6 +6,18 @@
  */
 
 /**
+ * 建立並發布原生相機圖文選單 (全域主進入點 / 向下相容別名)
+ * 預設建立中文選單並設為全域預設
+ * @param {string} [channelAccessToken]
+ * @param {string} [liffId]
+ * @param {GoogleAppsScript.Properties.Properties} [props]
+ * @returns {string} richMenuId
+ */
+function setupNativeCameraRichMenu(channelAccessToken, liffId, props) {
+  return setupChineseNativeCameraRichMenu(channelAccessToken, liffId, props);
+}
+
+/**
  * 建立並發布中文版 6 宮格原生相機圖文選單
  * @param {string} channelAccessToken
  * @param {string} liffId
