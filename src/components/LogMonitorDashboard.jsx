@@ -2374,21 +2374,25 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                             {/* User Name / Caller */}
                             <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
-                              <div className="flex items-center gap-1.5">
+                              <div className="flex items-center gap-1">
                                 {isLogin && <ShieldAlert size={14} className="text-purple-600 shrink-0" />}
+                                <span className="truncate max-w-[110px]" title={userName}>
+                                  {userName || '—'}
+                                </span>
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     setSelectedUser(selectedUser === userName ? 'ALL' : userName);
                                   }}
-                                  title={isEn ? `Filter by user: ${userName}` : `點擊篩選用戶：${userName}`}
-                                  className="truncate max-w-[120px] text-left font-bold text-black hover:underline hover:text-blue-700 transition-colors cursor-pointer"
+                                  title={selectedUser === userName ? (isEn ? 'Clear filter' : '取消篩選') : (isEn ? `Filter by: ${userName}` : `篩選用戶：${userName}`)}
+                                  className={`shrink-0 text-sm leading-none transition-colors cursor-pointer ${
+                                    selectedUser === userName
+                                      ? 'opacity-100'
+                                      : 'opacity-30 hover:opacity-100'
+                                  }`}
                                 >
-                                  {userName || '—'}
+                                  {selectedUser === userName ? '✕' : '🔍'}
                                 </button>
-                                {selectedUser === userName && (
-                                  <span className="text-[9px] font-black text-blue-700 bg-blue-50 border border-blue-300 px-1 py-0.2 rounded">篩選中</span>
-                                )}
                               </div>
                             </td>
 
