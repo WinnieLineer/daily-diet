@@ -4413,21 +4413,23 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
   const isEn = userLang === 'en';
 
   function buildMenuBtn(text, action, bgColor, textColor = "#000000") {
-    return {
+    const isDarkBg = bgColor === "#000000" || bgColor === "#18181B";
+    const shadowColor = isDarkBg ? "#3F3F46" : "#000000";
+
+    const innerBtn = {
       type: "box",
       layout: "vertical",
+      flex: 1,
       backgroundColor: bgColor,
       borderColor: "#000000",
       borderWidth: "2px",
-      cornerRadius: "12px",
-      paddingTop: "9px",
-      paddingBottom: "9px",
+      cornerRadius: "9px",
+      paddingTop: "8px",
+      paddingBottom: "8px",
       paddingStart: "4px",
       paddingEnd: "4px",
-      flex: 1,
       alignItems: "center",
       justifyContent: "center",
-      action: action,
       contents: [
         {
           type: "text",
@@ -4440,6 +4442,61 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
         }
       ]
     };
+
+    return {
+      type: "box",
+      layout: "vertical",
+      flex: 1,
+      backgroundColor: shadowColor,
+      cornerRadius: "11px",
+      paddingTop: "0px",
+      paddingStart: "0px",
+      paddingBottom: "2.5px",
+      paddingEnd: "2.5px",
+      action: action,
+      contents: [innerBtn]
+    };
+  }
+
+  function buildMenuSection(titleEmoji, titleText, rows) {
+    const innerCard = {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#FFFFFF",
+      borderColor: "#000000",
+      borderWidth: "2px",
+      cornerRadius: "12px",
+      paddingAll: "10px",
+      spacing: "sm",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          alignItems: "center",
+          contents: [
+            {
+              type: "text",
+              text: `${titleEmoji} ${titleText}`,
+              weight: "bold",
+              size: "xs",
+              color: "#000000",
+              flex: 1
+            }
+          ]
+        },
+        ...rows
+      ]
+    };
+
+    return {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: "#000000",
+      cornerRadius: "14px",
+      paddingBottom: "3px",
+      paddingEnd: "3px",
+      contents: [innerCard]
+    };
   }
 
   return {
@@ -4451,7 +4508,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#000000",
+        backgroundColor: "#18181B",
         paddingAll: "14px",
         contents: [
           {
@@ -4476,15 +4533,14 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
       body: {
         type: "box",
         layout: "vertical",
+        backgroundColor: "#F4F4F5",
         spacing: "md",
         paddingAll: "14px",
         contents: [
-          {
-            type: "box",
-            layout: "vertical",
-            spacing: "xs",
-            contents: [
-              { type: "text", text: isEn ? "⚡ Quick Log & Hydration" : "⚡ 快速記錄與補水", weight: "bold", size: "xs", color: "#000000" },
+          buildMenuSection(
+            "⚡",
+            isEn ? "Quick Log & Hydration" : "快速記錄與補水",
+            [
               {
                 type: "box",
                 layout: "horizontal",
@@ -4516,7 +4572,6 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 type: "box",
                 layout: "horizontal",
                 spacing: "sm",
-                margin: "xs",
                 contents: [
                   buildMenuBtn(
                     isEn ? "💧 +500ml Water" : "💧 補水 500",
@@ -4542,13 +4597,11 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 ]
               }
             ]
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            spacing: "xs",
-            contents: [
-              { type: "text", text: isEn ? "📈 History & Trends" : "📈 歷程與歷史回顧", weight: "bold", size: "xs", color: "#000000" },
+          ),
+          buildMenuSection(
+            "📈",
+            isEn ? "History & Trends" : "歷程與歷史回顧",
+            [
               {
                 type: "box",
                 layout: "horizontal",
@@ -4579,13 +4632,11 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 ]
               }
             ]
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            spacing: "xs",
-            contents: [
-              { type: "text", text: isEn ? "⚖️ Weight & Digestion" : "⚖️ 體態與排便紀錄", weight: "bold", size: "xs", color: "#000000" },
+          ),
+          buildMenuSection(
+            "⚖️",
+            isEn ? "Weight & Digestion" : "體態與排便紀錄",
+            [
               {
                 type: "box",
                 layout: "horizontal",
@@ -4625,13 +4676,11 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 ]
               }
             ]
-          },
-          {
-            type: "box",
-            layout: "vertical",
-            spacing: "xs",
-            contents: [
-              { type: "text", text: isEn ? "⚙️ Goals & Settings" : "⚙️ 目標設定與管理", weight: "bold", size: "xs", color: "#000000" },
+          ),
+          buildMenuSection(
+            "⚙️",
+            isEn ? "Goals & Settings" : "目標設定與管理",
+            [
               {
                 type: "box",
                 layout: "horizontal",
@@ -4663,7 +4712,6 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 type: "box",
                 layout: "horizontal",
                 spacing: "sm",
-                margin: "xs",
                 contents: [
                   buildMenuBtn(
                     isEn ? "📋 Manage Logs" : "📋 管理紀錄",
@@ -4692,7 +4740,6 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 type: "box",
                 layout: "horizontal",
                 spacing: "sm",
-                margin: "xs",
                 contents: [
                   buildMenuBtn(
                     isEn ? "🌐 Language" : "🌐 語言切換",
@@ -4707,45 +4754,25 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 ]
               }
             ]
-          }
+          )
         ]
       },
       footer: {
         type: "box",
         layout: "vertical",
         spacing: "xs",
-        paddingAll: "12px",
+        paddingAll: "14px",
         contents: [
-          {
-            type: "box",
-            layout: "vertical",
-            backgroundColor: "#000000",
-            borderColor: "#000000",
-            borderWidth: "2px",
-            cornerRadius: "12px",
-            paddingTop: "11px",
-            paddingBottom: "11px",
-            paddingStart: "8px",
-            paddingEnd: "8px",
-            alignItems: "center",
-            justifyContent: "center",
+          createNeoFlexButton({
+            label: isEn ? "📱 Open Diet Diary App" : "📱 開啟個人飲食日記",
+            variant: "accent",
+            size: "md",
             action: {
               type: "uri",
               label: isEn ? "Open Diet Diary" : "開啟個人飲食日記",
               uri: appTargetUrl
-            },
-            contents: [
-              {
-                type: "text",
-                text: isEn ? "📱 Open Diet Diary App" : "📱 開啟個人飲食日記",
-                weight: "bold",
-                size: "sm",
-                color: "#FFFFFF",
-                align: "center",
-                wrap: true
-              }
-            ]
-          }
+            }
+          })
         ]
       }
     }
