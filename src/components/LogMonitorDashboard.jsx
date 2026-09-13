@@ -776,6 +776,36 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     }
 
     const todayStr = new Date().toLocaleDateString('en-CA'); // "YYYY-MM-DD"
+
+    // ── 已知維護者身份對應（LINE userId 前綴 → 顯示名稱）
+    // 當同一個真實用戶既有 LINE userId (U開頭) 也有 Web userName 時，合併至統一 key
+    const OWNER_LINE_USER_ID_PREFIX = 'U497266'; // Winnie 本人的 LINE userId 前綴
+    const OWNER_CANONICAL_KEY = '__owner_winnie__';
+    const OWNER_DISPLAY_NAME = 'Winnie Lin';
+
+    // ── 偵測食物名稱（非人名）的 userName 過濾條件
+    // 食物名通常包含食材、烹飪方式等中文關鍵字，或過長（>12字元）且無英文
+    const FOOD_KEYWORDS = [
+      '炒', '煮', '燉', '烤', '蒸', '滷', '炸', '拌', '煎',
+      '茶', '咖啡', '果汁', '飲', '奶', '豆漿',
+      '飯', '麵', '粥', '麵包', '吐司', '餅', '糕', '包子', '餃', '鍋貼',
+      '菜', '沙拉', '泡菜',
+      '雞', '牛', '豬', '魚', '蝦', '蟹', '蛋',
+      '豆腐', '豆干', '豆花',
+      '冰', '刨冰', '布丁', '甜點', '蛋糕', '餅乾',
+      '湯', '拉麵', '烏龍', '蕎麥',
+      '珍珠', '仙草', '愛玉',
+      '香蕉', '蘋果', '橘子', '葡萄', '草莓', '芒果', '西瓜', '鳳梨'
+    ];
+    const isFoodLikeName = (name) => {
+      if (!name) return false;
+      // 若包含食物關鍵字，很可能是食物名
+      if (FOOD_KEYWORDS.some(kw => name.includes(kw))) return true;
+      // 若字元數超過 12 且不含任何英文字母，且全部是中文/特殊符號，也視為可疑
+      if (name.length > 12 && !/[a-zA-Z0-9]/.test(name)) return true;
+      return false;
+    };
+
     const userMap = {};
 
     normalizedLogs.forEach((log) => {
@@ -783,14 +813,37 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       const uName = (log.userName || uId || (isEn ? 'Unknown' : '未知用戶')).trim();
       const isMaintainer = uId === 'Maintainer' || log.type?.includes('維護者') || uName === 'Maintainer';
 
-      const key = (uId && uId.startsWith('U')) ? uId : (uName || uId || 'Unknown');
+      // ── 食物名稱 userName 過濾：合併到維護者本人（Winnie）
+      const nameIsFoodLike = isFoodLikeName(uName);
+
+      // ── 決定此 log 的 canonical key
+      let key;
+      if (nameIsFoodLike) {
+        // 食物名稱的 log 是維護者本人（Winnie）的紀錄，合併到 owner key
+        key = OWNER_CANONICAL_KEY;
+      } else if (uId && uId.startsWith(OWNER_LINE_USER_ID_PREFIX)) {
+        // Winnie 本人的 LINE userId
+        key = OWNER_CANONICAL_KEY;
+      } else if (uName === OWNER_DISPLAY_NAME) {
+        // Winnie 本人的 Web 記錄（userName = 'Winnie Lin'）
+        key = OWNER_CANONICAL_KEY;
+      } else if (uId && uId.startsWith('U')) {
+        // 其他 LINE 用戶 → 以 userId 為 key
+        key = uId;
+      } else {
+        // Web 或其他用戶 → 以 userName 為 key
+        key = uName || uId || 'Unknown';
+      }
 
       if (!userMap[key]) {
+        const displayName = (key === OWNER_CANONICAL_KEY)
+          ? OWNER_DISPLAY_NAME
+          : (uName || (uId.startsWith('U') ? `LINE 用戶 #${uId.slice(-4)}` : uId));
         userMap[key] = {
           key,
-          name: uName || (uId.startsWith('U') ? `LINE 用戶 #${uId.slice(-4)}` : uId),
+          name: displayName,
           userId: uId,
-          isMaintainer,
+          isMaintainer: isMaintainer || key === OWNER_CANONICAL_KEY,
           isLine: Boolean(log.source?.includes('LINE') || (uId && uId.startsWith('U'))),
           isWeb: Boolean(log.source?.includes('Web') || log.type?.includes('Web') || uId === 'default_user' || uId.startsWith('web_')),
           totalActions: 0,
@@ -802,6 +855,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           activeDays: new Set(),
           isTodayActive: false
         };
+      } else if (key === OWNER_CANONICAL_KEY) {
+        // 更新 Winnie 用戶的 isLine/isWeb 標記（取聯集）
+        if (log.source?.includes('LINE') || (uId && uId.startsWith('U'))) userMap[key].isLine = true;
+        if (log.source?.includes('Web') || log.type?.includes('Web')) userMap[key].isWeb = true;
       }
 
       const u = userMap[key];
@@ -831,8 +888,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       }
     });
 
+    // ── 維護者本人（Winnie）從「isMaintainer 過濾」中豁免，以便在用戶列表顯示
+    // 原本過濾 isMaintainer 是為了排除「Maintainer」系統帳號，但 Winnie 本人應顯示
     const list = Object.values(userMap)
-      .filter(u => !u.isMaintainer)
+      .filter(u => !(u.isMaintainer && u.key !== OWNER_CANONICAL_KEY))
       .map(u => {
         const activeDaysCount = u.activeDays.size;
         let tier = 'CASUAL';
