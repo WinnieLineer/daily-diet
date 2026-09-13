@@ -444,6 +444,46 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 10.9 查詢 LINE 官方帳號本月發送額度與已使用則數 (限維護者授權)
+    if (action === 'getLineQuota' || action === 'checkQuota') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized maintainer access' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+      let total = '未知';
+      let used = 0;
+      let rawQuota = {};
+      let rawConsumption = {};
+      try {
+        const quotaRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota", {
+          headers: { Authorization: `Bearer ${token}` },
+          muteHttpExceptions: true
+        });
+        rawQuota = JSON.parse(quotaRes.getContentText() || '{}');
+        if (rawQuota.value !== undefined) total = rawQuota.value;
+        else if (rawQuota.type === 'none') total = '無上限';
+      } catch (e) {}
+      try {
+        const consumptionRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota/consumption", {
+          headers: { Authorization: `Bearer ${token}` },
+          muteHttpExceptions: true
+        });
+        rawConsumption = JSON.parse(consumptionRes.getContentText() || '{}');
+        if (rawConsumption.totalUsage !== undefined) used = rawConsumption.totalUsage;
+      } catch (e) {}
+
+      const remaining = typeof total === 'number' ? (total - used) : total;
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'ok',
+        totalQuota: total,
+        usedMessages: used,
+        remainingMessages: remaining,
+        rawQuota: rawQuota,
+        rawConsumption: rawConsumption
+      }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 11. 實時運作日誌 API (限維護者授權存取)
     if (action === 'getRecentLogs') {
       if (!isAdmin) {
