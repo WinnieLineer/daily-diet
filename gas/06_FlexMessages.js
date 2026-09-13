@@ -5371,7 +5371,90 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             isEn ? "Logged data flows instantly between LINE, Web App, and your private Gist backup." : "LINE 與 Web 紀錄即時雙向連動，並無縫備份至個人專屬 Gist 雲端！",
             isEn ? "SYNC" : "同步",
             "#DCFCE7"
-          )
+          ),
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#000000",
+            cornerRadius: "14px",
+            paddingBottom: "3px",
+            paddingEnd: "3px",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#F3E8FF",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingAll: "10px",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    alignItems: "center",
+                    contents: [
+                      {
+                        type: "text",
+                        text: isEn ? "🌙 Sleep & Fat Loss Tip" : "🌙 睡前悄悄話・好眠更容易瘦",
+                        weight: "bold",
+                        size: "sm",
+                        color: "#000000",
+                        flex: 1,
+                        wrap: true
+                      },
+                      {
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#7C3AED",
+                        cornerRadius: "10px",
+                        paddingTop: "2px",
+                        paddingBottom: "2px",
+                        paddingStart: "6px",
+                        paddingEnd: "6px",
+                        contents: [
+                          {
+                            type: "text",
+                            text: isEn ? "NIGHT" : "晚安暖心",
+                            size: "xxs",
+                            color: "#FFFFFF",
+                            weight: "bold"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    type: "text",
+                    text: isEn
+                      ? "Tonight, put down your phone early! Deep sleep is your body's natural fat burner. Do a quick 3-min stretch, relax your mind, and sweet dreams ✨"
+                      : "看完了新功能，今晚早點放下手機吧！優質深層睡眠才是天然最強燃脂劑 ✨ 睡前推薦花 3 分鐘做做舒緩放鬆，祝大家美夢、減脂順利～晚安！💤🌙",
+                    size: "xs",
+                    color: "#4C1D95",
+                    margin: "xs",
+                    wrap: true
+                  },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    margin: "sm",
+                    contents: [
+                      createNeoFlexButton({
+                        label: isEn ? "🧘‍♀️ 3-min Bedtime Stretch Reel" : "🧘‍♀️ 點我看 3分鐘睡前舒緩短影音",
+                        variant: "accent",
+                        size: "sm",
+                        action: {
+                          type: "uri",
+                          label: isEn ? "Watch Reel" : "睡前舒緩短影音",
+                          uri: "https://www.instagram.com/reels/Dc3vGMrPcDx/"
+                        }
+                      })
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
         ]
       },
       footer: {

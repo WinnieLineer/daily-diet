@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic, Scale } from 'lucide-react';
+import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic, Scale, Moon, Film } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
@@ -141,6 +141,30 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                     description={t('whatsnew_v330_sync_desc')}
                     color="bg-emerald-300"
                   />
+
+                  {/* 🌙 睡前放鬆與舒緩短影音分享卡片 */}
+                  <div className="p-4 bg-gradient-to-br from-purple-50 to-indigo-50 border-4 border-black rounded-2xl shadow-neo mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 bg-purple-200 border-2 border-black rounded-lg flex items-center justify-center shadow-neo-sm">
+                        <Moon size={18} className="text-purple-900" strokeWidth={3} />
+                      </div>
+                      <h4 className="font-black text-base tracking-tight text-purple-950">
+                        {t('whatsnew_v330_sleep_title')}
+                      </h4>
+                    </div>
+                    <p className="text-xs text-purple-900/80 font-bold leading-relaxed mb-3">
+                      {t('whatsnew_v330_sleep_desc')}
+                    </p>
+                    <a
+                      href="https://www.instagram.com/reels/Dc3vGMrPcDx/"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center justify-center gap-2 w-full py-2.5 px-4 bg-yellow-300 hover:bg-yellow-400 active:translate-x-0.5 active:translate-y-0.5 text-black font-black text-xs border-2 border-black rounded-xl shadow-neo-sm transition-all"
+                    >
+                      <Film size={16} strokeWidth={3} />
+                      <span>{t('whatsnew_v330_sleep_btn')}</span>
+                    </a>
+                  </div>
                 </div>
               )}
               {show320 && (
