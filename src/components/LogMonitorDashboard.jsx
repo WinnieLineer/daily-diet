@@ -783,29 +783,6 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     const OWNER_CANONICAL_KEY = '__owner_winnie__';
     const OWNER_DISPLAY_NAME = 'Winnie Lin';
 
-    // ── 偵測食物名稱（非人名）的 userName 過濾條件
-    // 食物名通常包含食材、烹飪方式等中文關鍵字，或過長（>12字元）且無英文
-    const FOOD_KEYWORDS = [
-      '炒', '煮', '燉', '烤', '蒸', '滷', '炸', '拌', '煎',
-      '茶', '咖啡', '果汁', '飲', '奶', '豆漿',
-      '飯', '麵', '粥', '麵包', '吐司', '餅', '糕', '包子', '餃', '鍋貼',
-      '菜', '沙拉', '泡菜',
-      '雞', '牛', '豬', '魚', '蝦', '蟹', '蛋',
-      '豆腐', '豆干', '豆花',
-      '冰', '刨冰', '布丁', '甜點', '蛋糕', '餅乾',
-      '湯', '拉麵', '烏龍', '蕎麥',
-      '珍珠', '仙草', '愛玉',
-      '香蕉', '蘋果', '橘子', '葡萄', '草莓', '芒果', '西瓜', '鳳梨'
-    ];
-    const isFoodLikeName = (name) => {
-      if (!name) return false;
-      // 若包含食物關鍵字，很可能是食物名
-      if (FOOD_KEYWORDS.some(kw => name.includes(kw))) return true;
-      // 若字元數超過 12 且不含任何英文字母，且全部是中文/特殊符號，也視為可疑
-      if (name.length > 12 && !/[a-zA-Z0-9]/.test(name)) return true;
-      return false;
-    };
-
     const userMap = {};
 
     normalizedLogs.forEach((log) => {
@@ -813,15 +790,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       const uName = (log.userName || uId || (isEn ? 'Unknown' : '未知用戶')).trim();
       const isMaintainer = uId === 'Maintainer' || log.type?.includes('維護者') || uName === 'Maintainer';
 
-      // ── 食物名稱 userName 過濾：合併到維護者本人（Winnie）
-      const nameIsFoodLike = isFoodLikeName(uName);
-
       // ── 決定此 log 的 canonical key
+      // 將 Winnie 的 LINE 與 Web 兩種記錄合併至同一張卡片
       let key;
-      if (nameIsFoodLike) {
-        // 食物名稱的 log 是維護者本人（Winnie）的紀錄，合併到 owner key
-        key = OWNER_CANONICAL_KEY;
-      } else if (uId && uId.startsWith(OWNER_LINE_USER_ID_PREFIX)) {
+      if (uId && uId.startsWith(OWNER_LINE_USER_ID_PREFIX)) {
         // Winnie 本人的 LINE userId
         key = OWNER_CANONICAL_KEY;
       } else if (uName === OWNER_DISPLAY_NAME) {

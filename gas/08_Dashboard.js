@@ -151,3 +151,90 @@ function generateDashboardHtml() {
 </body>
 </html>`;
 }
+
+/**
+ * ========================================================
+ * 🛠️ 一次性歷史資料修復：將 Google Sheets 中食物名稱誤存為
+ *    userName 的舊日誌列，統一修正為「Winnie Lin」
+ *
+ * ⚠️  使用方式：在 GAS 編輯器中直接執行此函式一次即可。
+ *    執行完畢後此函式可保留但不需再跑。
+ * ========================================================
+ */
+function fixLegacyFoodNameUsers() {
+  const props = PropertiesService.getScriptProperties();
+  const ss = getOrCreateLogSheet(props);
+  if (!ss) {
+    Logger.log('❌ 無法取得 Log Sheet，請確認 LOG_SHEET_ID 已設定。');
+    return;
+  }
+
+  const sheet = ss.getSheets()[0];
+  const lastRow = sheet.getLastRow();
+  if (lastRow < 2) {
+    Logger.log('ℹ️  試算表無資料列需修復。');
+    return;
+  }
+
+  // 取得 B 欄（userName, col=2）和 C 欄（userId, col=3）的所有值
+  const userNameRange = sheet.getRange(2, 2, lastRow - 1, 2); // 從第2列起，B~C 欄
+  const values = userNameRange.getValues();
+
+  // 食物偵測關鍵字（與 recordSystemLog 內的 isFoodName 一致並擴充）
+  const FOOD_KEYWORDS = [
+    '炒', '煮', '燉', '烤', '蒸', '滷', '炸', '拌', '煎',
+    '茶', '咖啡', '果汁', '飲料', '奶', '豆漿',
+    '飯', '麵', '粥', '麵包', '吐司', '餅', '糕', '包子', '餃', '鍋貼',
+    '菜', '沙拉', '泡菜', '空心菜',
+    '雞', '牛', '豬', '魚', '蝦', '蟹', '蛋白',
+    '豆腐', '豆干', '豆花',
+    '冰', '刨冰', '布丁', '甜點', '蛋糕', '餅乾',
+    '湯', '拉麵', '烏龍', '蕎麥',
+    '珍珠', '仙草', '愛玉', '寒天',
+    '香蕉', '蘋果', '橘子', '葡萄', '草莓', '芒果', '西瓜', '鳳梨',
+    '原萃', '綜合', '蒜香'  // 截圖中出現的特定食物前綴
+  ];
+
+  const isFoodLike = (name) => {
+    if (!name) return false;
+    const s = String(name).trim();
+    if (FOOD_KEYWORDS.some(kw => s.includes(kw))) return true;
+    // 超過 12 字元且全無英文字母視為可疑食物名
+    if (s.length > 12 && !/[a-zA-Z0-9]/.test(s)) return true;
+    return false;
+  };
+
+  const CORRECT_NAME = 'Winnie Lin';
+  const CORRECT_USER_ID_FALLBACK = 'Winnie'; // 若 userId 也是食物名，改用此值
+
+  let fixCount = 0;
+  const fixedSamples = [];
+
+  for (let i = 0; i < values.length; i++) {
+    const rowNum = i + 2; // 實際 Sheet 第幾列（含 header 偏移）
+    const userName = String(values[i][0] || '').trim();
+    const userId   = String(values[i][1] || '').trim();
+
+    if (isFoodLike(userName)) {
+      // 修正 B 欄 userName
+      sheet.getRange(rowNum, 2).setValue(CORRECT_NAME);
+
+      // 若 C 欄 userId 也是食物名，一併修正
+      if (isFoodLike(userId)) {
+        sheet.getRange(rowNum, 3).setValue(CORRECT_USER_ID_FALLBACK);
+      }
+
+      fixCount++;
+      if (fixedSamples.length < 20) {
+        fixedSamples.push(`Row ${rowNum}: "${userName}" → "${CORRECT_NAME}"`);
+      }
+    }
+  }
+
+  Logger.log(`✅ 修復完成！共修正 ${fixCount} 筆舊資料。`);
+  if (fixedSamples.length > 0) {
+    Logger.log('📋 修復樣本（前20筆）：\n' + fixedSamples.join('\n'));
+  } else {
+    Logger.log('ℹ️  沒有找到需要修復的食物名稱用戶資料。');
+  }
+}
