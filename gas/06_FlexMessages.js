@@ -1238,12 +1238,12 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "📱 Open App to View Progress" : "📱 開啟 App 查看目標進度",
+            label: isEn ? "🎯 View Goals & Progress" : "🎯 查看個人目標進度",
             variant: "accent",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "📱 Open App to View Progress" : "📱 開啟 App 查看目標進度",
+              label: isEn ? "Goals Progress" : "目標進度",
               uri: appTargetUrl
             }
           }),
@@ -1547,12 +1547,12 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
+            label: isEn ? "⚙️ Open Diary Goal Settings" : "⚙️ 開啟個人飲食日記設定",
             variant: "accent",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
+              label: isEn ? "Goal Settings" : "目標設定",
               uri: appTargetUrl
             }
           })
@@ -1757,12 +1757,12 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
+            label: isEn ? "⚙️ Open Diary Goal Settings" : "⚙️ 開啟個人飲食日記設定",
             variant: "accent",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "⚙️ Open App for Full Settings" : "⚙️ 開啟 App 完整目標設定",
+              label: isEn ? "Goal Settings" : "目標設定",
               uri: appTargetUrl
             }
           }),
@@ -2138,12 +2138,12 @@ function generateWeightConfirmFlex(userId, weightData, liffId, userGistId, props
             }
           }),
           createNeoFlexButton({
-            label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 互動圖表",
+            label: isEn ? "📈 View Personal Trends" : "📈 查看個人趨勢圖表",
             variant: "black",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "Web Chart" : "Web 圖表",
+              label: isEn ? "View Chart" : "趨勢圖表",
               uri: webUrl
             }
           })
@@ -2274,12 +2274,12 @@ function generatePoopConfirmFlex(userId, poopData, liffId, userGistId, props, la
             }
           }),
           createNeoFlexButton({
-            label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 互動圖表",
+            label: isEn ? "📈 View Personal Trends" : "📈 查看個人趨勢圖表",
             variant: "black",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "Web Chart" : "Web 圖表",
+              label: isEn ? "View Chart" : "趨勢圖表",
               uri: webUrl
             }
           })
@@ -2409,12 +2409,12 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
               }
             }),
             createNeoFlexButton({
-              label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 互動圖表",
+              label: isEn ? "📈 View Personal Trends" : "📈 查看個人趨勢圖表",
               variant: "black",
               size: "md",
               action: {
                 type: "uri",
-                label: isEn ? "Web Chart" : "Web 圖表",
+                label: isEn ? "View Chart" : "趨勢圖表",
                 uri: webUrl
               }
             })
@@ -2643,12 +2643,12 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "📱 Open Web Interactive Chart" : "📱 開啟 Web 完整放大圖表",
+            label: isEn ? "📈 View Personal Trends" : "📈 查看個人趨勢圖表",
             variant: "accent",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "Web Chart" : "Web 圖表",
+              label: isEn ? "View Chart" : "趨勢圖表",
               uri: webUrl
             }
           }),
@@ -4279,13 +4279,13 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
             justifyContent: "center",
             action: {
               type: "uri",
-              label: isEn ? "📱 Open Web App Settings" : "📱 開啟 Web App 完整設定",
+              label: isEn ? "Open Diary" : "開啟個人飲食日記",
               uri: appTargetUrl
             },
             contents: [
               {
                 type: "text",
-                text: isEn ? "📱 Open Web App Settings" : "📱 開啟 Web App 完整設定",
+                text: isEn ? "📱 Open Diary Profile Settings" : "📱 開啟個人飲食日記設定",
                 weight: "bold",
                 size: "sm",
                 color: "#000000"
@@ -4764,12 +4764,12 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "📱 Open Diet Diary App" : "📱 開啟個人飲食日記",
+            label: isEn ? "📱 Open Personal Diet Diary" : "📱 開啟個人飲食日記",
             variant: "accent",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "Open Diet Diary" : "開啟個人飲食日記",
+              label: isEn ? "Open Diary" : "開啟個人飲食日記",
               uri: appTargetUrl
             }
           })
@@ -4962,7 +4962,7 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props, lang) {
             paddingAll: "12px",
             contents: [
               { type: "text", text: isEn ? "📌 3 Quick Steps to Link:" : "📌 簡單 3 步驟完成連動：", weight: "bold", size: "xs", color: "#854D0E", wrap: true },
-              { type: "text", text: isEn ? "1. Open Web app from button below" : "1. 點擊下方按鈕開啟 Web 版 Daily Diet", size: "xxs", color: "#713F12", wrap: true },
+              { type: "text", text: isEn ? "1. Open Diary from button below" : "1. 點擊下方按鈕開啟個人飲食日記", size: "xxs", color: "#713F12", wrap: true },
               { type: "text", text: isEn ? "2. Go to Settings ➔ Cloud Backup to copy Gist ID" : "2. 前往右上角「⚙️ 設定」➔「雲端備份」複製 Gist ID", size: "xxs", color: "#713F12", wrap: true },
               { type: "text", text: isEn ? "3. Tap 'Bind Gist' and send: Bind <YourGistId>" : "3. 點擊下方「填入綁定指令」，送出「綁定 您的GistID」即可！", size: "xxs", color: "#713F12", wrap: true }
             ]
@@ -4976,12 +4976,12 @@ function generateWebUserGuideFlex(userId, liffId, userGistId, props, lang) {
         paddingAll: "12px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "📱 Open Web to Copy Gist ID" : "📱 開啟 Web 複製 Gist ID",
+            label: isEn ? "📱 Open Diary to Copy Gist ID" : "📱 開啟個人飲食日記複製 ID",
             variant: "accent",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "📱 Open Web to Copy Gist ID" : "📱 開啟 Web 複製 Gist ID",
+              label: isEn ? "Copy Gist ID" : "複製 Gist ID",
               uri: appTargetUrl
             }
           }),
@@ -5309,12 +5309,12 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "📱 Open Web Full Tracker" : "📱 開啟 Web 完整記錄",
+            label: isEn ? "📱 Open Personal Diet Diary" : "📱 開啟個人飲食日記",
             variant: "accent",
             size: "md",
             action: {
               type: "uri",
-              label: isEn ? "Open Web" : "開啟 Web",
+              label: isEn ? "Open Diary" : "開啟個人飲食日記",
               uri: appTargetUrl
             }
           }),

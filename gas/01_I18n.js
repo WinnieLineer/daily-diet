@@ -21,7 +21,7 @@ const I18N_DICT = {
   gramsFat: { zh: "g脂", en: "g fat" },
   cancel: { zh: "取消", en: "Cancel" },
   confirm: { zh: "確認", en: "Confirm" },
-  openApp: { zh: "開啟 App", en: "Open App" },
+  openApp: { zh: "開啟個人飲食日記", en: "Open Personal Diet Diary" },
 
   // 圖文選單 (Rich Menu)
   menuCamera: { zh: "拍照記錄", en: "AI Camera" },
@@ -29,7 +29,7 @@ const I18N_DICT = {
   menuWater: { zh: "喝水 500", en: "+500ml Water" },
   menuSummary: { zh: "今日總結", en: "Daily Summary" },
   menuGuide: { zh: "使用說明", en: "Guide" },
-  menuOpenApp: { zh: "開啟 App", en: "Open App" },
+  menuOpenApp: { zh: "開啟個人飲食日記", en: "Open Personal Diet Diary" },
   menuChatBar: { zh: "點我開啟飲食選單 🐼", en: "Diet Menu 🐼" },
 
   // 飲食確認卡片 (MealConfirmCard)
