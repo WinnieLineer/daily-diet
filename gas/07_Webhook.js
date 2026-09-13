@@ -1076,6 +1076,16 @@ function doPost(e) {
           continue;
         }
 
+        // ⚖️ 點擊記錄體重指引 (桌面版或手動觸發備援)
+        if (payload.action === 'promptWeight') {
+          const promptMsg = isEn
+            ? "⚖️ 【Record Weight】\nPlease reply with your weight, e.g.:\n`Weight 65.2` or `64.5kg` 🐼"
+            : "⚖️ 【記錄體重】\n請在對話框輸入您的體重喔！\n例如：\n`體重 65.2` 或 `64.5kg` 🐼";
+          recordSystemLog('記錄體重指引', userId, '點擊記體重按鈕', '', '回傳記體重對話框引導提示');
+          replyTextMessage(replyToken, promptMsg, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 💩 點擊排便打卡
         if (payload.action === 'logPoop') {
           console.log(`💩 [按鈕排便打卡] 用戶: ${userId}`);

@@ -2175,9 +2175,11 @@ function generatePoopConfirmFlex(userId, poopData, liffId, userGistId, props, la
             variant: "white",
             size: "md",
             action: {
-              type: "message",
+              type: "postback",
               label: isEn ? "Log Weight" : "記體重",
-              text: isEn ? "weight " : "體重 "
+              data: JSON.stringify({ action: 'promptWeight' }),
+              inputOption: "openKeyboard",
+              fillInText: isEn ? "Weight 60.0" : "體重 60.0"
             }
           }),
           createNeoFlexButton({
@@ -2294,13 +2296,15 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
           paddingAll: "14px",
           contents: [
             createNeoFlexButton({
-              label: isEn ? "⚖️ Log Weight Now" : "⚖️ 馬下記錄體重",
+              label: isEn ? "⚖️ Log Weight Now" : "⚖️ 輸入體重打卡",
               variant: "accent",
               size: "md",
               action: {
-                type: "message",
+                type: "postback",
                 label: isEn ? "Log Weight" : "記體重",
-                text: isEn ? "weight " : "體重 "
+                data: JSON.stringify({ action: 'promptWeight' }),
+                inputOption: "openKeyboard",
+                fillInText: isEn ? "Weight 60.0" : "體重 60.0"
               }
             }),
             createNeoFlexButton({
@@ -2549,9 +2553,11 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 size: "sm",
                 flex: 1,
                 action: {
-                  type: "message",
+                  type: "postback",
                   label: isEn ? "Weight" : "記體重",
-                  text: isEn ? "weight " : "體重 "
+                  data: JSON.stringify({ action: 'promptWeight' }),
+                  inputOption: "openKeyboard",
+                  fillInText: isEn ? `Weight ${latestWeight || '60.0'}` : `體重 ${latestWeight || '60.0'}`
                 }
               }),
               createNeoFlexButton({
@@ -4476,20 +4482,31 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 spacing: "sm",
                 contents: [
                   buildMenuBtn(
-                    isEn ? "💩 Log Poop" : "💩 便便打卡",
+                    isEn ? "⚖️ Weight" : "⚖️ 記體重",
                     {
                       type: "postback",
-                      label: isEn ? "Log Poop" : "便便打卡",
+                      label: isEn ? "Weight" : "記體重",
+                      data: JSON.stringify({ action: 'promptWeight' }),
+                      inputOption: "openKeyboard",
+                      fillInText: isEn ? "Weight 60.0" : "體重 60.0"
+                    },
+                    "#EFF6FF"
+                  ),
+                  buildMenuBtn(
+                    isEn ? "💩 Poop" : "💩 便便打卡",
+                    {
+                      type: "postback",
+                      label: isEn ? "Poop" : "便便打卡",
                       data: JSON.stringify({ action: 'logPoop' }),
                       displayText: isEn ? "💩 Log Poop" : "💩 便便打卡"
                     },
                     "#FEF3C7"
                   ),
                   buildMenuBtn(
-                    isEn ? "📈 Weight Chart" : "📈 體重圖表",
+                    isEn ? "📈 Chart" : "📈 體重圖表",
                     {
                       type: "postback",
-                      label: isEn ? "Weight Chart" : "體重圖表",
+                      label: isEn ? "Chart" : "體重圖表",
                       data: JSON.stringify({ action: 'weightTrend' }),
                       displayText: isEn ? "📈 Weight Chart" : "📈 體重圖表"
                     },
@@ -5155,7 +5172,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#FEF08A",
+                backgroundColor: "#EFF6FF",
                 borderColor: "#000000",
                 borderWidth: "2px",
                 cornerRadius: "10px",
@@ -5166,12 +5183,13 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "Weight Chart" : "體重趨勢",
-                  data: JSON.stringify({ action: 'weightTrend' }),
-                  displayText: isEn ? "📈 Weight Chart" : "📈 體重趨勢"
+                  label: isEn ? "Weight" : "記體重",
+                  data: JSON.stringify({ action: 'promptWeight' }),
+                  inputOption: "openKeyboard",
+                  fillInText: isEn ? "Weight 60.0" : "體重 60.0"
                 },
                 contents: [
-                  { type: "text", text: isEn ? "📈 Weight Chart" : "📈 體重走勢", weight: "bold", size: "xs", color: "#000000" }
+                  { type: "text", text: isEn ? "⚖️ Weight" : "⚖️ 記體重", weight: "bold", size: "xs", color: "#000000" }
                 ]
               },
               {
@@ -5188,12 +5206,34 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 justifyContent: "center",
                 action: {
                   type: "postback",
-                  label: isEn ? "Log Poop" : "便便打卡",
+                  label: isEn ? "Poop" : "便便打卡",
                   data: JSON.stringify({ action: 'logPoop' }),
                   displayText: isEn ? "💩 Log Poop" : "💩 便便打卡"
                 },
                 contents: [
-                  { type: "text", text: isEn ? "💩 Log Poop" : "💩 便便打卡", weight: "bold", size: "xs", color: "#000000" }
+                  { type: "text", text: isEn ? "💩 Poop" : "💩 便便打卡", weight: "bold", size: "xs", color: "#000000" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF08A",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "10px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                action: {
+                  type: "postback",
+                  label: isEn ? "Chart" : "體重趨勢",
+                  data: JSON.stringify({ action: 'weightTrend' }),
+                  displayText: isEn ? "📈 Weight Chart" : "📈 體重趨勢"
+                },
+                contents: [
+                  { type: "text", text: isEn ? "📈 Chart" : "📈 體重走勢", weight: "bold", size: "xs", color: "#000000" }
                 ]
               }
             ]
