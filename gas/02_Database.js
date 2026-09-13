@@ -1632,22 +1632,29 @@ function getRecentLogsData(limit, days) {
   } catch (e) {}
 
   // 3.5 排除指定異常用戶名日誌（食物名稱、line_api、純數字等）
-  const EXCLUDED_USER_NAMES = [
-    '美式咖啡+茶葉蛋蛋水 19',
-    '綜合水果珍珠豆花刨冰',
-    'line_api',
-    '未檢測到食物',
-    '清炒空心菜',
-    '18',
-    '原萃綠茶 (玉露入り)',
-    '蒜香炒空心菜'
-  ];
+  const isInvalidUser = function(s) {
+    if (!s) return false;
+    const str = String(s).trim();
+    if (!str) return false;
+    if (/^\d+$/.test(str)) return true;
+    return str.includes('美式咖啡') ||
+           str.includes('茶葉蛋') ||
+           str.includes('珍珠豆花') ||
+           str.includes('豆花刨冰') ||
+           str.includes('綜合水果') ||
+           str.includes('原萃綠茶') ||
+           str.includes('蒜香炒空心菜') ||
+           str.includes('清炒空心菜') ||
+           str.includes('空心菜') ||
+           str.includes('未檢測到食物') ||
+           str === 'line_api' ||
+           str.startsWith('line_api');
+  };
+
   allLogs = allLogs.filter(function(l) {
     const uName = String(l.userName || l[1] || '').trim();
     const uId = String(l.userId || l[2] || '').trim();
-    return !EXCLUDED_USER_NAMES.some(function(target) {
-      return uName === target || uId === target;
-    });
+    return !isInvalidUser(uName) && !isInvalidUser(uId);
   });
 
   // 4. 依照 targetDays 過濾 (預設 30 天)

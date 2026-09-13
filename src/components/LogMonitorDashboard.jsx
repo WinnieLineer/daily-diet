@@ -53,17 +53,32 @@ const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_token_v2';
 const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
 const MAINTAINER_NAME_KEY = 'daily_diet_maintainer_name';
 
-// 🛑 需徹底過濾/刪除的異常用戶名清單（食物名稱、line_api、純數字等）
-export const INVALID_USER_NAMES = new Set([
-  '美式咖啡+茶葉蛋蛋水 19',
-  '綜合水果珍珠豆花刨冰',
-  'line_api',
-  '未檢測到食物',
-  '清炒空心菜',
-  '18',
-  '原萃綠茶 (玉露入り)',
-  '蒜香炒空心菜'
-]);
+// 🛑 需徹底過濾/刪除的異常用戶名判斷（支援精確與包含食物名、純數字、line_api等）
+export const isInvalidUserName = (name) => {
+  if (!name) return false;
+  const s = String(name).trim();
+  if (!s) return false;
+  // 純數字（如 18, 19 等）
+  if (/^\d+$/.test(s)) return true;
+  // 精確符合或包含特定異常用戶名關鍵字
+  if (
+    s.includes('美式咖啡') ||
+    s.includes('茶葉蛋') ||
+    s.includes('珍珠豆花') ||
+    s.includes('豆花刨冰') ||
+    s.includes('綜合水果') ||
+    s.includes('原萃綠茶') ||
+    s.includes('蒜香炒空心菜') ||
+    s.includes('清炒空心菜') ||
+    s.includes('空心菜') ||
+    s.includes('未檢測到食物') ||
+    s === 'line_api' ||
+    s.startsWith('line_api')
+  ) {
+    return true;
+  }
+  return false;
+};
 
 // 統一時間戳記格式化工具：保證所有日誌一律為 YYYY-MM-DD HH:mm:ss
 const formatUnifiedTimestamp = (rawTime) => {
@@ -131,13 +146,10 @@ const normalizeLog = (item) => {
   let userName = String(raw.userName || caller || raw.name || '');
 
   // 🛑 若用戶名或識別碼為指定的無效/食物名稱，直接剔除該筆日誌
-  const trimmedName = userName.trim();
-  const trimmedCaller = caller.trim();
-  const trimmedUserId = userId.trim();
   if (
-    INVALID_USER_NAMES.has(trimmedName) || 
-    INVALID_USER_NAMES.has(trimmedCaller) || 
-    INVALID_USER_NAMES.has(trimmedUserId)
+    isInvalidUserName(userName) || 
+    isInvalidUserName(caller) || 
+    isInvalidUserName(userId)
   ) {
     return null;
   }
@@ -227,7 +239,7 @@ const normalizeLog = (item) => {
   }
 
   const resolvedUserName = String(finalUserName || (isWeb ? 'Web 用戶' : (isLine ? 'LINE 用戶' : '系統服務'))).trim();
-  if (INVALID_USER_NAMES.has(resolvedUserName)) {
+  if (isInvalidUserName(resolvedUserName)) {
     return null;
   }
 
