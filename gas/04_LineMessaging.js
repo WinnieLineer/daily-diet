@@ -423,3 +423,33 @@ function pushTextMessage(userId, text, accessToken, props) {
     console.error("🚨 [LINE 主動推播文字失敗]:", err);
   }
 }
+
+/**
+ * 全局廣播 LINE Flex 訊息給所有好友用戶 (使用 LINE Official Account Broadcast API)
+ */
+function broadcastFlexMessage(flexMessage, accessToken) {
+  if (!accessToken || !flexMessage) return { success: false, error: 'Missing token or message' };
+  try {
+    if (flexMessage.altText && flexMessage.altText.length > 400) {
+      flexMessage.altText = flexMessage.altText.slice(0, 397) + '...';
+    }
+    const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/broadcast", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      payload: JSON.stringify({
+        messages: [flexMessage]
+      }),
+      muteHttpExceptions: true
+    });
+    const code = res.getResponseCode();
+    const text = res.getContentText();
+    return { success: code === 200, code: code, response: text };
+  } catch (err) {
+    console.error("🚨 [LINE 全局廣播 Flex 失敗]:", err);
+    return { success: false, error: err.message };
+  }
+}
+

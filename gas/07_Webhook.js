@@ -394,6 +394,30 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 10.8 觸發 LINE 全員功能升級廣播 (限維護者授權)
+    if (action === 'broadcastAnnouncement' || action === 'broadcastUpdate') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized maintainer access' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+      const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
+      const testUser = e?.parameter?.testUser || e?.parameter?.userId;
+      const flexMsg = generateFeatureAnnouncementFlex(testUser || 'default_user', liffId, '', props, 'zh');
+      
+      let res;
+      if (testUser && testUser.startsWith('U')) {
+        pushFlexMessage(testUser, flexMsg, token, props);
+        res = { status: 'ok', type: 'test_push', target: testUser, message: `已成功推播測試功能公告至用戶 ${testUser}` };
+      } else {
+        const bRes = broadcastFlexMessage(flexMsg, token);
+        res = { status: bRes.success ? 'ok' : 'error', type: 'broadcast', details: bRes };
+      }
+      recordSystemLog('管理員推播公告', 'admin', action, JSON.stringify(res), '執行功能更新推播', webCallerName || userId);
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 11. 實時運作日誌 API (限維護者授權存取)
     if (action === 'getRecentLogs') {
       if (!isAdmin) {
@@ -990,6 +1014,14 @@ function doPost(e) {
           continue;
         }
 
+        // 🚀 查看最新功能與版本更新通知
+        if (payload.action === 'showWhatsNew' || payload.action === 'whatsnew' || payload.action === 'featureAnnouncement') {
+          recordSystemLog('查看新功能通知', userId, '點擊新功能通知', '', '回傳最新版本功能升級卡片');
+          const announceFlex = generateFeatureAnnouncementFlex(userId, LIFF_ID, userGistId, props, userLang);
+          replyFlexMessage(replyToken, announceFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 🌐 語言設定 Postback
         if (payload.action === 'setLanguage') {
           const chosen = setUserLanguage(userId, payload.lang, userGistId, GITHUB_PAT, props);
@@ -1505,6 +1537,14 @@ function doPost(e) {
           currentOperation = '傳送文字訊息';
           currentUserInput = userText;
           console.log(`💬 [收到用戶文字] "${userText}"`);
+
+          // 🚀 查看新功能 / 更新公告
+          if (userText === '新功能' || userText === '更新' || userText === '更新通知' || userText === '更新說明' || userText === '最新功能' || userText === '功能更新' || userText.toLowerCase() === 'whatsnew' || userText.toLowerCase() === "what's new" || userText.toLowerCase() === 'news') {
+            recordSystemLog('查看新功能通知', userId, userText, '', '回傳最新版本功能升級卡片');
+            const announceFlex = generateFeatureAnnouncementFlex(userId, LIFF_ID, userGistId, props, userLang);
+            replyFlexMessage(replyToken, announceFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
 
           // 🌐 雙語切換 (支援中文/英文雙向切換)
           if (userText === '切換語言' || userText === '換語言' || userText === '語言' || userText === '雙語' || userText.toLowerCase() === 'language' || userText.toLowerCase() === 'switch language') {

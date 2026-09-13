@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic } from 'lucide-react';
+import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic, Scale } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
@@ -40,7 +40,7 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.2.0';
+export const LATEST_WHATSNEW_VERSION = '3.3.0';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
@@ -48,6 +48,7 @@ export const hasWhatsNewContent = (lastSeenVersion) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show330 = isNewer('3.3.0', lastSeenVersion);
   const show320 = isNewer('3.2.0', lastSeenVersion);
   const show310 = isNewer('3.1.0', lastSeenVersion);
   const show300 = isNewer('3.0.0', lastSeenVersion);
@@ -65,10 +66,10 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
-  const hasAnyFeatures = show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
+  const hasAnyFeatures = show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
 
   // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
-  const isBugFixOnly = !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -112,6 +113,36 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show330 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v330_header')}</div>
+                  
+                  <FeatureItem 
+                    icon={Scale}
+                    title={t('whatsnew_v330_weight_title')}
+                    description={t('whatsnew_v330_weight_desc')}
+                    color="bg-sky-300"
+                  />
+                  <FeatureItem 
+                    icon={Activity}
+                    title={t('whatsnew_v330_poop_title')}
+                    description={t('whatsnew_v330_poop_desc')}
+                    color="bg-amber-300"
+                  />
+                  <FeatureItem 
+                    icon={BarChart2}
+                    title={t('whatsnew_v330_line_chart_title')}
+                    description={t('whatsnew_v330_line_chart_desc')}
+                    color="bg-purple-300"
+                  />
+                  <FeatureItem 
+                    icon={Cloud}
+                    title={t('whatsnew_v330_sync_title')}
+                    description={t('whatsnew_v330_sync_desc')}
+                    color="bg-emerald-300"
+                  />
+                </div>
+              )}
               {show320 && (
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{'v' + version + ' · ' + t('whatsnew_v320_header')}</div>

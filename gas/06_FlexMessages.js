@@ -5020,3 +5020,194 @@ function generateBugReportAckFlex(userText, isSuccess, lang) {
     }
   };
 }
+
+/**
+ * 🚀 全新功能升級通知卡片 (體重追蹤、便便打卡、走勢圖表)
+ */
+function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang) {
+  const isEn = lang === 'en';
+  const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + (userId || '') + (userGistId ? '&gistId=' + userGistId : '') + '&tab=weight';
+
+  function buildFeatureCard(emoji, title, desc, tag, bgColor, borderColor = "#000000") {
+    return {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: bgColor,
+      borderColor: borderColor,
+      borderWidth: "2px",
+      cornerRadius: "12px",
+      paddingAll: "10px",
+      contents: [
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            { type: "text", text: `${emoji} ${title}`, weight: "bold", size: "sm", color: "#000000", flex: 1, wrap: true },
+            {
+              type: "box",
+              layout: "vertical",
+              backgroundColor: "#000000",
+              cornerRadius: "6px",
+              paddingStart: "6px",
+              paddingEnd: "6px",
+              paddingTop: "2px",
+              paddingBottom: "2px",
+              contents: [
+                { type: "text", text: tag, size: "xxs", color: "#FDE047", weight: "bold" }
+              ]
+            }
+          ]
+        },
+        {
+          type: "text",
+          text: desc,
+          size: "xs",
+          color: "#3F3F46",
+          margin: "xs",
+          wrap: true
+        }
+      ]
+    };
+  }
+
+  return {
+    type: "flex",
+    altText: isEn ? "🚀 Daily Diet Major Update: Weight, Poop & Chart Tracking!" : "🚀 Daily Diet 全新升級：體重紀錄、便便打卡與走勢圖表！",
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#18181B",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🚀 DAILY DIET UPDATE", color: "#FDE047", weight: "bold", size: "xs", flex: 0 },
+              { type: "text", text: isEn ? "v3.3.0 Major Release" : "全新功能重磅上線", color: "#A1A1AA", size: "xxs", align: "end" }
+            ]
+          },
+          {
+            type: "text",
+            text: isEn ? "🎉 Weight, Poop & Chart Tracking is Live!" : "🎉 體重追蹤、便便打卡與視覺化走勢全新登場！",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "sm",
+            margin: "xs",
+            wrap: true
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          buildFeatureCard(
+            "⚖️",
+            isEn ? "Weight Log & Delta" : "LINE 體重快速記錄",
+            isEn ? "Just type \"Weight 65.2\" or \"65kg\". Auto-computes diff vs previous log with coach tips!" : "輸入「體重 65.2」或「65kg」秒記！自動計算與前次增減差額，教練即時給予建議！",
+            isEn ? "NEW" : "全新",
+            "#EFF6FF"
+          ),
+          buildFeatureCard(
+            "💩",
+            isEn ? "Poop & Digestion Tracker" : "便便排便打卡",
+            isEn ? "Send \"Poop\" or \"💩\". Auto-tracks elapsed time since last log to monitor gut health!" : "輸入「便便」、「排便」或「💩」打卡！自動統計距離上次相隔時長，掌握腸道健康！",
+            isEn ? "NEW" : "全新",
+            "#FEF3C7"
+          ),
+          buildFeatureCard(
+            "📈",
+            isEn ? "Visual Weight & Poop Chart" : "LINE 專屬走勢圖表",
+            isEn ? "Type \"Weight chart\" to render 10-day curve & 7-day poop badges right inside LINE!" : "輸入「體重趨勢」或「體重紀錄」，直接在 LINE 對話框繪製近 10 天折線圖與 7 日便便狀態！",
+            isEn ? "CHART" : "圖表",
+            "#F3E8FF"
+          ),
+          buildFeatureCard(
+            "🔄",
+            isEn ? "Seamless Cloud Sync" : "Web & LINE 雙向同步",
+            isEn ? "Logged data flows instantly between LINE, Web App, and your private Gist backup." : "LINE 與 Web 紀錄即時雙向連動，並無縫備份至個人專屬 Gist 雲端！",
+            isEn ? "SYNC" : "同步",
+            "#DCFCE7"
+          )
+        ]
+      },
+      footer: {
+        type: "box",
+        layout: "vertical",
+        spacing: "sm",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF08A",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "10px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                action: {
+                  type: "postback",
+                  label: isEn ? "Weight Chart" : "體重趨勢",
+                  data: JSON.stringify({ action: 'weightTrend' }),
+                  displayText: isEn ? "📈 Weight Chart" : "📈 體重趨勢"
+                },
+                contents: [
+                  { type: "text", text: isEn ? "📈 Weight Chart" : "📈 體重走勢", weight: "bold", size: "xs", color: "#000000" }
+                ]
+              },
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FED7AA",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "10px",
+                paddingTop: "9px",
+                paddingBottom: "9px",
+                flex: 1,
+                alignItems: "center",
+                justifyContent: "center",
+                action: {
+                  type: "postback",
+                  label: isEn ? "Log Poop" : "便便打卡",
+                  data: JSON.stringify({ action: 'logPoop' }),
+                  displayText: isEn ? "💩 Log Poop" : "💩 便便打卡"
+                },
+                contents: [
+                  { type: "text", text: isEn ? "💩 Log Poop" : "💩 便便打卡", weight: "bold", size: "xs", color: "#000000" }
+                ]
+              }
+            ]
+          },
+          {
+            type: "button",
+            action: {
+              type: "uri",
+              label: isEn ? "📱 Open Web Full Tracker" : "📱 開啟 Web 完整記錄",
+              uri: appTargetUrl
+            },
+            style: "primary",
+            color: "#000000",
+            height: "sm"
+          }
+        ]
+      }
+    }
+  };
+}
+
