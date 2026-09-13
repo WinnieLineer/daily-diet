@@ -2517,13 +2517,13 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
   });
 
   let changeColor = "#059669";
-  let changeText = `📉 變化: ${weightChange} kg`;
+  let changeText = isEn ? `📉 ${weightChange} kg` : `📉 減輕 ${Math.abs(weightChange)} kg`;
   if (weightChange > 0) {
     changeColor = "#DC2626";
-    changeText = `📈 變化: +${weightChange} kg`;
+    changeText = isEn ? `📈 +${weightChange} kg` : `📈 增加 +${weightChange} kg`;
   } else if (weightChange === 0) {
     changeColor = "#4B5563";
-    changeText = `⚖️ 變化: 持平`;
+    changeText = isEn ? `⚖️ Flat (0 kg)` : `⚖️ 走勢持平`;
   }
 
   return {
@@ -2531,7 +2531,7 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
     altText: isEn ? `📈 Weight Trend: ${latestWeight} kg` : `📈 體重與排便紀錄：最新 ${latestWeight} kg`,
     contents: {
       type: "bubble",
-      size: "kilo",
+      size: "mega",
       hero: {
         type: "image",
         url: quickChartUrl,
@@ -2555,12 +2555,12 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 layout: "vertical",
                 backgroundColor: "#ECFDF5",
                 cornerRadius: "10px",
-                paddingAll: "8px",
+                paddingAll: "10px",
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "Latest Weight" : "⚖️ 最新體重", size: "xxs", color: "#059669", weight: "bold" },
-                  { type: "text", text: `${latestWeight} kg`, size: "sm", weight: "bold", color: "#000000", margin: "xs" }
+                  { type: "text", text: isEn ? "⚖️ Latest Weight" : "⚖️ 最新體重", size: "xs", color: "#059669", weight: "bold" },
+                  { type: "text", text: `${latestWeight} kg`, size: "md", weight: "bold", color: "#000000", margin: "xs" }
                 ]
               },
               {
@@ -2568,26 +2568,45 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 layout: "vertical",
                 backgroundColor: "#FEF3C7",
                 cornerRadius: "10px",
-                paddingAll: "8px",
+                paddingAll: "10px",
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "Poop Count" : "💩 近期排便", size: "xxs", color: "#92400E", weight: "bold" },
-                  { type: "text", text: isEn ? `${recentPoopCount} times` : `${recentPoopCount} 次`, size: "sm", weight: "bold", color: "#000000", margin: "xs" }
+                  { type: "text", text: isEn ? "💩 7-Day Poop" : "💩 近期排便", size: "xs", color: "#92400E", weight: "bold" },
+                  { type: "text", text: isEn ? `${recentPoopCount} times` : `${recentPoopCount} 次`, size: "md", weight: "bold", color: "#000000", margin: "xs" }
                 ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "horizontal",
+            backgroundColor: "#F8FAFC",
+            borderColor: "#E2E8F0",
+            borderWidth: "1px",
+            cornerRadius: "10px",
+            paddingStart: "12px",
+            paddingEnd: "12px",
+            paddingTop: "9px",
+            paddingBottom: "9px",
+            alignItems: "center",
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "📈 10-Day Trend" : "📈 近 10 日走勢變化",
+                size: "xs",
+                weight: "bold",
+                color: "#475569",
+                flex: 1
               },
               {
-                type: "box",
-                layout: "vertical",
-                backgroundColor: "#F4F4F5",
-                cornerRadius: "10px",
-                paddingAll: "8px",
-                flex: 1,
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "Trend" : "走勢變化", size: "xxs", color: "#52525B", weight: "bold" },
-                  { type: "text", text: changeText, size: "xxs", weight: "bold", color: changeColor, margin: "xs", wrap: true }
-                ]
+                type: "text",
+                text: changeText,
+                size: "xs",
+                weight: "bold",
+                color: changeColor,
+                align: "end",
+                flex: 0
               }
             ]
           },
