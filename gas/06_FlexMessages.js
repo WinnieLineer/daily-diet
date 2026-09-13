@@ -4565,24 +4565,28 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                         weight: "bold",
                         size: "xs",
                         color: "#000000",
-                        flex: 1
+                        flex: 1,
+                        wrap: true
                       },
                       {
                         type: "box",
                         layout: "vertical",
                         backgroundColor: "#000000",
                         cornerRadius: "8px",
-                        paddingTop: "2px",
-                        paddingBottom: "2px",
-                        paddingStart: "6px",
-                        paddingEnd: "6px",
+                        width: isEn ? "48px" : "44px",
+                        height: "20px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flex: 0,
                         contents: [
                           {
                             type: "text",
                             text: isEn ? "VOICE" : "免打字",
                             size: "xxs",
                             color: "#FDE047",
-                            weight: "bold"
+                            weight: "bold",
+                            align: "center",
+                            gravity: "center"
                           }
                         ]
                       }
@@ -5279,6 +5283,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               height: "20px",
               alignItems: "center",
               justifyContent: "center",
+              flex: 0,
               contents: [
                 { type: "text", text: tag, size: "xxs", color: "#FDE047", weight: "bold", align: "center", gravity: "center" }
               ]
@@ -5383,6 +5388,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                         height: "20px",
                         alignItems: "center",
                         justifyContent: "center",
+                        flex: 0,
                         contents: [
                           {
                             type: "text",
