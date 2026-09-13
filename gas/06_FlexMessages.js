@@ -5252,7 +5252,7 @@ function generateBugReportAckFlex(userText, isSuccess, lang) {
  */
 function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang) {
   const isEn = lang === 'en';
-  const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + (userId || '') + (userGistId ? '&gistId=' + userGistId : '') + '&tab=weight';
+  const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + (userId || '') + (userGistId ? '&gistId=' + userGistId : '');
 
   function buildFeatureCard(emoji, title, desc, tag, bgColor, borderColor = "#000000") {
     const innerCard = {

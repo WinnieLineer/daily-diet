@@ -266,15 +266,18 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   }, [initialTab]);
 
   useEffect(() => {
+    const validTabs = ['profile', 'goals', 'fasting', 'data', 'feedback', 'appinfo'];
     const handleOpenSettings = (e) => {
       setIsOpen(true);
-      if (e.detail && e.detail.tab) {
+      if (e.detail && e.detail.tab && validTabs.includes(e.detail.tab)) {
         setActiveTab(e.detail.tab);
+      } else if (!validTabs.includes(activeTab)) {
+        setActiveTab('profile');
       }
     };
     window.addEventListener('open-settings', handleOpenSettings);
     return () => window.removeEventListener('open-settings', handleOpenSettings);
-  }, []);
+  }, [activeTab]);
 
   const refreshStats = async () => {
     setStats(prev => ({ ...prev, loading: true }));

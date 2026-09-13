@@ -862,7 +862,8 @@ function App() {
       }
 
       // 1.5 Handle direct tab navigation from LINE LIFF URL (e.g. ?tab=feedback or ?tab=goals)
-      if (query.tab) {
+      const validSettingsTabs = ['profile', 'goals', 'fasting', 'data', 'feedback', 'appinfo'];
+      if (query.tab && validSettingsTabs.includes(query.tab)) {
         setTimeout(() => {
           window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: query.tab } }));
         }, 400);
