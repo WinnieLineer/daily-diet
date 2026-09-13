@@ -5041,17 +5041,21 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         {
           type: "box",
           layout: "horizontal",
+          alignItems: "center",
           contents: [
             { type: "text", text: `${emoji} ${title}`, weight: "bold", size: "sm", color: "#000000", flex: 1, wrap: true },
             {
               type: "box",
-              layout: "vertical",
+              layout: "horizontal",
               backgroundColor: "#000000",
-              cornerRadius: "6px",
-              paddingStart: "6px",
-              paddingEnd: "6px",
-              paddingTop: "2px",
-              paddingBottom: "2px",
+              cornerRadius: "99px",
+              paddingStart: "8px",
+              paddingEnd: "8px",
+              paddingTop: "3px",
+              paddingBottom: "3px",
+              flex: 0,
+              alignItems: "center",
+              justifyContent: "center",
               contents: [
                 { type: "text", text: tag, size: "xxs", color: "#FDE047", weight: "bold" }
               ]
