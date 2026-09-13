@@ -4537,6 +4537,71 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
         spacing: "md",
         paddingAll: "14px",
         contents: [
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#000000",
+            cornerRadius: "14px",
+            paddingBottom: "3px",
+            paddingEnd: "3px",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF08A",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingAll: "10px",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    alignItems: "center",
+                    contents: [
+                      {
+                        type: "text",
+                        text: isEn ? "🎙️ Full Voice Control" : "🎙️ 全功能支援語音說話",
+                        weight: "bold",
+                        size: "xs",
+                        color: "#000000",
+                        flex: 1
+                      },
+                      {
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#000000",
+                        cornerRadius: "8px",
+                        paddingTop: "2px",
+                        paddingBottom: "2px",
+                        paddingStart: "6px",
+                        paddingEnd: "6px",
+                        contents: [
+                          {
+                            type: "text",
+                            text: isEn ? "VOICE" : "免打字",
+                            size: "xxs",
+                            color: "#FDE047",
+                            weight: "bold"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    type: "text",
+                    text: isEn
+                      ? "Hold the LINE mic button to talk! Log meals, record weight, track water, or consult your coach — you can do EVERYTHING by voice 🐼✨"
+                      : "長按 LINE 麥克風直接說話！記飲食、報體重、記喝水、問教練，所有事情用語音都能一秒搞定 🐼✨",
+                    size: "xxs",
+                    color: "#713F12",
+                    margin: "xs",
+                    wrap: true
+                  }
+                ]
+              }
+            ]
+          },
           buildMenuSection(
             "⚡",
             isEn ? "Quick Log & Hydration" : "快速記錄與補水",
@@ -4643,7 +4708,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 spacing: "sm",
                 contents: [
                   buildMenuBtn(
-                    isEn ? "⚖️ Weight" : "⚖️ 記體重",
+                    isEn ? "⚖️ Log Weight" : "⚖️ 記體重",
                     {
                       type: "postback",
                       label: isEn ? "Weight" : "記體重",
@@ -4654,7 +4719,7 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     "#EFF6FF"
                   ),
                   buildMenuBtn(
-                    isEn ? "💩 Poop" : "💩 便便打卡",
+                    isEn ? "💩 Log Poop" : "💩 便便打卡",
                     {
                       type: "postback",
                       label: isEn ? "Poop" : "便便打卡",
@@ -4662,12 +4727,19 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                       displayText: isEn ? "💩 Log Poop" : "💩 便便打卡"
                     },
                     "#FEF3C7"
-                  ),
+                  )
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
                   buildMenuBtn(
-                    isEn ? "📈 Chart" : "📈 體重圖表",
+                    isEn ? "📈 View Trends Chart" : "📈 查看個人趨勢圖表",
                     {
                       type: "postback",
-                      label: isEn ? "Chart" : "體重圖表",
+                      label: isEn ? "Trends Chart" : "趨勢圖表",
                       data: JSON.stringify({ action: 'weightTrend' }),
                       displayText: isEn ? "📈 Weight Chart" : "📈 體重圖表"
                     },
