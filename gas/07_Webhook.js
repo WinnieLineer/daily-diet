@@ -1370,6 +1370,17 @@ function doPost(e) {
           continue;
         }
 
+        // 🔍 查看餐點 AI 營養詳情 (方案 B 原生卡片)
+        if (payload.action === 'mealInfo' || payload.action === 'detail' || payload.action === 'showMealInfo') {
+          const targetId = payload.id;
+          const targetDate = payload.date || null;
+          console.log(`🔍 [查看餐點詳情] ID: ${targetId} 日期: ${targetDate || '今日'} 用戶: ${userId}`);
+          recordSystemLog('查看餐點詳情', userId, `ID: ${targetId}`, '', '回傳 AI 營養詳情卡片 (方案 B 原生卡片)');
+          const infoFlex = generateMealInfoFlex(userId, targetId, targetDate, LIFF_ID, userGistId, props, userLang);
+          replyFlexMessage(replyToken, infoFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
         // 🍞 切換碳水與脂肪追蹤開關
         if (payload.action === 'toggleCarbsFat') {
           const currentGoals = getUserGoals(userId, props, userGistId);
@@ -1591,6 +1602,14 @@ function doPost(e) {
           }
           const base64Image = Utilities.base64Encode(imgBytes);
 
+          // 📸 24 小時迷你雲端縮圖同步 (方案 B 原生詳情卡片專用)
+          let uploadedImageUrl = null;
+          try {
+            uploadedImageUrl = uploadTempMealPhoto(imageBlob);
+          } catch (imgErr) {
+            console.warn("⚠️ 雲端縮圖同步失敗:", imgErr);
+          }
+
           const analysis = analyzeMealWithGemini(base64Image, GEMINI_API_KEY, userId, props, userGistId, GITHUB_PAT);
           console.log(`🤖 [照片 AI 辨識結果]`, JSON.stringify(analysis));
 
@@ -1629,7 +1648,8 @@ function doPost(e) {
             baseFat: Number(analysis.fat) || 0,
             baseWater: Number(analysis.water) || 0,
             multiplier: 1,
-            model_used: usedModel
+            model_used: usedModel,
+            image_url: uploadedImageUrl
           };
 
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
@@ -1892,6 +1912,17 @@ function doPost(e) {
             recordSystemLog('查詢總結', userId, userText, `累計: ${totCal}卡 / ${totPro}g蛋 / ${totWat}ml水`, `回傳今日總結卡片 (共 ${todayLogs.length} 餐 · 累計 ${totCal} kcal · ${totPro}g 蛋 · ${totWat}ml 水)`);
             const summaryFlex = generateDailySummaryFlex(userId, null, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 🔍 查詢餐點詳細 INFO (支援: 詳細、詳情、info、detail、詳細 1、詳細 早餐、詳細 Mee Soto 等)
+          const detailMatch = userText.match(/^(?:詳細|詳情|info|detail)(?:\s+(.+))?$/i);
+          if (detailMatch) {
+            const targetQuery = detailMatch[1] ? detailMatch[1].trim() : 'latest';
+            console.log(`🔍 [文字查詢餐點詳情] 查詢: ${targetQuery} 用戶: ${userId}`);
+            recordSystemLog('查詢餐點詳情', userId, userText, `目標: ${targetQuery}`, '回傳 AI 營養詳情卡片 (方案 B 原生卡片)');
+            const infoFlex = generateMealInfoFlex(userId, targetQuery, null, LIFF_ID, userGistId, props, userLang);
+            replyFlexMessage(replyToken, infoFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 

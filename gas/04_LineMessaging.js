@@ -23,6 +23,39 @@ function getLineImageBlob(messageId, accessToken) {
 }
 
 /**
+ * 📸 上傳餐點照片迷你雲端縮圖 (保存 24 小時)
+ * 使用 Litterbox 臨時雲端託管 API (24h 自動過期清理，免除伺服器儲存負擔)
+ * @param {Blob} imageBlob 照片 Blob 物件
+ * @returns {string|null} 公開 HTTPS 圖片 URL
+ */
+function uploadTempMealPhoto(imageBlob) {
+  if (!imageBlob) return null;
+  try {
+    const payload = {
+      reqtype: 'fileupload',
+      time: '24h',
+      fileToUpload: imageBlob
+    };
+    const res = UrlFetchApp.fetch('https://litterbox.catbox.moe/resources/internals/api.php', {
+      method: 'post',
+      payload: payload,
+      muteHttpExceptions: true
+    });
+    if (res.getResponseCode() === 200) {
+      const url = res.getContentText().trim();
+      if (url && url.startsWith('http')) {
+        console.log(`📸 [雲端縮圖同步成功 (24hr)]: ${url}`);
+        return url;
+      }
+    }
+    console.warn(`⚠️ [雲端縮圖上傳失敗 (${res.getResponseCode()})]:`, res.getContentText().slice(0, 100));
+  } catch (err) {
+    console.warn("⚠️ [雲端縮圖上傳異常]:", err);
+  }
+  return null;
+}
+
+/**
   * 下載 LINE 語音訊息內容
   * @param {string} messageId LINE 訊息 ID
   * @param {string} accessToken LINE Channel Access Token

@@ -316,6 +316,17 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     contents: {
       type: "bubble",
       size: "mega",
+      hero: (analysis.image_url || analysis.photo_url) ? {
+        type: "image",
+        url: analysis.image_url || analysis.photo_url,
+        size: "full",
+        aspectRatio: "16:9",
+        aspectMode: "cover",
+        action: {
+          type: "uri",
+          uri: analysis.image_url || analysis.photo_url
+        }
+      } : undefined,
       header: {
         type: "box",
         layout: "vertical",
@@ -544,18 +555,38 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
               })
             ]
           },
-          // 🗑️ 撤回這筆紀錄
-          createNeoFlexButton({
-            label: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄",
-            variant: "danger",
-            size: "md",
-            action: {
-              type: "postback",
-              label: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄",
-              data: postbackCancelData,
-              displayText: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄"
-            }
-          })
+          // 🔍 AI 營養詳情 & 🗑️ 撤回紀錄
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "sm",
+            contents: [
+              createNeoFlexButton({
+                label: isEn ? "🔍 AI Details" : "🔍 AI 營養詳情",
+                variant: "white",
+                size: "md",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "Details" : "詳情",
+                  data: JSON.stringify({ action: 'mealInfo', id: mealId, date: analysis.date || getTodayDateString() }),
+                  displayText: isEn ? ("🔍 AI Details: " + (analysis.dish_name || 'Meal')) : ("🔍 查看【" + (analysis.dish_name || '餐點') + "】詳細分析")
+                }
+              }),
+              createNeoFlexButton({
+                label: isEn ? "🗑️ Cancel" : "🗑️ 撤回紀錄",
+                variant: "danger",
+                size: "md",
+                flex: 1,
+                action: {
+                  type: "postback",
+                  label: isEn ? "🗑️ Cancel" : "🗑️ 撤回紀錄",
+                  data: postbackCancelData,
+                  displayText: isEn ? "🗑️ Cancel Log" : "🗑️ 撤回這筆紀錄"
+                }
+              })
+            ]
+          }
         ]
       }
     }
@@ -610,12 +641,19 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     const timePrefix = timeText ? `${timeText} ` : '';
     const displayName = log.dish_name || (isEn ? 'Meal' : '美味餐點');
 
+    const cleanDisplay = displayName.slice(0, 25);
     mealItems.push({
       type: "box",
       layout: "horizontal",
+      action: {
+        type: "postback",
+        label: isEn ? "Details" : "詳情",
+        data: JSON.stringify({ action: 'mealInfo', id: log.id, date: todayStr }),
+        displayText: isEn ? `🔍 Details: ${cleanDisplay}` : `🔍 查看【${cleanDisplay}】詳細分析`
+      },
       contents: [
         { type: "text", text: `• ${timePrefix}${catPrefix}${displayName}`, size: "xs", color: "#18181B", weight: "bold", flex: 4, wrap: true },
-        { type: "text", text: `${Number(log.calories) || 0} kcal`, size: "xs", color: "#E11D48", weight: "bold", flex: 2, align: "end" }
+        { type: "text", text: `${Number(log.calories) || 0} kcal 🔍`, size: "xs", color: "#E11D48", weight: "bold", flex: 2, align: "end" }
       ]
     });
   });
@@ -2771,6 +2809,18 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
         }
 
         var actionBtns = [];
+        actionBtns.push(createNeoFlexButton({
+          label: isEn ? "🔍 Info" : "🔍 詳情",
+          variant: "black",
+          size: "sm",
+          flex: 1,
+          action: {
+            type: "postback",
+            label: isEn ? "🔍 Info" : "🔍 詳情",
+            data: JSON.stringify({ action: 'mealInfo', id: log.id, date: todayStr }),
+            displayText: isEn ? ("🔍 Detail: " + cleanDishName) : ("🔍 查看【" + cleanDishName + "】詳情")
+          }
+        }));
         if (!isFav) {
           actionBtns.push(createNeoFlexButton({ label: isEn ? "\u2B50 Fav" : "\u2B50 \u52A0\u5E38\u7528", variant: "yellowLight", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\u2B50 Fav" : "\u2B50 \u52A0\u5E38\u7528", data: JSON.stringify({ action: 'saveFavorite', name: cleanDishName, cal: Number(log.calories) || 0, pro: Number(log.protein) || 0, wat: Number(log.water) || 0 }), displayText: isEn ? ("\u2B50 Favorite: " + cleanDishName) : ("\u2B50 \u5B58\u70BA\u5E38\u7528\uFF1A" + cleanDishName) } }));
         }
@@ -5415,4 +5465,446 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
     }
   };
 }
+
+/**
+ * 🍱 方案 B：LINE 原生卡片【AI 營養詳情 Flex 卡片】
+ * 呈現包含 24 小時雲端縮圖、成分拆解、計算過程、完整巨量營養素與熊貓教練建議
+ */
+function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, userGistId, props, lang) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const userLang = lang || getUserLanguage(userId, props, userGistId);
+  const isEn = userLang === 'en';
+  const todayStr = targetDateStr || getTodayDateString();
+
+  let meal = null;
+  if (typeof targetMealOrId === 'object' && targetMealOrId !== null) {
+    meal = targetMealOrId;
+  } else {
+    const todayLogs = getTodayLogs(userId, todayStr, props, userGistId);
+    if (targetMealOrId) {
+      // 1. 優先以 ID 比對
+      meal = todayLogs.find(function(l) { return l.id && String(l.id) === String(targetMealOrId); });
+      // 2. 依據數字編號 (1-based index)
+      if (!meal && !isNaN(Number(targetMealOrId))) {
+        var idx = parseInt(targetMealOrId, 10) - 1;
+        if (idx >= 0 && idx < todayLogs.length) {
+          meal = todayLogs[idx];
+        }
+      }
+      // 3. 依據菜名關鍵字搜尋
+      if (!meal) {
+        var q = String(targetMealOrId).trim().toLowerCase();
+        meal = todayLogs.find(function(l) { return (l.dish_name || '').toLowerCase().indexOf(q) !== -1; });
+      }
+    }
+    // 若未指定或為 latest，預設取今日最後一筆餐點
+    if (!meal && (!targetMealOrId || targetMealOrId === 'latest')) {
+      if (todayLogs.length > 0) {
+        meal = todayLogs[todayLogs.length - 1];
+      }
+    }
+    // 若今日仍未找到，嘗試比對昨日
+    if (!meal) {
+      try {
+        var yesterday = new Date(Date.now() - 24 * 60 * 60 * 1000);
+        var yDateStr = Utilities.formatDate(yesterday, "Asia/Taipei", "yyyy-MM-dd");
+        var yLogs = getTodayLogs(userId, yDateStr, props, userGistId);
+        if (targetMealOrId) {
+          meal = yLogs.find(function(l) { return l.id && String(l.id) === String(targetMealOrId); });
+          if (!meal && !isNaN(Number(targetMealOrId))) {
+            var yIdx = parseInt(targetMealOrId, 10) - 1;
+            if (yIdx >= 0 && yIdx < yLogs.length) meal = yLogs[yIdx];
+          }
+          if (!meal) {
+            var yq = String(targetMealOrId).trim().toLowerCase();
+            meal = yLogs.find(function(l) { return (l.dish_name || '').toLowerCase().indexOf(yq) !== -1; });
+          }
+        } else if (yLogs.length > 0) {
+          meal = yLogs[yLogs.length - 1];
+        }
+      } catch (ye) {}
+    }
+  }
+
+  if (!meal) {
+    return {
+      type: "flex",
+      altText: isEn ? "Meal Details Not Found" : "找不到餐點詳情",
+      contents: {
+        type: "bubble",
+        size: "mega",
+        header: {
+          type: "box",
+          layout: "vertical",
+          backgroundColor: "#000000",
+          paddingAll: "14px",
+          contents: [
+            { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+            { type: "text", text: isEn ? "Meal Record Not Found" : "未找到該筆餐點詳情", color: "#FFFFFF", weight: "bold", size: "md", margin: "xs" }
+          ]
+        },
+        body: {
+          type: "box",
+          layout: "vertical",
+          paddingAll: "16px",
+          spacing: "md",
+          contents: [
+            { type: "text", text: isEn ? "Could not locate this meal record. It might have been deleted or expired." : "找不到此筆飲食紀錄，可能已被刪除或已逾期喔！🐼", size: "xs", color: "#71717A", wrap: true },
+            createNeoFlexButton({
+              label: isEn ? "📊 View Summary" : "📊 查看今日總結",
+              variant: "black",
+              size: "md",
+              action: {
+                type: "postback",
+                label: isEn ? "Summary" : "今日總結",
+                data: JSON.stringify({ action: 'save' }),
+                displayText: isEn ? "Daily Summary" : "今日總結"
+              }
+            })
+          ]
+        }
+      }
+    };
+  }
+
+  var dishName = meal.dish_name || (isEn ? 'Meal' : '美味餐點');
+  var cleanDishName = dishName.replace(/^[0-9]+(?:\.[0-9]+)?(?:\u500D\u7684|x\s*)/i, '').replace(/\s*\(.*\u500D.*\u4EFD\u91CF\)/g, '').trim().slice(0, 25);
+  var cal = Number(meal.calories) || 0;
+  var pro = Number(meal.protein) || 0;
+  var carb = Number(meal.carbs) || 0;
+  var fat = Number(meal.fat) || 0;
+  var wat = Number(meal.water) || 0;
+  var time = meal.time || '';
+  var date = meal.date || todayStr || '';
+  var mealId = meal.id || Date.now();
+  var imageUrl = meal.image_url || meal.photo_url || null;
+
+  var hero = imageUrl ? {
+    type: "image",
+    url: imageUrl,
+    size: "full",
+    aspectRatio: "16:9",
+    aspectMode: "cover",
+    action: {
+      type: "uri",
+      uri: imageUrl
+    }
+  } : undefined;
+
+  var header = !hero ? {
+    type: "box",
+    layout: "vertical",
+    backgroundColor: "#000000",
+    paddingAll: "14px",
+    contents: [
+      {
+        type: "box",
+        layout: "horizontal",
+        contents: [
+          { type: "text", text: "🐼 AI 營養詳情", color: "#FDE047", weight: "bold", size: "sm" },
+          { type: "text", text: (date ? (date + " ") : "") + time, color: "#A1A1AA", size: "xs", align: "end" }
+        ]
+      },
+      { type: "text", text: dishName, color: "#FFFFFF", weight: "bold", size: "lg", margin: "xs", wrap: true }
+    ]
+  } : undefined;
+
+  var badges = [];
+  if (meal.category) {
+    var catEmoji = meal.category === 'breakfast' ? '🍳 ' : (meal.category === 'lunch' ? '🍱 ' : (meal.category === 'dinner' ? '🍲 ' : (meal.category === 'snack' ? '☕ ' : '')));
+    badges.push({
+      type: "box", layout: "horizontal", backgroundColor: "#F4F4F5", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+      contents: [{ type: "text", text: catEmoji + meal.category, size: "xxs", color: "#18181B", weight: "bold" }]
+    });
+  }
+  if (meal.model_used) {
+    badges.push({
+      type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+      contents: [{ type: "text", text: "🤖 " + meal.model_used, size: "xxs", color: "#2563EB", weight: "bold" }]
+    });
+  }
+  if (imageUrl) {
+    badges.push({
+      type: "box", layout: "horizontal", backgroundColor: "#FEF08A", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+      contents: [{ type: "text", text: "📸 照片已同步 (24h)", size: "xxs", color: "#854D0E", weight: "bold" }]
+    });
+  }
+
+  var breakdownList = (meal.breakdown && Array.isArray(meal.breakdown)) ? meal.breakdown : [];
+  var breakdownRows = breakdownList.slice(0, 6).map(function(item) {
+    return {
+      type: "box",
+      layout: "horizontal",
+      margin: "xs",
+      contents: [
+        { type: "text", text: "• " + (item.name || '品項') + (item.portion ? (" (" + item.portion + ")") : ""), size: "xxs", color: "#18181B", weight: "bold", flex: 5, wrap: true },
+        { type: "text", text: (Number(item.calories) || 0) + " kcal" + (Number(item.protein) > 0 ? (" / " + item.protein + "g蛋") : ""), size: "xxs", color: "#E11D48", weight: "bold", align: "end", flex: 6, wrap: true }
+      ]
+    };
+  });
+
+  var curM = Number(meal.multiplier) || 1;
+  var baseCal = meal.baseCalories !== undefined ? Number(meal.baseCalories) : (curM !== 1 ? Math.round(cal / curM) : cal);
+  var basePro = meal.baseProtein !== undefined ? Number(meal.baseProtein) : (curM !== 1 ? Number((pro / curM).toFixed(1)) : pro);
+  var baseCarb = meal.baseCarbs !== undefined ? Number(meal.baseCarbs) : (curM !== 1 ? Number((carb / curM).toFixed(1)) : carb);
+  var baseFat = meal.baseFat !== undefined ? Number(meal.baseFat) : (curM !== 1 ? Number((fat / curM).toFixed(1)) : fat);
+  var baseWat = meal.baseWater !== undefined ? Number(meal.baseWater) : (curM !== 1 ? Math.round(wat / curM) : wat);
+
+  function buildPortionPill(label, m) {
+    var isSelected = Math.abs(curM - m) < 0.01;
+    return {
+      type: "box",
+      layout: "vertical",
+      backgroundColor: isSelected ? "#000000" : "#FFFFFF",
+      borderColor: "#000000",
+      borderWidth: "2px",
+      cornerRadius: "10px",
+      paddingAll: "6px",
+      flex: 1,
+      alignItems: "center",
+      justifyContent: "center",
+      action: {
+        type: "postback",
+        label: label,
+        data: JSON.stringify({
+          action: "setMultiplier",
+          id: mealId,
+          m: m,
+          baseCal: baseCal,
+          basePro: basePro,
+          baseCarb: baseCarb,
+          baseFat: baseFat,
+          baseWat: baseWat,
+          baseName: encodeURIComponent(cleanDishName)
+        }),
+        displayText: isEn ? ("Adjust portion to " + label) : ("調整份量為 " + label)
+      },
+      contents: [
+        {
+          type: "text",
+          text: label,
+          weight: "bold",
+          size: "xxs",
+          color: isSelected ? "#FFFFFF" : "#000000"
+        }
+      ]
+    };
+  }
+
+  var commentText = (meal.comment || meal.advice || '').trim();
+
+  var bubble = {
+    type: "bubble",
+    size: "mega",
+    hero: hero,
+    header: header,
+    body: {
+      type: "box",
+      layout: "vertical",
+      spacing: "md",
+      paddingAll: "16px",
+      contents: [
+        ...(hero ? [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: dishName, weight: "bold", size: "lg", color: "#18181B", flex: 3, wrap: true },
+              { type: "text", text: time || date, size: "xs", color: "#71717A", flex: 1, align: "end" }
+            ]
+          }
+        ] : []),
+        ...(badges.length > 0 ? [
+          {
+            type: "box",
+            layout: "horizontal",
+            spacing: "xs",
+            contents: badges
+          }
+        ] : []),
+        // 核心營養素三欄
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "xs",
+          contents: [
+            {
+              type: "box", layout: "vertical", backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "8px", flex: 1, alignItems: "center",
+              contents: [
+                { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
+                { type: "text", text: String(cal), size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                { type: "text", text: "kcal", size: "xxs", color: "#881337", weight: "bold" }
+              ]
+            },
+            {
+              type: "box", layout: "vertical", backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "8px", flex: 1, alignItems: "center",
+              contents: [
+                { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
+                { type: "text", text: pro + "g", size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                { type: "text", text: "Protein", size: "xxs", color: "#1E40AF", weight: "bold" }
+              ]
+            },
+            {
+              type: "box", layout: "vertical", backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "8px", flex: 1, alignItems: "center",
+              contents: [
+                { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
+                { type: "text", text: wat + "ml", size: "md", weight: "bold", color: "#000000", margin: "xs" },
+                { type: "text", text: "Water", size: "xxs", color: "#155E75", weight: "bold" }
+              ]
+            }
+          ]
+        },
+        // 碳水與脂肪
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "xs",
+          contents: [
+            {
+              type: "box", layout: "vertical", backgroundColor: "#FFF7ED", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
+              contents: [
+                { type: "text", text: "🍞 碳水化合物", size: "xxs", color: "#C2410C", weight: "bold" },
+                { type: "text", text: carb + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs" }
+              ]
+            },
+            {
+              type: "box", layout: "vertical", backgroundColor: "#F0FDF4", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
+              contents: [
+                { type: "text", text: "🥑 脂肪", size: "xxs", color: "#166534", weight: "bold" },
+                { type: "text", text: fat + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs" }
+              ]
+            }
+          ]
+        },
+        // 拆解明細清單
+        ...(breakdownRows.length > 0 ? [
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FFFFFF",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            cornerRadius: "12px",
+            paddingAll: "10px",
+            spacing: "xs",
+            contents: [
+              { type: "text", text: "🧮 AI 成分與熱量拆解明細", size: "xxs", color: "#000000", weight: "bold" },
+              ...breakdownRows,
+              ...(meal.calculation_note ? [
+                { type: "text", text: "💡 計算過程：" + meal.calculation_note, size: "xxs", color: "#52525B", wrap: true, margin: "xs" }
+              ] : [])
+            ]
+          }
+        ] : []),
+        // 教練點評
+        ...(commentText ? [
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF08A",
+            borderColor: "#000000",
+            borderWidth: "2px",
+            cornerRadius: "12px",
+            paddingAll: "12px",
+            contents: [
+              { type: "text", text: "💬 熊貓教練點評：" + commentText, size: "xs", color: "#000000", weight: "bold", wrap: true }
+            ]
+          }
+        ] : []),
+        // 份量微調
+        {
+          type: "box",
+          layout: "vertical",
+          spacing: "xs",
+          contents: [
+            { type: "text", text: "⚖️ 份量微調 (整份等比縮放)", size: "xxs", weight: "bold", color: "#71717A" },
+            {
+              type: "box",
+              layout: "horizontal",
+              spacing: "xs",
+              contents: [
+                buildPortionPill("x0.5", 0.5),
+                buildPortionPill("x1.0", 1.0),
+                buildPortionPill("x1.5", 1.5),
+                buildPortionPill("x2.0", 2.0)
+              ]
+            }
+          ]
+        },
+        // 底部按鈕第一列：加常用 + 微調
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "sm",
+          contents: [
+            createNeoFlexButton({
+              label: isEn ? "⭐ Fav" : "⭐ 存為常用",
+              variant: "yellowLight",
+              size: "md",
+              flex: 1,
+              action: {
+                type: "postback",
+                label: isEn ? "⭐ Favorite" : "⭐ 存為常用",
+                data: JSON.stringify({ action: 'saveFavorite', name: cleanDishName, cal: cal, pro: pro, wat: wat }),
+                displayText: isEn ? ("⭐ Favorite: " + cleanDishName) : ("⭐ 存為常用：" + cleanDishName)
+              }
+            }),
+            createNeoFlexButton({
+              label: isEn ? "✏️ Edit" : "✏️ 微調數值",
+              variant: "white",
+              size: "md",
+              flex: 1,
+              action: {
+                type: "postback",
+                label: isEn ? "✏️ Edit" : "✏️ 微調數值",
+                data: JSON.stringify({ action: 'fillEdit', id: mealId }),
+                inputOption: "openKeyboard",
+                fillInText: isEn ? ("Change " + cleanDishName + " " + cal + "cal " + pro + "pro " + wat + "water") : ("改 " + cleanDishName + " " + cal + "卡 " + pro + "蛋 " + wat + "水")
+              }
+            })
+          ]
+        },
+        // 底部按鈕第二列：回總結 + 刪除
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "sm",
+          contents: [
+            createNeoFlexButton({
+              label: isEn ? "📊 Summary" : "📊 查看今日總結",
+              variant: "black",
+              size: "md",
+              flex: 1,
+              action: {
+                type: "postback",
+                label: isEn ? "Summary" : "今日總結",
+                data: JSON.stringify({ action: 'save' }),
+                displayText: isEn ? "Daily Summary" : "今日總結"
+              }
+            }),
+            createNeoFlexButton({
+              label: isEn ? "🗑️ Delete" : "🗑️ 刪除紀錄",
+              variant: "danger",
+              size: "md",
+              flex: 1,
+              action: {
+                type: "postback",
+                label: isEn ? "🗑️ Delete" : "🗑️ 刪除紀錄",
+                data: JSON.stringify({ action: 'deleteMeal', id: mealId, date: date }),
+                displayText: isEn ? ("🗑️ Delete meal: " + dishName) : ("🗑️ 刪除餐點：" + dishName)
+              }
+            })
+          ]
+        }
+      ]
+    }
+  };
+
+  return {
+    type: "flex",
+    altText: isEn ? ("🔍 [" + dishName + "] AI Nutrition Details") : ("🔍 【" + dishName + "】AI 營養詳情"),
+    contents: bubble
+  };
+}
+
 
