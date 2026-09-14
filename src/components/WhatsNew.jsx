@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic, Scale, Moon, Film, Pencil } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
+import { APP_VERSION } from '../lib/constants';
 
 const safeGetStorage = (key) => {
   try {
@@ -18,8 +19,12 @@ const FeatureItem = ({ icon: Icon, title, description, color }) => (
       <Icon size={24} className="text-black" strokeWidth={3} />
     </div>
     <div className="space-y-1">
-      <h3 className="font-black text-lg italic tracking-tight leading-tight">{title}</h3>
-      <div className="text-sm text-zinc-500 font-bold leading-relaxed">{description}</div>
+      <h3 className="font-black text-lg tracking-tight leading-none text-black flex items-center gap-2">
+        {title}
+      </h3>
+      <p className="text-xs text-zinc-600 font-bold leading-relaxed">
+        {description}
+      </p>
     </div>
   </div>
 );
@@ -40,16 +45,15 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.3.23';
+export const LATEST_WHATSNEW_VERSION = APP_VERSION;
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
-  return isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
+  return isNewer(APP_VERSION, lastSeenVersion);
 };
 
-const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
-  const show3323 = isNewer('3.3.23', lastSeenVersion);
-  const show3321 = isNewer('3.3.21', lastSeenVersion);
+const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
+  const showLatest = isNewer(APP_VERSION, lastSeenVersion) || !lastSeenVersion;
   const show330 = isNewer('3.3.0', lastSeenVersion);
   const show320 = isNewer('3.2.0', lastSeenVersion);
   const show310 = isNewer('3.1.0', lastSeenVersion);
@@ -68,10 +72,10 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
-  const hasAnyFeatures = show3323 || show3321 || show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
+  const hasAnyFeatures = showLatest || show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
 
   // Only show "Patch" UI if no major new content is being shown
-  const isBugFixOnly = !show3323 && !show3321 && !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !showLatest && !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -115,33 +119,11 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
-              {show3323 && (
+              {showLatest && (
                 <div className="space-y-3">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">v3.3.23 LINE 同步更新 🔄</div>
-                  <FeatureItem
-                    icon={Sparkles}
-                    title="碳水與脂肪 Web ↔ LINE 雙向同步"
-                    description="在 Web 開啟碳水追蹤後，LINE 也會同步顯示！今日總結改為雙行網格（熱量+水 / 蛋白質+碳水+脂肪），數字清晰不吃字。"
-                    color="bg-orange-300"
-                  />
-                  <FeatureItem
-                    icon={RefreshCw}
-                    title="常用餐點卡片不再超過 50KB"
-                    description="Carousel 改為每頁最多 5 筆常用，管理餐點改為每頁 8 筆分頁，徹底解決 LINE 傳送失敗問題！"
-                    color="bg-emerald-300"
-                  />
-                  <FeatureItem
-                    icon={Settings}
-                    title='LINE 輸入「開啟碳水」即可切換追蹤'
-                    description="支援文字指令（開啟碳水、關閉碳水）與今日總結底部按鈕，操作直覺、立即生效。"
-                    color="bg-sky-300"
-                  />
-                </div>
-              )}
-
-              {show3321 && (
-                <div className="space-y-3">
-                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v3321_header')}</div>
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">
+                    {t('whatsnew_v3321_header')}
+                  </div>
                   
                   {/* 📣 暖心回覆反饋用戶卡片 */}
                   <div className="p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border-4 border-black rounded-2xl shadow-neo mb-4">
@@ -164,11 +146,23 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
                     description={t('whatsnew_v3321_correct_desc')}
                     color="bg-amber-300"
                   />
+                  <FeatureItem
+                    icon={Sparkles}
+                    title="碳水與脂肪 Web ↔ LINE 雙向同步"
+                    description="在 Web 開啟碳水追蹤後，LINE 也會同步顯示！今日總結改為雙行網格（熱量+水 / 蛋白質+碳水+脂肪），數字清晰不吃字。"
+                    color="bg-orange-300"
+                  />
+                  <FeatureItem
+                    icon={RefreshCw}
+                    title="常用餐點卡片不再超過 50KB"
+                    description="Carousel 改為每頁最多 5 筆常用，管理餐點改為每頁 8 筆分頁，徹底解決 LINE 傳送失敗問題！"
+                    color="bg-emerald-300"
+                  />
                   <FeatureItem 
                     icon={RefreshCw}
                     title={t('whatsnew_v3321_log_edit_title')}
                     description={t('whatsnew_v3321_log_edit_desc')}
-                    color="bg-emerald-300"
+                    color="bg-purple-300"
                   />
                   <FeatureItem 
                     icon={ShieldCheck}

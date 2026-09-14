@@ -78,7 +78,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 // 📢 Latest version with release notes configured in WhatsNew modal
-export const LATEST_WHATSNEW_VERSION = '3.3.23';
+export const LATEST_WHATSNEW_VERSION = APP_VERSION;
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -1477,9 +1477,6 @@ function App() {
           const lastSeenVersion = safeGetStorage('last_seen_version');
           console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
           
-          // 🚀 Always immediately persist current version to prevent repeated triggers on visibility/focus/interval
-          safeSetStorage('last_seen_version', APP_VERSION);
-
           if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
             console.log("[VersionCheck] Version changed from", lastSeenVersion, "to", APP_VERSION);
@@ -1491,6 +1488,9 @@ function App() {
               console.log("[VersionCheck] Triggering WhatsNew modal!");
               setLastSeenVersionState(lastSeenVersion);
               setShowWhatsNew(true);
+            } else {
+              // Only silently advance version if there is no major WhatsNew release notes to show
+              safeSetStorage('last_seen_version', APP_VERSION);
             }
           }
         }

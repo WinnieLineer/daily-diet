@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import NeoButton from './NeoButton';
 import NeoCard from './NeoCard';
 import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCircle, RefreshCw, Image as ImageIcon, X, MapPin, Star, Trash2, ChevronDown, ChevronUp, Clock, Sparkles, Zap, Pencil, Sliders } from 'lucide-react';
-import { analyzeFoodImage, analyzeFoodText } from '../lib/groq';
+import { analyzeFoodImage, analyzeFoodText, recalculateFoodNutritionWithName } from '../lib/groq';
 import { db } from '../db';
 import { getCurrentGistId, uploadToGist } from '../lib/gistService';
 import { syncMealToCloud } from '../lib/syncService';
@@ -709,12 +709,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         userInstructions: `用戶指定品名更正為：「${trimmed}」。請務必以「${trimmed}」為主要品名，並依據${preview ? '照片中的份量與食物外觀' : '此品名'}重新估算精準熱量、蛋白質、碳水化合物、脂肪、各成分拆解(breakdown)與計算過程。`
       };
 
-      let newRes;
-      if (preview) {
-        newRes = await analyzeFoodImage(preview, dailyContext, getLanguage());
-      } else {
-        newRes = await analyzeFoodText(trimmed, dailyContext, getLanguage());
-      }
+      // 🚀 Fast text-only AI model with previous image/analysis as reference (no heavy image re-uploads!)
+      const newRes = await recalculateFoodNutritionWithName(trimmed, result, dailyContext, getLanguage());
 
       if (newRes && (newRes.calories !== undefined || newRes.dish_name)) {
         const finalDishName = trimmed;

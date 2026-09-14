@@ -448,6 +448,110 @@ export async function getPandaAdvice(calories, calorieGoal, protein, proteinGoal
 }
 
 /**
+ * Fast Text-Based Nutrition Recalculation using corrected dish name & previous visual analysis as reference
+ * High throughput, ultra-fast response, no heavy image re-uploads!
+ */
+export async function recalculateFoodNutritionWithName(newName, previousResult = {}, context = {}, language = 'zh') {
+  const { calories, calorieGoal, protein, proteinGoal, foodLogs = [], userName = '' } = context;
+  const langDisplay = language === 'zh' ? 'Traditional Chinese' : 'English';
+  const cleanName = String(newName || '').slice(0, 100).replace(/[<>{}]/g, ' ').trim();
+
+  const prevRef = previousResult ? {
+    dish_name: previousResult.dish_name || '',
+    calories: previousResult.calories || 0,
+    protein: previousResult.protein || 0,
+    carbs: previousResult.carbs || 0,
+    fat: previousResult.fat || 0,
+    water: previousResult.water || 0,
+    description: previousResult.description || ''
+  } : null;
+
+  const prompt = `You are an elite registered dietitian panda. The user previously photographed a meal which was initially analyzed.
+The user now MANUALLY CORRECTED the food name to:
+<corrected_food_name>
+${cleanName}
+</corrected_food_name>
+
+${prevRef ? `Previous initial analysis reference for portion & context:
+<previous_analysis>
+Initial Name: ${prevRef.dish_name}
+Initial Calories: ${prevRef.calories} kcal
+Initial Protein: ${prevRef.protein} g, Carbs: ${prevRef.carbs} g, Fat: ${prevRef.fat} g, Water: ${prevRef.water} ml
+Initial Description: ${prevRef.description}
+</previous_analysis>` : ''}
+
+CRITICAL TASK:
+1. Re-estimate accurate nutritional facts for "${cleanName}".
+2. Reference the portion size and structure observed in the previous analysis (e.g. if the photo had a specific bento or bowl portion, scale accordingly).
+3. Deconstruct calories, protein, carbs, and fat accurately based on this corrected food item.
+${getPersonaInstruction()}
+
+Output all text fields in ${langDisplay}. Return STRICTLY a raw JSON object. NO MARKDOWN.
+Required Schema:
+{
+  "dish_name": "${cleanName}",
+  "calories": <integer calories in kcal>,
+  "protein": <integer protein in grams>,
+  "carbs": <integer carbohydrates in grams>,
+  "fat": <integer total fat in grams>,
+  "water": <integer liquid intake in ml, or 0 if dry food>,
+  "description": "<Detailed nutritional and ingredient breakdown in ${langDisplay}>",
+  "fun_fact": "<Science-based nutrition fact about this specific food in ${langDisplay}>",
+  "roast": "<Witty but expert nutritional comment in ${langDisplay}>",
+  "panda_comment": "<Coach feedback with 1 actionable tip, max 35 words in ${langDisplay}>"
+}`;
+
+  const apiKey = await getApiKey();
+
+  if (apiKey) {
+    try {
+      const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.2,
+          response_mime_type: "application/json"
+        }
+      };
+      const rawText = await callGeminiDirect(payload, apiKey);
+      const parsed = extractAndParseJson(rawText);
+      if (parsed) {
+        parsed.dish_name = cleanName;
+        return sanitizeAndBalanceNutrition(parsed, cleanName);
+      }
+    } catch (err) {
+      console.warn("Direct fast recalculation failed, using GAS proxy fallback...", err);
+    }
+  }
+
+  // GAS proxy fallback (uses pure text endpoint, ultra fast & quota friendly)
+  try {
+    const proxyResult = await callGasProxy('analyzeText', {
+      text: prompt,
+      context,
+      language
+    });
+    if (proxyResult) {
+      proxyResult.dish_name = cleanName;
+      return sanitizeAndBalanceNutrition(proxyResult, cleanName);
+    }
+  } catch (err) {
+    console.error("Fast recalculate proxy failed:", err);
+  }
+
+  // Graceful local fallback if both fail
+  return sanitizeAndBalanceNutrition({
+    dish_name: cleanName,
+    calories: prevRef?.calories || 300,
+    protein: prevRef?.protein || 15,
+    carbs: prevRef?.carbs || 35,
+    fat: prevRef?.fat || 10,
+    water: prevRef?.water || 0,
+    description: language === 'zh' ? `手動修正為「${cleanName}」，已重新平衡營養估算。` : `Manually corrected to "${cleanName}".`,
+    panda_comment: language === 'zh' ? `已根據「${cleanName}」重新估算營養！繼續保持紀錄！🐼` : `Recalculated for "${cleanName}"!`
+  }, cleanName);
+}
+
+/**
  * Generic text completion with Gemini
  */
 export async function completeText(prompt, options = {}) {
