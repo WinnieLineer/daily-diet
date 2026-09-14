@@ -1,6 +1,6 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic, Scale, Moon, Film } from 'lucide-react';
+import { Target, Sparkles, X, Move, Globe, ShieldCheck, Cloud, MessageSquare, Zap, Settings, Image as ImageIcon, History, RefreshCw, Activity, Wrench, Heart, Trophy, BarChart2, Mic, Scale, Moon, Film, Pencil } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { t } from '../lib/translations';
 
@@ -40,7 +40,7 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.3.0';
+export const LATEST_WHATSNEW_VERSION = '3.3.21';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
@@ -48,6 +48,7 @@ export const hasWhatsNewContent = (lastSeenVersion) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show3321 = isNewer('3.3.21', lastSeenVersion);
   const show330 = isNewer('3.3.0', lastSeenVersion);
   const show320 = isNewer('3.2.0', lastSeenVersion);
   const show310 = isNewer('3.1.0', lastSeenVersion);
@@ -66,10 +67,10 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
-  const hasAnyFeatures = show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
+  const hasAnyFeatures = show3321 || show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
 
-  // Only show "Patch" UI if no major new content (v2.2.0+) is being shown
-  const isBugFixOnly = !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  // Only show "Patch" UI if no major new content is being shown
+  const isBugFixOnly = !show3321 && !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -113,6 +114,46 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show3321 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v3321_header')}</div>
+                  
+                  {/* 📣 暖心回覆反饋用戶卡片 */}
+                  <div className="p-4 bg-gradient-to-br from-amber-50 to-yellow-50 border-4 border-black rounded-2xl shadow-neo mb-4">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-8 h-8 bg-yellow-300 border-2 border-black rounded-lg flex items-center justify-center shadow-neo-sm">
+                        <Sparkles size={18} className="text-black" strokeWidth={3} />
+                      </div>
+                      <h4 className="font-black text-base tracking-tight text-yellow-950">
+                        {t('whatsnew_v3321_shoutout_title')}
+                      </h4>
+                    </div>
+                    <p className="text-xs text-yellow-950/85 font-bold leading-relaxed">
+                      {t('whatsnew_v3321_shoutout_desc')}
+                    </p>
+                  </div>
+
+                  <FeatureItem 
+                    icon={Pencil}
+                    title={t('whatsnew_v3321_correct_title')}
+                    description={t('whatsnew_v3321_correct_desc')}
+                    color="bg-amber-300"
+                  />
+                  <FeatureItem 
+                    icon={RefreshCw}
+                    title={t('whatsnew_v3321_log_edit_title')}
+                    description={t('whatsnew_v3321_log_edit_desc')}
+                    color="bg-emerald-300"
+                  />
+                  <FeatureItem 
+                    icon={ShieldCheck}
+                    title={t('whatsnew_v3321_trans_fix_title')}
+                    description={t('whatsnew_v3321_trans_fix_desc')}
+                    color="bg-sky-300"
+                  />
+                </div>
+              )}
+
               {show330 && (
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v330_header')}</div>
