@@ -1626,31 +1626,45 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
   const time = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
 
   const isFoodName = (name) => name && (/[\+＋]/.test(name) || /美式咖啡|茶葉蛋|雞胸|便當|吐司|沙拉|地瓜|香蕉|蘋果|優格|拿鐵|蛋餅|水餃|鍋貼|乾麵|牛肉麵|炒飯|白飯/.test(name));
+  const isGistIdStr = (name) => name && (/^[0-9a-fA-F]{20,40}$/.test(String(name).trim()) || /^gist[-_]/i.test(String(name).trim()));
 
   let displayName = userName;
+  // 🛡️ 若傳入的 displayName 為 Gist ID，立即嘗試轉換或清除，絕不直接作為用戶名
+  if (isGistIdStr(displayName)) {
+    if (String(displayName).toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') {
+      displayName = 'Winnie Lin';
+    } else {
+      displayName = '';
+    }
+  }
+
   // 🛡️ 管理員/維護者統一標示為「管理員」
   if (userId === 'admin' || userId === 'Maintainer' || userName === 'admin' || (type && (type.includes('管理員') || type.includes('維護者')))) {
     displayName = '管理員';
-  } else if (!displayName || isFoodName(displayName) || displayName === 'default_user') {
+  } else if (!displayName || isFoodName(displayName) || displayName === 'default_user' || isGistIdStr(displayName)) {
     displayName = props.getProperty(`USER_NAME_${userId}`);
-    if ((!displayName || isFoodName(displayName) || displayName === 'default_user') && typeof userId === 'string' && userId.startsWith('U')) {
+    if ((!displayName || isFoodName(displayName) || displayName === 'default_user' || isGistIdStr(displayName)) && typeof userId === 'string' && userId.startsWith('U')) {
       const channelToken = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
       displayName = getUserDisplayName(userId, channelToken, props);
     }
   }
-  // Web 用戶 caller 的名稱拿不到就用他的名字
-  if ((!displayName || isFoodName(displayName) || displayName === 'default_user') && userId && !userId.startsWith('U') && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api', 'admin'].includes(userId)) {
+  // Web 用戶 caller 的名稱拿不到就用他的名字（排除 Gist ID）
+  if ((!displayName || isFoodName(displayName) || displayName === 'default_user' || isGistIdStr(displayName)) && userId && !userId.startsWith('U') && !isGistIdStr(userId) && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api', 'admin'].includes(userId)) {
     displayName = userId;
   }
-  if (!displayName || isFoodName(displayName) || displayName === 'default_user') {
+  if (!displayName || isFoodName(displayName) || displayName === 'default_user' || isGistIdStr(displayName)) {
     if (userId === 'admin' || userId === 'Maintainer') {
       displayName = '管理員';
-    } else if (userId === 'default_user' || userId === 'web_user' || userId === 'web_client') {
-      displayName = 'Web 用戶';
+    } else if (userId === 'default_user' || userId === 'web_user' || userId === 'web_client' || isGistIdStr(userId)) {
+      if (String(userId).toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') {
+        displayName = 'Winnie Lin';
+      } else {
+        displayName = 'Web 用戶';
+      }
     } else if (userId && userId.length > 8 && userId.startsWith('U')) {
       displayName = `LINE 用戶 (${userId.slice(-4)})`;
     } else {
-      displayName = userId || '訪客';
+      displayName = (userId && !isGistIdStr(userId)) ? userId : 'Web 用戶';
     }
   }
 
@@ -2031,10 +2045,31 @@ function getRecentLogsData(limit, days) {
            str.startsWith('line_api');
   };
 
+  const isGistStr = function(s) {
+    if (!s) return false;
+    const str = String(s).trim();
+    return /^[0-9a-fA-F]{20,40}$/.test(str) || /^gist[-_]/i.test(str);
+  };
+
   allLogs = allLogs.filter(function(l) {
     const uName = String(l.userName || l[1] || '').trim();
     const uId = String(l.userId || l[2] || '').trim();
     return !isInvalidUser(uName) && !isInvalidUser(uId);
+  }).map(function(l) {
+    let name = String(l.userName || l[1] || '').trim();
+    if (isGistStr(name)) {
+      if (name.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') {
+        name = 'Winnie Lin';
+      } else {
+        name = 'Web 用戶';
+      }
+      if (Array.isArray(l)) {
+        l[1] = name;
+      } else {
+        l.userName = name;
+      }
+    }
+    return l;
   });
 
   // 4. 依照 targetDays 過濾 (預設 30 天)

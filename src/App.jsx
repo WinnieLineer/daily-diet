@@ -962,7 +962,7 @@ function App() {
         }
       }
 
-      if (query.user && !query.user.startsWith('U')) {
+      if (query.user && !query.user.startsWith('U') && !/^[0-9a-fA-F]{20,40}$/.test(query.user)) {
         if (!safeGetStorage('line_user_name')) {
           safeSetStorage('user_name', query.user);
           setUserName(query.user);
@@ -1025,7 +1025,7 @@ function App() {
 
       // 3. Realtime Synchronize with Google Apps Script Backend (LINE Bot sync)
       const localGist = safeGetStorage('gist_backup_id') || query.gistId || '';
-      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id') || localGist;
+      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id') || 'web_user';
       const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
       if (effectiveUserId) {
@@ -1256,14 +1256,17 @@ function App() {
           if (cloudData) {
             // 👤 雲端 Gist 使用者名稱統一邏輯：
             // 優先統一為 LINE 名稱（LIFF profile > Gist 記錄的 line_user_name > Gist 記錄的 user_name）
-            const authoritativeName = profile?.displayName || cloudData.localStorage?.line_user_name || cloudData.localStorage?.user_name;
+            const isGist = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
+            const rawAuthoritativeName = profile?.displayName || cloudData.localStorage?.line_user_name || cloudData.localStorage?.user_name;
+            const authoritativeName = (rawAuthoritativeName && !isGist(rawAuthoritativeName)) ? rawAuthoritativeName : '';
             if (authoritativeName) {
               safeSetStorage('user_name', authoritativeName);
               safeSetStorage('line_user_name', cloudData.localStorage?.line_user_name || profile?.displayName || authoritativeName);
               setUserName(authoritativeName);
               console.log(`👤 [Gist 同步] 使用者名稱強制統一為 LINE/雲端名稱: ${authoritativeName}`);
             } else {
-              const lineFallback = safeGetStorage('line_user_name') || (!query.user?.startsWith('U') ? query.user : '') || query.name;
+              const rawFallback = safeGetStorage('line_user_name') || (!query.user?.startsWith('U') && !isGist(query.user || '') ? query.user : '') || query.name;
+              const lineFallback = (rawFallback && !isGist(rawFallback)) ? rawFallback : '';
               if (lineFallback) {
                 safeSetStorage('user_name', lineFallback);
                 setUserName(lineFallback);

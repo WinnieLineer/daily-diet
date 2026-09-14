@@ -53,6 +53,19 @@ const PERMANENT_TOKEN_KEY = 'daily_diet_maintainer_token_v2';
 const CLIENT_INFO_KEY = 'daily_diet_maintainer_client_info';
 const MAINTAINER_NAME_KEY = 'daily_diet_maintainer_name';
 
+// 🆔 判斷字串是否為 GitHub Gist ID（20~40 位的十六進制字串，或以 gist 開頭）
+export const isGistId = (str) => {
+  if (!str) return false;
+  const s = String(str).trim();
+  return /^[0-9a-fA-F]{20,40}$/.test(s) || /^gist[-_]/i.test(s);
+};
+
+// 🗺️ 已知 Gist ID 對應之標準用戶名稱字典
+export const KNOWN_GIST_NAMES = {
+  '9a48b4604260e1a58a6d976f38c544b5': 'Winnie Lin',
+  '9141ec7d6457090e66188c67c1351eed': 'Web 用戶'
+};
+
 // 🛑 需徹底過濾/刪除的異常用戶名判斷（支援精確與包含食物名、純數字、line_api等）
 export const isInvalidUserName = (name) => {
   if (!name) return false;
@@ -145,6 +158,11 @@ const normalizeLog = (item) => {
   const caller = String(raw.caller || raw.callerName || '');
   let userName = String(raw.userName || caller || raw.name || '');
 
+  // 🛡️ 若 userName 是 Gist ID，絕不直接顯示為用戶名，依字典反查或 fallback
+  if (isGistId(userName)) {
+    userName = KNOWN_GIST_NAMES[userName.toLowerCase()] || (raw.name && !isGistId(raw.name) && raw.name !== 'default_user' ? raw.name : '');
+  }
+
   // 🛑 若用戶名或識別碼為指定的無效/食物名稱，直接剔除該筆日誌
   if (
     isInvalidUserName(userName) || 
@@ -193,7 +211,8 @@ const normalizeLog = (item) => {
     rawSource.includes('Web') || 
     outputStr.includes('Web') ||
     userId === 'Maintainer' ||
-    userId.startsWith('web_');
+    userId.startsWith('web_') ||
+    isGistId(userId);
 
   const isLine = 
     !isWeb && (
@@ -231,14 +250,21 @@ const normalizeLog = (item) => {
     finalUserName = '管理員';
   } else if (isWeb || finalUserName.includes('(user)') || finalUserName.includes('(ient)')) {
     if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client', '用戶 (user)', '用戶 (ient)', '用戶 (Web)'].includes(finalUserName) || finalUserName.startsWith('用戶 (')) {
-      if (userId && !userId.startsWith('U') && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient', '用戶 (Web)', 'admin'].includes(userId)) {
+      if (userId && !userId.startsWith('U') && !isGistId(userId) && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient', '用戶 (Web)', 'admin'].includes(userId)) {
         finalUserName = userId; // 用他的名字
-      } else if (raw.name && raw.name !== 'default_user') {
+      } else if (raw.name && !isGistId(raw.name) && raw.name !== 'default_user') {
         finalUserName = raw.name;
+      } else if (isGistId(userId)) {
+        finalUserName = KNOWN_GIST_NAMES[userId.toLowerCase()] || 'Web 用戶';
       } else {
         finalUserName = 'Web 用戶';
       }
     }
+  }
+
+  // 🛡️ 二次防護：絕不讓任何 Gist ID 作為最終顯示的用戶名稱
+  if (isGistId(finalUserName)) {
+    finalUserName = KNOWN_GIST_NAMES[finalUserName.toLowerCase()] || (raw.name && !isGistId(raw.name) && raw.name !== 'default_user' ? raw.name : 'Web 用戶');
   }
 
   if (finalUserName === 'default_user' || !finalUserName) {
@@ -830,7 +856,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     if (!normalizedLogs || !normalizedLogs.length) return [];
     const countMap = {};
     normalizedLogs.forEach((log) => {
-      const u = (log.userName || log.userId || (isEn ? 'Unknown' : '未知用戶')).trim();
+      let u = (log.userName || (isGistId(log.userId) ? 'Web 用戶' : log.userId) || (isEn ? 'Unknown' : '未知用戶')).trim();
+      if (isGistId(u)) {
+        u = KNOWN_GIST_NAMES[u.toLowerCase()] || 'Web 用戶';
+      }
       countMap[u] = (countMap[u] || 0) + 1;
     });
     return Object.entries(countMap).sort((a, b) => b[1] - a[1]);
@@ -855,46 +884,60 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
     // ── 已知維護者身份對應（LINE userId 前綴 → 顯示名稱）
     // 當同一個真實用戶既有 LINE userId (U開頭) 也有 Web userName 時，合併至統一 key
-    const OWNER_LINE_USER_ID_PREFIX = 'U497266'; // Winnie 本人的 LINE userId 前綴
     const OWNER_CANONICAL_KEY = '__owner_winnie__';
     const OWNER_DISPLAY_NAME = 'Winnie Lin';
-    const OWNER_NAME_ALIASES = new Set(['Winnie Lin']);
+    const OWNER_NAME_ALIASES = new Set(['winnie lin', 'winnie', '9a48b4604260e1a58a6d976f38c544b5']);
+
+    const isWinnieUser = (uId, uName) => {
+      const id = String(uId || '').trim().toLowerCase();
+      const name = String(uName || '').trim().toLowerCase();
+      return (
+        id.startsWith('u497266') ||
+        id.includes('497c66') ||
+        id.startsWith('u1f5434') ||
+        id === '9a48b4604260e1a58a6d976f38c544b5' ||
+        OWNER_NAME_ALIASES.has(name)
+      );
+    };
 
     const userMap = {};
 
     normalizedLogs.forEach((log) => {
       const uId = (log.userId || '').trim();
-      const uName = (log.userName || uId || (isEn ? 'Unknown' : '未知用戶')).trim();
+      let uName = (log.userName || uId || (isEn ? 'Unknown' : '未知用戶')).trim();
+      if (isGistId(uName)) {
+        uName = KNOWN_GIST_NAMES[uName.toLowerCase()] || (isGistId(uId) ? (KNOWN_GIST_NAMES[uId.toLowerCase()] || 'Web 用戶') : 'Web 用戶');
+      }
       const isMaintainer = uId === 'Maintainer' || log.type?.includes('維護者') || uName === 'Maintainer';
 
       // ── 決定此 log 的 canonical key
-      // 僅針對 Winnie 本人的 LINE 帳號或明確的 'Winnie Lin' 進行歸戶
+      // 僅針對 Winnie 本人的 LINE 帳號或明確的 'Winnie Lin' / Winnie Gist ID 進行歸戶
       let key;
-      if (uId && uId.startsWith(OWNER_LINE_USER_ID_PREFIX)) {
-        // Winnie 本人的 LINE userId
-        key = OWNER_CANONICAL_KEY;
-      } else if (OWNER_NAME_ALIASES.has(uName)) {
-        // Winnie 本人的 Web 記錄（userName = 'Winnie Lin'）
+      if (isWinnieUser(uId, uName)) {
         key = OWNER_CANONICAL_KEY;
       } else if (uId && uId.startsWith('U')) {
         // 其他 LINE 用戶 → 以 userId 為 key
         key = uId;
       } else {
-        // Web 或其他用戶 → 以 userName 為 key
-        key = uName || uId || 'Unknown';
+        // Web 或其他用戶 → 以 userName 為 key（若為 Gist ID 則轉為標準名稱）
+        const resolvedName = isGistId(uName) ? (KNOWN_GIST_NAMES[uName.toLowerCase()] || 'Web 用戶') : uName;
+        key = resolvedName || (isGistId(uId) ? (KNOWN_GIST_NAMES[uId.toLowerCase()] || 'Web 用戶') : uId) || 'Unknown';
       }
 
       if (!userMap[key]) {
-        const displayName = (key === OWNER_CANONICAL_KEY)
+        let displayName = (key === OWNER_CANONICAL_KEY)
           ? OWNER_DISPLAY_NAME
-          : (uName || (uId.startsWith('U') ? `LINE 用戶 #${uId.slice(-4)}` : uId));
+          : (uName || (uId.startsWith('U') ? `LINE 用戶 #${uId.slice(-4)}` : (isGistId(uId) ? 'Web 用戶' : uId)));
+        if (isGistId(displayName)) {
+          displayName = KNOWN_GIST_NAMES[displayName.toLowerCase()] || 'Web 用戶';
+        }
         userMap[key] = {
           key,
           name: displayName,
-          userId: uId,
+          userId: isGistId(uId) ? 'web_user' : uId,
           isMaintainer: isMaintainer || key === OWNER_CANONICAL_KEY,
           isLine: Boolean(log.source?.includes('LINE') || (uId && uId.startsWith('U'))),
-          isWeb: Boolean(log.source?.includes('Web') || log.type?.includes('Web') || uId === 'default_user' || uId.startsWith('web_')),
+          isWeb: Boolean(log.source?.includes('Web') || log.type?.includes('Web') || uId === 'default_user' || uId.startsWith('web_') || isGistId(uId)),
           totalActions: 0,
           mealsCount: 0,
           waterCount: 0,
@@ -2230,7 +2273,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                           </span>
                           {userId && (
                             <span className="font-mono text-[9px] px-1 py-0.5 rounded border bg-zinc-100 text-zinc-600 font-bold">
-                              {userId === 'Maintainer' ? 'ADMIN' : (userId.startsWith('U') ? `#${userId.slice(-6)}` : userId)}
+                              {userId === 'Maintainer' ? 'ADMIN' : (userId.startsWith('U') ? `#${userId.slice(-6)}` : (isGistId(userId) ? 'Web' : userId))}
                             </span>
                           )}
                         </div>

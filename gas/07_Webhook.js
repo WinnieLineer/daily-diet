@@ -157,9 +157,12 @@ function doGet(e) {
     if (!userId) userId = 'default_user';
 
     // 🛡️ LINE 原生用戶 (U 開頭) 的名稱由 LINE Profile API / props 取得，優先於 Web 前端傳入的暫存 caller
+    const isGistStr = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
+    const cleanCaller = isGistStr(incomingCaller) ? '' : incomingCaller;
+    const cleanUserIdName = (!userId.startsWith('U') && userId !== 'default_user' && !isGistStr(userId)) ? userId : '';
     const resolvedLineName = (userId && userId.startsWith('U')) ? (props.getProperty(`USER_NAME_${userId}`) || getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || '') : '';
-    const webCallerName = resolvedLineName || incomingCaller || (!userId.startsWith('U') && userId !== 'default_user' ? userId : '');
-    if (webCallerName && userId && !userId.startsWith('U') && userId !== 'default_user') {
+    const webCallerName = resolvedLineName || cleanCaller || cleanUserIdName || (isGistStr(userId) && userId.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5' ? 'Winnie Lin' : '');
+    if (webCallerName && !isGistStr(webCallerName) && userId && !userId.startsWith('U') && userId !== 'default_user' && !isGistStr(userId)) {
       props.setProperty(`USER_NAME_${userId}`, webCallerName);
     }
 

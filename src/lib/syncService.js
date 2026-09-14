@@ -24,13 +24,18 @@ function getEffectiveIds() {
       if (!userName && q.get('name')) userName = q.get('name');
       if (!gistId && q.get('gistId')) gistId = q.get('gistId');
     }
-    // Web 用戶：若 caller 名稱拿不到，就用他的名字
-    if (!userName && userId && !userId.startsWith('U') && userId !== 'default_user') {
+    // Web 用戶：若 caller 名稱拿不到，就用他的名字（排除 Gist ID 誤當用戶名）
+    const isGistId = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
+    if (isGistId(userName)) {
+      userName = '';
+    }
+    if (!userName && userId && !userId.startsWith('U') && userId !== 'default_user' && !isGistId(userId)) {
       userName = userId;
     }
   } catch (e) {}
+  const isGist = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
   const effectiveUserId = userId || userName || 'default_user';
-  const effectiveUserName = userName || (userId && !userId.startsWith('U') ? userId : '');
+  const effectiveUserName = (userName && !isGist(userName)) ? userName : (userId && !userId.startsWith('U') && !isGist(userId) ? userId : '');
   return { userId: effectiveUserId, userName: effectiveUserName, gistId };
 }
 
