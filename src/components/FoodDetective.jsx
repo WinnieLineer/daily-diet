@@ -142,6 +142,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [originalResult, setOriginalResult] = useState(null);
   const [showCustomMultiplier, setShowCustomMultiplier] = useState(false);
   const [showMacroEditor, setShowMacroEditor] = useState(false);
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [editedDishName, setEditedDishName] = useState('');
+  const [recalculating, setRecalculating] = useState(false);
   const [waterToast, setWaterToast] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState([]);
@@ -689,6 +692,56 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     await handleAnalysis(base64, locationPromise);
   };
 
+  const handleRecalculateWithNewName = async () => {
+    const trimmed = (editedDishName || '').trim();
+    if (!trimmed) return;
+    setRecalculating(true);
+    try {
+      const dailyContext = {
+        calories: summary?.calories || 0,
+        calorieGoal: goals?.calories || 2000,
+        protein: summary?.protein || 0,
+        proteinGoal: goals?.protein || 100,
+        water: summary?.water || 0,
+        waterGoal: goals?.water || 2000,
+        foodLogs: (recentLogs || []).map(({ image, ...rest }) => rest),
+        userName: userName,
+        userInstructions: `用戶指定品名更正為：「${trimmed}」。請務必以「${trimmed}」為主要品名，並依據${preview ? '照片中的份量與食物外觀' : '此品名'}重新估算精準熱量、蛋白質、碳水化合物、脂肪、各成分拆解(breakdown)與計算過程。`
+      };
+
+      let newRes;
+      if (preview) {
+        newRes = await analyzeFoodImage(preview, dailyContext, getLanguage());
+      } else {
+        newRes = await analyzeFoodText(trimmed, dailyContext, getLanguage());
+      }
+
+      if (newRes && (newRes.calories !== undefined || newRes.dish_name)) {
+        const finalDishName = trimmed;
+        const updated = {
+          ...result,
+          ...newRes,
+          dish_name: finalDishName,
+          location: result?.location || newRes.location || null
+        };
+        setResult(updated);
+        setOriginalResult(updated);
+        setMultiplier(1);
+        setShowCustomMultiplier(false);
+        if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
+        if (newRes.panda_comment && setAdvice) setAdvice(newRes.panda_comment);
+        setIsEditingName(false);
+        setSuccessToast(isEn ? `Updated to "${finalDishName}"` : `已更正為「${finalDishName}」`);
+        setTimeout(() => setSuccessToast(null), 3500);
+      }
+    } catch (err) {
+      console.error("Failed to recalculate with new name:", err);
+      alert(isEn ? "Failed to re-calculate: " + (err.message || "Please try again") : "重新估算失敗：" + (err.message || "請稍後重試"));
+    } finally {
+      setRecalculating(false);
+    }
+  };
+
   const handleMultiplierChange = (m) => {
     setMultiplierInput(m.toString());
     const val = parseFloat(m);
@@ -1171,8 +1224,94 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
                 <NeoCard className="bg-white border-4 border-black">
                   <div className="flex justify-between items-start gap-4 mb-4">
-                    <div className="flex-1">
-                      <h3 className="text-2xl font-black italic mb-2">{result.dish_name}</h3>
+                    <div className="flex-1 min-w-0">
+                      {isEditingName ? (
+                        <div className="bg-amber-50 border-4 border-black p-3.5 rounded-[1.5rem] mb-3 shadow-neo-sm space-y-2.5">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs font-black flex items-center gap-1.5 text-amber-950">
+                              <Pencil size={13} className="text-amber-600" />
+                              <span>{t('correct_dish_name')}</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => setIsEditingName(false)}
+                              className="text-zinc-400 hover:text-black p-1 active:scale-95"
+                            >
+                              <X size={16} />
+                            </button>
+                          </div>
+                          <div>
+                            <input
+                              type="text"
+                              value={editedDishName}
+                              onChange={(e) => setEditedDishName(e.target.value)}
+                              placeholder={t('correct_name_placeholder')}
+                              className="w-full border-3 border-black p-2.5 rounded-xl font-bold bg-white text-sm outline-none shadow-sm focus:border-amber-500"
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') {
+                                  e.preventDefault();
+                                  handleRecalculateWithNewName();
+                                }
+                              }}
+                            />
+                          </div>
+                          <div className="flex flex-col sm:flex-row gap-2 pt-0.5">
+                            <button
+                              type="button"
+                              disabled={recalculating || !editedDishName.trim()}
+                              onClick={handleRecalculateWithNewName}
+                              className="flex-1 bg-black text-white px-3 py-2.5 rounded-xl text-xs font-black flex items-center justify-center gap-2 shadow-neo-sm hover:bg-neutral-800 active:scale-95 transition-all disabled:opacity-50 cursor-pointer"
+                            >
+                              {recalculating ? (
+                                <>
+                                  <Loader2 size={14} className="animate-spin text-accent" />
+                                  <span>{t('recalculating_nutrition')}</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Sparkles size={14} className="text-accent" />
+                                  <span>{t('recalculate_nutrition')}</span>
+                                </>
+                              )}
+                            </button>
+                            <button
+                              type="button"
+                              disabled={recalculating || !editedDishName.trim()}
+                              onClick={() => {
+                                if (editedDishName.trim()) {
+                                  const newName = editedDishName.trim();
+                                  setResult(prev => ({ ...prev, dish_name: newName }));
+                                  setOriginalResult(prev => prev ? ({ ...prev, dish_name: newName }) : prev);
+                                  setIsEditingName(false);
+                                }
+                              }}
+                              className="bg-white text-black border-2 border-black px-3 py-2 rounded-xl text-xs font-black hover:bg-zinc-100 active:scale-95 transition-all"
+                            >
+                              {t('rename_only')}
+                            </button>
+                          </div>
+                          <p className="text-[10px] text-amber-800 font-bold leading-tight">
+                            💡 {t('recalculate_hint')}
+                          </p>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 mb-2 flex-wrap">
+                          <h3 className="text-2xl font-black italic break-words">{result.dish_name}</h3>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setEditedDishName(result.dish_name || '');
+                              setIsEditingName(true);
+                            }}
+                            className="px-2.5 py-1 rounded-xl border-2 border-black bg-amber-200 hover:bg-amber-300 text-black active:scale-95 transition-all shadow-neo-sm flex items-center gap-1 text-[11px] font-black shrink-0 cursor-pointer"
+                            title={isEn ? "Correct food name and re-calculate calories" : "手動更正食物名稱並重新估算熱量"}
+                          >
+                            <Pencil size={12} />
+                            <span>{t('correct_dish_name')}</span>
+                          </button>
+                        </div>
+                      )}
                       <div className="mb-4"><div className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div><div className="flex overflow-x-auto no-scrollbar gap-2 -mx-1 px-1">{[0.5, 1, 1.5, 2].map(m => (<button key={m} onClick={() => { handleMultiplierChange(m); setShowCustomMultiplier(false); }} className={twMerge("px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", multiplier === m && !showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>x{m}</button>))}<button onClick={() => { setShowCustomMultiplier(true); setMultiplierInput(''); }} className={twMerge("px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>{t('custom')}</button></div></div>
                       {showCustomMultiplier && <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-4"><input type="number" step="0.1" min="0.1" value={multiplierInput} onChange={(e) => handleMultiplierChange(e.target.value)} className="w-20 border-4 border-black p-1.5 rounded-xl font-black text-center outline-none focus:bg-zinc-50 transition-all" autoFocus placeholder="1.0" /><span className="font-black text-xs">{t('times_portion')}</span></motion.div>}
                       <div className="flex flex-wrap items-center gap-2 mt-2"><div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5"><MapPin size={14} className="text-zinc-400" /><span className="text-[10px] font-bold text-zinc-500">{locationLoading ? t('locating') : (result.location || t('unknown_location'))}</span>{!locationLoading && !result.location && (<button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1"><RefreshCw size={12} className="animate-pulse" /></button>)}</div><div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>

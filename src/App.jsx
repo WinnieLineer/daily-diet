@@ -11,8 +11,8 @@ import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { db, getDailySummary, calculateStreak } from './db';
 import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
 import { syncMealToCloud, syncDeleteMealToCloud, syncLanguageToCloud } from './lib/syncService';
-import { getPandaAdvice } from './lib/groq';
-import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart } from 'lucide-react';
+import { getPandaAdvice, analyzeFoodText } from './lib/groq';
+import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage, setLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
@@ -140,6 +140,35 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
     })()
   });
 
+  const [isRecalculating, setIsRecalculating] = useState(false);
+
+  const handleRecalculateMeal = async () => {
+    const name = (formData.dish_name || '').trim();
+    if (!name) return;
+    setIsRecalculating(true);
+    try {
+      const res = await analyzeFoodText(name, {
+        calories: goals?.calories || 2000,
+        protein: goals?.protein || 100
+      }, getLanguage());
+      if (res && res.calories !== undefined) {
+        setFormData(prev => ({
+          ...prev,
+          calories: Number(res.calories) || prev.calories,
+          protein: Number(res.protein) || prev.protein,
+          carbs: Number(res.carbs) || prev.carbs,
+          fat: Number(res.fat) || prev.fat,
+          water: Number(res.water) || prev.water,
+          comment: res.panda_comment || prev.comment
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to recalculate meal:", err);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
+
   const handleFormSubmit = (e) => {
     e.preventDefault();
     onSave(formData);
@@ -183,9 +212,21 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
           <form onSubmit={handleFormSubmit} className="flex-1 flex flex-col overflow-hidden">
             <div className="overflow-y-auto p-5 space-y-4 flex-1 custom-scrollbar">
               <div>
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
-                  {t('food_name')}
-                </label>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400">
+                    {t('food_name')}
+                  </label>
+                  <button
+                    type="button"
+                    disabled={isRecalculating || !formData.dish_name.trim()}
+                    onClick={handleRecalculateMeal}
+                    className="text-[10px] font-black bg-white border-2 border-black px-2 py-0.5 rounded-lg shadow-neo-sm hover:bg-yellow-100 flex items-center gap-1 active:scale-95 disabled:opacity-50"
+                    title="依修改後的品名由 AI 重新估算熱量與營養"
+                  >
+                    {isRecalculating ? <Loader2 size={11} className="animate-spin text-black" /> : <Sparkles size={11} className="text-amber-500" />}
+                    <span>{t('ai_recalculate_btn')}</span>
+                  </button>
+                </div>
                 <input 
                   type="text" 
                   value={formData.dish_name}
@@ -464,8 +505,35 @@ const LogDetailModal = ({ log, goals, onClose }) => {
 const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, cancelEditing, saveEdit, startEditing, deleteLog, onAddToFavorite, onShowDetail }) => {
   const isEditing = editingId === log.id;
   const [showActions, setShowActions] = React.useState(false);
+  const [isRecalculating, setIsRecalculating] = React.useState(false);
   const longPressTimer = React.useRef(null);
   const didLongPress = React.useRef(false);
+
+  const handleRecalculateLog = async () => {
+    const name = (editValues?.dish_name || '').trim();
+    if (!name) return;
+    setIsRecalculating(true);
+    try {
+      const res = await analyzeFoodText(name, {
+        calories: goals?.calories || 2000,
+        protein: goals?.protein || 100
+      }, getLanguage());
+      if (res && res.calories !== undefined) {
+        setEditValues(prev => ({
+          ...prev,
+          calories: Number(res.calories) || prev.calories,
+          protein: Number(res.protein) || prev.protein,
+          carbs: Number(res.carbs) || prev.carbs,
+          fat: Number(res.fat) || prev.fat,
+          water: Number(res.water) || prev.water
+        }));
+      }
+    } catch (err) {
+      console.error("Failed to recalculate log nutrition:", err);
+    } finally {
+      setIsRecalculating(false);
+    }
+  };
 
   if (isEditing) {
     return (
@@ -476,7 +544,19 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
         className="p-4 border-4 border-black rounded-2xl bg-accent/10 space-y-3"
       >
         <div>
-          <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-1">{t('food_name')}</label>
+          <div className="flex justify-between items-center mb-1">
+            <label className="text-[10px] font-black uppercase tracking-widest text-gray-400">{t('food_name')}</label>
+            <button
+              type="button"
+              disabled={isRecalculating || !editValues.dish_name.trim()}
+              onClick={handleRecalculateLog}
+              className="text-[10px] font-black bg-white border-2 border-black px-2 py-0.5 rounded-lg shadow-neo-sm hover:bg-yellow-100 flex items-center gap-1 active:scale-95 disabled:opacity-50"
+              title="依修改後的品名由 AI 重新估算熱量與營養"
+            >
+              {isRecalculating ? <Loader2 size={11} className="animate-spin text-black" /> : <Sparkles size={11} className="text-amber-500" />}
+              <span>{t('ai_recalculate_btn')}</span>
+            </button>
+          </div>
           <input 
             type="text" 
             value={editValues.dish_name}
