@@ -14,6 +14,24 @@ import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud } from '../li
 
 const VERSION_HISTORY = [
   { 
+    version: '3.3.26', 
+    date: '2026-09-14', 
+    features: [
+      '🍱 食物修正品名與 AI 極速重新拆解估算', 
+      '🔄 碳水與脂肪 Web ↔ LINE 雙向即時同步',
+      '⚡ 常用餐點管理分頁防爆與傳送最佳化'
+    ] 
+  },
+  { 
+    version: '3.3.0', 
+    date: '2026-09-10', 
+    features: [
+      '⚖️ 體重追蹤、折線走勢圖與差額計算', 
+      '💩 便便打卡與腸道健康週期統計',
+      '📈 LINE 聊天室原生圖表繪製'
+    ] 
+  },
+  { 
     version: '3.2.0', 
     date: '2026-09-08', 
     features: [
@@ -1863,9 +1881,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     </div>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between px-1">
-                        <div className="flex items-center gap-2 text-zinc-400">
-                          <History size={16} />
-                          <span className="text-[10px] font-black uppercase">{t('settings_version_history')}</span>
+                        <div className="flex items-center gap-2 text-zinc-500">
+                          <History size={16} className="text-zinc-400" />
+                          <span className="text-xs font-black tracking-wider uppercase">{t('settings_version_history')}</span>
                         </div>
                         <button
                           type="button"
@@ -1873,10 +1891,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             setIsOpen(false);
                             window.dispatchEvent(new CustomEvent('open-whatsnew'));
                           }}
-                          className="text-[10px] font-black text-black bg-accent px-2.5 py-1 rounded-lg border border-black shadow-neo-xs hover:bg-yellow-300 active:scale-95 transition-all flex items-center gap-1 cursor-pointer"
+                          className="group relative inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-200 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs rounded-full border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer select-none"
+                          title="查看最新版本功能特色介紹"
                         >
-                          <Sparkles size={12} />
-                          <span>What's New</span>
+                          <span className="relative flex h-2 w-2">
+                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
+                            <span className="relative inline-flex rounded-full h-2 w-2 bg-orange-500"></span>
+                          </span>
+                          <Sparkles size={13} strokeWidth={2.5} className="group-hover:rotate-12 transition-transform duration-300 text-amber-950" />
+                          <span className="tracking-tight text-amber-950">What's New</span>
+                          <ChevronRight size={13} strokeWidth={3} className="text-amber-950/60 group-hover:text-amber-950 group-hover:translate-x-0.5 transition-all" />
                         </button>
                       </div>
                       <div className="space-y-2">
