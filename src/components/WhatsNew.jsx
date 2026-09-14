@@ -40,7 +40,7 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.3.21';
+export const LATEST_WHATSNEW_VERSION = '3.3.23';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
@@ -48,6 +48,7 @@ export const hasWhatsNewContent = (lastSeenVersion) => {
 };
 
 const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
+  const show3323 = isNewer('3.3.23', lastSeenVersion);
   const show3321 = isNewer('3.3.21', lastSeenVersion);
   const show330 = isNewer('3.3.0', lastSeenVersion);
   const show320 = isNewer('3.2.0', lastSeenVersion);
@@ -67,10 +68,10 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
-  const hasAnyFeatures = show3321 || show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
+  const hasAnyFeatures = show3323 || show3321 || show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
 
   // Only show "Patch" UI if no major new content is being shown
-  const isBugFixOnly = !show3321 && !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show3323 && !show3321 && !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -114,6 +115,30 @@ const WhatsNew = ({ version, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {show3323 && (
+                <div className="space-y-3">
+                  <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">v3.3.23 LINE 同步更新 🔄</div>
+                  <FeatureItem
+                    icon={Sparkles}
+                    title="碳水與脂肪 Web ↔ LINE 雙向同步"
+                    description="在 Web 開啟碳水追蹤後，LINE 也會同步顯示！今日總結改為雙行網格（熱量+水 / 蛋白質+碳水+脂肪），數字清晰不吃字。"
+                    color="bg-orange-300"
+                  />
+                  <FeatureItem
+                    icon={RefreshCw}
+                    title="常用餐點卡片不再超過 50KB"
+                    description="Carousel 改為每頁最多 5 筆常用，管理餐點改為每頁 8 筆分頁，徹底解決 LINE 傳送失敗問題！"
+                    color="bg-emerald-300"
+                  />
+                  <FeatureItem
+                    icon={Settings}
+                    title='LINE 輸入「開啟碳水」即可切換追蹤'
+                    description="支援文字指令（開啟碳水、關閉碳水）與今日總結底部按鈕，操作直覺、立即生效。"
+                    color="bg-sky-300"
+                  />
+                </div>
+              )}
+
               {show3321 && (
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">{t('whatsnew_v3321_header')}</div>

@@ -78,7 +78,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 // 📢 Latest version with release notes configured in WhatsNew modal
-export const LATEST_WHATSNEW_VERSION = '3.3.21';
+export const LATEST_WHATSNEW_VERSION = '3.3.23';
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -1943,28 +1943,26 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* PWA New Version Floating Banner */}
+      {/* PWA New Version Floating Banner — 頂部細條，不遮擋底部熊貓教練 */}
       <AnimatePresence>
         {newVersionAvailable && (
           <motion.div
             key="pwa-version-banner"
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 50, scale: 0.9 }}
-            className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[250] bg-yellow-300 text-black px-4 py-3 rounded-2xl font-black text-sm shadow-neo border-4 border-black flex items-center gap-3 w-max max-w-[94vw] justify-between"
+            initial={{ opacity: 0, y: -40 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -40 }}
+            className="fixed top-0 left-0 right-0 z-[250] bg-yellow-300 text-black border-b-4 border-black flex items-center justify-between px-4 py-2 shadow-neo"
           >
-            <div className="flex items-center gap-2 text-xs sm:text-sm">
-              <span className="text-lg">🎉</span>
+            <div className="flex items-center gap-2 text-xs font-black">
+              <span className="text-base">🎉</span>
               <span>{currentLang === 'en' ? 'New version available!' : '熊貓教練有最新版本囉！'}</span>
             </div>
             <button
               onClick={() => {
-                try {
-                  sessionStorage.removeItem('chunk_reload_count');
-                } catch (e) {}
+                try { sessionStorage.removeItem('chunk_reload_count'); } catch (e) {}
                 window.location.reload();
               }}
-              className="bg-black text-white px-3 py-1.5 rounded-xl border-2 border-black text-xs font-black shadow-sm active:translate-y-0.5 cursor-pointer hover:bg-neutral-800 transition-colors"
+              className="bg-black text-white px-3 py-1 rounded-lg border-2 border-black text-xs font-black shadow-sm active:translate-y-0.5 cursor-pointer hover:bg-neutral-800 transition-colors shrink-0"
             >
               {currentLang === 'en' ? 'Update Now' : '立即更新'}
             </button>
