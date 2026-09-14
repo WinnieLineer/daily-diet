@@ -752,6 +752,30 @@ const safeRemoveStorage = (key) => {
   } catch (e) {}
 };
 
+const HeaderClock = React.memo(function HeaderClock({ lastLocation }) {
+  const [now, setNow] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setNow(new Date());
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  return (
+    <div className="bg-white border-[3px] sm:border-4 border-black px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center shrink-0">
+      <div className="text-[9px] sm:text-xs text-black whitespace-nowrap notranslate" translate="no">
+        {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
+      </div>
+      {lastLocation && (
+        <div className="text-[7px] sm:text-[9px] text-gray-400 italic truncate max-w-[70px] sm:max-w-[120px] whitespace-nowrap">
+          📍 {lastLocation}
+        </div>
+      )}
+    </div>
+  );
+});
+
 function App() {
   const isLineEntry = () => {
     const query = getAppQueryParams();
@@ -1424,7 +1448,6 @@ function App() {
   const [showHistory, setShowHistory] = useState(false);
   const [showToday, setShowToday] = useState(true);
   const [advice, setAdvice] = useState('');
-  const [now, setNow] = useState(new Date());
   const [lastLocation, setLastLocation] = useState(null);
   const [streak, setStreak] = useState(0);
   const [isDataLoaded, setIsDataLoaded] = useState(false);
@@ -1466,13 +1489,6 @@ function App() {
     safeSetStorage('app_layout', JSON.stringify(layout));
   }, [layout]);
   const [toast, setToast] = useState(null);
-
-  useEffect(() => {
-    const timer = setInterval(() => {
-      setNow(new Date());
-    }, 1000);
-    return () => clearInterval(timer);
-  }, []);
 
   // Hydration Reminder Local Notifications
   useEffect(() => {
@@ -1904,9 +1920,12 @@ function App() {
           <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none z-10 relative">
             {userName ? (
               <span className="flex flex-col">
-                <span className="text-accent text-[10px] uppercase tracking-widest block mb-0.5">{userName}{t('title_possessive')}</span>
+                <span className="text-accent text-[10px] uppercase tracking-widest block mb-0.5 notranslate" translate="no">
+                  <span>{userName}</span>
+                  <span>{t('title_possessive')}</span>
+                </span>
                 <span className="flex items-center gap-1">
-                  {t('app_title')}
+                  <span>{t('app_title')}</span>
                   {ENABLE_520_THEME && (
                     <span className="text-[9px] font-black italic bg-rose-500 text-white px-1.5 py-0.5 rounded-md -mt-2 ml-0.5 shadow-sm transform -rotate-3">
                       慶祝520
@@ -1916,7 +1935,7 @@ function App() {
               </span>
             ) : (
               <span className="flex items-center gap-1">
-                {t('app_title')}
+                <span>{t('app_title')}</span>
                 {ENABLE_520_THEME && (
                   <span className="text-[9px] font-black italic bg-rose-500 text-white px-1.5 py-0.5 rounded-md -mt-2 ml-0.5 shadow-sm transform -rotate-3">
                     慶祝520
@@ -1925,19 +1944,10 @@ function App() {
               </span>
             )}
           </h1>
-          <span className="text-[8px] font-bold text-zinc-400 mt-1">v{APP_VERSION}</span>
+          <span className="text-[8px] font-bold text-zinc-400 mt-1 notranslate" translate="no">v{APP_VERSION}</span>
         </div>
         <div className="flex flex-row items-center gap-1.5 sm:gap-2 shrink-0">
-          <div className="bg-white border-[3px] sm:border-4 border-black px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center shrink-0">
-            <div className="text-[9px] sm:text-xs text-black whitespace-nowrap">
-              {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
-            </div>
-            {lastLocation && (
-              <div className="text-[7px] sm:text-[9px] text-gray-400 italic truncate max-w-[70px] sm:max-w-[120px] whitespace-nowrap">
-                📍 {lastLocation}
-              </div>
-            )}
-          </div>
+          <HeaderClock lastLocation={lastLocation} />
           <div className="flex items-center gap-1 sm:gap-2">
             {/* 🌐 Fast 1-Tap Bilingual Language Switcher */}
             <NeoButton 

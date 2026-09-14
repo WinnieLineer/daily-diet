@@ -3,6 +3,32 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 
+// 🛡️ Defense against Google Translate & browser extension DOM mutations breaking React
+// Fixes: "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node."
+if (typeof Node === 'function' && Node.prototype) {
+  const originalRemoveChild = Node.prototype.removeChild;
+  Node.prototype.removeChild = function (child) {
+    if (child && child.parentNode !== this) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Cannot remove child: not a child of this node. Ignored to prevent translation crash.', child, this);
+      }
+      return child;
+    }
+    return originalRemoveChild.apply(this, arguments);
+  };
+
+  const originalInsertBefore = Node.prototype.insertBefore;
+  Node.prototype.insertBefore = function (newNode, referenceNode) {
+    if (referenceNode && referenceNode.parentNode !== this) {
+      if (typeof console !== 'undefined' && console.warn) {
+        console.warn('Cannot insertBefore: reference node not a child of this node. Appending instead.', referenceNode, this);
+      }
+      return originalInsertBefore.call(this, newNode, null);
+    }
+    return originalInsertBefore.apply(this, arguments);
+  };
+}
+
 let memoryLastAlertSig = '';
 let memoryLastAlertTime = 0;
 
@@ -114,6 +140,23 @@ class ErrorBoundary extends React.Component {
         if (reloadCount < 2) {
           sessionStorage.setItem('chunk_reload_count', String(reloadCount + 1));
           console.warn('🔄 Detected outdated chunk from past deployment, auto-refreshing page...');
+          window.location.reload();
+          return;
+        }
+      } catch (e) {}
+    }
+
+    if (
+      errMsg.includes('removeChild') ||
+      errMsg.includes('not a child of this node') ||
+      errMsg.includes('insertBefore')
+    ) {
+      let domReloadCount = 0;
+      try {
+        domReloadCount = Number(sessionStorage.getItem('dom_reload_count') || 0);
+        if (domReloadCount < 2) {
+          sessionStorage.setItem('dom_reload_count', String(domReloadCount + 1));
+          console.warn('🔄 Detected DOM mutation crash (browser translation/extension), auto-recovering...');
           window.location.reload();
           return;
         }
