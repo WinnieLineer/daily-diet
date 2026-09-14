@@ -806,6 +806,53 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       });
     }
 
+    // 🛡️ 智能日誌歸戶對齊 (Session & IP Reconciliation)
+    // 1. IP 歸戶：若同一 IP 曾有明確的具名用戶（如 Winnie Lin 或 LINE 綁定用戶），將該 IP 的「Web 用戶」自動對齊
+    const ipToKnownName = new Map();
+    list.forEach((item) => {
+      if (!item) return;
+      const u = String(item.userName || '').trim();
+      if (item.ip && u && u !== 'Web 用戶' && u !== 'LINE 用戶' && u !== '系統服務' && u !== '管理員' && !u.startsWith('用戶 (') && !isInvalidUserName(u)) {
+        ipToKnownName.set(item.ip, u);
+      }
+    });
+
+    if (ipToKnownName.size > 0) {
+      list.forEach((item) => {
+        if (!item) return;
+        if ((item.userName === 'Web 用戶' || item.userName === 'default_user') && item.ip && ipToKnownName.has(item.ip)) {
+          item.userName = ipToKnownName.get(item.ip);
+        }
+      });
+    }
+
+    // 2. 時窗會話連動歸戶：若 15 分鐘內有明確由 Winnie Lin 執行的 Web 操作，
+    // 其前後 15 分鐘內未帶名字的 Web 常用增刪/排序操作，皆屬於同一個人操作，統一歸納為 Winnie Lin
+    const winnieTimeMsList = [];
+    list.forEach((item) => {
+      if (!item || !item.time) return;
+      const u = String(item.userName || '').trim().toLowerCase();
+      if (u === 'winnie lin' || u === 'winnie' || item.userId?.startsWith('u1f5434') || item.userId?.includes('497c66')) {
+        const t = new Date(item.time).getTime();
+        if (!isNaN(t)) winnieTimeMsList.push(t);
+      }
+    });
+
+    if (winnieTimeMsList.length > 0) {
+      list.forEach((item) => {
+        if (!item || !item.time) return;
+        if (item.userName === 'Web 用戶' || item.userName === 'default_user') {
+          const t = new Date(item.time).getTime();
+          if (!isNaN(t)) {
+            const isNearWinnie = winnieTimeMsList.some((wt) => Math.abs(wt - t) <= 15 * 60 * 1000);
+            if (isNearWinnie && (item.type?.startsWith('Web') || item.location?.includes('Web') || item.source?.includes('Web'))) {
+              item.userName = 'Winnie Lin';
+            }
+          }
+        }
+      });
+    }
+
     // 依統一時間戳記倒序排序（最新時間排在最上方）
     list.sort((a, b) => {
       if (!a.time || !b.time) return 0;

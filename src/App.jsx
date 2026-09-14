@@ -10,7 +10,7 @@ import NeoButton from './components/NeoButton';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { db, getDailySummary, calculateStreak } from './db';
 import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
-import { syncMealToCloud, syncDeleteMealToCloud, syncLanguageToCloud } from './lib/syncService';
+import { syncMealToCloud, syncDeleteMealToCloud, syncLanguageToCloud, syncAddFavorite } from './lib/syncService';
 import { getPandaAdvice, analyzeFoodText } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
@@ -1095,10 +1095,10 @@ function App() {
               // 雙向反向同步：若本機 IndexedDB 有遠端缺失的常用餐點，自動補齊至 LINE / GAS 雲端
               const remoteFavNames = new Set(gasData.favorites.map(f => f.dish_name));
               const missingInRemote = localFavs.filter(f => f.dish_name && !remoteFavNames.has(f.dish_name));
-              if (missingInRemote.length > 0 && effectiveUserId && effectiveUserId !== 'default_user') {
+              if (missingInRemote.length > 0) {
                 for (const mFav of missingInRemote) {
                   try {
-                    fetch(`${GAS_URL}?action=addFavorite&userId=${encodeURIComponent(effectiveUserId)}&name=${encodeURIComponent(mFav.dish_name)}&cal=${mFav.calories || 0}&pro=${mFav.protein || 0}&wat=${mFav.water || 0}`, { mode: 'no-cors' });
+                    syncAddFavorite(mFav);
                     console.log(`📤 [Favorites Reverse Sync] 自動補齊本地常用至 LINE/GAS: ${mFav.dish_name}`);
                   } catch (e) {
                     console.warn("常用餐點雙向同步失敗:", e);
@@ -1867,13 +1867,8 @@ function App() {
     showToast(t('added_to_favorites'));
 
     // ☁️ 雙向同步常用餐點至 GAS 與 Gist
-    const effectiveUserId = safeGetStorage('line_user_id') || getAppQueryParams().userId || getAppQueryParams().user;
+    syncAddFavorite(log);
     const currentGist = getCurrentGistId();
-    if (effectiveUserId || currentGist) {
-      const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-      try {
-        fetch(`${GAS_URL}?action=addFavorite&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&name=${encodeURIComponent(log.dish_name)}&cal=${log.calories || 0}&pro=${log.protein || 0}&wat=${log.water || 0}`, { mode: 'no-cors' }).catch(() => {});
-      } catch (e) {}
 
       if (currentGist) {
         (async () => {
@@ -1890,7 +1885,6 @@ function App() {
           });
         })();
       }
-    }
   };
 
   const getFastingStatus = () => {

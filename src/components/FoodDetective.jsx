@@ -6,7 +6,7 @@ import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCirc
 import { analyzeFoodImage, analyzeFoodText, recalculateFoodNutritionWithName } from '../lib/groq';
 import { db } from '../db';
 import { getCurrentGistId, uploadToGist } from '../lib/gistService';
-import { syncMealToCloud } from '../lib/syncService';
+import { syncMealToCloud, syncDeleteFavorite, syncReorderFavorites } from '../lib/syncService';
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -257,14 +257,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       setFavToast(t('order_updated') || '常用順序已更新！');
       setTimeout(() => setFavToast(null), 1500);
 
-      const effectiveUserId = safeGetStorage('line_user_id');
       const currentGist = getCurrentGistId();
-      if (effectiveUserId || currentGist) {
-        const orderNames = newFavorites.map(f => f.dish_name).join(',');
-        const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-        try {
-          fetch(`${GAS_URL}?action=reorderFavorites&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&order=${encodeURIComponent(orderNames)}`, { mode: 'no-cors' });
-        } catch (e) {}
+      const orderNames = newFavorites.map(f => f.dish_name).join(',');
+      syncReorderFavorites(orderNames);
 
         if (currentGist) {
           Promise.all([
@@ -283,7 +278,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
             console.warn("[Gist] Background favorite reorder sync skipped:", e?.message);
           });
         }
-      }
     } catch (err) {
       console.error("Failed to reorder favorites:", err);
     }
@@ -1679,14 +1673,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                             await db.favorites.delete(item.id);
                             loadFavorites();
 
-                            // ☁️ 雙向同步刪除常用餐點
-                            const effectiveUserId = safeGetStorage('line_user_id');
+                            // ☁️ 雙向同步刪除常用餐點（保證攜帶用戶姓名與 Gist ID）
+                            syncDeleteFavorite(item.dish_name);
                             const currentGist = getCurrentGistId();
-                            if (effectiveUserId || currentGist) {
-                              const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
-                              try {
-                                fetch(`${GAS_URL}?action=deleteFavorite&userId=${encodeURIComponent(effectiveUserId || 'default_user')}&name=${encodeURIComponent(item.dish_name)}`, { mode: 'no-cors' });
-                              } catch (e) {}
 
                               if (currentGist) {
                                 Promise.all([
@@ -1705,7 +1694,6 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                                   console.warn("[Gist] Background favorite delete sync skipped:", e?.message);
                                 });
                               }
-                            }
                           }}
                           className="p-1 hover:text-rose-500"
                         >

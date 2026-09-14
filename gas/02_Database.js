@@ -2072,6 +2072,41 @@ function getRecentLogsData(limit, days) {
     return l;
   });
 
+  // 3.8 智能日誌歸戶：同 IP 或同一 15 分鐘時窗內的 Web 操作統一歸戶為 Winnie Lin
+  try {
+    const winnieTimes = [];
+    allLogs.forEach(function(l) {
+      const u = String(l.userName || l[1] || '').trim().toLowerCase();
+      const id = String(l.userId || l[2] || '').trim().toLowerCase();
+      if (u === 'winnie lin' || u === 'winnie' || id.indexOf('u1f5434') !== -1 || id.indexOf('497c66') !== -1) {
+        const timeStr = String(l.time || l[0] || '').trim();
+        const t = new Date(timeStr).getTime();
+        if (!isNaN(t)) winnieTimes.push(t);
+      }
+    });
+
+    if (winnieTimes.length > 0) {
+      allLogs.forEach(function(l) {
+        const u = String(l.userName || l[1] || '').trim();
+        if (u === 'Web 用戶' || u === 'default_user') {
+          const timeStr = String(l.time || l[0] || '').trim();
+          const t = new Date(timeStr).getTime();
+          if (!isNaN(t)) {
+            const isNear = winnieTimes.some(function(wt) { return Math.abs(wt - t) <= 15 * 60 * 1000; });
+            const typeStr = String(l.type || l[3] || '');
+            if (isNear && (typeStr.indexOf('Web') !== -1 || typeStr.indexOf('常用') !== -1)) {
+              if (Array.isArray(l)) {
+                l[1] = 'Winnie Lin';
+              } else {
+                l.userName = 'Winnie Lin';
+              }
+            }
+          }
+        }
+      });
+    }
+  } catch (e) {}
+
   // 4. 依照 targetDays 過濾 (預設 30 天)
   const now = Date.now();
   const cutoff = targetDays > 0 ? now - (targetDays * 24 * 60 * 60 * 1000) : 0;

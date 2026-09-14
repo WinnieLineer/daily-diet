@@ -8,7 +8,7 @@ import { getLocalDateString } from './constants';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
-function getEffectiveIds() {
+export function getEffectiveIds() {
   let userId = '';
   let gistId = '';
   let userName = '';
@@ -32,11 +32,26 @@ function getEffectiveIds() {
     if (!userName && userId && !userId.startsWith('U') && userId !== 'default_user' && !isGistId(userId)) {
       userName = userId;
     }
+    // 🛡️ 若維護者姓名存在 MAINTAINER_NAME_KEY，優先補全
+    if (!userName) {
+      const maintainerName = localStorage.getItem('daily_diet_maintainer_name');
+      if (maintainerName && !isGistId(maintainerName)) {
+        userName = maintainerName;
+      }
+    }
+    // 🛡️ 若 Gist ID 為 Winnie Lin 的專屬 Gist ID，精準補全用戶名
+    if (!userName && gistId && gistId.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') {
+      userName = 'Winnie Lin';
+    }
   } catch (e) {}
   const isGist = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
-  const effectiveUserId = userId || userName || 'default_user';
+  const effectiveUserId = (userId && userId !== 'default_user' && !isGist(userId)) ? userId : (userName || 'default_user');
   const effectiveUserName = (userName && !isGist(userName)) ? userName : (userId && !userId.startsWith('U') && !isGist(userId) ? userId : '');
-  return { userId: effectiveUserId, userName: effectiveUserName, gistId };
+  return { 
+    userId: isGist(effectiveUserId) ? 'default_user' : effectiveUserId, 
+    userName: effectiveUserName, 
+    gistId 
+  };
 }
 
 // ⏱️ 輕量防抖工具函數
@@ -318,6 +333,81 @@ export async function syncPoopToCloud(poopLog) {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
       .catch(e => console.warn('[Web ➔ LINE Sync] 即時同步排便異常:', e?.message));
     console.log(`💩 [Web ➔ LINE Sync] 即時同步排便打卡成功: ${poopLog.timestamp}`);
+  } catch (err) {}
+}
+
+/**
+ * 即時同步新增常用餐點至 LINE 後端與 Gist
+ */
+export function syncAddFavorite(favItem) {
+  if (!favItem) return;
+  const { userId, userName, gistId } = getEffectiveIds();
+  const params = new URLSearchParams({
+    action: 'addFavorite',
+    userId,
+    name: favItem.dish_name || favItem.name || '常用餐點',
+    cal: String(favItem.calories || 0),
+    pro: String(favItem.protein || 0),
+    wat: String(favItem.water || 0)
+  });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
+  if (gistId) params.append('gistId', gistId);
+
+  try {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 新增常用異常:', e?.message));
+    console.log(`⭐ [Web ➔ LINE Sync] 新增常用成功: ${favItem.dish_name || favItem.name}`);
+  } catch (err) {}
+}
+
+/**
+ * 即時同步刪除常用餐點至 LINE 後端與 Gist
+ */
+export function syncDeleteFavorite(favNameOrId) {
+  if (!favNameOrId) return;
+  const { userId, userName, gistId } = getEffectiveIds();
+  const params = new URLSearchParams({
+    action: 'deleteFavorite',
+    userId,
+    name: String(favNameOrId)
+  });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
+  if (gistId) params.append('gistId', gistId);
+
+  try {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 刪除常用異常:', e?.message));
+    console.log(`🗑️ [Web ➔ LINE Sync] 刪除常用成功: ${favNameOrId}`);
+  } catch (err) {}
+}
+
+/**
+ * 即時同步常用餐點排序至 LINE 後端與 Gist
+ */
+export function syncReorderFavorites(orderNames) {
+  if (!orderNames) return;
+  const { userId, userName, gistId } = getEffectiveIds();
+  const params = new URLSearchParams({
+    action: 'reorderFavorites',
+    userId,
+    order: String(orderNames)
+  });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
+  if (gistId) params.append('gistId', gistId);
+
+  try {
+    fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
+      .catch(e => console.warn('[Web ➔ LINE Sync] 常用排序異常:', e?.message));
+    console.log(`🔀 [Web ➔ LINE Sync] 常用排序同步成功`);
   } catch (err) {}
 }
 
