@@ -156,8 +156,9 @@ function doGet(e) {
     }
     if (!userId) userId = 'default_user';
 
-    // 🛡️ LINE 原生用戶 (U 開頭) 的名稱由 LINE Profile API 取得，不可被 Web 請求參數覆寫
-    const webCallerName = incomingCaller || (!userId.startsWith('U') && userId !== 'default_user' ? userId : (props.getProperty(`USER_NAME_${userId}`) || ''));
+    // 🛡️ LINE 原生用戶 (U 開頭) 的名稱由 LINE Profile API / props 取得，優先於 Web 前端傳入的暫存 caller
+    const resolvedLineName = (userId && userId.startsWith('U')) ? (props.getProperty(`USER_NAME_${userId}`) || getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || '') : '';
+    const webCallerName = resolvedLineName || incomingCaller || (!userId.startsWith('U') && userId !== 'default_user' ? userId : '');
     if (webCallerName && userId && !userId.startsWith('U') && userId !== 'default_user') {
       props.setProperty(`USER_NAME_${userId}`, webCallerName);
     }
@@ -241,9 +242,25 @@ function doGet(e) {
       const weightLogs = (typeof getUserWeightHistory === 'function') ? getUserWeightHistory(userId, 30, props, incomingGist) : [];
       const poopLogs = (typeof getUserPoopHistory === 'function') ? getUserPoopHistory(userId, 30, props, incomingGist) : [];
 
+      let lineDisplayName = '';
+      if (userId && userId.startsWith('U')) {
+        lineDisplayName = props.getProperty(`USER_NAME_${userId}`) || getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || '';
+      }
+      if (!lineDisplayName && incomingGist) {
+        for (const k in allProps) {
+          if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
+            const matchedLineId = k.replace('USER_GIST_', '');
+            lineDisplayName = props.getProperty(`USER_NAME_${matchedLineId}`) || getUserDisplayName(matchedLineId, CHANNEL_ACCESS_TOKEN, props) || '';
+            if (lineDisplayName) break;
+          }
+        }
+      }
+
       return ContentService.createTextOutput(JSON.stringify({
         status: 'ok',
         userId,
+        userName: lineDisplayName || webCallerName || '',
+        lineUserName: lineDisplayName || '',
         gistId,
         todayLogs,
         weightLogs,
@@ -886,11 +903,24 @@ function doPost(e) {
       // 🛡️ 僅接收 caller 與 userName，絕不使用 name 避免餐點名稱污染用戶暱稱
       const incomingCallerName = data?.caller || data?.userName || e?.parameter?.caller || e?.parameter?.userName || '';
       let webUserId = data?.userId || e?.parameter?.userId || '';
+      const incomingGist = data?.gistId || e?.parameter?.gistId || '';
+
+      if (incomingGist && (!webUserId || !webUserId.startsWith('U'))) {
+        const allProps = props.getProperties();
+        for (const k in allProps) {
+          if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
+            webUserId = k.replace('USER_GIST_', '');
+            break;
+          }
+        }
+      }
+
       if ((!webUserId || webUserId === 'web_user' || webUserId === 'default_user') && incomingCallerName) {
         webUserId = incomingCallerName;
       }
       if (!webUserId) webUserId = 'web_user';
-      const webCaller = incomingCallerName || (!webUserId.startsWith('U') && webUserId !== 'web_user' ? webUserId : (props.getProperty(`USER_NAME_${webUserId}`) || 'Web 用戶'));
+      const resolvedLineName = (webUserId && webUserId.startsWith('U')) ? (props.getProperty(`USER_NAME_${webUserId}`) || getUserDisplayName(webUserId, CHANNEL_ACCESS_TOKEN, props) || '') : '';
+      const webCaller = resolvedLineName || incomingCallerName || (!webUserId.startsWith('U') && webUserId !== 'web_user' ? webUserId : 'Web 用戶');
       if (webCaller && webUserId && !webUserId.startsWith('U') && webUserId !== 'web_user') {
         props.setProperty(`USER_NAME_${webUserId}`, webCaller);
       }

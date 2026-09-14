@@ -878,7 +878,7 @@ function App() {
   }, []);
 
   const [userName, setUserName] = useState(() => {
-    return safeGetStorage('user_name') || '';
+    return safeGetStorage('line_user_name') || safeGetStorage('user_name') || '';
   });
   const [newVersionAvailable, setNewVersionAvailable] = useState(false);
 
@@ -954,15 +954,19 @@ function App() {
           comment: query.cmt || ''
         });
       } else if (query.name && !query.user) {
-        // If not editing a meal, treat query.name as username login
-        safeSetStorage('user_name', query.name);
-        setUserName(query.name);
-        console.log(`📥 Set username from URL query: ${query.name}`);
+        // If not editing a meal, treat query.name as username login only if line_user_name is not already set
+        if (!safeGetStorage('line_user_name')) {
+          safeSetStorage('user_name', query.name);
+          setUserName(query.name);
+          console.log(`📥 Set username from URL query: ${query.name}`);
+        }
       }
 
-      if (query.user) {
-        safeSetStorage('user_name', query.user);
-        setUserName(query.user);
+      if (query.user && !query.user.startsWith('U')) {
+        if (!safeGetStorage('line_user_name')) {
+          safeSetStorage('user_name', query.user);
+          setUserName(query.user);
+        }
       }
 
       // 1.5 Handle direct tab navigation from LINE LIFF URL (e.g. ?tab=feedback or ?tab=goals)
@@ -1020,12 +1024,12 @@ function App() {
       }
 
       // 3. Realtime Synchronize with Google Apps Script Backend (LINE Bot sync)
-      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id');
+      const localGist = safeGetStorage('gist_backup_id') || query.gistId || '';
+      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id') || localGist;
       const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
       if (effectiveUserId) {
         try {
-          const localGist = safeGetStorage('gist_backup_id') || query.gistId || '';
           const localCal = (await db.settings.get('calorie_goal'))?.value;
           const localPro = (await db.settings.get('protein_goal'))?.value;
           const localWat = (await db.settings.get('water_goal'))?.value;
@@ -1044,6 +1048,13 @@ function App() {
             const gasData = await res.json();
             if (gasData.gistId) {
               safeSetStorage('gist_backup_id', gasData.gistId);
+            }
+            if (gasData.lineUserName || gasData.userName) {
+              const unifiedName = gasData.lineUserName || gasData.userName;
+              safeSetStorage('user_name', unifiedName);
+              if (gasData.lineUserName) safeSetStorage('line_user_name', gasData.lineUserName);
+              setUserName(unifiedName);
+              console.log(`👤 [GAS Sync] 從 LINE 後端同步統一使用者名稱: ${unifiedName}`);
             }
             if (gasData.goals) {
               const cal = Number(gasData.goals.calories) || 2000;
@@ -1243,19 +1254,19 @@ function App() {
         try {
           const cloudData = await downloadFromGist(effectiveGistId);
           if (cloudData) {
-            // 👤 雲端 Gist 使用者名稱統一邏輯：優先統一為 LINE 名稱，若無則沿用最早設定的設定名稱
-            const lineName = profile?.displayName || safeGetStorage('line_user_name') || (!query.user?.startsWith('U') ? query.user : '') || query.name;
-            if (lineName) {
-              safeSetStorage('user_name', lineName);
-              safeSetStorage('line_user_name', lineName);
-              setUserName(lineName);
-              console.log(`👤 [Gist 同步] 使用者名稱統一為 LINE 名稱: ${lineName}`);
-            } else if (cloudData.localStorage?.user_name) {
-              const earliestName = cloudData.localStorage.user_name;
-              if (!safeGetStorage('user_name')) {
-                safeSetStorage('user_name', earliestName);
-                setUserName(earliestName);
-                console.log(`👤 [Gist 同步] 未連動 LINE，使用最早設定名稱: ${earliestName}`);
+            // 👤 雲端 Gist 使用者名稱統一邏輯：
+            // 優先統一為 LINE 名稱（LIFF profile > Gist 記錄的 line_user_name > Gist 記錄的 user_name）
+            const authoritativeName = profile?.displayName || cloudData.localStorage?.line_user_name || cloudData.localStorage?.user_name;
+            if (authoritativeName) {
+              safeSetStorage('user_name', authoritativeName);
+              safeSetStorage('line_user_name', cloudData.localStorage?.line_user_name || profile?.displayName || authoritativeName);
+              setUserName(authoritativeName);
+              console.log(`👤 [Gist 同步] 使用者名稱強制統一為 LINE/雲端名稱: ${authoritativeName}`);
+            } else {
+              const lineFallback = safeGetStorage('line_user_name') || (!query.user?.startsWith('U') ? query.user : '') || query.name;
+              if (lineFallback) {
+                safeSetStorage('user_name', lineFallback);
+                setUserName(lineFallback);
               }
             }
 

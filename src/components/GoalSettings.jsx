@@ -502,7 +502,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     if (getCurrentGistId() && !confirm(t('backup_confirm'))) return;
     setSyncStatus('syncing');
     try {
-      const currentLineName = lineProfile?.displayName || safeGetStorage('line_user_name');
+      let existingCloudLineName = null;
+      try {
+        const currentCloud = await downloadFromGist(getCurrentGistId());
+        existingCloudLineName = currentCloud?.localStorage?.line_user_name;
+      } catch (e) {}
+
+      const currentLineName = lineProfile?.displayName || safeGetStorage('line_user_name') || existingCloudLineName;
       const finalUserName = currentLineName || safeGetStorage('user_name') || userName || '';
       if (currentLineName) {
         safeSetStorage('user_name', currentLineName);
@@ -574,10 +580,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     }
   };
 
-  const handleManualGistIdSave = () => {
-    if (gistIdInput.trim()) {
-      setGistId(gistIdInput.trim());
+  const handleManualGistIdSave = async () => {
+    const rawId = gistIdInput.trim();
+    if (rawId) {
+      setGistId(rawId);
       refreshStats();
+      try {
+        const cloudData = await downloadFromGist(rawId);
+        if (cloudData) {
+          const cloudName = cloudData.localStorage?.line_user_name || cloudData.localStorage?.user_name;
+          if (cloudName) {
+            safeSetStorage('user_name', cloudName);
+            safeSetStorage('line_user_name', cloudData.localStorage?.line_user_name || cloudName);
+            if (onSetUserName) onSetUserName(cloudName);
+          }
+        }
+      } catch (e) {
+        console.warn("手動儲存 Gist ID 後同步名稱失敗:", e);
+      }
       alert(t('gist_id_saved') || "Gist ID saved!");
     }
   };
