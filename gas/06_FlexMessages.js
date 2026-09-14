@@ -1878,6 +1878,26 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
           flex: 3
         }
       ]
+    };
+  });
+
+  return {
+    type: "flex",
+    altText: isEn ? `📈 7-Day Nutrition Trend: Avg ${avgCal} kcal / day` : `📈 7 日飲食趨勢週報：平均每日 ${avgCal} kcal`,
+    contents: {
+      type: "bubble",
+      size: "mega",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#000000",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            contents: [
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
               { type: "text", text: isEn ? "7-Day Trend" : "7 日趨勢週報", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
