@@ -641,19 +641,71 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     const timePrefix = timeText ? `${timeText} ` : '';
     const displayName = log.dish_name || (isEn ? 'Meal' : '美味餐點');
 
-    const cleanDisplay = displayName.slice(0, 25);
+    const cleanDisplay = displayName.replace(/^[0-9]+(?:\.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().slice(0, 22);
+    const hasPhoto = !!(log.image_url || log.photo_url);
+    const calVal = Number(log.calories) || 0;
+    const proVal = Number(log.protein) || 0;
+
     mealItems.push({
       type: "box",
-      layout: "horizontal",
+      layout: "vertical",
+      backgroundColor: "#FFFFFF",
+      borderColor: "#000000",
+      borderWidth: "2px",
+      cornerRadius: "14px",
+      paddingAll: "10px",
+      margin: "sm",
       action: {
         type: "postback",
         label: isEn ? "Details" : "詳情",
         data: JSON.stringify({ action: 'mealInfo', id: log.id, date: todayStr }),
-        displayText: isEn ? `🔍 Details: ${cleanDisplay}` : `🔍 查看【${cleanDisplay}】詳細分析`
+        displayText: isEn ? `🔍 ${cleanDisplay}` : `🔍 查看【${cleanDisplay}】詳細分析`
       },
       contents: [
-        { type: "text", text: `• ${timePrefix}${catPrefix}${displayName}`, size: "xs", color: "#18181B", weight: "bold", flex: 4, wrap: true },
-        { type: "text", text: `${Number(log.calories) || 0} kcal 🔍`, size: "xs", color: "#E11D48", weight: "bold", flex: 2, align: "end" }
+        {
+          type: "box",
+          layout: "horizontal",
+          contents: [
+            {
+              type: "text",
+              text: `${catPrefix}${cleanDisplay}`,
+              weight: "bold",
+              size: "sm",
+              color: "#18181B",
+              flex: 4,
+              wrap: true
+            },
+            {
+              type: "text",
+              text: (hasPhoto ? "📸 " : "") + (timePrefix || ''),
+              size: "xxs",
+              color: "#71717A",
+              align: "end",
+              flex: 2,
+              gravity: "center"
+            }
+          ]
+        },
+        {
+          type: "box",
+          layout: "horizontal",
+          spacing: "xs",
+          margin: "xs",
+          contents: [
+            {
+              type: "box", layout: "horizontal", backgroundColor: "#FFF1F2", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+              contents: [{ type: "text", text: `🔥 ${calVal} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+            },
+            ...(proVal > 0 ? [{
+              type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+              contents: [{ type: "text", text: `🥩 ${proVal}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+            }] : []),
+            {
+              type: "box", layout: "horizontal", backgroundColor: "#FDE047", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "2px", paddingBottom: "2px", marginLeft: "auto",
+              contents: [{ type: "text", text: isEn ? "🔍 Details" : "🔍 詳情", size: "xxs", color: "#000000", weight: "bold" }]
+            }
+          ]
+        }
       ]
     });
   });
@@ -699,23 +751,35 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#000000",
+        backgroundColor: "#FDE047",
         paddingAll: "14px",
         contents: [
           {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: `📅 ${todayStr}`, color: "#A1A1AA", size: "xs", align: "end" }
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#000000",
+                cornerRadius: "8px",
+                paddingStart: "8px",
+                paddingEnd: "8px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                contents: [
+                  { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "xxs" }
+                ]
+              },
+              { type: "text", text: `📅 ${todayStr}`, color: "#713F12", weight: "bold", size: "xs", align: "end", gravity: "center" }
             ]
           },
           {
             type: "text",
             text: headerTitle,
-            color: "#FFFFFF",
+            color: "#000000",
             weight: "bold",
-            size: "md",
+            size: "lg",
             margin: "xs",
             wrap: true
           }
@@ -829,7 +893,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
               ]
             }
           ]),
-          // 餐點列表框
+          // ⚡ Neo 熱量達標進度條
           {
             type: "box",
             layout: "vertical",
@@ -837,11 +901,64 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             borderColor: "#000000",
             borderWidth: "2.5px",
             cornerRadius: "14px",
+            paddingAll: "10px",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: isEn ? "⚡ Calorie Target Progress" : "⚡ 每日熱量達標進度", size: "xxs", weight: "bold", color: "#71717A", flex: 3 },
+                  { type: "text", text: `${totalCal} / ${calGoal} kcal (${calPercent}%)`, size: "xxs", weight: "bold", color: isOverCal ? "#E11D48" : "#000000", align: "end", flex: 4 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#F4F4F5",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "8px",
+                height: "12px",
+                margin: "xs",
+                contents: [
+                  ...(calPercent > 0 ? [{
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: isOverCal ? "#E11D48" : (calPercent >= 90 ? "#16A34A" : "#FDE047"),
+                    flex: Math.min(100, Math.max(2, calPercent)),
+                    height: "100%"
+                  }] : []),
+                  ...(calPercent < 100 ? [{
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#F4F4F5",
+                    flex: Math.max(1, 100 - calPercent),
+                    height: "100%"
+                  }] : [])
+                ]
+              }
+            ]
+          },
+          // 餐點列表框
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            borderColor: "#000000",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
             paddingAll: "12px",
             spacing: "xs",
             contents: [
-              { type: "text", text: isEn ? (isToday ? `🍱 Logged ${allLogs.length} meals today:` : `🍱 Logged ${allLogs.length} meals on this date:`) : (isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`), size: "xs", weight: "bold", color: "#000000" },
-              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isEn ? (isToday ? "No meals logged yet today" : "No meals logged on this date") : (isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄"), size: "xs", color: "#A1A1AA" }])
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: isEn ? (isToday ? `🍱 Logged ${allLogs.length} meals:` : `🍱 ${allLogs.length} meals on ${todayStr}:`) : (isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`), size: "xs", weight: "bold", color: "#000000", flex: 3 },
+                  { type: "text", text: isEn ? "Tap meal for AI info 🔍" : "點擊餐點看 AI 詳情 🔍", size: "xxs", color: "#71717A", align: "end", flex: 3, gravity: "center" }
+                ]
+              },
+              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isEn ? (isToday ? "No meals logged yet today" : "No meals logged on this date") : (isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄"), size: "xs", color: "#A1A1AA", margin: "sm" }])
             ]
           },
           // 教練提示框
@@ -5594,18 +5711,30 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
   var header = !hero ? {
     type: "box",
     layout: "vertical",
-    backgroundColor: "#000000",
+    backgroundColor: "#FDE047",
     paddingAll: "14px",
     contents: [
       {
         type: "box",
         layout: "horizontal",
         contents: [
-          { type: "text", text: "🐼 AI 營養詳情", color: "#FDE047", weight: "bold", size: "sm" },
-          { type: "text", text: (date ? (date + " ") : "") + time, color: "#A1A1AA", size: "xs", align: "end" }
+          {
+            type: "box",
+            layout: "horizontal",
+            backgroundColor: "#000000",
+            cornerRadius: "8px",
+            paddingStart: "8px",
+            paddingEnd: "8px",
+            paddingTop: "2px",
+            paddingBottom: "2px",
+            contents: [
+              { type: "text", text: "🐼 AI NUTRITION", color: "#FDE047", weight: "bold", size: "xxs" }
+            ]
+          },
+          { type: "text", text: (date ? (date + " ") : "") + time, color: "#713F12", weight: "bold", size: "xs", align: "end", gravity: "center" }
         ]
       },
-      { type: "text", text: dishName, color: "#FFFFFF", weight: "bold", size: "lg", margin: "xs", wrap: true }
+      { type: "text", text: dishName, color: "#000000", weight: "bold", size: "xl", margin: "xs", wrap: true }
     ]
   } : undefined;
 
@@ -5613,19 +5742,19 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
   if (meal.category) {
     var catEmoji = meal.category === 'breakfast' ? '🍳 ' : (meal.category === 'lunch' ? '🍱 ' : (meal.category === 'dinner' ? '🍲 ' : (meal.category === 'snack' ? '☕ ' : '')));
     badges.push({
-      type: "box", layout: "horizontal", backgroundColor: "#F4F4F5", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+      type: "box", layout: "horizontal", backgroundColor: "#F4F4F5", cornerRadius: "8px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
       contents: [{ type: "text", text: catEmoji + meal.category, size: "xxs", color: "#18181B", weight: "bold" }]
     });
   }
   if (meal.model_used) {
     badges.push({
-      type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+      type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "8px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
       contents: [{ type: "text", text: "🤖 " + meal.model_used, size: "xxs", color: "#2563EB", weight: "bold" }]
     });
   }
   if (imageUrl) {
     badges.push({
-      type: "box", layout: "horizontal", backgroundColor: "#FEF08A", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
+      type: "box", layout: "horizontal", backgroundColor: "#FEF08A", cornerRadius: "8px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
       contents: [{ type: "text", text: "📸 照片已同步 (24h)", size: "xxs", color: "#854D0E", weight: "bold" }]
     });
   }
@@ -5707,10 +5836,30 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
         ...(hero ? [
           {
             type: "box",
-            layout: "horizontal",
+            layout: "vertical",
+            spacing: "xs",
             contents: [
-              { type: "text", text: dishName, weight: "bold", size: "lg", color: "#18181B", flex: 3, wrap: true },
-              { type: "text", text: time || date, size: "xs", color: "#71717A", flex: 1, align: "end" }
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    backgroundColor: "#000000",
+                    cornerRadius: "8px",
+                    paddingStart: "8px",
+                    paddingEnd: "8px",
+                    paddingTop: "2px",
+                    paddingBottom: "2px",
+                    contents: [
+                      { type: "text", text: "🐼 AI NUTRITION", color: "#FDE047", weight: "bold", size: "xxs" }
+                    ]
+                  },
+                  { type: "text", text: (date ? (date + " ") : "") + time, color: "#71717A", size: "xs", align: "end", gravity: "center" }
+                ]
+              },
+              { type: "text", text: dishName, weight: "bold", size: "xl", color: "#18181B", wrap: true }
             ]
           }
         ] : []),
@@ -5722,14 +5871,14 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
             contents: badges
           }
         ] : []),
-        // 核心營養素三欄
+        // 核心營養素三欄 (Neo 粗黑邊框)
         {
           type: "box",
           layout: "horizontal",
           spacing: "xs",
           contents: [
             {
-              type: "box", layout: "vertical", backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "8px", flex: 1, alignItems: "center",
+              type: "box", layout: "vertical", backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
                 { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
                 { type: "text", text: String(cal), size: "md", weight: "bold", color: "#000000", margin: "xs" },
@@ -5737,7 +5886,7 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
               ]
             },
             {
-              type: "box", layout: "vertical", backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "8px", flex: 1, alignItems: "center",
+              type: "box", layout: "vertical", backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
                 { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
                 { type: "text", text: pro + "g", size: "md", weight: "bold", color: "#000000", margin: "xs" },
@@ -5745,7 +5894,7 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
               ]
             },
             {
-              type: "box", layout: "vertical", backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "8px", flex: 1, alignItems: "center",
+              type: "box", layout: "vertical", backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
                 { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
                 { type: "text", text: wat + "ml", size: "md", weight: "bold", color: "#000000", margin: "xs" },
@@ -5754,21 +5903,21 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
             }
           ]
         },
-        // 碳水與脂肪
+        // 碳水與脂肪 (Neo 雙欄)
         {
           type: "box",
           layout: "horizontal",
           spacing: "xs",
           contents: [
             {
-              type: "box", layout: "vertical", backgroundColor: "#FFF7ED", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
+              type: "box", layout: "vertical", backgroundColor: "#FFF7ED", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
                 { type: "text", text: "🍞 碳水化合物", size: "xxs", color: "#C2410C", weight: "bold" },
                 { type: "text", text: carb + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs" }
               ]
             },
             {
-              type: "box", layout: "vertical", backgroundColor: "#F0FDF4", borderColor: "#000000", borderWidth: "2px", cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
+              type: "box", layout: "vertical", backgroundColor: "#F0FDF4", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
                 { type: "text", text: "🥑 脂肪", size: "xxs", color: "#166534", weight: "bold" },
                 { type: "text", text: fat + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs" }
@@ -5776,45 +5925,69 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
             }
           ]
         },
-        // 拆解明細清單
+        // 拆解明細清單 (Neo 卡片)
         ...(breakdownRows.length > 0 ? [
           {
             type: "box",
             layout: "vertical",
             backgroundColor: "#FFFFFF",
             borderColor: "#000000",
-            borderWidth: "2px",
-            cornerRadius: "12px",
-            paddingAll: "10px",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
+            paddingAll: "12px",
             spacing: "xs",
             contents: [
-              { type: "text", text: "🧮 AI 成分與熱量拆解明細", size: "xxs", color: "#000000", weight: "bold" },
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: "🧮 AI 成分與熱量拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 4 },
+                  { type: "text", text: "熱量 / 蛋白質", size: "xxs", color: "#71717A", align: "end", flex: 3 }
+                ]
+              },
               ...breakdownRows,
               ...(meal.calculation_note ? [
-                { type: "text", text: "💡 計算過程：" + meal.calculation_note, size: "xxs", color: "#52525B", wrap: true, margin: "xs" }
+                {
+                  type: "box",
+                  layout: "vertical",
+                  backgroundColor: "#F4F4F5",
+                  borderColor: "#E4E4E7",
+                  borderWidth: "1px",
+                  cornerRadius: "8px",
+                  paddingAll: "8px",
+                  margin: "xs",
+                  contents: [
+                    { type: "text", text: "💡 估算依據：" + meal.calculation_note, size: "xxs", color: "#52525B", wrap: true }
+                  ]
+                }
               ] : [])
             ]
           }
         ] : []),
-        // 教練點評
+        // 教練點評 (Neo Cyber Yellow 氣泡框)
         ...(commentText ? [
           {
             type: "box",
             layout: "vertical",
             backgroundColor: "#FEF08A",
             borderColor: "#000000",
-            borderWidth: "2px",
-            cornerRadius: "12px",
+            borderWidth: "2.5px",
+            cornerRadius: "14px",
             paddingAll: "12px",
             contents: [
               { type: "text", text: "💬 熊貓教練點評：" + commentText, size: "xs", color: "#000000", weight: "bold", wrap: true }
             ]
           }
         ] : []),
-        // 份量微調
+        // 份量微調 (Neo 容器)
         {
           type: "box",
           layout: "vertical",
+          backgroundColor: "#FFFFFF",
+          borderColor: "#000000",
+          borderWidth: "2px",
+          cornerRadius: "14px",
+          paddingAll: "10px",
           spacing: "xs",
           contents: [
             { type: "text", text: "⚖️ 份量微調 (整份等比縮放)", size: "xxs", weight: "bold", color: "#71717A" },
