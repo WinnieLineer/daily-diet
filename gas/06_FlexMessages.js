@@ -1878,26 +1878,6 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
           flex: 3
         }
       ]
-    };
-  });
-
-  return {
-    type: "flex",
-    altText: isEn ? `📈 7-Day Nutrition Trend: Avg ${avgCal} kcal / day` : `📈 7 日飲食趨勢週報：平均每日 ${avgCal} kcal`,
-    contents: {
-      type: "bubble",
-      size: "mega",
-      header: {
-        type: "box",
-        layout: "vertical",
-        backgroundColor: "#000000",
-        paddingAll: "14px",
-        contents: [
-          {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
               { type: "text", text: isEn ? "7-Day Trend" : "7 日趨勢週報", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
@@ -2693,7 +2673,11 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
 // 📋 5. 餐點管理清單卡片 (支援修改/刪除/清空)
 // ========================================================
 
-function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, props, lang) {
+// ========================================================
+// 📋 5. 餐點管理卡片 (paginated, each bubble <= 8 logs)
+// ========================================================
+
+function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, props, lang, page) {
   if (!props) props = PropertiesService.getScriptProperties();
   const todayStr = targetDateStr || getTodayDateString();
   const isToday = todayStr === getTodayDateString();
@@ -2704,263 +2688,145 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
   const goals = getUserGoals(userId, props, userGistId);
   const showCarbsFat = !!goals.show_carbs_fat;
 
+  // 每頁最多 8 筆，單 Bubble 約 15-22 KB，遠低於 LINE 30 KB 上限
+  const PAGE_SIZE = 8;
+  const totalLogs = allLogs.length;
+  const totalPages = Math.max(1, Math.ceil(totalLogs / PAGE_SIZE));
+  const currentPage = Math.max(1, Math.min(parseInt(page, 10) || 1, totalPages));
+  const startIdx = (currentPage - 1) * PAGE_SIZE;
+  const pageLogs = allLogs.slice(startIdx, startIdx + PAGE_SIZE);
+
   let totalCal = 0;
-  const mealBoxes = [];
+  allLogs.forEach(function(l) { totalCal += Number(l.calories) || 0; });
 
-  if (allLogs.length === 0) {
-    mealBoxes.push({
-      type: "box",
-      layout: "vertical",
-      backgroundColor: "#FFFFFF",
-      cornerRadius: "14px",
-      borderColor: "#000000",
-      borderWidth: "2px",
-      paddingAll: "16px",
-      alignItems: "center",
-      spacing: "md",
-      contents: [
-        { type: "text", text: isEn ? "No meals logged on this date 🐼" : "該日期尚未有任何飲食紀錄 🐼", size: "xs", color: "#71717A", weight: "bold" },
-        createNeoFlexButton({
-          label: isEn ? (isToday ? "➕ Log Meal" : `➕ Log Meal for ${todayStr}`) : (isToday ? "➕ 記錄今日餐點" : `➕ 補記 ${todayStr} 餐點`),
-          variant: "green",
-          size: "md",
-          action: {
-            type: "postback",
-            label: isEn ? "➕ Log Meal" : "➕ 補記餐點",
-            data: JSON.stringify({ action: 'fillAddMeal', date: todayStr }),
-            inputOption: "openKeyboard",
-            fillInText: isToday ? "記 " : `補記 ${todayStr} `
-          }
-        })
-      ]
-    });
-  } else {
-    allLogs.forEach((log, index) => {
-      totalCal += Number(log.calories) || 0;
-      let timeText = log.time || '';
-      if (!timeText && log.timestamp) {
-        try {
-          timeText = Utilities.formatDate(new Date(Number(log.timestamp)), "Asia/Taipei", "HH:mm");
-        } catch (e) {}
-      }
-      const dishName = log.dish_name || (isEn ? 'Meal' : '餐點');
-      const cleanDishName = dishName.replace(/^[0-9]+(?:\.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim();
-      const isFav = favorites.some(f => {
-        const fName = String(f.dish_name || '').trim();
-        return fName === cleanDishName || fName === dishName;
-      });
+  function buildPageBubble(logsSlice, pageNum) {
+    var mealBoxes = [];
 
+    if (logsSlice.length === 0) {
       mealBoxes.push({
-        type: "box",
-        layout: "vertical",
-        backgroundColor: "#FFFFFF",
-        cornerRadius: "12px",
-        borderColor: "#E4E4E7",
-        borderWidth: "1px",
-        paddingAll: "12px",
-        spacing: "sm",
+        type: "box", layout: "vertical",
+        backgroundColor: "#FFFFFF", cornerRadius: "14px",
+        borderColor: "#000000", borderWidth: "2px",
+        paddingAll: "16px", alignItems: "center", spacing: "md",
         contents: [
-          {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: `${index + 1}. ${dishName}`, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true },
-              { type: "text", text: timeText, size: "xxs", color: "#A1A1AA", flex: 1, align: "end" }
-            ]
-          },
-          {
-            type: "box",
-            layout: "horizontal",
-            spacing: "xs",
-            contents: [
-              {
-                type: "box", layout: "horizontal",
-                backgroundColor: "#FFF1F2", cornerRadius: "6px",
-                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-                contents: [{ type: "text", text: `🔥 ${log.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
-              },
-              {
-                type: "box", layout: "horizontal",
-                backgroundColor: "#EFF6FF", cornerRadius: "6px",
-                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-                contents: [{ type: "text", text: `🥩 ${log.protein}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
-              },
-              {
-                type: "box", layout: "horizontal",
-                backgroundColor: "#ECFEFF", cornerRadius: "6px",
-                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-                contents: [{ type: "text", text: `💧 ${log.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
-              }
-            ]
-          },
-          ...(showCarbsFat && (Number(log.carbs) > 0 || Number(log.fat) > 0) ? [{
-            type: "box", layout: "horizontal", spacing: "xs",
-            contents: [
-              Number(log.carbs) > 0 ? {
-                type: "box", layout: "horizontal",
-                backgroundColor: "#FFF7ED", cornerRadius: "6px",
-                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-                contents: [{ type: "text", text: `🍞 ${log.carbs}g`, size: "xxs", color: "#C2410C", weight: "bold" }]
-              } : null,
-              Number(log.fat) > 0 ? {
-                type: "box", layout: "horizontal",
-                backgroundColor: "#F0FDF4", cornerRadius: "6px",
-                paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-                contents: [{ type: "text", text: `🥑 ${log.fat}g`, size: "xxs", color: "#166534", weight: "bold" }]
-              } : null
-            ].filter(Boolean)
-          }] : []),
-
-          {
-            type: "box",
-            layout: "horizontal",
-            spacing: "xs",
-            margin: "xs",
-            contents: [
-              ...(isFav ? [] : [
-                createNeoFlexButton({
-                  label: isEn ? "⭐ Fav" : "⭐ 加常用",
-                  variant: "yellowLight",
-                  size: "sm",
-                  flex: 1,
-                  action: {
-                    type: "postback",
-                    label: isEn ? "⭐ Fav" : "⭐ 加常用",
-                    data: JSON.stringify({
-                      action: 'saveFavorite',
-                      name: cleanDishName,
-                      cal: Number(log.calories) || 0,
-                      pro: Number(log.protein) || 0,
-                      wat: Number(log.water) || 0
-                    }),
-                    displayText: isEn ? `⭐ Favorite: ${cleanDishName}` : `⭐ 存為常用：${cleanDishName}`
-                  }
-                })
-              ]),
-              createNeoFlexButton({
-                label: isEn ? "✏️ Edit" : "✏️ 微調",
-                variant: "white",
-                size: "sm",
-                flex: 1,
-                action: {
-                  type: "postback",
-                  label: isEn ? "✏️ Edit" : "✏️ 微調",
-                  data: JSON.stringify({ action: 'fillEdit', id: log.id }),
-                  inputOption: "openKeyboard",
-                  fillInText: isEn ? `Change ${dishName} ${log.calories}cal ${log.protein || 0}pro ${log.water || 0}water` : `改 ${dishName} ${log.calories}卡 ${log.protein || 0}蛋 ${log.water || 0}水`
-                }
-              }),
-              createNeoFlexButton({
-                label: isEn ? "🗑️ Delete" : "🗑️ 刪除",
-                variant: "danger",
-                size: "sm",
-                flex: 1,
-                action: {
-                  type: "postback",
-                  label: isEn ? "🗑️ Delete" : "🗑️ 刪除",
-                  data: JSON.stringify({ action: 'deleteMeal', id: log.id, index: index, date: todayStr }),
-                  displayText: isEn ? `🗑️ Delete meal: ${dishName}` : `🗑️ 刪除餐點：${dishName}`
-                }
-              })
-            ]
-          }
+          { type: "text", text: isEn ? "No meals logged on this date \uD83D\uDC3C" : "\u8A72\u65E5\u671F\u5C1A\u672A\u6709\u4EFB\u4F55\u98F2\u98DF\u7D00\u9304 \uD83D\uDC3C", size: "xs", color: "#71717A", weight: "bold" },
+          createNeoFlexButton({
+            label: isEn ? (isToday ? "\u2795 Log Meal" : ("\u2795 Log Meal for " + todayStr)) : (isToday ? "\u2795 \u8A18\u9304\u4ECA\u65E5\u9910\u9ede" : ("\u2795 \u88DC\u8A18 " + todayStr + " \u9910\u9ede")),
+            variant: "green", size: "md",
+            action: {
+              type: "postback", label: isEn ? "\u2795 Log Meal" : "\u2795 \u88DC\u8A18\u9910\u9ede",
+              data: JSON.stringify({ action: 'fillAddMeal', date: todayStr }),
+              inputOption: "openKeyboard",
+              fillInText: isToday ? "\u8A18 " : ("\u88DC\u8A18 " + todayStr + " ")
+            }
+          })
         ]
       });
-    });
-  }
+    } else {
+      logsSlice.forEach(function(log, i) {
+        var globalIdx = startIdx + i;
+        var dishName = log.dish_name || (isEn ? 'Meal' : '\u9910\u9ede');
+        var cleanDishName = dishName.replace(/^[0-9]+(?:\.[0-9]+)?(?:\u500D\u7684|x\s*)/i, '').replace(/\s*\(.*\u500D.*\u4EFD\u91CF\)/g, '').trim();
+        var isFav = favorites.some(function(f) {
+          var fName = String(f.dish_name || '').trim();
+          return fName === cleanDishName || fName === dishName;
+        });
+        var timeText = log.time || '';
+        if (!timeText && log.timestamp) {
+          try { timeText = Utilities.formatDate(new Date(Number(log.timestamp)), "Asia/Taipei", "HH:mm"); } catch (e) {}
+        }
 
-  return {
-    type: "flex",
-    altText: isEn 
-      ? `📋 Manage ${isToday ? 'Today' : todayStr} Logs (${allLogs.length} meals, ${totalCal} kcal)`
-      : `📋 ${isToday ? '今日' : todayStr} 餐點管理清單（共 ${allLogs.length} 餐，累計 ${totalCal} kcal）`,
-    contents: {
+        var chipRow = [
+          { type: "box", layout: "horizontal", backgroundColor: "#FFF1F2", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83D\uDD25 " + log.calories + " kcal", size: "xxs", color: "#E11D48", weight: "bold" }] },
+          { type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83E\uDD69 " + log.protein + "g", size: "xxs", color: "#2563EB", weight: "bold" }] },
+          { type: "box", layout: "horizontal", backgroundColor: "#ECFEFF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83D\uDCA7 " + (log.water || 0) + "ml", size: "xxs", color: "#0891B2", weight: "bold" }] }
+        ];
+
+        var extraChips = [];
+        if (showCarbsFat && (Number(log.carbs) > 0 || Number(log.fat) > 0)) {
+          var row2 = [];
+          if (Number(log.carbs) > 0) row2.push({ type: "box", layout: "horizontal", backgroundColor: "#FFF7ED", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83C\uDF5E " + log.carbs + "g", size: "xxs", color: "#C2410C", weight: "bold" }] });
+          if (Number(log.fat) > 0) row2.push({ type: "box", layout: "horizontal", backgroundColor: "#F0FDF4", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83E\uDD51 " + log.fat + "g", size: "xxs", color: "#166534", weight: "bold" }] });
+          if (row2.length > 0) extraChips.push({ type: "box", layout: "horizontal", spacing: "xs", contents: row2 });
+        }
+
+        var actionBtns = [];
+        if (!isFav) {
+          actionBtns.push(createNeoFlexButton({ label: isEn ? "\u2B50 Fav" : "\u2B50 \u52A0\u5E38\u7528", variant: "yellowLight", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\u2B50 Fav" : "\u2B50 \u52A0\u5E38\u7528", data: JSON.stringify({ action: 'saveFavorite', name: cleanDishName, cal: Number(log.calories) || 0, pro: Number(log.protein) || 0, wat: Number(log.water) || 0 }), displayText: isEn ? ("\u2B50 Favorite: " + cleanDishName) : ("\u2B50 \u5B58\u70BA\u5E38\u7528\uFF1A" + cleanDishName) } }));
+        }
+        actionBtns.push(createNeoFlexButton({ label: isEn ? "\u270F\uFE0F Edit" : "\u270F\uFE0F \u5FAE\u8ABF", variant: "white", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\u270F\uFE0F Edit" : "\u270F\uFE0F \u5FAE\u8ABF", data: JSON.stringify({ action: 'fillEdit', id: log.id }), inputOption: "openKeyboard", fillInText: isEn ? ("Change " + dishName + " " + log.calories + "cal " + (log.protein || 0) + "pro " + (log.water || 0) + "water") : ("\u6539 " + dishName + " " + log.calories + "\u5361 " + (log.protein || 0) + "\u86CB " + (log.water || 0) + "\u6C34") } }));
+        actionBtns.push(createNeoFlexButton({ label: isEn ? "\uD83D\uDDD1\uFE0F Del" : "\uD83D\uDDD1\uFE0F \u522A\u9664", variant: "danger", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\uD83D\uDDD1\uFE0F Delete" : "\uD83D\uDDD1\uFE0F \u522A\u9664", data: JSON.stringify({ action: 'deleteMeal', id: log.id, index: globalIdx, date: todayStr }), displayText: isEn ? ("\uD83D\uDDD1\uFE0F Delete meal: " + dishName) : ("\uD83D\uDDD1\uFE0F \u522A\u9664\u9910\u9ede\uFF1A" + dishName) } }));
+
+        mealBoxes.push({
+          type: "box", layout: "vertical",
+          backgroundColor: "#FFFFFF", cornerRadius: "12px",
+          borderColor: "#E4E4E7", borderWidth: "1px",
+          paddingAll: "12px", spacing: "sm",
+          contents: [
+            { type: "box", layout: "horizontal", contents: [
+              { type: "text", text: (globalIdx + 1) + ". " + dishName, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true },
+              { type: "text", text: timeText, size: "xxs", color: "#A1A1AA", flex: 1, align: "end" }
+            ]},
+            { type: "box", layout: "horizontal", spacing: "xs", contents: chipRow }
+          ].concat(extraChips).concat([
+            { type: "box", layout: "horizontal", spacing: "xs", margin: "xs", contents: actionBtns }
+          ])
+        });
+      });
+    }
+
+    // 分頁導航
+    var navButtons = [];
+    if (pageNum > 1) navButtons.push(createNeoFlexButton({ label: isEn ? ("\u25C0 Prev (" + (pageNum - 1) + "/" + totalPages + ")") : ("\u25C0 \u4E0A\u9801 (" + (pageNum - 1) + "/" + totalPages + ")"), variant: "white", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\u25C0 Prev" : "\u25C0 \u4E0A\u9801", data: JSON.stringify({ action: 'manageMeals', date: todayStr, page: pageNum - 1 }), displayText: isEn ? ("Page " + (pageNum - 1)) : ("\u7B2C " + (pageNum - 1) + " \u9801") } }));
+    if (pageNum < totalPages) navButtons.push(createNeoFlexButton({ label: isEn ? ("Next (" + (pageNum + 1) + "/" + totalPages + ") \u25B6") : ("\u4E0B\u9801 (" + (pageNum + 1) + "/" + totalPages + ") \u25B6"), variant: "accent", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "Next \u25B6" : "\u4E0B\u9801 \u25B6", data: JSON.stringify({ action: 'manageMeals', date: todayStr, page: pageNum + 1 }), displayText: isEn ? ("Page " + (pageNum + 1)) : ("\u7B2C " + (pageNum + 1) + " \u9801") } }));
+
+    var footerContents = [];
+    if (pageNum === 1) {
+      footerContents.push(createNeoFlexButton({ label: isEn ? (isToday ? "\u2795 Log Another Meal" : ("\u2795 Log Meal for " + todayStr)) : (isToday ? "\u2795 \u8A18\u9304\u65B0\u9910\u9ede" : ("\u2795 \u88DC\u8A18 " + todayStr + " \u9910\u9ede")), variant: "green", size: "md", action: { type: "postback", label: isEn ? "\u2795 Log Meal" : "\u2795 \u88DC\u8A18\u9910\u9ede", data: JSON.stringify({ action: 'fillAddMeal', date: todayStr }), inputOption: "openKeyboard", fillInText: isToday ? "\u8A18 " : ("\u88DC\u8A18 " + todayStr + " ") } }));
+      footerContents.push(createNeoFlexButton({ label: isToday ? (isEn ? "\uD83D\uDCCA View Today's Summary" : "\uD83D\uDCCA \u67E5\u770B\u4ECA\u65E5\u7E3D\u7D50") : (isEn ? ("\uD83D\uDCCA View " + todayStr + " Summary") : ("\uD83D\uDCCA \u67E5\u770B " + todayStr + " \u7E3D\u7D50")), variant: "black", size: "md", action: { type: "postback", label: isToday ? (isEn ? "\uD83D\uDCCA View Summary" : "\uD83D\uDCCA \u67E5\u770B\u7E3D\u7D50") : ("\uD83D\uDCCA " + todayStr), data: JSON.stringify({ action: 'pickDate', date: todayStr }), displayText: isToday ? (isEn ? "Daily Summary" : "\u4ECA\u65E5\u7E3D\u7D50") : (todayStr + " \u7E3D\u7D50") } }));
+    }
+    if (navButtons.length > 0) footerContents.push({ type: "box", layout: "horizontal", spacing: "sm", contents: navButtons });
+    if (pageNum === totalPages && isToday && totalLogs > 0) {
+      footerContents.push(createNeoFlexButton({ label: isEn ? "\uD83D\uDDD1\uFE0F Clear All Today's Logs" : "\uD83D\uDDD1\uFE0F \u6E05\u7A7A\u4ECA\u65E5\u7D00\u9304", variant: "danger", size: "md", action: { type: "postback", label: isEn ? "\uD83D\uDDD1\uFE0F Clear All" : "\uD83D\uDDD1\uFE0F \u6E05\u7A7A\u4ECA\u65E5\u7D00\u9304", data: JSON.stringify({ action: 'clearTodayConfirm' }), displayText: isEn ? "\uD83D\uDDD1\uFE0F Clear Today's Logs" : "\uD83D\uDDD1\uFE0F \u6E05\u7A7A\u4ECA\u65E5\u7D00\u9304" } }));
+    }
+
+    return {
       type: "bubble",
       size: "mega",
       header: {
-        type: "box",
-        layout: "vertical",
-        backgroundColor: "#000000",
-        paddingAll: "14px",
+        type: "box", layout: "vertical",
+        backgroundColor: "#000000", paddingAll: "14px",
         contents: [
-          {
-            type: "box",
-            layout: "horizontal",
-            contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: `📅 ${todayStr}`, color: "#A1A1AA", size: "xs", align: "end" }
-            ]
-          },
-          {
-            type: "text",
-            text: isToday ? (isEn ? "📋 Today's Meals Management" : "📋 今日餐點管理清單") : (isEn ? `📋 ${todayStr} Meals Management` : `📋 ${todayStr} 餐點管理清單`),
-            color: "#FFFFFF",
-            weight: "bold",
-            size: "md",
-            margin: "xs",
-            wrap: true
-          },
-          {
-            type: "text",
-            text: isEn ? `${allLogs.length} meals logged | Total ${totalCal} kcal` : `${isToday ? '今日' : '該日'}已記錄 ${allLogs.length} 餐 ｜ 累計攝取 ${totalCal} kcal`,
-            color: "#FDE047",
-            size: "xxs",
-            margin: "xs",
-            wrap: true
-          }
+          { type: "box", layout: "horizontal", contents: [
+            { type: "text", text: "\uD83D\uDC3C DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
+            { type: "text", text: "\uD83D\uDCC5 " + todayStr, color: "#A1A1AA", size: "xs", align: "end" }
+          ]},
+          { type: "text", text: isToday ? (isEn ? "\uD83D\uDCCB Today's Meals Management" : "\uD83D\uDCCB \u4ECA\u65E5\u9910\u9ede\u7BA1\u7406\u6E05\u55AE") : (isEn ? ("\uD83D\uDCCB " + todayStr + " Meals Management") : ("\uD83D\uDCCB " + todayStr + " \u9910\u9ede\u7BA1\u7406\u6E05\u55AE")), color: "#FFFFFF", weight: "bold", size: "md", margin: "xs", wrap: true },
+          { type: "text", text: totalPages > 1 ? (isEn ? (totalLogs + " meals | " + totalCal + " kcal | Page " + pageNum + "/" + totalPages) : ("\u5171 " + totalLogs + " \u9910 \uFF5C " + totalCal + " kcal \uFF5C \u7B2C " + pageNum + "/" + totalPages + " \u9801")) : (isEn ? (totalLogs + " meals logged | Total " + totalCal + " kcal") : ((isToday ? "\u4ECA\u65E5" : "\u8A72\u65E5") + "\u5DF2\u8A18\u9304 " + totalLogs + " \u9910 \uFF5C \u7D2F\u8A08\u651D\u53D6 " + totalCal + " kcal")), color: "#FDE047", size: "xxs", margin: "xs", wrap: true }
         ]
       },
       body: {
-        type: "box",
-        layout: "vertical",
-        spacing: "sm",
-        paddingAll: "14px",
+        type: "box", layout: "vertical",
+        spacing: "sm", paddingAll: "14px",
         backgroundColor: "#FAFAFA",
         contents: mealBoxes
       },
       footer: {
-        type: "box",
-        layout: "vertical",
-        spacing: "sm",
-        paddingAll: "14px",
-        contents: [
-          createNeoFlexButton({
-            label: isEn ? (isToday ? "➕ Log Another Meal" : `➕ Log Meal for ${todayStr}`) : (isToday ? "➕ 記錄新餐點" : `➕ 補記 ${todayStr} 餐點`),
-            variant: "accent",
-            size: "md",
-            action: {
-              type: "postback",
-              label: isEn ? "➕ Log Meal" : "➕ 補記餐點",
-              data: JSON.stringify({ action: 'fillAddMeal', date: todayStr }),
-              inputOption: "openKeyboard",
-              fillInText: isToday ? "記 " : `補記 ${todayStr} `
-            }
-          }),
-          createNeoFlexButton({
-            label: isToday ? (isEn ? "📊 View Today's Summary" : "📊 查看今日總結") : (isEn ? `📊 View ${todayStr} Summary` : `📊 查看 ${todayStr} 總結`),
-            variant: "black",
-            size: "md",
-            action: {
-              type: "postback",
-              label: isToday ? (isEn ? "📊 View Today's Summary" : "📊 查看今日總結") : (isEn ? `📊 View ${todayStr} Summary` : `📊 查看 ${todayStr} 總結`),
-              data: JSON.stringify({ action: 'pickDate', date: todayStr }),
-              displayText: isToday ? (isEn ? "Daily Summary" : "今日總結") : (isEn ? `${todayStr} Summary` : `${todayStr} 總結`)
-            }
-          }),
-          ...(isToday && allLogs.length > 0 ? [createNeoFlexButton({
-            label: isEn ? "🗑️ Clear All Today's Logs" : "🗑️ 清空今日紀錄",
-            variant: "danger",
-            size: "md",
-            action: {
-              type: "postback",
-              label: isEn ? "🗑️ Clear All Today's Logs" : "🗑️ 清空今日紀錄",
-              data: JSON.stringify({ action: 'clearTodayConfirm' }),
-              displayText: isEn ? "🗑️ Clear Today's Logs" : "🗑️ 清空今日紀錄"
-            }
-          })] : [])
-        ]
+        type: "box", layout: "vertical",
+        spacing: "sm", paddingAll: "14px",
+        contents: footerContents.length > 0 ? footerContents : [{ type: "text", text: isEn ? "Swipe for more pages" : "\u5DE6\u53F3\u6ED1\u52D5\u67E5\u770B\u66F4\u591A", size: "xxs", color: "#A1A1AA", align: "center" }]
       }
-    }
+    };
+  }
+
+  var altText = isEn
+    ? ("\uD83D\uDCCB Manage " + (isToday ? "Today" : todayStr) + " Logs (" + totalLogs + " meals, " + totalCal + " kcal)" + (totalPages > 1 ? " — Page " + currentPage + "/" + totalPages : ""))
+    : ("\uD83D\uDCCB " + (isToday ? "\u4ECA\u65E5" : todayStr) + " \u9910\u9ede\u7BA1\u7406\uFF08\u5171 " + totalLogs + " \u9910\uFF0C\u7D2F\u8A08 " + totalCal + " kcal\uFF09" + (totalPages > 1 ? " \u7B2C " + currentPage + "/" + totalPages + " \u9801" : ""));
+
+  return {
+    type: "flex",
+    altText: altText,
+    contents: buildPageBubble(pageLogs, currentPage)
   };
 }
 

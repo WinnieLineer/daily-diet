@@ -1335,9 +1335,10 @@ function doPost(e) {
         // 📋 管理紀錄 (當日或歷史日期)
         if (payload.action === 'manageMeals' || payload.action === 'manage') {
           const targetDate = payload.date || null;
-          console.log(`📋 [管理紀錄] 日期: ${targetDate || '今日'} 用戶: ${userId}`);
-          recordSystemLog('管理清單', userId, targetDate ? `管理 ${targetDate}` : '點擊管理紀錄', '', `回傳餐點管理面板卡片 (${targetDate || '今日'})`);
-          const mgmtFlex = generateManageMealsFlex(userId, targetDate, LIFF_ID, userGistId, props, userLang);
+          const page = parseInt(payload.page, 10) || 1;
+          console.log(`📋 [管理紀錄] 日期: ${targetDate || '今日'} 頁: ${page} 用戶: ${userId}`);
+          recordSystemLog('管理清單', userId, targetDate ? `管理 ${targetDate}` : '點擊管理紀錄', '', `回傳餐點管理面板卡片 (${targetDate || '今日'} p${page})`);
+          const mgmtFlex = generateManageMealsFlex(userId, targetDate, LIFF_ID, userGistId, props, userLang, page);
           replyFlexMessage(replyToken, mgmtFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
