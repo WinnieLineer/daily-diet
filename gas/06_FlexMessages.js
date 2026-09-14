@@ -63,8 +63,8 @@ function createNeoFlexButton(config) {
     cornerRadius: innerCorner,
     paddingTop: isSm ? '7px' : '9px',
     paddingBottom: isSm ? '7px' : '9px',
-    paddingStart: isSm ? '6px' : '12px',
-    paddingEnd: isSm ? '6px' : '12px',
+    paddingStart: isSm ? (config.paddingStart || '4px') : (config.paddingStart || '12px'),
+    paddingEnd: isSm ? (config.paddingEnd || '4px') : (config.paddingEnd || '12px'),
     alignItems: 'center',
     justifyContent: 'center',
     contents: [
@@ -72,10 +72,10 @@ function createNeoFlexButton(config) {
         type: 'text',
         text: label,
         weight: 'bold',
-        size: isSm ? 'xxs' : 'xs',
+        size: config.fontSize || (isSm ? 'xxs' : 'xs'),
         color: textColor,
         align: 'center',
-        wrap: true
+        wrap: config.wrap !== undefined ? config.wrap : false
       }
     ]
   };
@@ -2939,7 +2939,7 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
           }
         }));
         if (!isFav) {
-          actionBtns.push(createNeoFlexButton({ label: isEn ? "\u2B50 Fav" : "\u2B50 \u52A0\u5E38\u7528", variant: "yellowLight", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\u2B50 Fav" : "\u2B50 \u52A0\u5E38\u7528", data: JSON.stringify({ action: 'saveFavorite', name: cleanDishName, cal: Number(log.calories) || 0, pro: Number(log.protein) || 0, wat: Number(log.water) || 0 }), displayText: isEn ? ("\u2B50 Favorite: " + cleanDishName) : ("\u2B50 \u5B58\u70BA\u5E38\u7528\uFF1A" + cleanDishName) } }));
+          actionBtns.push(createNeoFlexButton({ label: isEn ? "\u2B50 Fav" : "\u2B50 \u5E38\u7528", variant: "yellowLight", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\u2B50 Fav" : "\u2B50 \u5E38\u7528", data: JSON.stringify({ action: 'saveFavorite', name: cleanDishName, cal: Number(log.calories) || 0, pro: Number(log.protein) || 0, wat: Number(log.water) || 0 }), displayText: isEn ? ("\u2B50 Favorite: " + cleanDishName) : ("\u2B50 \u5B58\u70BA\u5E38\u7528\uFF1A" + cleanDishName) } }));
         }
         actionBtns.push(createNeoFlexButton({ label: isEn ? "\u270F\uFE0F Edit" : "\u270F\uFE0F \u5FAE\u8ABF", variant: "white", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\u270F\uFE0F Edit" : "\u270F\uFE0F \u5FAE\u8ABF", data: JSON.stringify({ action: 'fillEdit', id: log.id }), inputOption: "openKeyboard", fillInText: isEn ? ("Change " + dishName + " " + log.calories + "cal " + (log.protein || 0) + "pro " + (log.water || 0) + "water") : ("\u6539 " + dishName + " " + log.calories + "\u5361 " + (log.protein || 0) + "\u86CB " + (log.water || 0) + "\u6C34") } }));
         actionBtns.push(createNeoFlexButton({ label: isEn ? "\uD83D\uDDD1\uFE0F Del" : "\uD83D\uDDD1\uFE0F \u522A\u9664", variant: "danger", size: "sm", flex: 1, action: { type: "postback", label: isEn ? "\uD83D\uDDD1\uFE0F Delete" : "\uD83D\uDDD1\uFE0F \u522A\u9664", data: JSON.stringify({ action: 'deleteMeal', id: log.id, index: globalIdx, date: todayStr }), displayText: isEn ? ("\uD83D\uDDD1\uFE0F Delete meal: " + dishName) : ("\uD83D\uDDD1\uFE0F \u522A\u9664\u9910\u9ede\uFF1A" + dishName) } }));
