@@ -502,13 +502,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     if (getCurrentGistId() && !confirm(t('backup_confirm'))) return;
     setSyncStatus('syncing');
     try {
+      const currentLineName = lineProfile?.displayName || safeGetStorage('line_user_name');
+      const finalUserName = currentLineName || safeGetStorage('user_name') || userName || '';
+      if (currentLineName) {
+        safeSetStorage('user_name', currentLineName);
+        safeSetStorage('line_user_name', currentLineName);
+        if (onSetUserName) onSetUserName(currentLineName);
+      }
+
       const data = {
         dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => ({ ...rest, image: null })),
         weightLogs: await db.weightLogs.toArray(),
         settings: await db.settings.toArray(),
         favorites: await db.favorites.toArray(),
         localStorage: {
-          user_name: safeGetStorage('user_name'),
+          user_name: finalUserName,
+          line_user_name: currentLineName || null,
           app_layout: safeGetStorage('app_layout'),
           onboarding_seen: safeGetStorage('onboarding_seen'),
           last_seen_version: safeGetStorage('last_seen_version'),
@@ -546,6 +555,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       });
       if (data.localStorage) {
         Object.entries(data.localStorage).forEach(([key, value]) => { if (value !== null) safeSetStorage(key, value); });
+
+        // 👤 使用者名稱統一規則：若有 LINE 名稱則優先以 LINE 名稱為準；若無，則採用 Gist 備份中最早設定的名稱
+        const currentLineName = lineProfile?.displayName || safeGetStorage('line_user_name');
+        if (currentLineName) {
+          safeSetStorage('user_name', currentLineName);
+          safeSetStorage('line_user_name', currentLineName);
+        } else if (data.localStorage.user_name) {
+          safeSetStorage('user_name', data.localStorage.user_name);
+        }
       }
       setSyncStatus('success');
       setTimeout(() => window.location.reload(), 1000);
@@ -792,6 +810,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           </div>
                           <p className="text-[9px] text-amber-900 font-bold leading-relaxed">
                             在 LINE 官方帳號（@618iipof）聊天室傳送「<span className="text-black font-black">綁定 {currentGistId ? currentGistId.slice(0, 8) + '...' : '您的ID'}</span>」，即可在 LINE 隨時雙向同步您的飲食紀錄與目標！
+                            <br /><span className="text-[8px] opacity-80 mt-0.5 inline-block">💡 連動後使用者名稱將自動與您的 LINE 暱稱保持一致；若未連動 LINE 則沿用您最早自訂的設定名稱。</span>
                           </p>
                           <div className="flex items-center gap-1.5">
                             <div className="flex-1 bg-white border-2 border-black p-2 rounded-lg font-mono text-[10px] font-black text-zinc-800 break-all select-all">

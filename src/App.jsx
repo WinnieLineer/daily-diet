@@ -1003,6 +1003,7 @@ function App() {
         profile = await liffService.init();
         if (profile) {
           if (profile.displayName) {
+            safeSetStorage('line_user_name', profile.displayName);
             safeSetStorage('user_name', profile.displayName);
             setUserName(profile.displayName);
           }
@@ -1242,6 +1243,22 @@ function App() {
         try {
           const cloudData = await downloadFromGist(effectiveGistId);
           if (cloudData) {
+            // 👤 雲端 Gist 使用者名稱統一邏輯：優先統一為 LINE 名稱，若無則沿用最早設定的設定名稱
+            const lineName = profile?.displayName || safeGetStorage('line_user_name') || (!query.user?.startsWith('U') ? query.user : '') || query.name;
+            if (lineName) {
+              safeSetStorage('user_name', lineName);
+              safeSetStorage('line_user_name', lineName);
+              setUserName(lineName);
+              console.log(`👤 [Gist 同步] 使用者名稱統一為 LINE 名稱: ${lineName}`);
+            } else if (cloudData.localStorage?.user_name) {
+              const earliestName = cloudData.localStorage.user_name;
+              if (!safeGetStorage('user_name')) {
+                safeSetStorage('user_name', earliestName);
+                setUserName(earliestName);
+                console.log(`👤 [Gist 同步] 未連動 LINE，使用最早設定名稱: ${earliestName}`);
+              }
+            }
+
             // 同步雲端目標設定
             if (cloudData.settings && Array.isArray(cloudData.settings)) {
               for (const s of cloudData.settings) {

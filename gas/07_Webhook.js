@@ -2015,6 +2015,14 @@ function doPost(e) {
               
               let extraMsg = '';
               let favCount = 0;
+              let lineDisplayName = '';
+              try {
+                lineDisplayName = getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || '';
+                if (lineDisplayName && !lineDisplayName.startsWith('LINE用戶')) {
+                  props.setProperty(`USER_NAME_${userId}`, lineDisplayName);
+                }
+              } catch (ne) {}
+
               if (GITHUB_PAT) {
                 try {
                   const gistUrl = `https://api.github.com/gists/${cleanGistId}`;
@@ -2026,6 +2034,7 @@ function doPost(e) {
                     const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
                     if (content) {
                       const backupData = JSON.parse(content);
+                      let needGistUpdate = false;
                       if (backupData.settings) {
                         const cal = backupData.settings.find(s => s.key === 'calorie_goal' || s.key === 'user_calories')?.value;
                         const pro = backupData.settings.find(s => s.key === 'protein_goal' || s.key === 'user_protein')?.value;
@@ -2038,9 +2047,34 @@ function doPost(e) {
                         props.setProperty(`FAVORITES_${userId}`, JSON.stringify(backupData.favorites));
                         favCount = backupData.favorites.length;
                       }
+                      // 👤 同步使用者名稱統一為 LINE 名稱 (若有)
+                      if (lineDisplayName && !lineDisplayName.startsWith('LINE用戶')) {
+                        backupData.localStorage = backupData.localStorage || {};
+                        backupData.localStorage.user_name = lineDisplayName;
+                        backupData.localStorage.line_user_name = lineDisplayName;
+                        needGistUpdate = true;
+                      }
+                      if (needGistUpdate) {
+                        try {
+                          UrlFetchApp.fetch(gistUrl, {
+                            method: 'PATCH',
+                            headers: { 'Authorization': `Bearer ${GITHUB_PAT}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json' },
+                            payload: JSON.stringify({
+                              files: {
+                                'daily-diet-backup.json': {
+                                  content: JSON.stringify(backupData, null, 2)
+                                }
+                              }
+                            }),
+                            muteHttpExceptions: true
+                          });
+                        } catch (ue) {
+                          console.warn("Gist 名稱反寫失敗:", ue);
+                        }
+                      }
                       extraMsg = isEn 
-                        ? `\n📦 Synced Web logs, nutrition targets & ${favCount} favorite meals in real-time!`
-                        : `\n📦 已偵測到您在 Web 端的歷史紀錄、體態目標與 ${favCount} 筆常用餐點，已全面即時連動！`;
+                        ? `\n👤 User name synced to your LINE name: "${lineDisplayName || 'User'}"\n📦 Synced Web logs, nutrition targets & ${favCount} favorite meals in real-time!`
+                        : `\n👤 使用者名稱已同步為您的 LINE 名稱：「${lineDisplayName || 'LINE 用戶'}」\n📦 已偵測到您在 Web 端的歷史紀錄、體態目標與 ${favCount} 筆常用餐點，已全面即時連動！`;
                     }
                   }
                 } catch (e) {
