@@ -77,8 +77,8 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-// 📢 Latest version with release notes configured in WhatsNew modal
-export const LATEST_WHATSNEW_VERSION = APP_VERSION;
+// 📢 Latest version with release notes configured in WhatsNew modal (only bump when major/feature notes are added)
+export const LATEST_WHATSNEW_VERSION = '3.3.21';
 
 const getLocalDateString = () => {
   const now = new Date();

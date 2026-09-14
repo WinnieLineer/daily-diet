@@ -45,15 +45,16 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = APP_VERSION;
+export const LATEST_WHATSNEW_VERSION = '3.3.21';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
-  return isNewer(APP_VERSION, lastSeenVersion);
+  return isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
 };
 
 const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
-  const showLatest = isNewer(APP_VERSION, lastSeenVersion) || !lastSeenVersion;
+  // Always display the primary current release features whenever this modal is opened
+  const show3321 = true;
   const show330 = isNewer('3.3.0', lastSeenVersion);
   const show320 = isNewer('3.2.0', lastSeenVersion);
   const show310 = isNewer('3.1.0', lastSeenVersion);
@@ -72,10 +73,10 @@ const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
   const show201 = isNewer('2.0.1', lastSeenVersion);
   const show200 = isNewer('2.0.0', lastSeenVersion);
 
-  const hasAnyFeatures = showLatest || show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
+  const hasAnyFeatures = show3321 || show330 || show320 || show310 || show300 || show250 || show242 || show235 || show231 || show230 || show220 || show212 || show211 || show210 || show208 || show206 || show201 || show200;
 
   // Only show "Patch" UI if no major new content is being shown
-  const isBugFixOnly = !showLatest && !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
+  const isBugFixOnly = !show3321 && !show330 && !show320 && !show310 && !show300 && !show250 && !show242 && !show235 && !show231 && !show230 && !show220 && !show212 && !show210 && lastSeenVersion && isNewer(lastSeenVersion, '2.0.7') && isNewer('2.1.0', lastSeenVersion);
 
   return (
     <motion.div 
@@ -119,7 +120,7 @@ const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
-              {showLatest && (
+              {show3321 && (
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">
                     {t('whatsnew_v3321_header')}
