@@ -626,34 +626,88 @@ function getTodayLogs(userId, dateStr, props, userGistId) {
     localLogs = [];
   }
 
-  // ☁️ 若 Properties 內無紀錄，向 Gist 查詢回填
-  if (localLogs.length === 0) {
-    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
-    const pat = props.getProperty('GITHUB_PAT');
-    if (gistId && pat) {
-      try {
-        const gistUrl = `https://api.github.com/gists/${gistId}`;
-        const getRes = UrlFetchApp.fetch(gistUrl, {
-          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
-          muteHttpExceptions: true
-        });
-        if (getRes.getResponseCode() === 200) {
-          const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
-          if (content) {
-            const backupData = JSON.parse(content);
-            if (backupData.dietLogs && Array.isArray(backupData.dietLogs)) {
-              const todayFromGist = backupData.dietLogs.filter(l => l.date === dateStr);
-              if (todayFromGist.length > 0) {
-                props.setProperty(todayKey, JSON.stringify(todayFromGist));
-                return todayFromGist;
+  // ☁️ 雙向自動合併：比對 Gist 雲端是否含有本地尚未同步的餐點（如從 Web 端同步之餐點）
+  const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const pat = props.getProperty('GITHUB_PAT');
+  if (gistId && pat) {
+    try {
+      const gistUrl = `https://api.github.com/gists/${gistId}`;
+      const getRes = UrlFetchApp.fetch(gistUrl, {
+        headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
+        muteHttpExceptions: true
+      });
+      if (getRes.getResponseCode() === 200) {
+        const content = JSON.parse(getRes.getContentText()).files?.['daily-diet-backup.json']?.content;
+        if (content) {
+          const backupData = JSON.parse(content);
+          if (backupData.dietLogs && Array.isArray(backupData.dietLogs)) {
+            const todayFromGist = backupData.dietLogs.filter(l => l.date === dateStr);
+            if (todayFromGist.length > 0) {
+              let hasNewGistItems = false;
+              for (const gm of todayFromGist) {
+                const gmId = gm.id || gm.timestamp;
+                const exists = localLogs.some(lm => {
+                  const lmId = lm.id || lm.timestamp;
+                  if (gmId && lmId && String(gmId) === String(lmId)) return true;
+                  return lm.dish_name === gm.dish_name && (Number(lm.calories) === Number(gm.calories) || lm.time === gm.time);
+                });
+                if (!exists) {
+                  localLogs.push(gm);
+                  hasNewGistItems = true;
+                  console.log(`📥 [Gist ➔ LINE 回填] 成功將 Web 雲端餐點合併至 LINE 紀錄: ${gm.dish_name} (${gm.calories}卡)`);
+                }
+              }
+              if (hasNewGistItems || localLogs.length === 0) {
+                props.setProperty(todayKey, JSON.stringify(localLogs));
               }
             }
           }
         }
-      } catch (e) {
-        console.warn("從 Gist 拉取今日紀錄失敗:", e);
       }
+    } catch (e) {
+      console.warn("從 Gist 比對合併今日紀錄失敗:", e);
     }
+  }
+
+  // 兼容性補償：若曾用使用者名稱 (如 "Winnie") 作為 userId 寫入的紀錄，也自動合併至此 LINE 用戶名下
+  const cachedUserName = props.getProperty(`USER_NAME_${userId}`);
+  const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
+  const maintainerUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+  const candidateAliases = [];
+  if (cachedUserName && cachedUserName !== userId && !cachedUserName.startsWith('LINE用戶')) {
+    candidateAliases.push(cachedUserName);
+  }
+  if ((userId === adminLineId || !cachedUserName || cachedUserName.startsWith('LINE用戶')) && maintainerUser && !candidateAliases.includes(maintainerUser)) {
+    candidateAliases.push(maintainerUser);
+  }
+
+  for (const alias of candidateAliases) {
+    try {
+      const aliasKey = `DIET_LOGS_${alias}_${dateStr}`;
+      const aliasRaw = props.getProperty(aliasKey);
+      if (aliasRaw) {
+        const aliasLogs = JSON.parse(aliasRaw);
+        if (Array.isArray(aliasLogs) && aliasLogs.length > 0) {
+          let hasAliasItems = false;
+          for (const am of aliasLogs) {
+            const amId = am.id || am.timestamp;
+            const exists = localLogs.some(lm => {
+              const lmId = lm.id || lm.timestamp;
+              if (amId && lmId && String(amId) === String(lmId)) return true;
+              return lm.dish_name === am.dish_name && (Number(lm.calories) === Number(am.calories) || lm.time === am.time);
+            });
+            if (!exists) {
+              localLogs.push(am);
+              hasAliasItems = true;
+              console.log(`📥 [別名用戶回填] 成功將 ${alias} 名下的餐點合併至 LINE 紀錄: ${am.dish_name}`);
+            }
+          }
+          if (hasAliasItems) {
+            props.setProperty(todayKey, JSON.stringify(localLogs));
+          }
+        }
+      }
+    } catch (ae) {}
   }
 
   return localLogs;

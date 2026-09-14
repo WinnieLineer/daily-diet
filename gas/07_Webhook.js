@@ -112,14 +112,41 @@ function doGet(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 🔗 若 userId 為空或為 default_user，但有帶 Gist ID，透過 Gist ID 反查 LINE 用戶綁定
-    if ((!userId || userId === 'default_user' || userId === 'undefined') && incomingGist) {
+    // 🔗 核心修復：若 userId 不是 LINE 原生 ID（非 U 開頭），透過 Gist ID 或 用戶名稱 反查真實的 LINE 用戶綁定！
+    if (!userId || !userId.startsWith('U') || userId === 'default_user' || userId === 'undefined') {
       const allProps = props.getProperties();
-      for (const k in allProps) {
-        if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
-          userId = k.replace('USER_GIST_', '');
-          console.log(`🔗 [Gist 反查綁定] Gist ${incomingGist} 成功對應至 LINE 用戶 ${userId}`);
-          break;
+      // 1. 優先以 Gist ID 反查
+      if (incomingGist) {
+        for (const k in allProps) {
+          if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
+            const matchedLineUserId = k.replace('USER_GIST_', '');
+            console.log(`🔗 [Gist 反查綁定] Gist ${incomingGist} 成功對應至 LINE 用戶 ${matchedLineUserId} (原傳入: ${userId})`);
+            userId = matchedLineUserId;
+            break;
+          }
+        }
+      }
+      // 2. 若仍未找到且傳入非 U 開頭的名稱（如 "Winnie"），嘗試以 USER_NAME_ 反查對應的 LINE 原生用戶
+      if ((!userId || !userId.startsWith('U')) && (incomingCaller || userId)) {
+        const queryName = (incomingCaller || userId || '').trim();
+        for (const k in allProps) {
+          if (k.startsWith('USER_NAME_') && allProps[k] === queryName) {
+            const matchedLineUserId = k.replace('USER_NAME_', '');
+            if (matchedLineUserId.startsWith('U')) {
+              console.log(`🔗 [名稱反查綁定] 名稱 ${queryName} 成功對應至 LINE 用戶 ${matchedLineUserId}`);
+              userId = matchedLineUserId;
+              break;
+            }
+          }
+        }
+        // 3. 若為維護者名字（如 Winnie）且設定了 ADMIN_LINE_USER_ID，直接自動綁定至維護者 LINE 帳號
+        if (!userId || !userId.startsWith('U')) {
+          const maintainerUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+          const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
+          if (adminLineId && queryName.toLowerCase() === maintainerUser.toLowerCase()) {
+            console.log(`🔗 [維護者自動綁定] 維護者 ${queryName} 成功對應至 LINE 用戶 ${adminLineId}`);
+            userId = adminLineId;
+          }
         }
       }
     }
