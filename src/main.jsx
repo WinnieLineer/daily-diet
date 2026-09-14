@@ -194,7 +194,8 @@ class ErrorBoundary extends React.Component {
                   }
                 }
               } catch (e) {}
-              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now();
+              const hash = window.location.hash || '';
+              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now() + hash;
             }}
             style={{ marginTop: '20px', padding: '10px 15px', background: '#c62828', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}
           >

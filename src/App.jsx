@@ -1359,9 +1359,12 @@ function App() {
       }
 
 
-      // Clean up URL parameters so they don't stay in the address bar
-      if (window.location.search || (window.location.hash && window.location.hash.includes('?'))) {
-        const cleanUrl = window.location.origin + window.location.pathname;
+      // Clean up URL parameters so they don't stay in the address bar, while preserving the active route / hash (e.g. #/admin)
+      const currentHash = window.location.hash || '';
+      const isLogView = checkIsLogRoute();
+      if (window.location.search || (currentHash && currentHash.includes('?'))) {
+        const targetHash = isLogView ? (currentHash.startsWith('#/admin') || currentHash.startsWith('#/logs') ? currentHash : '#/admin') : currentHash;
+        const cleanUrl = window.location.origin + window.location.pathname + targetHash;
         window.history.replaceState({}, document.title, cleanUrl);
       }
     };
@@ -1449,10 +1452,11 @@ function App() {
   // Force reload on version change to clear cache
   useEffect(() => {
     const checkVersion = async () => {
-      // 🚀 CRITICAL: Do not reload if we are in the middle of AI analysis
+      // 🚀 CRITICAL: Do not reload if we are in the middle of AI analysis or if user is actively typing
       const isAnalyzing = document.body.classList.contains('ai-analyzing');
-      if (isAnalyzing) {
-        console.log("AI Analysis in progress, delaying version check reload.");
+      const isTyping = ['INPUT', 'TEXTAREA'].includes(document.activeElement?.tagName);
+      if (isAnalyzing || isTyping) {
+        console.log("Activity in progress, delaying version check reload.");
         return;
       }
 
@@ -1500,8 +1504,13 @@ function App() {
             safeRemoveStorage('ai_fallback_date');
             safeRemoveStorage('ai_fallback_model');
              
-            // 4. Final Hard Reload (forcing a fresh hit to the server by appending version)
-            window.location.href = window.location.origin + window.location.pathname + '?v=' + remoteVersion;
+            // 4. Final Hard Reload (preserving current hash and query parameters e.g. #/admin)
+            const isLogView = checkIsLogRoute();
+            const currentHash = window.location.hash || (isLogView ? '#/admin' : '');
+            const searchParams = new URLSearchParams(window.location.search);
+            searchParams.set('v', remoteVersion);
+            const targetUrl = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${currentHash}`;
+            window.location.href = targetUrl;
           }
         } else {
           // If version matches, check if we should show the "What's New" intro
