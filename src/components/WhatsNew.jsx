@@ -163,7 +163,7 @@ const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
                   </div>
 
                   <p className="text-[11px] text-amber-950 bg-amber-100/90 p-3 rounded-2xl border-2 border-amber-300 leading-relaxed">
-                    🎋 特別感謝今日在餐點中友善留言提醒的訪客用戶，以及第一時間通報異常的用戶 <strong>L</strong>！大家的及時反饋幫助團隊以最快速度抓出漏洞並完成修復。造成大家的困擾致上最深歉意，團隊已加強隔離防護，守護您的隱私與安全 🐼
+                    🎋 特別感謝第一時間透過意見反饋通報異常的熱心用戶！您的及時反饋幫助團隊以最快速度定位漏洞並完成修復。造成大家的困擾致上最深歉意，團隊已加強隔離防護，全力守護您的隱私與安全 🐼
                   </p>
                 </div>
               </div>
