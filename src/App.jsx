@@ -1285,9 +1285,11 @@ function App() {
       }
 
       // 4. Historical Gist Sync (if Gist ID is available)
-      const effectiveGistId = query.gistId || safeGetStorage('gist_backup_id');
+      const storedGist = safeGetStorage('gist_backup_id');
+      // 🛡️ 僅在真實 LINE 原生用戶環境下才自動採用 URL 傳入的 gistId，避免匿名訪客因惡意連結 (?gistId=...) 遭覆寫本地資料 (Session Fixation 防護)
+      const effectiveGistId = (query.gistId && isRealLineUser) ? query.gistId : storedGist;
       if (effectiveGistId) {
-        if (query.gistId) {
+        if (query.gistId && isRealLineUser) {
           safeSetStorage('gist_backup_id', query.gistId);
         }
         try {

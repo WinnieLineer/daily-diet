@@ -298,7 +298,7 @@ function deleteInvalidUserNameLogs(props) {
           sheet.deleteRow(r);
           deletedCount++;
         } else if (/^[0-9a-fA-F]{20,40}$/.test(uName) || /^gist[-_]/i.test(uName)) {
-          const properName = (uName.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') ? 'Winnie Lin' : 'Web 用戶';
+          const properName = 'Web 用戶';
           sheet.getRange(r, 2).setValue(properName);
           if (/^[0-9a-fA-F]{20,40}$/.test(uId)) {
             sheet.getRange(r, 3).setValue('web_user');
@@ -323,7 +323,7 @@ function deleteInvalidUserNameLogs(props) {
     }).map(function(l) {
       let name = String(l.userName || l[1] || '').trim();
       if (isGistStr(name)) {
-        name = (name.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') ? 'Winnie Lin' : 'Web 用戶';
+        name = 'Web 用戶';
         if (Array.isArray(l)) l[1] = name;
         else l.userName = name;
       }

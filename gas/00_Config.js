@@ -124,7 +124,8 @@ function isGenericUserId(uid) {
          clean === 'system' || 
          clean === 'undefined' || 
          clean === 'null' ||
-         clean.startsWith('client_');
+         clean.startsWith('client_') ||
+         clean.startsWith('guest_');
 }
 
 /**

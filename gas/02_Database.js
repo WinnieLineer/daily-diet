@@ -47,13 +47,14 @@ function getUserLanguage(userId, props, userGistId, pat) {
 function setUserLanguage(userId, lang, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
   const validLang = (lang === 'en' || lang === 'zh') ? lang : 'zh';
-  if (userId) {
+  const isGeneric = !userId || (typeof isGenericUserId === 'function' ? isGenericUserId(userId) : false);
+  if (!isGeneric) {
     props.setProperty(`LANGUAGE_${userId}`, validLang);
   }
 
-  const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const gistId = userGistId || (!isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const token = pat || props.getProperty('GITHUB_PAT');
-  if (gistId && token) {
+  if (gistId && token && (!userGistId || (typeof verifyGistOwnership === 'function' && verifyGistOwnership(gistId, userId, props)))) {
     try {
       const gistUrl = `https://api.github.com/gists/${gistId}`;
       const getRes = UrlFetchApp.fetch(gistUrl, {
@@ -138,13 +139,14 @@ function getUserPersona(userId, props, userGistId, pat) {
 function setUserPersona(userId, persona, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
   const validPersona = (persona === 'gentle' || persona === 'hardcore' || persona === 'tsundere') ? persona : DEFAULT_PERSONA;
-  if (userId) {
+  const isGeneric = !userId || (typeof isGenericUserId === 'function' ? isGenericUserId(userId) : false);
+  if (!isGeneric) {
     props.setProperty(`PERSONA_${userId}`, validPersona);
   }
 
-  const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const gistId = userGistId || (!isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const token = pat || props.getProperty('GITHUB_PAT');
-  if (gistId && token) {
+  if (gistId && token && (!userGistId || (typeof verifyGistOwnership === 'function' && verifyGistOwnership(gistId, userId, props)))) {
     try {
       const gistUrl = `https://api.github.com/gists/${gistId}`;
       const getRes = UrlFetchApp.fetch(gistUrl, {
@@ -274,10 +276,13 @@ function getUserGoals(userId, props, userGistId) {
  */
 function setUserCarbsFatToggle(userId, enable, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
-  props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(!!enable));
+  const isGeneric = !userId || (typeof isGenericUserId === 'function' ? isGenericUserId(userId) : false);
+  if (!isGeneric) {
+    props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(!!enable));
+  }
   console.log(`🍞 [碳水追蹤] 已將用戶 ${userId} 的碳水與脂肪追蹤設為 ${enable ? '開啟' : '關閉'}`);
-  const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
-  if (gistId && pat) {
+  const gistId = userGistId || (!isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
+  if (gistId && pat && (!userGistId || (typeof verifyGistOwnership === 'function' && verifyGistOwnership(gistId, userId, props)))) {
     try {
       const gistUrl = `https://api.github.com/gists/${gistId}`;
       const getRes = UrlFetchApp.fetch(gistUrl, {
@@ -650,6 +655,7 @@ function purgeSharedGenericData(props) {
   try {
     if (!props) props = PropertiesService.getScriptProperties();
     const genericKeys = [
+      'LAST_ACTIVE_LINE_USER_ID',
       'USER_GIST_web_user',
       'USER_GIST_default_user',
       'USER_GIST_web_guest',
@@ -667,10 +673,18 @@ function purgeSharedGenericData(props) {
       'FAT_GOAL_default_user',
       'SHOW_CARBS_FAT_web_user',
       'SHOW_CARBS_FAT_default_user',
+      'SHOW_CARBS_FAT_web_guest',
+      'SHOW_CARBS_FAT_web_client',
       'FASTING_ENABLED_web_user',
       'FASTING_ENABLED_default_user',
+      'LANGUAGE_web_user',
+      'LANGUAGE_default_user',
+      'LANGUAGE_web_guest',
+      'LANGUAGE_web_client',
       'PERSONA_web_user',
       'PERSONA_default_user',
+      'PERSONA_web_guest',
+      'PERSONA_web_client',
       'USER_FAVORITES_web_user',
       'USER_FAVORITES_default_user',
       'FAVORITES_web_user',
@@ -725,7 +739,7 @@ function getTodayLogs(userId, dateStr, props, userGistId) {
   // ☁️ 雙向自動合併：比對 Gist 雲端是否含有本地尚未同步的餐點（如從 Web 端同步之餐點）
   const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const pat = props.getProperty('GITHUB_PAT');
-  if (gistId && pat) {
+  if (gistId && pat && (!userGistId || (typeof verifyGistOwnership === 'function' && verifyGistOwnership(gistId, userId, props)))) {
     try {
       const gistUrl = `https://api.github.com/gists/${gistId}`;
       const getRes = UrlFetchApp.fetch(gistUrl, {
@@ -1283,7 +1297,7 @@ function getUserWeightHistory(userId, days, props, userGistId) {
   }
 
   const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
-  if ((!logs || logs.length === 0) && gistId) {
+  if ((!logs || logs.length === 0) && gistId && (!userGistId || (typeof verifyGistOwnership === 'function' && verifyGistOwnership(gistId, userId, props)))) {
     const pat = props.getProperty('GITHUB_PAT');
     if (pat) {
       try {
@@ -1329,7 +1343,7 @@ function getUserPoopHistory(userId, days, props, userGistId) {
   }
 
   const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
-  if ((!logs || logs.length === 0) && gistId) {
+  if ((!logs || logs.length === 0) && gistId && (!userGistId || (typeof verifyGistOwnership === 'function' && verifyGistOwnership(gistId, userId, props)))) {
     const pat = props.getProperty('GITHUB_PAT');
     if (pat) {
       try {
@@ -1444,7 +1458,7 @@ function getUserFavorites(userId, props, userGistId) {
 
   const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const pat = props.getProperty('GITHUB_PAT');
-  if (gistId && pat) {
+  if (gistId && pat && (!userGistId || (typeof verifyGistOwnership === 'function' && verifyGistOwnership(gistId, userId, props)))) {
     try {
       const gistUrl = `https://api.github.com/gists/${gistId}`;
       const getRes = UrlFetchApp.fetch(gistUrl, {
@@ -1548,10 +1562,18 @@ function saveUserFavorite(userId, favItem, userGistId, pat, props) {
 
 function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權操作非授權 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕自非授權 Gist 刪除常用餐點: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
   const lock = LockService.getScriptLock();
   try { lock.waitLock(30000); } catch (e) {}
   try {
-    const favKey = `FAVORITES_${userId}`;
+    const isGeneric = isGenericUserId(userId);
+    const favKey = isGeneric ? (userGistId ? `FAVORITES_GIST_${userGistId}` : null) : `FAVORITES_${userId}`;
     let favorites = getUserFavorites(userId, props, userGistId);
     const cleanId = String(favIdentifier || '').trim();
     let decodedId = cleanId;
@@ -1562,9 +1584,9 @@ function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
       const fName = String(f.dish_name || '').trim();
       return fId !== cleanId && fId !== decodedId && fName !== cleanId && fName !== decodedId;
     });
-    props.setProperty(favKey, JSON.stringify(favorites));
+    if (favKey) props.setProperty(favKey, JSON.stringify(favorites));
 
-    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+    const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
     const token = pat || props.getProperty('GITHUB_PAT');
     if (token && gistId) {
       try {
@@ -1584,10 +1606,18 @@ function deleteUserFavorite(userId, favIdentifier, userGistId, pat, props) {
  */
 function reorderUserFavorites(userId, favIdentifier, direction, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權操作非授權 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕向非授權 Gist 調整常用餐點順序: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
   const lock = LockService.getScriptLock();
   try { lock.waitLock(30000); } catch (e) {}
   try {
-    const favKey = `FAVORITES_${userId}`;
+    const isGeneric = isGenericUserId(userId);
+    const favKey = isGeneric ? (userGistId ? `FAVORITES_GIST_${userGistId}` : null) : `FAVORITES_${userId}`;
     let favorites = getUserFavorites(userId, props, userGistId);
     if (!favorites || favorites.length <= 1) return favorites || [];
 
@@ -1623,9 +1653,9 @@ function reorderUserFavorites(userId, favIdentifier, direction, userGistId, pat,
       }
     }
 
-    props.setProperty(favKey, JSON.stringify(favorites));
+    if (favKey) props.setProperty(favKey, JSON.stringify(favorites));
 
-    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+    const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
     const token = pat || props.getProperty('GITHUB_PAT');
     if (token && gistId) {
       try {
@@ -1645,10 +1675,18 @@ function reorderUserFavorites(userId, favIdentifier, direction, userGistId, pat,
  */
 function saveAllUserFavoritesOrder(userId, orderedIdentifiers, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權操作非授權 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕向非授權 Gist 批量調整常用順序: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
   const lock = LockService.getScriptLock();
   try { lock.waitLock(30000); } catch (e) {}
   try {
-    const favKey = `FAVORITES_${userId}`;
+    const isGeneric = isGenericUserId(userId);
+    const favKey = isGeneric ? (userGistId ? `FAVORITES_GIST_${userGistId}` : null) : `FAVORITES_${userId}`;
     let favorites = getUserFavorites(userId, props, userGistId);
     if (!favorites || favorites.length <= 1) return favorites || [];
 
@@ -1672,9 +1710,9 @@ function saveAllUserFavoritesOrder(userId, orderedIdentifiers, userGistId, pat, 
       });
     }
 
-    props.setProperty(favKey, JSON.stringify(favorites));
+    if (favKey) props.setProperty(favKey, JSON.stringify(favorites));
 
-    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+    const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
     const token = pat || props.getProperty('GITHUB_PAT');
     if (token && gistId) {
       try {
@@ -1721,6 +1759,7 @@ function syncFavoritesToUserGist(favorites, gistId, pat) {
 // ========================================================
 
 function purgeAllUserData(userId, userGistId, pat, props) {
+  if (!userId || (typeof isGenericUserId === 'function' && isGenericUserId(userId))) return;
   if (!props) props = PropertiesService.getScriptProperties();
   const todayStr = getTodayDateString();
   props.deleteProperty(`DIET_LOGS_${userId}_${todayStr}`);
@@ -1729,12 +1768,21 @@ function purgeAllUserData(userId, userGistId, pat, props) {
   props.deleteProperty(`CALORIE_GOAL_${userId}`);
   props.deleteProperty(`PROTEIN_GOAL_${userId}`);
   props.deleteProperty(`WATER_GOAL_${userId}`);
+  props.deleteProperty(`CARBS_GOAL_${userId}`);
+  props.deleteProperty(`FAT_GOAL_${userId}`);
+  props.deleteProperty(`SHOW_CARBS_FAT_${userId}`);
   props.deleteProperty(`LANGUAGE_${userId}`);
   props.deleteProperty(`PERSONA_${userId}`);
+  props.deleteProperty(`WEIGHT_LOGS_${userId}`);
+  props.deleteProperty(`POOP_LOGS_${userId}`);
 
-  const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const gistId = userGistId || props.getProperty(`USER_GIST_${userId}`);
   const token = pat || props.getProperty('GITHUB_PAT');
   if (token && gistId) {
+    if (typeof verifyGistOwnership === 'function' && !verifyGistOwnership(gistId, userId, props)) {
+      console.warn(`🚨 [Gist 越權存取攔截] 拒絕非授權 Gist 銷毀操作: ${gistId} (userId: ${userId})`);
+      return;
+    }
     try {
       UrlFetchApp.fetch(`https://api.github.com/gists/${gistId}`, {
         method: 'delete',
@@ -1791,13 +1839,9 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
   const isGistIdStr = (name) => name && (/^[0-9a-fA-F]{20,40}$/.test(String(name).trim()) || /^gist[-_]/i.test(String(name).trim()));
 
   let displayName = userName;
-  // 🛡️ 若傳入的 displayName 為 Gist ID，立即嘗試轉換或清除，絕不直接作為用戶名
+  // 🛡️ 若傳入的 displayName 為 Gist ID，立即清除，絕不直接作為用戶名
   if (isGistIdStr(displayName)) {
-    if (String(displayName).toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') {
-      displayName = 'Winnie Lin';
-    } else {
-      displayName = '';
-    }
+    displayName = '';
   }
 
   // 🛡️ 管理員/維護者統一標示為「管理員」
@@ -1818,11 +1862,7 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
     if (userId === 'admin' || userId === 'Maintainer') {
       displayName = '管理員';
     } else if (userId === 'default_user' || userId === 'web_user' || userId === 'web_client' || isGistIdStr(userId)) {
-      if (String(userId).toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') {
-        displayName = 'Winnie Lin';
-      } else {
-        displayName = 'Web 用戶';
-      }
+      displayName = 'Web 用戶';
     } else if (userId && userId.length > 8 && userId.startsWith('U')) {
       displayName = `LINE 用戶 (${userId.slice(-4)})`;
     } else {
@@ -2140,52 +2180,7 @@ function getRecentLogsData(limit, days) {
     }
   } catch (sheetErr) {}
 
-  // 3. 自動回填今日用戶飲食紀錄至系統審計流 (確保 10:10 ~ 18:50 所有餐點與補水紀錄 100% 完整重現)
-  try {
-    const todayStr = getTodayDateString();
-    const knownGists = [
-      { userId: 'Winnie Lin', gistId: props.getProperty('USER_GIST_U1f5434ad962dfd74e5223a8dfc497c66') || '9a48b4604260e1a58a6d976f38c544b5', isLine: true },
-      { userId: 'Web 用戶', gistId: props.getProperty('USER_GIST_default_user') || '9141ec7d6457090e66188c67c1351eed', isLine: false }
-    ];
 
-    for (const g of knownGists) {
-      if (!g.gistId || !pat) continue;
-      try {
-        const uRes = UrlFetchApp.fetch(`https://api.github.com/gists/${g.gistId}`, {
-          headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
-          muteHttpExceptions: true
-        });
-        if (uRes.getResponseCode() === 200) {
-          const uContent = JSON.parse(uRes.getContentText()).files?.['daily-diet-backup.json']?.content;
-          if (uContent) {
-            const uData = JSON.parse(uContent);
-            if (Array.isArray(uData.dietLogs)) {
-              for (const meal of uData.dietLogs) {
-                if (meal.date === todayStr) {
-                  const mealTime = meal.time ? `${todayStr} ${meal.time}:00` : `${todayStr} 12:00:00`;
-                  const isWater = (meal.dish_name || '').includes('水');
-                  const logType = isWater ? '🚰 喝水打卡' : (g.isLine ? '🎙️ 語音/文字記餐' : 'Web同步餐點');
-                  allLogs.push({
-                    time: mealTime,
-                    userName: g.userId,
-                    userId: g.userId,
-                    type: logType,
-                    input: meal.dish_name,
-                    aiResult: `${meal.calories || 0}卡 / ${meal.protein || 0}g蛋 / ${meal.water || 0}ml水`,
-                    output: meal.comment || `已記錄：【${meal.dish_name}】(${meal.calories || 0} kcal · ${meal.protein || 0}g 蛋 · ${meal.water || 0}ml 水)`,
-                    ip: '',
-                    location: g.isLine ? 'LINE 智慧助理' : 'Web 飲食管家',
-                    source: g.isLine ? 'LINE 智慧助理' : 'Web 飲食管家'
-                  });
-                }
-              }
-            }
-          }
-        }
-      } catch (err) {}
-    }
-    allLogs = deduplicateLogs(allLogs);
-  } catch (e) {}
 
   // 3.5 排除指定異常用戶名日誌（食物名稱、line_api、純數字等）
   const isInvalidUser = function(s) {

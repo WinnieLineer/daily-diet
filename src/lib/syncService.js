@@ -56,10 +56,6 @@ export function getEffectiveIds() {
         userName = maintainerName;
       }
     }
-    // 🛡️ 若 Gist ID 為 Winnie Lin 的專屬 Gist ID，精準補全用戶名
-    if (!userName && gistId && gistId.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5') {
-      userName = 'Winnie Lin';
-    }
   } catch (e) {}
 
   const effectiveUserId = (userId && !isGeneric(userId) && !isGistId(userId)) 

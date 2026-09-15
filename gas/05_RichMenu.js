@@ -222,10 +222,8 @@ function switchUserRichMenuByLanguage(userId, lang, props) {
   const token = props.getProperty('CHANNEL_ACCESS_TOKEN') || props.getProperty('LINE_CHANNEL_ACCESS_TOKEN');
   if (!token) return;
 
-  let targetId = userId;
-  if (!targetId || !targetId.startsWith('U') || targetId.length < 20) {
-    targetId = props.getProperty('LAST_ACTIVE_LINE_USER_ID');
-  }
+  const targetId = userId;
+  // 🛡️ 嚴格限制：僅針對傳入的真實 LINE 原生用戶 (U 開頭) 切換圖文選單，絕不影響其他用戶
   if (!targetId || !targetId.startsWith('U') || targetId.length < 20) return;
 
   try {

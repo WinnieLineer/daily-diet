@@ -55,6 +55,19 @@ function doGet(e) {
 
     // 🛡️ 0.1 維護者登入安全校驗端點 (供 Web 前端進行身分校驗，簽發暫態 Session Token，絕不洩露後端主密碼)
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
+      const cache = CacheService.getScriptCache();
+      const failKey = 'MAINTAINER_AUTH_FAIL_COUNT';
+      const failCount = Number(cache.get(failKey) || 0);
+      if (failCount >= 5) {
+        console.warn(`🚨 [防暴力破解] 維護者登入嘗試失敗超過 5 次，系統已鎖定 15 分鐘！`);
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          code: 'RATE_LIMIT',
+          authenticated: false, 
+          message: '安全防護：登入失敗次數過多，為維護安全系統已鎖定 15 分鐘，請稍候再試。' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
       const incomingPass = e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
       const incomingUser = e?.parameter?.user || e?.parameter?.userName || '';
       const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
@@ -79,6 +92,7 @@ function doGet(e) {
       );
 
       if (isUserMatch && isPassMatch) {
+        cache.remove(failKey);
         const sessionToken = todayToken || configuredPass;
         return ContentService.createTextOutput(JSON.stringify({ 
           status: 'ok', 
@@ -87,6 +101,7 @@ function doGet(e) {
           userName: configuredUser 
         })).setMimeType(ContentService.MimeType.JSON);
       } else {
+        cache.put(failKey, String(failCount + 1), 900);
         return ContentService.createTextOutput(JSON.stringify({ 
           status: 'error', 
           authenticated: false, 
@@ -191,7 +206,7 @@ function doGet(e) {
     const cleanCaller = isGistStr(incomingCaller) ? '' : incomingCaller;
     const cleanUserIdName = (!userId.startsWith('U') && userId !== 'default_user' && userId !== 'web_user' && !isGistStr(userId)) ? userId : '';
     const resolvedLineName = (userId && userId.startsWith('U')) ? (props.getProperty(`USER_NAME_${userId}`) || getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || '') : '';
-    const webCallerName = resolvedLineName || cleanCaller || cleanUserIdName || (isGistStr(userId) && userId.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5' ? 'Winnie Lin' : '');
+    const webCallerName = resolvedLineName || cleanCaller || cleanUserIdName || '';
     if (webCallerName && !isGistStr(webCallerName) && userId && !userId.startsWith('U') && userId !== 'default_user' && userId !== 'web_user' && !isGistStr(userId)) {
       props.setProperty(`USER_NAME_${userId}`, webCallerName);
     }
@@ -459,23 +474,18 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 10. Web App 觸發更新語言偏好 (支援中英雙語，並即時切換用戶 LINE 圖文選單)
+    // 10. Web App 觸發更新語言偏好 (支援中英雙語，若為 LINE 原生用戶即時切換其圖文選單)
     if (action === 'updateLanguage') {
       const lang = e?.parameter?.lang || 'zh';
       const rawUserId = userId || e?.parameter?.userId || '';
       const userGistId = incomingGist || (rawUserId ? getOrCreateUserGist(rawUserId, pat, props) : '');
       const updated = setUserLanguage(rawUserId || 'web_user', lang, userGistId, pat, props);
-      switchUserRichMenuByLanguage(rawUserId, updated, props);
-
-      const lastLineUser = props.getProperty('LAST_ACTIVE_LINE_USER_ID');
-      if (lastLineUser && lastLineUser !== rawUserId) {
-        setUserLanguage(lastLineUser, lang, null, pat, props);
-        switchUserRichMenuByLanguage(lastLineUser, updated, props);
-        console.log(`🌐 [Web 語言切換] 同步為最後活躍 LINE 用戶 ${lastLineUser} 切換語系與 Rich Menu 至 ${updated}`);
+      if (rawUserId && rawUserId.startsWith('U')) {
+        switchUserRichMenuByLanguage(rawUserId, updated, props);
       }
 
-      recordSystemLog('Web更新語言', rawUserId || lastLineUser || 'unknown', updated, '', `已更新用戶語言為「${updated}」並同步切換 LINE 選單`, webCallerName || userId);
-      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', language: updated, lineUserId: lastLineUser }))
+      recordSystemLog('Web更新語言', rawUserId || 'web_user', updated, '', `已更新用戶語言為「${updated}」`, webCallerName || userId);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', language: updated, lineUserId: (rawUserId && rawUserId.startsWith('U')) ? rawUserId : '' }))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -819,6 +829,19 @@ function doPost(e) {
 
     // 🛡️ 0.1 維護者登入安全校驗端點 (POST 支援，簽發暫態 Session Token，絕不洩露後端主密碼)
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
+      const cache = CacheService.getScriptCache();
+      const failKey = 'MAINTAINER_AUTH_FAIL_COUNT';
+      const failCount = Number(cache.get(failKey) || 0);
+      if (failCount >= 5) {
+        console.warn(`🚨 [防暴力破解] 維護者登入嘗試失敗超過 5 次，系統已鎖定 15 分鐘！`);
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          code: 'RATE_LIMIT',
+          authenticated: false, 
+          message: '安全防護：登入失敗次數過多，為維護安全系統已鎖定 15 分鐘，請稍候再試。' 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
       const incomingPass = data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
       const incomingUser = data?.user || data?.userName || e?.parameter?.user || e?.parameter?.userName || '';
       const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
@@ -843,6 +866,7 @@ function doPost(e) {
       );
 
       if (isUserMatch && isPassMatch) {
+        cache.remove(failKey);
         const sessionToken = todayToken || configuredPass;
         return ContentService.createTextOutput(JSON.stringify({ 
           status: 'ok', 
@@ -851,6 +875,7 @@ function doPost(e) {
           userName: configuredUser 
         })).setMimeType(ContentService.MimeType.JSON);
       } else {
+        cache.put(failKey, String(failCount + 1), 900);
         return ContentService.createTextOutput(JSON.stringify({ 
           status: 'error', 
           authenticated: false, 
@@ -1114,9 +1139,8 @@ function doPost(e) {
       console.log(`\n========================================`);
       console.log(`📩 [LINE 事件收到] 用戶 ID: ${userId} | 類型: ${event.type}`);
 
-      // 🌟 記錄最後活躍 LINE 原生用戶，並強制依語系綁定正確圖文選單 (突破 LINE App 本地快取)
+      // 🌟 強制依語系綁定正確圖文選單 (突破 LINE App 本地快取)
       if (userId && userId.startsWith('U') && userId.length >= 20) {
-        props.setProperty('LAST_ACTIVE_LINE_USER_ID', userId);
         const userLang = getUserLanguage(userId, props);
         const targetMenuId = (userLang === 'en')
           ? props.getProperty('ENGLISH_RICH_MENU_ID')
