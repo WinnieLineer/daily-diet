@@ -1274,6 +1274,21 @@ function verifyWebAIRequest(data, e) {
     }
     cache.put(nonceKey, '1', 300);
 
+    // 🛡️ 1.5 全局頻率與配額防護 (防止自動化腳本利用隨機 caller 盜刷耗盡 Gemini API 配額)
+    const global1mKey = 'RATE_AI_GLOBAL_1M';
+    const global1mCount = Number(cache.get(global1mKey) || 0);
+    if (global1mCount >= 60) {
+      return { valid: false, reason: '系統目前 AI 調用量較大，請稍候 1 分鐘後再試 (Global Rate Limit Exceeded)' };
+    }
+    cache.put(global1mKey, String(global1mCount + 1), 60);
+
+    const globalDayKey = 'RATE_AI_GLOBAL_DAY';
+    const globalDayCount = Number(cache.get(globalDayKey) || 0);
+    if (globalDayCount >= 1500) {
+      return { valid: false, reason: '今日全局免費 AI 調用額度已達上限，請明日再試或至設定綁定個人 API Key' };
+    }
+    cache.put(globalDayKey, String(globalDayCount + 1), 86400);
+
     // 🛡️ 2. 呼叫端分流頻率限制
     const callerId = (data?.userId || e?.parameter?.userId || data?.caller || 'web_user').toString().replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
 

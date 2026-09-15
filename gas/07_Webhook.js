@@ -124,9 +124,20 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      // 🛡️ 5 分鐘冷卻防刷限制 (防範 MailApp 每日配額耗盡)
+      // 🛡️ 5 分鐘冷卻與每小時全局頻率限制 (防範 MailApp / Web3Forms 每日配額耗盡)
       try {
         const cache = CacheService.getScriptCache();
+        const globalKey = 'FEEDBACK_COOLDOWN_GLOBAL_1H';
+        const globalCount = Number(cache.get(globalKey) || 0);
+        if (globalCount >= 20) {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            code: 'RATE_LIMIT',
+            message: '系統目前接收意見回饋量較大，為防範服務超載請稍候 1 小時後再試。'
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+        cache.put(globalKey, String(globalCount + 1), 3600);
+
         const senderKey = 'FEEDBACK_COOLDOWN_' + (uid ? uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32) : 'guest');
         if (cache.get(senderKey)) {
           return ContentService.createTextOutput(JSON.stringify({
@@ -261,7 +272,12 @@ function doGet(e) {
 
     // 1. 查詢/綁定個人 Gist ID
     if (action === 'getGistId' && userId) {
-      if (incomingGist && !isGenericUserId(userId)) props.setProperty(`USER_GIST_${userId}`, incomingGist);
+      if (incomingGist && !isGenericUserId(userId)) {
+        const existingGist = props.getProperty(`USER_GIST_${userId}`);
+        if (!existingGist || isAdmin) {
+          props.setProperty(`USER_GIST_${userId}`, incomingGist);
+        }
+      }
       const gistId = getOrCreateUserGist(userId, pat, props);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', userId, gistId }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -270,8 +286,12 @@ function doGet(e) {
     // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
     if (action === 'getLogs' && userId) {
       if (incomingGist && !isGenericUserId(userId)) {
-        props.setProperty(`USER_GIST_${userId}`, incomingGist);
-        console.log(`☁️ [Web 端連動] 已自動將用戶 ${userId} 綁定 Gist ID: ${incomingGist}`);
+        const existingGist = props.getProperty(`USER_GIST_${userId}`);
+        // 🛡️ 防竄改防護：若該 LINE 用戶已綁定 Gist，不允許透過無認證的公開 GET 覆寫其 Gist ID
+        if (!existingGist || isAdmin) {
+          props.setProperty(`USER_GIST_${userId}`, incomingGist);
+          console.log(`☁️ [Web 端連動] 已自動將用戶 ${userId} 綁定 Gist ID: ${incomingGist}`);
+        }
       }
       const incomingCal = Number(e?.parameter?.cal);
       const incomingPro = Number(e?.parameter?.pro);
@@ -898,9 +918,20 @@ function doPost(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
-      // 🛡️ 5 分鐘冷卻防刷限制 (防範 MailApp 每日配額耗盡)
+      // 🛡️ 5 分鐘冷卻與每小時全局頻率限制 (防範 MailApp 每日配額耗盡)
       try {
         const cache = CacheService.getScriptCache();
+        const globalKey = 'FEEDBACK_COOLDOWN_GLOBAL_1H';
+        const globalCount = Number(cache.get(globalKey) || 0);
+        if (globalCount >= 20) {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            code: 'RATE_LIMIT',
+            message: '系統目前接收意見回饋量較大，為防範服務超載請稍候 1 小時後再試。'
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+        cache.put(globalKey, String(globalCount + 1), 3600);
+
         const senderKey = 'FEEDBACK_COOLDOWN_' + (uid ? uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32) : 'guest');
         if (cache.get(senderKey)) {
           return ContentService.createTextOutput(JSON.stringify({
@@ -2199,7 +2230,8 @@ function doPost(e) {
           // ☁️ 手動綁定既有的 GitHub Gist ID
           if (userText.startsWith('綁定') || userText.startsWith('連動') || userText.toLowerCase().startsWith('gist') || userText.toLowerCase().startsWith('bind')) {
             const cleanGistId = userText.replace(/^(?:綁定|連動|gist|bind)\s*/i, '').replace(/^(?:id)?[:：\s]*/i, '').trim();
-            if (cleanGistId && cleanGistId.length >= 8) {
+            const isGistFormatValid = cleanGistId && (typeof isValidGistId === 'function' ? isValidGistId(cleanGistId) : /^[0-9a-zA-Z]{8,64}$/.test(cleanGistId));
+            if (cleanGistId && isGistFormatValid) {
               props.setProperty(`USER_GIST_${userId}`, cleanGistId);
               recordSystemLog('綁定Gist', userId, userText, cleanGistId, `回傳綁定成功訊息：已成功連動個人 Gist 雲端庫 (${cleanGistId})`);
               
@@ -2276,6 +2308,12 @@ function doPost(e) {
                 ? `🎉 Congratulations! Successfully linked your LINE account to Gist Cloud:\n🔑 Gist ID: ${cleanGistId}${extraMsg}\n\nType "Favorites" or "Goals" anytime in LINE to use your custom Web data! 🐼✨`
                 : `🎉 恭喜！已成功將您的 LINE 帳號連動至 Gist 雲端庫：\n🔑 Gist ID: ${cleanGistId}${extraMsg}\n\n現在在 LINE 輸入「常用」或「目標」，隨時都能取用您在 Web 建立的自訂常用餐點！🐼✨`;
               replyTextMessage(replyToken, bindReply, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            } else if (cleanGistId) {
+              const invalidGistReply = isEn
+                ? "⚠️ Invalid Gist ID format! GitHub Gist IDs must be alphanumeric strings (e.g. 9a48b4604260...). Please check and try again! 🐼"
+                : "⚠️ Gist ID 格式不正確！GitHub Gist ID 必須為純英數字組成的雜湊字串（例如 9a48b4604260...），不能包含路徑符號或特殊字元，請確認後重新輸入！🐼";
+              replyTextMessage(replyToken, invalidGistReply, CHANNEL_ACCESS_TOKEN, userId, props);
               continue;
             }
           }
@@ -2931,7 +2969,7 @@ function sendBugReportNotification(params) {
         access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
         subject: subject,
         message: textBody,
-        from_name: `Daily Diet LINE User (${userName})`,
+        from_name: `Daily Diet (${displayUserName})`,
         device: 'LINE Messaging API / Chat'
       }),
       muteHttpExceptions: true
@@ -3102,14 +3140,20 @@ function sendErrorAlertToWeb3Forms(info) {
 
     const subject = `🚨 [Daily-Diet 系統異常] ${userName} | ${errMessage.slice(0, 40)}`;
 
+    const maskedUserId = (!userId || userId === 'system' || userId === 'default_user' || userId === 'web_user')
+      ? '系統/Web訪客'
+      : (userId.startsWith('U') ? `LINE用戶 (#${userId.slice(-6)})` : `訪客 (#${userId.slice(-6)})`);
+
+    const cleanUserInput = String(userInput).replace(/([?&](?:token|pass|password|key|adminKey|secret)=)[^&\s]+/gi, '$1***REDACTED***');
+
     const messageContent = [
       `🚨 【Daily-Diet 熊貓教練系統異常自動通報】`,
       `----------------------------------------`,
       `⏰ 發生時間：${timeStr} (台灣時間 GMT+8)`,
       `👤 相關用戶：${userName}`,
-      `🆔 用戶識別碼：${userId}`,
+      `🆔 用戶識別碼：${maskedUserId}`,
       `🕹️ 執行操作：${operation}`,
-      `💬 用戶輸入內容：${userInput}`,
+      `💬 用戶輸入內容：${cleanUserInput}`,
       `🌐 觸發來源：${source}`,
       `----------------------------------------`,
       `❌ 錯誤訊息：`,
@@ -3152,7 +3196,7 @@ function sendErrorAlertToWeb3Forms(info) {
           from_name: '🐼 Daily-Diet 異常監控小幫手',
           time: timeStr,
           user_name: userName,
-          user_id: userId,
+          user_id: maskedUserId,
           operation: operation,
           error_message: errMessage,
           message: messageContent

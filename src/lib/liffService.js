@@ -48,6 +48,15 @@ export const liffService = {
     }
   },
 
+  getIDToken() {
+    try {
+      if (this.isInitialized && liff.isLoggedIn()) {
+        return liff.getIDToken();
+      }
+    } catch (e) {}
+    return null;
+  },
+
   async login() {
     try {
       if (!this.isInitialized) {

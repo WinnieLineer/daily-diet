@@ -1054,7 +1054,12 @@ function App() {
       }
 
       // 3. Realtime Synchronize with Google Apps Script Backend (LINE Bot sync)
-      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id') || getOrCreateClientId();
+      const rawParamUser = query.userId || query.user || '';
+      const verifiedParamUser = (rawParamUser && rawParamUser.startsWith('U'))
+        ? (isRealLineUser ? rawParamUser : '') // 🛡️ 拒絕未經 LINE 授權之外部訪客冒用 U 開頭之原生 LINE 帳號 ID
+        : rawParamUser;
+
+      const effectiveUserId = profile?.userId || safeGetStorage('line_user_id') || verifiedParamUser || getOrCreateClientId();
       const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
       if (effectiveUserId) {
@@ -1071,6 +1076,9 @@ function App() {
           if (localCal) queryParams.append('cal', localCal);
           if (localPro) queryParams.append('pro', localPro);
           if (localWat) queryParams.append('wat', localWat);
+          if (isRealLineUser && liffService.getIDToken()) {
+            queryParams.append('idToken', liffService.getIDToken());
+          }
 
           const res = await fetch(`${GAS_URL}?${queryParams.toString()}`);
           if (res.ok) {

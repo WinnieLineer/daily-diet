@@ -100,10 +100,13 @@ async function callGeminiDirect(payload, apiKey) {
   let lastError = null;
   for (const model of GEMINI_MODELS) {
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 
+          'Content-Type': 'application/json',
+          'x-goog-api-key': apiKey 
+        },
         body: JSON.stringify(payload)
       });
 
@@ -139,8 +142,16 @@ function createWebAIPayload(data) {
     userId = localStorage.getItem('line_user_id') || userName || '';
     if (typeof window !== 'undefined' && window.location.search) {
       const q = new URLSearchParams(window.location.search);
-      if (!userId && q.get('userId')) userId = q.get('userId');
-      if (!userId && q.get('user')) userId = q.get('user');
+      const rawQUser = q.get('userId') || q.get('user');
+      if (rawQUser) {
+        if (rawQUser.startsWith('U')) {
+          if (userId === rawQUser) {
+            userId = rawQUser;
+          }
+        } else if (!userId) {
+          userId = rawQUser;
+        }
+      }
       if (!userName && q.get('userName')) userName = q.get('userName');
       if (!userName && q.get('name')) userName = q.get('name');
     }

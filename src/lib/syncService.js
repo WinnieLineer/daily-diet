@@ -36,8 +36,17 @@ export function getEffectiveIds() {
     gistId = localStorage.getItem('gist_backup_id') || '';
     if (typeof window !== 'undefined' && window.location.search) {
       const q = new URLSearchParams(window.location.search);
-      if (!userId && q.get('userId')) userId = q.get('userId');
-      if (!userId && q.get('user')) userId = q.get('user');
+      const rawQUser = q.get('userId') || q.get('user');
+      if (rawQUser) {
+        if (rawQUser.startsWith('U')) {
+          // 🛡️ 只有在本地已存有該 LINE 帳號授權態時，才允許使用 U 開頭之原生 LINE 帳號 ID
+          if (userId === rawQUser) {
+            userId = rawQUser;
+          }
+        } else if (!userId) {
+          userId = rawQUser;
+        }
+      }
       if (!userName && q.get('userName')) userName = q.get('userName');
       if (!userName && q.get('name')) userName = q.get('name');
       if (!gistId && q.get('gistId')) gistId = q.get('gistId');

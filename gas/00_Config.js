@@ -150,17 +150,36 @@ function generateSessionToken(configuredUser, configuredPass, dayOffset) {
 }
 
 /**
+ * 🛡️ 嚴格校驗 GitHub Gist ID 格式
+ * 防止路徑遍歷 (Path Traversal) 與 SSRF 攻擊
+ * @param {string} gistId
+ * @returns {boolean}
+ */
+function isValidGistId(gistId) {
+  if (!gistId || typeof gistId !== 'string') return false;
+  const clean = gistId.trim();
+  // 標準 GitHub Gist ID 為 8~64 字元之純英數字雜湊，絕不包含斜線、反斜線、問號或小數點
+  return /^[0-9a-zA-Z]{8,64}$/.test(clean) && !clean.includes('.') && !clean.includes('/') && !clean.includes('\\');
+}
+
+/**
  * 🛡️ 驗證 Gist 是否屬於當前用戶或未被其他原生 LINE 用戶綁定
- * 防範 IDOR (越權存取) 與跨用戶資料污染
+ * 防範 IDOR (越權存取)、格式注入與跨用戶資料污染
  * @param {string} userGistId
  * @param {string} userId
  * @param {GoogleAppsScript.Properties.Properties} [props]
- * @returns {boolean} true 表示合法或未被其他用戶佔用，false 表示檢測到越權存取
+ * @returns {boolean} true 表示合法或未被其他用戶佔用，false 表示檢測到越權存取或非法格式
  */
 function verifyGistOwnership(userGistId, userId, props) {
   if (!userGistId) return true;
   const cleanGist = String(userGistId).trim();
   if (!cleanGist || cleanGist === 'undefined' || cleanGist === 'null') return true;
+
+  // 🛡️ 格式安全防護：拒絕任何包含路徑遍歷或非英數字元的惡意 Gist ID
+  if (!isValidGistId(cleanGist)) {
+    console.warn(`🚨 [非法 Gist ID 格式攔截] 傳入之 Gist ID 格式不合法或含有非法字元: ${cleanGist}`);
+    return false;
+  }
 
   if (!props) props = PropertiesService.getScriptProperties();
   const allProps = props.getProperties();
