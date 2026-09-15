@@ -11,7 +11,8 @@
 
 /**
  * 🛡️ 驗證維護者與管理端點權限
- * 支援藉由 URL 參數 token, adminKey, pass, password 驗證
+ * 支援由 URL 參數或 Body (token, adminKey, pass, password) 驗證
+ * 同時相容原始主密碼以及暫態 HMAC-SHA256 Session Token
  * 遵循安全原則：若環境中尚未設定 MAINTAINER_PASS，一律拒絕存取 (Fail-Closed)
  */
 function verifyAdminAccess(e, props) {
@@ -20,7 +21,18 @@ function verifyAdminAccess(e, props) {
   if (!configuredPass) return false;
   const incomingToken = e?.parameter?.token || e?.parameter?.adminKey || e?.parameter?.pass || e?.parameter?.password;
   if (!incomingToken) return false;
-  return incomingToken === configuredPass;
+
+  // 1. 直接主密碼校驗 (支援既有自動化腳本或直接傳遞)
+  if (incomingToken === configuredPass) return true;
+
+  // 2. 暫態 Session Token 校驗 (支援當日與跨午夜容錯)
+  const configuredUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+  const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
+  if (todayToken && incomingToken === todayToken) return true;
+  const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
+  if (yesterdayToken && incomingToken === yesterdayToken) return true;
+
+  return false;
 }
 
 function doGet(e) {
@@ -41,7 +53,7 @@ function doGet(e) {
     const pat = props.getProperty('GITHUB_PAT');
     const isAdmin = verifyAdminAccess(e, props);
 
-    // 🛡️ 0.1 維護者登入安全校驗端點 (供 Web 前端進行身分校驗，在 Google Apps Script 後端執行，前端完全無法窺探)
+    // 🛡️ 0.1 維護者登入安全校驗端點 (供 Web 前端進行身分校驗，簽發暫態 Session Token，絕不洩露後端主密碼)
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
       const incomingPass = e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
       const incomingUser = e?.parameter?.user || e?.parameter?.userName || '';
@@ -58,13 +70,20 @@ function doGet(e) {
       }
 
       const isUserMatch = incomingUser && incomingUser.trim().toLowerCase() === configuredUser.toLowerCase();
-      const isPassMatch = incomingPass && incomingPass === configuredPass;
+      const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
+      const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
+      const isPassMatch = incomingPass && (
+        incomingPass === configuredPass ||
+        incomingPass === todayToken ||
+        incomingPass === yesterdayToken
+      );
 
       if (isUserMatch && isPassMatch) {
+        const sessionToken = todayToken || configuredPass;
         return ContentService.createTextOutput(JSON.stringify({ 
           status: 'ok', 
           authenticated: true, 
-          token: configuredPass, 
+          token: sessionToken, 
           userName: configuredUser 
         })).setMimeType(ContentService.MimeType.JSON);
       } else {
@@ -76,10 +95,10 @@ function doGet(e) {
       }
     }
 
-    // 📬 0.2 Web 用戶反饋 / 問題回報端點 (GET 支援)
+    // 📬 0.2 Web 用戶反饋 / 問題回報端點 (GET 支援，具備 Cache 5 分鐘冷卻鎖與長度截斷防護)
     if (action === 'sendFeedback' || action === 'reportBug') {
-      const subject = e?.parameter?.subject || '用戶意見反饋';
       const message = e?.parameter?.message || '';
+      const subject = e?.parameter?.subject || '用戶意見反饋';
       const contact = e?.parameter?.contact || '';
       const clientDevice = e?.parameter?.device || '';
       const caller = e?.parameter?.userName || e?.parameter?.caller || 'Web 訪客';
@@ -90,16 +109,36 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
+      // 🛡️ 5 分鐘冷卻防刷限制 (防範 MailApp 每日配額耗盡)
+      try {
+        const cache = CacheService.getScriptCache();
+        const senderKey = 'FEEDBACK_COOLDOWN_' + (uid ? uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32) : 'guest');
+        if (cache.get(senderKey)) {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            code: 'RATE_LIMIT',
+            message: '您剛剛已送出過反饋，請稍候 5 分鐘後再試 (Please wait 5 minutes before submitting again)'
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+        cache.put(senderKey, '1', 300);
+      } catch (cacheErr) {}
+
+      // 🛡️ 限制長度防範超大 payload
+      const cleanMessage = String(message).trim().slice(0, 1000);
+      const cleanContact = String(contact).trim().slice(0, 100);
+      const cleanDevice = String(clientDevice).trim().slice(0, 150);
+      const cleanCaller = String(caller).trim().slice(0, 50);
+
       const issueDetails = [
-        message,
+        cleanMessage,
         '',
-        `📱 裝置與環境：${clientDevice || '未知'}`,
-        `📫 聯絡方式：${contact || '未提供'}`
+        `📱 裝置與環境：${cleanDevice || '未知'}`,
+        `📫 聯絡方式：${cleanContact || '未提供'}`
       ].join('\n');
 
       const mailResult = sendBugReportNotification({
         userId: uid,
-        userName: caller,
+        userName: cleanCaller,
         issueDetails: issueDetails,
         userLang: 'zh',
         persona: 'tsundere',
@@ -108,7 +147,7 @@ function doGet(e) {
       });
 
       if (typeof recordSystemLog === 'function') {
-        recordSystemLog('用戶意見反饋', uid, subject, `聯絡方式: ${contact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, caller);
+        recordSystemLog('用戶意見反饋', uid, String(subject).slice(0, 50), `聯絡方式: ${cleanContact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, cleanCaller);
       }
 
       return ContentService.createTextOutput(JSON.stringify({
@@ -118,50 +157,34 @@ function doGet(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 🔗 核心修復：若 userId 不是 LINE 原生 ID（非 U 開頭），透過 Gist ID 或 用戶名稱 反查真實的 LINE 用戶綁定！
+    // 🛡️ 0.3 Gist 所有權安全校驗：防範跨用戶資料串聯與越權存取 (IDOR)
+    if (incomingGist && !verifyGistOwnership(incomingGist, userId, props)) {
+      console.warn(`🚨 [Gist 越權存取拒絕 (GET)] 用戶 ${userId || '匿名/Web'} 企圖存取非授權 Gist: ${incomingGist}`);
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'error', 
+        code: 'FORBIDDEN', 
+        message: '存取被拒絕：無權存取該 Gist 資料來源 (Access Denied)' 
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 🔗 帳號與身分識別校驗 (防止未授權訪客冒用 LINE 原生用戶或維護者身分)
     if (!userId || !userId.startsWith('U') || userId === 'default_user' || userId === 'undefined') {
-      // 1. 優先以 Gist ID 反查
-      if (incomingGist) {
-        for (const k in allProps) {
-          if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
-            const matchedLineUserId = k.replace('USER_GIST_', '');
-            if (matchedLineUserId.startsWith('U')) {
-              console.log(`🔗 [Gist 反查綁定] Gist ${incomingGist} 成功對應至 LINE 用戶 ${matchedLineUserId} (原傳入: ${userId})`);
-              userId = matchedLineUserId;
-              break;
-            }
-          }
-        }
-      }
-      // 2. 若仍未找到且傳入非 U 開頭的名稱（如 "Winnie"），嘗試以 USER_NAME_ 反查對應的 LINE 原生用戶
-      if ((!userId || !userId.startsWith('U')) && (incomingCaller || userId)) {
-        const queryName = (incomingCaller || userId || '').trim();
-        for (const k in allProps) {
-          if (k.startsWith('USER_NAME_') && allProps[k] === queryName) {
-            const matchedLineUserId = k.replace('USER_NAME_', '');
-            if (matchedLineUserId.startsWith('U')) {
-              console.log(`🔗 [名稱反查綁定] 名稱 ${queryName} 成功對應至 LINE 用戶 ${matchedLineUserId}`);
-              userId = matchedLineUserId;
-              break;
-            }
-          }
-        }
-        // 3. 若為維護者名字（如 Winnie）且設定了 ADMIN_LINE_USER_ID，直接自動綁定至維護者 LINE 帳號
-        if (!userId || !userId.startsWith('U')) {
-          const maintainerUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
-          const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
-          if (adminLineId && queryName.toLowerCase() === maintainerUser.toLowerCase()) {
-            console.log(`🔗 [維護者自動綁定] 維護者 ${queryName} 成功對應至 LINE 用戶 ${adminLineId}`);
-            userId = adminLineId;
-          }
+      const queryName = (incomingCaller || userId || '').trim();
+      // 僅在通過管理員密碼/權杖驗證的前提下，才允許維護者別名自動綁定至 ADMIN_LINE_USER_ID
+      if (isAdmin && queryName) {
+        const maintainerUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+        const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
+        if (adminLineId && queryName.toLowerCase() === maintainerUser.toLowerCase()) {
+          console.log(`🔗 [維護者自動綁定] 維護者 ${queryName} 權限校驗通過，對應至 LINE 用戶 ${adminLineId}`);
+          userId = adminLineId;
         }
       }
     }
-    // Web 用戶 caller 的名稱拿不到就用他的名字
+    // Web 用戶 caller 的名稱拿不到就用其輸入名稱或預設 web_user
     if ((!userId || userId === 'default_user' || userId === 'undefined') && incomingCaller) {
       userId = incomingCaller;
     }
-    if (!userId) userId = 'default_user';
+    if (!userId) userId = 'web_user';
 
     // 🛡️ LINE 原生用戶 (U 開頭) 的名稱由 LINE Profile API / props 取得，優先於 Web 前端傳入的暫存 caller
     const isGistStr = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
@@ -794,7 +817,7 @@ function doPost(e) {
     const LIFF_ID = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
     currentToken = CHANNEL_ACCESS_TOKEN;
 
-    // 🛡️ 0.1 維護者登入安全校驗端點 (POST 支援，在 Google Apps Script 後端執行，前端完全無法窺探)
+    // 🛡️ 0.1 維護者登入安全校驗端點 (POST 支援，簽發暫態 Session Token，絕不洩露後端主密碼)
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
       const incomingPass = data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
       const incomingUser = data?.user || data?.userName || e?.parameter?.user || e?.parameter?.userName || '';
@@ -811,13 +834,20 @@ function doPost(e) {
       }
 
       const isUserMatch = incomingUser && incomingUser.trim().toLowerCase() === configuredUser.toLowerCase();
-      const isPassMatch = incomingPass && incomingPass === configuredPass;
+      const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
+      const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
+      const isPassMatch = incomingPass && (
+        incomingPass === configuredPass ||
+        incomingPass === todayToken ||
+        incomingPass === yesterdayToken
+      );
 
       if (isUserMatch && isPassMatch) {
+        const sessionToken = todayToken || configuredPass;
         return ContentService.createTextOutput(JSON.stringify({ 
           status: 'ok', 
           authenticated: true, 
-          token: configuredPass, 
+          token: sessionToken, 
           userName: configuredUser 
         })).setMimeType(ContentService.MimeType.JSON);
       } else {
@@ -829,10 +859,10 @@ function doPost(e) {
       }
     }
 
-    // 📬 0.2 Web 用戶反饋 / 問題回報端點 (POST 支援)
+    // 📬 0.2 Web 用戶反饋 / 問題回報端點 (POST 支援，具備 Cache 5 分鐘冷卻鎖與長度截斷防護)
     if (action === 'sendFeedback' || action === 'reportBug') {
-      const subject = data?.subject || e?.parameter?.subject || '用戶意見反饋';
       const message = data?.message || e?.parameter?.message || '';
+      const subject = data?.subject || e?.parameter?.subject || '用戶意見反饋';
       const contact = data?.contact || e?.parameter?.contact || '';
       const clientDevice = data?.device || e?.parameter?.device || '';
       const caller = data?.userName || e?.parameter?.userName || data?.caller || 'Web 訪客';
@@ -843,16 +873,36 @@ function doPost(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
 
+      // 🛡️ 5 分鐘冷卻防刷限制 (防範 MailApp 每日配額耗盡)
+      try {
+        const cache = CacheService.getScriptCache();
+        const senderKey = 'FEEDBACK_COOLDOWN_' + (uid ? uid.replace(/[^a-zA-Z0-9_-]/g, '').slice(-32) : 'guest');
+        if (cache.get(senderKey)) {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            code: 'RATE_LIMIT',
+            message: '您剛剛已送出過反饋，請稍候 5 分鐘後再試 (Please wait 5 minutes before submitting again)'
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+        cache.put(senderKey, '1', 300);
+      } catch (cacheErr) {}
+
+      // 🛡️ 限制長度防範超大 payload
+      const cleanMessage = String(message).trim().slice(0, 1000);
+      const cleanContact = String(contact).trim().slice(0, 100);
+      const cleanDevice = String(clientDevice).trim().slice(0, 150);
+      const cleanCaller = String(caller).trim().slice(0, 50);
+
       const issueDetails = [
-        message,
+        cleanMessage,
         '',
-        `📱 裝置與環境：${clientDevice || '未知'}`,
-        `📫 聯絡方式：${contact || '未提供'}`
+        `📱 裝置與環境：${cleanDevice || '未知'}`,
+        `📫 聯絡方式：${cleanContact || '未提供'}`
       ].join('\n');
 
       const mailResult = sendBugReportNotification({
         userId: uid,
-        userName: caller,
+        userName: cleanCaller,
         issueDetails: issueDetails,
         userLang: 'zh',
         persona: 'tsundere',
@@ -861,7 +911,7 @@ function doPost(e) {
       });
 
       if (typeof recordSystemLog === 'function') {
-        recordSystemLog('用戶意見反饋', uid, subject, `聯絡方式: ${contact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, caller);
+        recordSystemLog('用戶意見反饋', uid, String(subject).slice(0, 50), `聯絡方式: ${cleanContact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, cleanCaller);
       }
 
       return ContentService.createTextOutput(JSON.stringify({
@@ -875,7 +925,16 @@ function doPost(e) {
     if (action === 'recordMaintainerLogin') {
       const incomingToken = data?.token || e?.parameter?.token || '';
       const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
-      if (!configuredPass || incomingToken !== configuredPass) {
+      const configuredUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+      const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
+      const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
+      const isAuthValid = configuredPass && (
+        incomingToken === configuredPass ||
+        (todayToken && incomingToken === todayToken) ||
+        (yesterdayToken && incomingToken === yesterdayToken)
+      );
+
+      if (!isAuthValid) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
@@ -928,17 +987,13 @@ function doPost(e) {
       let webUserId = data?.userId || e?.parameter?.userId || '';
       const incomingGist = data?.gistId || e?.parameter?.gistId || '';
 
-      if (incomingGist && (!webUserId || !webUserId.startsWith('U'))) {
-        const allProps = props.getProperties();
-        for (const k in allProps) {
-          if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
-            const matchedId = k.replace('USER_GIST_', '');
-            if (matchedId.startsWith('U')) {
-              webUserId = matchedId;
-              break;
-            }
-          }
-        }
+      // 🛡️ 驗證傳入之 Gist 是否合法
+      if (incomingGist && !verifyGistOwnership(incomingGist, webUserId, props)) {
+        console.warn(`🚨 [Gist 越權存取拒絕 (Web AI)] 用戶 ${webUserId || '匿名/Web'} 企圖關聯非授權 Gist: ${incomingGist}`);
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: 'error', 
+          message: 'Forbidden: 無權存取該 Gist 資料來源' 
+        })).setMimeType(ContentService.MimeType.JSON);
       }
 
       if ((!webUserId || webUserId === 'web_user' || webUserId === 'default_user') && incomingCallerName) {

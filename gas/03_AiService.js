@@ -1266,14 +1266,41 @@ function verifyWebAIRequest(data, e) {
 
   try {
     const cache = CacheService.getScriptCache();
-    // 🛡️ 以實際呼叫端標識進行頻率限制（避免使用隨機 nonce 導致限流失效）
-    const callerId = (data?.userId || e?.parameter?.userId || data?.caller || 'web_user').toString().replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
-    const rateKey = `RATE_AI_${callerId || 'guest'}`;
-    const currentCount = Number(cache.get(rateKey) || 0);
-    if (currentCount > 30) {
-      return { valid: false, reason: '調用頻率過高，請稍候 (Rate Limit Exceeded)' };
+
+    // 🛡️ 1. 重送攻擊防護 (Nonce Replay Check - 5 分鐘內不可重複)
+    const nonceKey = `NONCE_${nonce}`;
+    if (cache.get(nonceKey)) {
+      return { valid: false, reason: '重送攻擊防護：Nonce 權杖已被使用 (Replay Attack Detected)' };
     }
-    cache.put(rateKey, String(currentCount + 1), 60);
+    cache.put(nonceKey, '1', 300);
+
+    // 🛡️ 2. 呼叫端分流頻率限制
+    const callerId = (data?.userId || e?.parameter?.userId || data?.caller || 'web_user').toString().replace(/[^a-zA-Z0-9_-]/g, '').slice(-32);
+
+    // 1 分鐘短衝防護 (最多 15 次)
+    const rate1mKey = `RATE_AI_1M_${callerId || 'guest'}`;
+    const count1m = Number(cache.get(rate1mKey) || 0);
+    if (count1m >= 15) {
+      return { valid: false, reason: '調用頻率過高，請稍候 1 分鐘後再試 (Rate Limit Exceeded)' };
+    }
+    cache.put(rate1mKey, String(count1m + 1), 60);
+
+    // 5 分鐘波段防護 (最多 30 次)
+    const rate5mKey = `RATE_AI_5M_${callerId || 'guest'}`;
+    const count5m = Number(cache.get(rate5mKey) || 0);
+    if (count5m >= 30) {
+      return { valid: false, reason: '短時間調用頻率過高，請稍候 5 分鐘後再試 (5-Min Limit Exceeded)' };
+    }
+    cache.put(rate5mKey, String(count5m + 1), 300);
+
+    // 每日配額防護 (每位用戶每天上限 60 次免費 AI 分析)
+    const rateDayKey = `RATE_AI_DAY_${callerId || 'guest'}`;
+    const countDay = Number(cache.get(rateDayKey) || 0);
+    if (countDay >= 60) {
+      return { valid: false, reason: '已達今日免費 AI 分析次數上限 (60次)，請明日再試或至設定綁定個人 API Key' };
+    }
+    cache.put(rateDayKey, String(countDay + 1), 86400);
+
   } catch (err) {}
 
   return { valid: true };

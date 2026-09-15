@@ -126,3 +126,59 @@ function isGenericUserId(uid) {
          clean === 'null' ||
          clean.startsWith('client_');
 }
+
+/**
+ * 🔑 產生暫態 HMAC-SHA256 維護者會話權杖 (Session Token)
+ * 每日滾動更新，不向瀏覽器洩露主管理員密碼
+ * @param {string} configuredUser
+ * @param {string} configuredPass
+ * @param {number} [dayOffset=0]
+ * @returns {string}
+ */
+function generateSessionToken(configuredUser, configuredPass, dayOffset) {
+  if (!configuredPass) return '';
+  const offset = dayOffset || 0;
+  const dayEpoch = Math.floor(Date.now() / 86400000) + offset;
+  const rawSignature = `${(configuredUser || 'Winnie').trim().toLowerCase()}_${dayEpoch}`;
+  try {
+    const signatureBytes = Utilities.computeHmacSha256Signature(rawSignature, configuredPass);
+    return Utilities.base64Encode(signatureBytes);
+  } catch (e) {
+    return '';
+  }
+}
+
+/**
+ * 🛡️ 驗證 Gist 是否屬於當前用戶或未被其他原生 LINE 用戶綁定
+ * 防範 IDOR (越權存取) 與跨用戶資料污染
+ * @param {string} userGistId
+ * @param {string} userId
+ * @param {GoogleAppsScript.Properties.Properties} [props]
+ * @returns {boolean} true 表示合法或未被其他用戶佔用，false 表示檢測到越權存取
+ */
+function verifyGistOwnership(userGistId, userId, props) {
+  if (!userGistId) return true;
+  const cleanGist = String(userGistId).trim();
+  if (!cleanGist || cleanGist === 'undefined' || cleanGist === 'null') return true;
+
+  if (!props) props = PropertiesService.getScriptProperties();
+  const allProps = props.getProperties();
+
+  // 檢查所有已綁定 Gist 的 LINE 原生用戶 (USER_GIST_U...)
+  for (const k in allProps) {
+    if (k.startsWith('USER_GIST_') && allProps[k] === cleanGist) {
+      const ownerId = k.replace('USER_GIST_', '');
+      // 若該 Gist 已明確登記為某真實 LINE 用戶 (U 開頭)
+      if (ownerId.startsWith('U')) {
+        const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
+        const isMaintainer = userId && adminLineId && userId === adminLineId;
+        // 如果呼叫者不是該用戶本人，且不是維護者，一律判定為越權存取！
+        if (userId !== ownerId && !isMaintainer) {
+          console.warn(`🚨 [Gist 越權存取攔截] 用戶 ${userId || '匿名/Web'} 企圖存取/覆寫屬於 LINE 用戶 ${ownerId} 的 Gist ${cleanGist}`);
+          return false;
+        }
+      }
+    }
+  }
+  return true;
+}

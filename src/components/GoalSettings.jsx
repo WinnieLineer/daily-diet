@@ -1438,7 +1438,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div className="flex gap-2 w-full">
                             <div className="flex-1 relative">
                               <input
-                                type="text"
+                                type={showApiKey ? "text" : "password"}
                                 value={apiKey}
                                 onChange={e => setApiKey(e.target.value)}
                                 style={{ WebkitTextSecurity: showApiKey ? 'none' : 'disc' }}
@@ -1474,7 +1474,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div className="flex gap-2 w-full">
                             <div className="flex-1 relative">
                               <input
-                                type="text"
+                                type={showGithubPat ? "text" : "password"}
                                 value={githubPat}
                                 onChange={e => setGithubPat(e.target.value)}
                                 style={{ WebkitTextSecurity: showGithubPat ? 'none' : 'disc' }}

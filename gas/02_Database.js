@@ -400,6 +400,17 @@ function isOutsideEatingWindow(dateObj, startStr, endStr) {
 
 function saveMealLog(userId, meal, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權寫入他人 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕向非授權 Gist 寫入餐點: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
+  // 🛡️ 限制字串長度，防範 ScriptProperties 單一屬性 9KB 配額爆滿
+  if (meal.dish_name) meal.dish_name = String(meal.dish_name).slice(0, 100);
+  if (meal.comment) meal.comment = String(meal.comment).slice(0, 200);
+
   const lock = LockService.getScriptLock();
   try {
     lock.waitLock(30000);
@@ -459,6 +470,17 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
 
 function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權更新他人 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕向非授權 Gist 更新餐點: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
+  // 🛡️ 限制更新字串長度
+  if (updateFields.dish_name) updateFields.dish_name = String(updateFields.dish_name).slice(0, 100);
+  if (updateFields.comment) updateFields.comment = String(updateFields.comment).slice(0, 200);
+
   const todayStr = getTodayDateString();
   const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
   let logs = getTodayLogs(userId, todayStr, props, userGistId);
@@ -862,6 +884,13 @@ function getRecentDaysLogs(userId, days, props, userGistId, lang) {
 
 function deleteMealLog(userId, mealIdOrName, userGistId, pat, props, targetDateStr) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權刪除他人 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕自非授權 Gist 刪除紀錄: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
   const lock = LockService.getScriptLock();
   try { lock.waitLock(30000); } catch (e) {}
   try {
@@ -911,6 +940,13 @@ function deleteMealLog(userId, mealIdOrName, userGistId, pat, props, targetDateS
 
 function clearTodayLogs(userId, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權清空他人 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕清空非授權 Gist: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
   const todayStr = getTodayDateString();
   const isGeneric = isGenericUserId(userId);
   const todayKey = isGeneric
@@ -1102,6 +1138,13 @@ function deleteMealFromUserGist(targetMeal, gistId, pat) {
 
 function saveWeightLog(userId, weightVal, dateStr, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權寫入他人 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕向非授權 Gist 寫入體重紀錄: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
   const weight = Number(parseFloat(weightVal).toFixed(1));
   const date = dateStr || getTodayDateString();
   const timestamp = new Date(date + 'T12:00:00+08:00').getTime();
@@ -1138,7 +1181,7 @@ function saveWeightLog(userId, weightVal, dateStr, userGistId, pat, props) {
     logs.unshift(weightItem);
   }
   logs.sort((a, b) => b.timestamp - a.timestamp);
-  if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90))); // 保留最近 90 筆
+  if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 30))); // 🛡️ 配額防護：保留最近 30 筆快取 (完整歷程保存在 Gist)
 
   const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const token = pat || props.getProperty('GITHUB_PAT');
@@ -1163,6 +1206,13 @@ function saveWeightLog(userId, weightVal, dateStr, userGistId, pat, props) {
 
 function savePoopLog(userId, timestampVal, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
+
+  // 🛡️ Gist 所有權校驗：拒絕越權寫入他人 Gist
+  if (userGistId && typeof verifyGistOwnership === 'function' && !verifyGistOwnership(userGistId, userId, props)) {
+    console.warn(`🚨 [Database Gist 防護] 拒絕向非授權 Gist 寫入排便紀錄: ${userGistId} (userId: ${userId})`);
+    userGistId = '';
+  }
+
   const ts = timestampVal ? Number(timestampVal) : Date.now();
   const dateStr = getTodayDateString(new Date(ts));
   const logId = Date.now();
@@ -1190,7 +1240,7 @@ function savePoopLog(userId, timestampVal, userGistId, pat, props) {
 
   logs.unshift(poopItem);
   logs.sort((a, b) => b.timestamp - a.timestamp);
-  if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+  if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 30))); // 🛡️ 配額防護：保留最近 30 筆快取
 
   const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const token = pat || props.getProperty('GITHUB_PAT');
@@ -1247,7 +1297,7 @@ function getUserWeightHistory(userId, days, props, userGistId) {
             const data = JSON.parse(content);
             if (Array.isArray(data.weightLogs) && data.weightLogs.length > 0) {
               logs = data.weightLogs;
-              if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+              if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 30)));
             }
           }
         }
@@ -1293,7 +1343,7 @@ function getUserPoopHistory(userId, days, props, userGistId) {
             const data = JSON.parse(content);
             if (Array.isArray(data.poopLogs) && data.poopLogs.length > 0) {
               logs = data.poopLogs;
-              if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+              if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 30)));
             }
           }
         }

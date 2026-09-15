@@ -481,24 +481,27 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     };
   };
 
-  // 📡 Send Maintainer Login Audit to GAS Backend
+  // 📡 Send Maintainer Login Audit to GAS Backend (POST 安全通道)
   const recordMaintainerAuditToBackend = async (info, token, userNameOverride) => {
     try {
       setIsRegisteringAudit(true);
       const name = userNameOverride || maintainerName || info.userName || 'Admin';
       const currentToken = token || permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
-      const params = new URLSearchParams({
-        action: 'recordMaintainerLogin',
-        userName: name,
-        ip: info.ip || '',
-        location: info.location || '',
-        device: info.device || '',
-        browser: info.browser || '',
-        os: info.os || '',
-        token: currentToken
+      await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'recordMaintainerLogin',
+          userName: name,
+          ip: info.ip || '',
+          location: info.location || '',
+          device: info.device || '',
+          browser: info.browser || '',
+          os: info.os || '',
+          token: currentToken
+        })
       });
-      await fetch(`${GAS_API_URL}?${params.toString()}`);
-      console.log('✅ [Maintainer Audit] 登入日誌已記錄 (含使用者名字、位置與 IP)');
+      console.log('✅ [Maintainer Audit] 登入日誌已安全記錄 (POST)');
     } catch (err) {
       console.warn('⚠️ 記錄維護者登入日誌失敗:', err);
     } finally {
@@ -506,7 +509,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     }
   };
 
-  // Handle Login & Issue Permanent Pass (透過後端 GAS 進行動態身分安全校驗)
+  // Handle Login & Issue Permanent Pass (透過後端 GAS 進行動態身分安全校驗，POST 傳輸)
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     const cleanInput = passwordInput.trim();
@@ -521,26 +524,18 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     setAuthError('');
 
     try {
-      let data = null;
-      try {
-        // 優先以 POST 發送，避免維護者密碼被記錄至瀏覽器歷史或 GET URL 日誌中
-        const postRes = await fetch(GAS_API_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'verifyMaintainerAuth',
-            user: cleanName,
-            pass: cleanInput,
-            timestamp: Date.now()
-          })
-        });
-        data = await postRes.json();
-      } catch (postErr) {
-        // 若 POST 因網路環境異常，優雅 fallback 至 GET
-        const verifyUrl = `${GAS_API_URL}?action=verifyMaintainerAuth&user=${encodeURIComponent(cleanName)}&pass=${encodeURIComponent(cleanInput)}&_t=${Date.now()}`;
-        const res = await fetch(verifyUrl);
-        data = await res.json();
-      }
+      // 🛡️ 嚴格使用 POST 發送身分驗證，絕不在 GET URL 查詢字串傳輸敏感密碼
+      const postRes = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'verifyMaintainerAuth',
+          user: cleanName,
+          pass: cleanInput,
+          timestamp: Date.now()
+        })
+      });
+      const data = await postRes.json();
 
       if (data && data.status === 'ok' && data.authenticated) {
         const validatedToken = data.token || cleanInput;
