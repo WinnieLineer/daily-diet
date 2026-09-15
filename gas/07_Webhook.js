@@ -2850,22 +2850,28 @@ function sendBugReportNotification(params) {
   const { userId, userName, issueDetails, userLang, persona, userGistId, props } = params;
   const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
   const isEn = (userLang === 'en');
-  const subject = `[Daily-Diet LINE] ${isEn ? 'Bug Report' : '問題回報'} - ${userName} (${userId ? userId.slice(-6) : 'User'})`;
+  const isGeneric = (typeof isGenericUserId === 'function') ? isGenericUserId(userName) : (!userName || ['web_user', 'default_user', 'web_client'].includes(userName));
+  const displayUserName = (!userName || isGeneric) ? '未具名訪客' : userName;
+  const displayUserId = (!userId || (typeof isGenericUserId === 'function' ? isGenericUserId(userId) : false))
+    ? '未登入/Web訪客'
+    : (userId.startsWith('U') ? `LINE 用戶 (${userId.slice(-6)})` : userId.slice(-8));
+
+  const subject = `[Daily-Diet LINE] ${isEn ? 'Bug Report' : '問題回報'} - ${displayUserName}`;
 
   const textBody = [
     `【Daily-Diet 熊貓教練 用戶問題與反饋回報】`,
     `========================================`,
     `⏰ 回報時間：${timeStr} (台灣時間 UTC+8)`,
-    `👤 用戶暱稱：${userName}`,
-    `🆔 用戶 ID：${userId}`,
-    `🌐 語言環境：${userLang}`,
+    `👤 用戶暱稱：${displayUserName}`,
+    `🆔 用戶標識：${displayUserId}`,
+    `🌐 語言環境：${userLang || 'zh'}`,
     `🎭 教練性格：${persona || 'tsundere'}`,
-    `📂 Gist 綁定：${userGistId ? '已綁定 (' + userGistId.slice(0, 8) + '...)' : '未綁定'}`,
+    `📂 雲端備份：${userGistId ? '已建立專屬備份' : '未建立'}`,
     `========================================`,
     `📝 問題與建議內容：`,
     `${issueDetails}`,
     `========================================`,
-    `本信件由 Daily-Diet LINE Bot 自動發送。`
+    `本信件由 Daily-Diet 系統自動發送至開發團隊。`
   ].join('\n');
 
   let mailSuccess = false;
