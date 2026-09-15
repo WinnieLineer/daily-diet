@@ -28,8 +28,13 @@ function getLineImageBlob(messageId, accessToken) {
  * @param {Blob} imageBlob 照片 Blob 物件
  * @returns {string|null} 公開 HTTPS 圖片 URL
  */
-function uploadTempMealPhoto(imageBlob) {
+function uploadTempMealPhoto(imageBlob, props) {
   if (!imageBlob) return null;
+  if (!props) props = PropertiesService.getScriptProperties();
+  // 🛡️ 隱私防護：預設嚴格禁止將用戶照片外傳至第三方公用匿名圖床 (符合個資法規，保障用戶隱私)
+  if (props.getProperty('ENABLE_PUBLIC_IMAGE_HOSTING') !== 'true') {
+    return null;
+  }
   try {
     const payload = {
       reqtype: 'fileupload',

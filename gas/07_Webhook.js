@@ -1734,10 +1734,10 @@ function doPost(e) {
           }
           const base64Image = Utilities.base64Encode(imgBytes);
 
-          // 📸 24 小時迷你雲端縮圖同步 (方案 B 原生詳情卡片專用)
+          // 📸 24 小時迷你雲端縮圖同步 (方案 B 原生詳情卡片專用，預設防護關閉)
           let uploadedImageUrl = null;
           try {
-            uploadedImageUrl = uploadTempMealPhoto(imageBlob);
+            uploadedImageUrl = uploadTempMealPhoto(imageBlob, props);
           } catch (imgErr) {
             console.warn("⚠️ 雲端縮圖同步失敗:", imgErr);
           }

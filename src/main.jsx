@@ -82,7 +82,18 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
       sessionStorage.setItem(lastTimeKey, String(Date.now()));
     } catch (e) {}
 
-    const currentUrl = typeof window !== 'undefined' ? window.location.href : 'N/A';
+    let currentUrl = 'N/A';
+    if (typeof window !== 'undefined' && window.location) {
+      try {
+        const u = new URL(window.location.href);
+        ['token', 'pass', 'password', 'key', 'adminKey', 'secret'].forEach(p => {
+          if (u.searchParams.has(p)) u.searchParams.set(p, '***REDACTED***');
+        });
+        currentUrl = u.toString();
+      } catch (e) {
+        currentUrl = (window.location.href || '').split('?')[0];
+      }
+    }
     const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent : 'N/A';
 
     fetch('https://api.web3forms.com/submit', {
