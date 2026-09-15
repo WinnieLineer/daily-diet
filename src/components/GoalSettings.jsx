@@ -14,6 +14,15 @@ import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateC
 
 const VERSION_HISTORY = [
   { 
+    version: '3.3.42', 
+    date: '2026-09-15', 
+    features: [
+      '🚨 緊急修復：訪客裝置身分全面獨立隔離與共用快取淨空', 
+      '🧹 自動自癒：開機自動解除誤綁並清理混入之他人餐點',
+      '🔗 資料管理：新增「解除雲端綁定」手動重設按鈕'
+    ] 
+  },
+  { 
     version: '3.3.26', 
     date: '2026-09-14', 
     features: [

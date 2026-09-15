@@ -45,7 +45,7 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.3.21';
+export const LATEST_WHATSNEW_VERSION = '3.3.42';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
@@ -120,6 +120,54 @@ const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {/* 🚨 緊急修復公告卡片 (v3.3.42) */}
+              <div className="p-5 bg-gradient-to-br from-rose-50 via-amber-50 to-orange-50 border-4 border-black rounded-3xl shadow-neo mb-6">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-10 h-10 bg-rose-500 border-2 border-black rounded-2xl flex items-center justify-center shadow-neo-xs text-white shrink-0">
+                    <ShieldCheck size={22} strokeWidth={3} />
+                  </div>
+                  <div>
+                    <span className="inline-block px-2 py-0.5 bg-rose-600 text-white rounded-md text-[10px] font-black uppercase tracking-wider mb-1">
+                      🚨 緊急修復公告 v{version}
+                    </span>
+                    <h4 className="font-black text-base tracking-tight text-zinc-950 leading-tight">
+                      訪客裝置雲端紀錄異常串聯之說明與修復
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-xs text-zinc-800 font-bold leading-relaxed border-t-2 border-dashed border-zinc-300 pt-3">
+                  <p className="text-zinc-900 leading-relaxed">
+                    親愛的 Daily-Diet 用戶您好：針對今日（9/15）部分純網頁訪客反饋「我的紀錄跟別人串了」的異常狀況，開發團隊已完成全鏈路隔離修復：
+                  </p>
+
+                  <div className="bg-white/90 border-2 border-black rounded-2xl p-3 space-y-1.5 shadow-neo-xs">
+                    <div className="text-[11px] font-black text-rose-950 flex items-center gap-1.5">
+                      <span className="text-sm">🔍</span> 異常原因說明
+                    </div>
+                    <p className="text-[11px] text-zinc-700 leading-normal">
+                      日前升級 Web ↔ LINE 雙向同步時，針對未登入 LINE 的網頁訪客身分判別存在漏洞，導致後端將不同訪客誤分配至同一個雲端備份 ID，致使餐點紀錄相互下載與覆蓋。
+                    </p>
+                  </div>
+
+                  <div className="bg-white/90 border-2 border-black rounded-2xl p-3.5 space-y-2 shadow-neo-xs">
+                    <div className="text-[11px] font-black text-emerald-950 flex items-center gap-1.5">
+                      <span className="text-sm">🛠️</span> 已完成之防護與自癒修復
+                    </div>
+                    <ul className="text-[11px] text-zinc-700 space-y-1.5 list-disc list-inside leading-relaxed">
+                      <li><strong>全設備獨立身分隔離</strong>：徹底棄用通用訪客標籤，每台未登入 LINE 的手機派發專屬唯一 Client ID，互不干擾。</li>
+                      <li><strong>伺服器共用快取淨空</strong>：後端已全數清空歷史殘留共用快取，杜絕跨裝置混淆。</li>
+                      <li><strong>受影響裝置「自動自癒修復」</strong>：曾發生紀錄混入的用戶，<strong>本次更新後只要重新開啟網頁，系統會自動解除誤綁，並自動清理混入的他人紀錄</strong>，完整保留您本人記錄的餐點！</li>
+                      <li><strong>新增手動解除功能</strong>：在「⚙️ 設定 ➔ 資料管理」新增「解除雲端綁定」紅色按鈕，隨時可自主檢查與重置。</li>
+                    </ul>
+                  </div>
+
+                  <p className="text-[11px] text-amber-950 bg-amber-100/90 p-3 rounded-2xl border-2 border-amber-300 leading-relaxed">
+                    🎋 特別感謝今日在餐點中友善留言提醒的訪客用戶，以及第一時間通報異常的用戶 <strong>L</strong>！大家的及時反饋幫助團隊以最快速度抓出漏洞並完成修復。造成大家的困擾致上最深歉意，團隊已加強隔離防護，守護您的隱私與安全 🐼
+                  </p>
+                </div>
+              </div>
+
               {show3321 && (
                 <div className="space-y-3">
                   <div className="text-xs font-black uppercase tracking-widest text-black/50 ml-2 mb-2">
