@@ -1,4 +1,5 @@
 import { db } from "../db";
+import { getOrCreateClientId } from "./syncService";
 
 const GEMINI_MODELS = [
   'gemini-3.5-flash-lite',
@@ -151,7 +152,7 @@ function createWebAIPayload(data) {
 
   return {
     ...data,
-    userId: data?.userId || userId || userName || 'web_user',
+    userId: data?.userId || userId || userName || getOrCreateClientId(),
     userName: data?.userName || userName || userId || '',
     caller: data?.caller || userName || userId || 'Web 用戶',
     client: 'daily-diet-web',

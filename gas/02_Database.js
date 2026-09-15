@@ -186,22 +186,23 @@ function setUserPersona(userId, persona, userGistId, pat, props) {
 
 function getUserGoals(userId, props, userGistId) {
   if (!props) props = PropertiesService.getScriptProperties();
-  let cal = Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || Number(props.getProperty('CALORIE_GOAL'));
-  let pro = Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || Number(props.getProperty('PROTEIN_GOAL'));
-  let wat = Number(props.getProperty(`WATER_GOAL_${userId}`)) || Number(props.getProperty('WATER_GOAL'));
-  let carbs = Number(props.getProperty(`CARBS_GOAL_${userId}`)) || 0;
-  let fat = Number(props.getProperty(`FAT_GOAL_${userId}`)) || 0;
-  let showCarbsRaw = props.getProperty(`SHOW_CARBS_FAT_${userId}`);
+  const isGeneric = isGenericUserId(userId);
+  let cal = isGeneric ? 0 : (Number(props.getProperty(`CALORIE_GOAL_${userId}`)) || 0);
+  let pro = isGeneric ? 0 : (Number(props.getProperty(`PROTEIN_GOAL_${userId}`)) || 0);
+  let wat = isGeneric ? 0 : (Number(props.getProperty(`WATER_GOAL_${userId}`)) || 0);
+  let carbs = isGeneric ? 0 : (Number(props.getProperty(`CARBS_GOAL_${userId}`)) || 0);
+  let fat = isGeneric ? 0 : (Number(props.getProperty(`FAT_GOAL_${userId}`)) || 0);
+  let showCarbsRaw = isGeneric ? null : props.getProperty(`SHOW_CARBS_FAT_${userId}`);
   let showCarbs = showCarbsRaw === 'true' ? true : (showCarbsRaw === 'false' ? false : null);
 
-  let fastingEnabledRaw = props.getProperty(`FASTING_ENABLED_${userId}`);
+  let fastingEnabledRaw = isGeneric ? null : props.getProperty(`FASTING_ENABLED_${userId}`);
   let fastingEnabled = fastingEnabledRaw === 'true' ? true : (fastingEnabledRaw === 'false' ? false : null);
-  let fastingStart = props.getProperty(`FASTING_START_${userId}`);
-  let fastingEnd = props.getProperty(`FASTING_END_${userId}`);
+  let fastingStart = isGeneric ? '' : props.getProperty(`FASTING_START_${userId}`);
+  let fastingEnd = isGeneric ? '' : props.getProperty(`FASTING_END_${userId}`);
 
-  // 若尚未儲存目標，向 Gist 雲端資料庫拉取
+  // 若尚未儲存目標，向 Gist 雲端資料庫拉取 (若為泛用訪客，必須具備傳入的個人 userGistId)
   if (!cal || !pro || !wat || !carbs || !fat || showCarbs === null || fastingEnabled === null || !fastingStart || !fastingEnd) {
-    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+    const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
     const pat = props.getProperty('GITHUB_PAT');
     if (gistId && pat) {
       try {
@@ -225,26 +226,26 @@ function getUserGoals(userId, props, userGistId) {
               const gFastSt = backupData.settings.find(s => s.key === 'fasting_start')?.value;
               const gFastEnd = backupData.settings.find(s => s.key === 'fasting_end')?.value;
 
-              if (gCal && !cal) { cal = Number(gCal); props.setProperty(`CALORIE_GOAL_${userId}`, String(cal)); }
-              if (gPro && !pro) { pro = Number(gPro); props.setProperty(`PROTEIN_GOAL_${userId}`, String(pro)); }
-              if (gWat && !wat) { wat = Number(gWat); props.setProperty(`WATER_GOAL_${userId}`, String(wat)); }
-              if (gCarbs && !carbs) { carbs = Number(gCarbs); props.setProperty(`CARBS_GOAL_${userId}`, String(carbs)); }
-              if (gFat && !fat) { fat = Number(gFat); props.setProperty(`FAT_GOAL_${userId}`, String(fat)); }
+              if (gCal && !cal) { cal = Number(gCal); if (!isGeneric) props.setProperty(`CALORIE_GOAL_${userId}`, String(cal)); }
+              if (gPro && !pro) { pro = Number(gPro); if (!isGeneric) props.setProperty(`PROTEIN_GOAL_${userId}`, String(pro)); }
+              if (gWat && !wat) { wat = Number(gWat); if (!isGeneric) props.setProperty(`WATER_GOAL_${userId}`, String(wat)); }
+              if (gCarbs && !carbs) { carbs = Number(gCarbs); if (!isGeneric) props.setProperty(`CARBS_GOAL_${userId}`, String(carbs)); }
+              if (gFat && !fat) { fat = Number(gFat); if (!isGeneric) props.setProperty(`FAT_GOAL_${userId}`, String(fat)); }
               if (gShowCarbs !== undefined && showCarbs === null) {
                 showCarbs = (gShowCarbs === true || gShowCarbs === 'true');
-                props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbs));
+                if (!isGeneric) props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbs));
               }
               if (gFastEn !== undefined && fastingEnabled === null) {
                 fastingEnabled = (gFastEn === true || gFastEn === 'true');
-                props.setProperty(`FASTING_ENABLED_${userId}`, String(fastingEnabled));
+                if (!isGeneric) props.setProperty(`FASTING_ENABLED_${userId}`, String(fastingEnabled));
               }
               if (gFastSt && !fastingStart) {
                 fastingStart = String(gFastSt);
-                props.setProperty(`FASTING_START_${userId}`, fastingStart);
+                if (!isGeneric) props.setProperty(`FASTING_START_${userId}`, fastingStart);
               }
               if (gFastEnd && !fastingEnd) {
                 fastingEnd = String(gFastEnd);
-                props.setProperty(`FASTING_END_${userId}`, fastingEnd);
+                if (!isGeneric) props.setProperty(`FASTING_END_${userId}`, fastingEnd);
               }
             }
           }
@@ -407,35 +408,41 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
   }
 
   try {
-    const todayKey = `DIET_LOGS_${userId}_${meal.date}`;
+    const isGeneric = isGenericUserId(userId);
+    const todayKey = isGeneric
+      ? (userGistId ? `DIET_LOGS_GIST_${userGistId}_${meal.date}` : null)
+      : `DIET_LOGS_${userId}_${meal.date}`;
+
     let logs = [];
-    try {
-      const raw = props.getProperty(todayKey);
-      if (raw) logs = JSON.parse(raw);
-    } catch (e) {
-      logs = [];
-    }
+    if (todayKey) {
+      try {
+        const raw = props.getProperty(todayKey);
+        if (raw) logs = JSON.parse(raw);
+      } catch (e) {
+        logs = [];
+      }
 
-    // 🛡️ 防重複：若同一 ID 已存在，或 3 分鐘內的喝水打卡重複同步，則更新而非無限制新增
-    const mealId = meal.id || meal.timestamp;
-    let existingIdx = -1;
-    if (mealId) {
-      existingIdx = logs.findIndex(l => l.id && String(l.id) === String(mealId));
-    }
-    if (existingIdx === -1 && meal.dish_name && (meal.dish_name.includes('水') || meal.dish_name.toLowerCase().includes('water'))) {
-      const isRecentWater = logs.findIndex(l => 
-        l.dish_name && (l.dish_name.includes('水') || l.dish_name.toLowerCase().includes('water')) && 
-        (Math.abs((l.id || 0) - (mealId || 0)) < 3 * 60 * 1000 || l.time === meal.time)
-      );
-      if (isRecentWater !== -1) existingIdx = isRecentWater;
-    }
+      // 🛡️ 防重複：若同一 ID 已存在，或 3 分鐘內的喝水打卡重複同步，則更新而非無限制新增
+      const mealId = meal.id || meal.timestamp;
+      let existingIdx = -1;
+      if (mealId) {
+        existingIdx = logs.findIndex(l => l.id && String(l.id) === String(mealId));
+      }
+      if (existingIdx === -1 && meal.dish_name && (meal.dish_name.includes('水') || meal.dish_name.toLowerCase().includes('water'))) {
+        const isRecentWater = logs.findIndex(l => 
+          l.dish_name && (l.dish_name.includes('水') || l.dish_name.toLowerCase().includes('water')) && 
+          (Math.abs((l.id || 0) - (mealId || 0)) < 3 * 60 * 1000 || l.time === meal.time)
+        );
+        if (isRecentWater !== -1) existingIdx = isRecentWater;
+      }
 
-    if (existingIdx !== -1) {
-      logs[existingIdx] = { ...logs[existingIdx], ...meal };
-    } else {
-      logs.push(meal);
+      if (existingIdx !== -1) {
+        logs[existingIdx] = { ...logs[existingIdx], ...meal };
+      } else {
+        logs.push(meal);
+      }
+      props.setProperty(todayKey, JSON.stringify(logs));
     }
-    props.setProperty(todayKey, JSON.stringify(logs));
 
     // 同步寫入該用戶專屬 Gist
     if (pat && userGistId) {
@@ -614,10 +621,77 @@ function cleanExpiredDailyDietLogs(props) {
   }
 }
 
+/**
+ * 🧹 清理歷史版本遺留的泛用訪客共用屬性（徹底杜絕跨用戶資料串聯）
+ */
+function purgeSharedGenericData(props) {
+  try {
+    if (!props) props = PropertiesService.getScriptProperties();
+    const genericKeys = [
+      'USER_GIST_web_user',
+      'USER_GIST_default_user',
+      'USER_GIST_web_guest',
+      'USER_GIST_system',
+      'USER_GIST_undefined',
+      'CALORIE_GOAL_web_user',
+      'CALORIE_GOAL_default_user',
+      'PROTEIN_GOAL_web_user',
+      'PROTEIN_GOAL_default_user',
+      'WATER_GOAL_web_user',
+      'WATER_GOAL_default_user',
+      'CARBS_GOAL_web_user',
+      'CARBS_GOAL_default_user',
+      'FAT_GOAL_web_user',
+      'FAT_GOAL_default_user',
+      'SHOW_CARBS_FAT_web_user',
+      'SHOW_CARBS_FAT_default_user',
+      'FASTING_ENABLED_web_user',
+      'FASTING_ENABLED_default_user',
+      'PERSONA_web_user',
+      'PERSONA_default_user',
+      'USER_FAVORITES_web_user',
+      'USER_FAVORITES_default_user',
+      'FAVORITES_web_user',
+      'FAVORITES_default_user',
+      'USER_NAME_web_user',
+      'USER_NAME_default_user',
+      'WEIGHT_LOGS_web_user',
+      'WEIGHT_LOGS_default_user',
+      'WEIGHT_LOGS_web_guest',
+      'WEIGHT_LOGS_web_client',
+      'POOP_LOGS_web_user',
+      'POOP_LOGS_default_user',
+      'POOP_LOGS_web_guest',
+      'POOP_LOGS_web_client'
+    ];
+    genericKeys.forEach(k => {
+      try { props.deleteProperty(k); } catch (e) {}
+    });
+
+    const all = props.getProperties();
+    for (const k in all) {
+      if (k.startsWith('DIET_LOGS_web_user_') || k.startsWith('DIET_LOGS_default_user_') || k.startsWith('USER_GIST_web_user')) {
+        try { props.deleteProperty(k); } catch (e) {}
+      }
+    }
+  } catch (e) {
+    console.warn('清理泛用共用屬性警告:', e);
+  }
+}
+
 function getTodayLogs(userId, dateStr, props, userGistId) {
   if (!props) props = PropertiesService.getScriptProperties();
   cleanExpiredDailyDietLogs(props);
-  const todayKey = `DIET_LOGS_${userId}_${dateStr}`;
+
+  // 🛡️ 數據隔離防護：若為泛用訪客 (web_user / default_user) 且未提供個人 Gist ID，絕不讀取共用快取
+  const isGeneric = isGenericUserId(userId);
+  if (isGeneric && !userGistId) {
+    return [];
+  }
+
+  const todayKey = isGeneric
+    ? `DIET_LOGS_GIST_${userGistId}_${dateStr}`
+    : `DIET_LOGS_${userId}_${dateStr}`;
   let localLogs = [];
   try {
     const raw = props.getProperty(todayKey);
@@ -627,7 +701,7 @@ function getTodayLogs(userId, dateStr, props, userGistId) {
   }
 
   // ☁️ 雙向自動合併：比對 Gist 雲端是否含有本地尚未同步的餐點（如從 Web 端同步之餐點）
-  const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const pat = props.getProperty('GITHUB_PAT');
   if (gistId && pat) {
     try {
@@ -669,45 +743,47 @@ function getTodayLogs(userId, dateStr, props, userGistId) {
     }
   }
 
-  // 兼容性補償：若曾用使用者名稱 (如 "Winnie") 作為 userId 寫入的紀錄，也自動合併至此 LINE 用戶名下
-  const cachedUserName = props.getProperty(`USER_NAME_${userId}`);
-  const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
-  const maintainerUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
-  const candidateAliases = [];
-  if (cachedUserName && cachedUserName !== userId && !cachedUserName.startsWith('LINE用戶')) {
-    candidateAliases.push(cachedUserName);
-  }
-  if ((userId === adminLineId || !cachedUserName || cachedUserName.startsWith('LINE用戶')) && maintainerUser && !candidateAliases.includes(maintainerUser)) {
-    candidateAliases.push(maintainerUser);
-  }
+  // 兼容性補償：僅針對真實 LINE 原生用戶 (U 開頭) 進行別名合併
+  if (userId && userId.startsWith('U')) {
+    const cachedUserName = props.getProperty(`USER_NAME_${userId}`);
+    const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
+    const maintainerUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+    const candidateAliases = [];
+    if (cachedUserName && cachedUserName !== userId && !cachedUserName.startsWith('LINE用戶')) {
+      candidateAliases.push(cachedUserName);
+    }
+    if ((userId === adminLineId || !cachedUserName || cachedUserName.startsWith('LINE用戶')) && maintainerUser && !candidateAliases.includes(maintainerUser)) {
+      candidateAliases.push(maintainerUser);
+    }
 
-  for (const alias of candidateAliases) {
-    try {
-      const aliasKey = `DIET_LOGS_${alias}_${dateStr}`;
-      const aliasRaw = props.getProperty(aliasKey);
-      if (aliasRaw) {
-        const aliasLogs = JSON.parse(aliasRaw);
-        if (Array.isArray(aliasLogs) && aliasLogs.length > 0) {
-          let hasAliasItems = false;
-          for (const am of aliasLogs) {
-            const amId = am.id || am.timestamp;
-            const exists = localLogs.some(lm => {
-              const lmId = lm.id || lm.timestamp;
-              if (amId && lmId && String(amId) === String(lmId)) return true;
-              return lm.dish_name === am.dish_name && (Number(lm.calories) === Number(am.calories) || lm.time === am.time);
-            });
-            if (!exists) {
-              localLogs.push(am);
-              hasAliasItems = true;
-              console.log(`📥 [別名用戶回填] 成功將 ${alias} 名下的餐點合併至 LINE 紀錄: ${am.dish_name}`);
+    for (const alias of candidateAliases) {
+      try {
+        const aliasKey = `DIET_LOGS_${alias}_${dateStr}`;
+        const aliasRaw = props.getProperty(aliasKey);
+        if (aliasRaw) {
+          const aliasLogs = JSON.parse(aliasRaw);
+          if (Array.isArray(aliasLogs) && aliasLogs.length > 0) {
+            let hasAliasItems = false;
+            for (const am of aliasLogs) {
+              const amId = am.id || am.timestamp;
+              const exists = localLogs.some(lm => {
+                const lmId = lm.id || lm.timestamp;
+                if (amId && lmId && String(amId) === String(lmId)) return true;
+                return lm.dish_name === am.dish_name && (Number(lm.calories) === Number(am.calories) || lm.time === am.time);
+              });
+              if (!exists) {
+                localLogs.push(am);
+                hasAliasItems = true;
+                console.log(`📥 [別名用戶回填] 成功將 ${alias} 名下的餐點合併至 LINE 紀錄: ${am.dish_name}`);
+              }
+            }
+            if (hasAliasItems) {
+              props.setProperty(todayKey, JSON.stringify(localLogs));
             }
           }
-          if (hasAliasItems) {
-            props.setProperty(todayKey, JSON.stringify(localLogs));
-          }
         }
-      }
-    } catch (ae) {}
+      } catch (ae) {}
+    }
   }
 
   return localLogs;
@@ -790,7 +866,10 @@ function deleteMealLog(userId, mealIdOrName, userGistId, pat, props, targetDateS
   try { lock.waitLock(30000); } catch (e) {}
   try {
     const todayStr = targetDateStr || getTodayDateString();
-    const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
+    const isGeneric = isGenericUserId(userId);
+    const todayKey = isGeneric
+      ? (userGistId ? `DIET_LOGS_GIST_${userGistId}_${todayStr}` : null)
+      : `DIET_LOGS_${userId}_${todayStr}`;
     let logs = getTodayLogs(userId, todayStr, props, userGistId);
 
     if (logs.length === 0) return false;
@@ -814,7 +893,7 @@ function deleteMealLog(userId, mealIdOrName, userGistId, pat, props, targetDateS
     }
 
     if (removedMeal) {
-      props.setProperty(todayKey, JSON.stringify(logs));
+      if (todayKey) props.setProperty(todayKey, JSON.stringify(logs));
       if (pat && userGistId) {
         try {
           deleteMealFromUserGist(removedMeal, userGistId, pat);
@@ -833,8 +912,11 @@ function deleteMealLog(userId, mealIdOrName, userGistId, pat, props, targetDateS
 function clearTodayLogs(userId, userGistId, pat, props) {
   if (!props) props = PropertiesService.getScriptProperties();
   const todayStr = getTodayDateString();
-  const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
-  props.setProperty(todayKey, JSON.stringify([]));
+  const isGeneric = isGenericUserId(userId);
+  const todayKey = isGeneric
+    ? (userGistId ? `DIET_LOGS_GIST_${userGistId}_${todayStr}` : null)
+    : `DIET_LOGS_${userId}_${todayStr}`;
+  if (todayKey) props.setProperty(todayKey, JSON.stringify([]));
 
   if (pat && userGistId) {
     try {
@@ -871,6 +953,8 @@ function clearTodayLogs(userId, userGistId, pat, props) {
 
 function getOrCreateUserGist(userId, pat, props) {
   if (!pat) return '';
+  // 🛡️ 數據隔離防護：絕對禁止為泛用訪客 (web_user, default_user 等) 取得或建立共用 Gist！
+  if (!userId || isGenericUserId(userId)) return '';
   if (!props) props = PropertiesService.getScriptProperties();
 
   const userGistKey = `USER_GIST_${userId}`;
@@ -1030,12 +1114,15 @@ function saveWeightLog(userId, weightVal, dateStr, userGistId, pat, props) {
     timestamp: timestamp
   };
 
-  const key = `WEIGHT_LOGS_${userId}`;
+  const isGeneric = isGenericUserId(userId);
+  const key = isGeneric ? (userGistId ? `WEIGHT_LOGS_GIST_${userGistId}` : null) : `WEIGHT_LOGS_${userId}`;
   let logs = [];
-  try {
-    const raw = props.getProperty(key);
-    if (raw) logs = JSON.parse(raw);
-  } catch (e) { logs = []; }
+  if (key) {
+    try {
+      const raw = props.getProperty(key);
+      if (raw) logs = JSON.parse(raw);
+    } catch (e) { logs = []; }
+  }
 
   // 取得前一次記錄的體重用以比對
   let prevWeight = null;
@@ -1051,12 +1138,14 @@ function saveWeightLog(userId, weightVal, dateStr, userGistId, pat, props) {
     logs.unshift(weightItem);
   }
   logs.sort((a, b) => b.timestamp - a.timestamp);
-  props.setProperty(key, JSON.stringify(logs.slice(0, 90))); // 保留最近 90 筆
+  if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90))); // 保留最近 90 筆
 
+  const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const token = pat || props.getProperty('GITHUB_PAT');
   // 同步個人 Gist
-  if (pat && userGistId) {
+  if (token && gistId) {
     try {
-      syncWeightToUserGist(weightItem, userGistId, pat);
+      syncWeightToUserGist(weightItem, gistId, token);
     } catch (e) {
       console.warn("同步體重至 Gist 失敗:", e);
     }
@@ -1084,12 +1173,15 @@ function savePoopLog(userId, timestampVal, userGistId, pat, props) {
     date: dateStr
   };
 
-  const key = `POOP_LOGS_${userId}`;
+  const isGeneric = isGenericUserId(userId);
+  const key = isGeneric ? (userGistId ? `POOP_LOGS_GIST_${userGistId}` : null) : `POOP_LOGS_${userId}`;
   let logs = [];
-  try {
-    const raw = props.getProperty(key);
-    if (raw) logs = JSON.parse(raw);
-  } catch (e) { logs = []; }
+  if (key) {
+    try {
+      const raw = props.getProperty(key);
+      if (raw) logs = JSON.parse(raw);
+    } catch (e) { logs = []; }
+  }
 
   let prevTimestamp = null;
   if (logs.length > 0) {
@@ -1098,12 +1190,14 @@ function savePoopLog(userId, timestampVal, userGistId, pat, props) {
 
   logs.unshift(poopItem);
   logs.sort((a, b) => b.timestamp - a.timestamp);
-  props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+  if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
 
+  const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const token = pat || props.getProperty('GITHUB_PAT');
   // 同步個人 Gist
-  if (pat && userGistId) {
+  if (token && gistId) {
     try {
-      syncPoopToUserGist(poopItem, userGistId, pat);
+      syncPoopToUserGist(poopItem, gistId, token);
     } catch (e) {
       console.warn("同步排便至 Gist 失敗:", e);
     }
@@ -1125,18 +1219,25 @@ function savePoopLog(userId, timestampVal, userGistId, pat, props) {
 
 function getUserWeightHistory(userId, days, props, userGistId) {
   if (!props) props = PropertiesService.getScriptProperties();
-  const key = `WEIGHT_LOGS_${userId}`;
+  const isGeneric = isGenericUserId(userId);
+  if (isGeneric && !userGistId) {
+    return [];
+  }
+  const key = isGeneric ? (userGistId ? `WEIGHT_LOGS_GIST_${userGistId}` : null) : `WEIGHT_LOGS_${userId}`;
   let logs = [];
-  try {
-    const raw = props.getProperty(key);
-    if (raw) logs = JSON.parse(raw);
-  } catch (e) { logs = []; }
+  if (key) {
+    try {
+      const raw = props.getProperty(key);
+      if (raw) logs = JSON.parse(raw);
+    } catch (e) { logs = []; }
+  }
 
-  if ((!logs || logs.length === 0) && userGistId) {
+  const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
+  if ((!logs || logs.length === 0) && gistId) {
     const pat = props.getProperty('GITHUB_PAT');
     if (pat) {
       try {
-        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${userGistId}`, {
+        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${gistId}`, {
           headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
           muteHttpExceptions: true
         });
@@ -1146,7 +1247,7 @@ function getUserWeightHistory(userId, days, props, userGistId) {
             const data = JSON.parse(content);
             if (Array.isArray(data.weightLogs) && data.weightLogs.length > 0) {
               logs = data.weightLogs;
-              props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+              if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
             }
           }
         }
@@ -1164,18 +1265,25 @@ function getUserWeightHistory(userId, days, props, userGistId) {
 
 function getUserPoopHistory(userId, days, props, userGistId) {
   if (!props) props = PropertiesService.getScriptProperties();
-  const key = `POOP_LOGS_${userId}`;
+  const isGeneric = isGenericUserId(userId);
+  if (isGeneric && !userGistId) {
+    return [];
+  }
+  const key = isGeneric ? (userGistId ? `POOP_LOGS_GIST_${userGistId}` : null) : `POOP_LOGS_${userId}`;
   let logs = [];
-  try {
-    const raw = props.getProperty(key);
-    if (raw) logs = JSON.parse(raw);
-  } catch (e) { logs = []; }
+  if (key) {
+    try {
+      const raw = props.getProperty(key);
+      if (raw) logs = JSON.parse(raw);
+    } catch (e) { logs = []; }
+  }
 
-  if ((!logs || logs.length === 0) && userGistId) {
+  const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
+  if ((!logs || logs.length === 0) && gistId) {
     const pat = props.getProperty('GITHUB_PAT');
     if (pat) {
       try {
-        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${userGistId}`, {
+        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${gistId}`, {
           headers: { 'Authorization': `Bearer ${pat}`, 'Accept': 'application/vnd.github+json' },
           muteHttpExceptions: true
         });
@@ -1185,7 +1293,7 @@ function getUserPoopHistory(userId, days, props, userGistId) {
             const data = JSON.parse(content);
             if (Array.isArray(data.poopLogs) && data.poopLogs.length > 0) {
               logs = data.poopLogs;
-              props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
+              if (key) props.setProperty(key, JSON.stringify(logs.slice(0, 90)));
             }
           }
         }
@@ -1272,7 +1380,10 @@ function syncPoopToUserGist(poopItem, gistId, pat) {
 
 function getUserFavorites(userId, props, userGistId) {
   if (!props) props = PropertiesService.getScriptProperties();
-  const favKey = `FAVORITES_${userId}`;
+  const isGeneric = isGenericUserId(userId);
+  if (isGeneric && !userGistId) return [];
+
+  const favKey = isGeneric ? `FAVORITES_GIST_${userGistId}` : `FAVORITES_${userId}`;
   try {
     const raw = props.getProperty(favKey);
     if (raw !== null && raw !== undefined) {
@@ -1281,7 +1392,7 @@ function getUserFavorites(userId, props, userGistId) {
     }
   } catch (e) {}
 
-  const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+  const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
   const pat = props.getProperty('GITHUB_PAT');
   if (gistId && pat) {
     try {
@@ -1313,8 +1424,9 @@ function saveUserFavorite(userId, favItem, userGistId, pat, props) {
   const lock = LockService.getScriptLock();
   try { lock.waitLock(30000); } catch (e) {}
   try {
-    const favKey = `FAVORITES_${userId}`;
-    let favorites = getUserFavorites(userId, props);
+    const isGeneric = isGenericUserId(userId);
+    const favKey = isGeneric ? (userGistId ? `FAVORITES_GIST_${userGistId}` : null) : `FAVORITES_${userId}`;
+    let favorites = getUserFavorites(userId, props, userGistId);
 
     // 確保輸入的名稱不帶「蛋水」或「蛋 水」等後綴殘留
     if (favItem.dish_name) {
@@ -1367,9 +1479,9 @@ function saveUserFavorite(userId, favItem, userGistId, pat, props) {
       return true;
     });
 
-    props.setProperty(favKey, JSON.stringify(favorites));
+    if (favKey) props.setProperty(favKey, JSON.stringify(favorites));
 
-    const gistId = userGistId || (userId ? props.getProperty(`USER_GIST_${userId}`) : '');
+    const gistId = userGistId || (userId && !isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
     const token = pat || props.getProperty('GITHUB_PAT');
     if (token && gistId) {
       try {

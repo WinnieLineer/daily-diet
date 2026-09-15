@@ -32,6 +32,10 @@ function doGet(e) {
     const incomingCaller = e?.parameter?.caller || e?.parameter?.userName || '';
 
     const props = PropertiesService.getScriptProperties();
+    // 🛡️ 自動清理殘留之泛用訪客共用屬性（杜絕跨用戶資料串聯）
+    if (typeof purgeSharedGenericData === 'function') {
+      purgeSharedGenericData(props);
+    }
     const allProps = props.getProperties();
     const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN') || '';
     const pat = props.getProperty('GITHUB_PAT');
@@ -121,9 +125,11 @@ function doGet(e) {
         for (const k in allProps) {
           if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
             const matchedLineUserId = k.replace('USER_GIST_', '');
-            console.log(`🔗 [Gist 反查綁定] Gist ${incomingGist} 成功對應至 LINE 用戶 ${matchedLineUserId} (原傳入: ${userId})`);
-            userId = matchedLineUserId;
-            break;
+            if (matchedLineUserId.startsWith('U')) {
+              console.log(`🔗 [Gist 反查綁定] Gist ${incomingGist} 成功對應至 LINE 用戶 ${matchedLineUserId} (原傳入: ${userId})`);
+              userId = matchedLineUserId;
+              break;
+            }
           }
         }
       }
@@ -217,7 +223,7 @@ function doGet(e) {
 
     // 1. 查詢/綁定個人 Gist ID
     if (action === 'getGistId' && userId) {
-      if (incomingGist) props.setProperty(`USER_GIST_${userId}`, incomingGist);
+      if (incomingGist && !isGenericUserId(userId)) props.setProperty(`USER_GIST_${userId}`, incomingGist);
       const gistId = getOrCreateUserGist(userId, pat, props);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', userId, gistId }))
         .setMimeType(ContentService.MimeType.JSON);
@@ -225,16 +231,18 @@ function doGet(e) {
 
     // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
     if (action === 'getLogs' && userId) {
-      if (incomingGist) {
+      if (incomingGist && !isGenericUserId(userId)) {
         props.setProperty(`USER_GIST_${userId}`, incomingGist);
         console.log(`☁️ [Web 端連動] 已自動將用戶 ${userId} 綁定 Gist ID: ${incomingGist}`);
       }
       const incomingCal = Number(e?.parameter?.cal);
       const incomingPro = Number(e?.parameter?.pro);
       const incomingWat = Number(e?.parameter?.wat);
-      if (incomingCal) props.setProperty(`CALORIE_GOAL_${userId}`, String(incomingCal));
-      if (incomingPro) props.setProperty(`PROTEIN_GOAL_${userId}`, String(incomingPro));
-      if (incomingWat) props.setProperty(`WATER_GOAL_${userId}`, String(incomingWat));
+      if (!isGenericUserId(userId)) {
+        if (incomingCal) props.setProperty(`CALORIE_GOAL_${userId}`, String(incomingCal));
+        if (incomingPro) props.setProperty(`PROTEIN_GOAL_${userId}`, String(incomingPro));
+        if (incomingWat) props.setProperty(`WATER_GOAL_${userId}`, String(incomingWat));
+      }
 
       const todayStr = getTodayDateString();
       const todayLogs = getTodayLogs(userId, todayStr, props, incomingGist);
@@ -254,8 +262,10 @@ function doGet(e) {
         for (const k in allProps) {
           if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
             const matchedLineId = k.replace('USER_GIST_', '');
-            lineDisplayName = props.getProperty(`USER_NAME_${matchedLineId}`) || getUserDisplayName(matchedLineId, CHANNEL_ACCESS_TOKEN, props) || '';
-            if (lineDisplayName) break;
+            if (matchedLineId.startsWith('U')) {
+              lineDisplayName = props.getProperty(`USER_NAME_${matchedLineId}`) || getUserDisplayName(matchedLineId, CHANNEL_ACCESS_TOKEN, props) || '';
+              if (lineDisplayName) break;
+            }
           }
         }
       }
@@ -374,20 +384,25 @@ function doGet(e) {
       const fastingStart = e?.parameter?.fasting_start;
       const fastingEnd = e?.parameter?.fasting_end;
 
-      if (calories) props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
-      if (protein) props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
-      if (water) props.setProperty(`WATER_GOAL_${userId}`, String(water));
-      if (carbs) props.setProperty(`CARBS_GOAL_${userId}`, String(carbs));
-      if (fat) props.setProperty(`FAT_GOAL_${userId}`, String(fat));
-      if (showCarbsFatRaw !== undefined) props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbsFat));
-
       let fastingLogStr = '';
       let isFastingEnabled = false;
+      if (!isGenericUserId(userId)) {
+        if (calories) props.setProperty(`CALORIE_GOAL_${userId}`, String(calories));
+        if (protein) props.setProperty(`PROTEIN_GOAL_${userId}`, String(protein));
+        if (water) props.setProperty(`WATER_GOAL_${userId}`, String(water));
+        if (carbs) props.setProperty(`CARBS_GOAL_${userId}`, String(carbs));
+        if (fat) props.setProperty(`FAT_GOAL_${userId}`, String(fat));
+        if (showCarbsFatRaw !== undefined) props.setProperty(`SHOW_CARBS_FAT_${userId}`, String(showCarbsFat));
+
+        if (fastingEnabledRaw !== undefined) {
+          isFastingEnabled = fastingEnabledRaw === 'true';
+          props.setProperty(`FASTING_ENABLED_${userId}`, String(isFastingEnabled));
+          if (fastingStart) props.setProperty(`FASTING_START_${userId}`, String(fastingStart));
+          if (fastingEnd) props.setProperty(`FASTING_END_${userId}`, String(fastingEnd));
+        }
+      }
       if (fastingEnabledRaw !== undefined) {
         isFastingEnabled = fastingEnabledRaw === 'true';
-        props.setProperty(`FASTING_ENABLED_${userId}`, String(isFastingEnabled));
-        if (fastingStart) props.setProperty(`FASTING_START_${userId}`, String(fastingStart));
-        if (fastingEnd) props.setProperty(`FASTING_END_${userId}`, String(fastingEnd));
         fastingLogStr = ` / 窗口:${fastingStart || '12:00'}~${fastingEnd || '20:00'} (${isFastingEnabled ? '開啟' : '關閉'})`;
       }
 
@@ -917,8 +932,11 @@ function doPost(e) {
         const allProps = props.getProperties();
         for (const k in allProps) {
           if (k.startsWith('USER_GIST_') && allProps[k] === incomingGist) {
-            webUserId = k.replace('USER_GIST_', '');
-            break;
+            const matchedId = k.replace('USER_GIST_', '');
+            if (matchedId.startsWith('U')) {
+              webUserId = matchedId;
+              break;
+            }
           }
         }
       }

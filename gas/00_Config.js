@@ -106,3 +106,23 @@ function formatTime(dateOrTimestamp) {
     return '';
   }
 }
+
+/**
+ * 🛡️ 判定是否為泛用或匿名佔位符用戶 ID
+ * 避免通用名稱（如 web_user, default_user）造成跨用戶資料污染或共用 Gist
+ * @param {string} uid
+ * @returns {boolean}
+ */
+function isGenericUserId(uid) {
+  if (!uid || typeof uid !== 'string') return true;
+  const clean = uid.trim().toLowerCase();
+  return clean === 'web_user' || 
+         clean === 'default_user' || 
+         clean === 'web_guest' || 
+         clean === 'web_client' || 
+         clean === 'unknown' || 
+         clean === 'system' || 
+         clean === 'undefined' || 
+         clean === 'null' ||
+         clean.startsWith('client_');
+}

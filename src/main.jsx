@@ -2,6 +2,7 @@ import React from 'react'
 import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
+import { getOrCreateClientId } from './lib/syncService'
 
 // 🛡️ Defense against Google Translate & browser extension DOM mutations breaking React
 // Fixes: "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node."
@@ -57,7 +58,7 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
     let userName = 'Web 訪客';
     let userId = 'web_guest';
     try {
-      userId = localStorage.getItem('line_user_id') || 'web_user';
+      userId = localStorage.getItem('line_user_id') || getOrCreateClientId();
       userName = localStorage.getItem('line_user_name') || localStorage.getItem('user_name') || `Web 用戶 (${userId.slice(-6)})`;
     } catch (e) {}
 

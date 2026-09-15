@@ -10,7 +10,7 @@ import NeoButton from './components/NeoButton';
 import PWAInstallPrompt from './components/PWAInstallPrompt';
 import { db, getDailySummary, calculateStreak } from './db';
 import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
-import { syncMealToCloud, syncDeleteMealToCloud, syncLanguageToCloud, syncAddFavorite } from './lib/syncService';
+import { syncMealToCloud, syncDeleteMealToCloud, syncLanguageToCloud, syncAddFavorite, getOrCreateClientId } from './lib/syncService';
 import { getPandaAdvice, analyzeFoodText } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
@@ -1023,9 +1023,38 @@ function App() {
         console.error("Failed to initialize LIFF in App startup:", err);
       }
 
+      // 🛡️ [自癒修復：防止歷史共用 Gist 污染]
+      const isRealLineUser = Boolean(
+        (profile?.userId && profile.userId.startsWith('U')) ||
+        (safeGetStorage('line_user_id') && safeGetStorage('line_user_id').startsWith('U'))
+      );
+      let localGist = safeGetStorage('gist_backup_id') || query.gistId || '';
+      const isContaminatedGist = localGist === '125fcc2939ed2c79237d928d5d92e046';
+
+      if (!isRealLineUser && isContaminatedGist) {
+        const localCalVal = (await db.settings.get('calorie_goal'))?.value;
+        // 若訪客熱量並非 1500（例如自訂了 1111）或無自備 GitHub 授權，代表是被先前漏洞誤綁共用 Gist
+        if (Number(localCalVal) !== 1500 || !safeGetStorage('github_pat')) {
+          console.warn("🚨 [自癒修復] 偵測到訪客裝置誤綁共用 Gist ID，立即自動解綁並清理混入之雲端紀錄...");
+          safeRemoveStorage('gist_backup_id');
+          localStorage.removeItem('gist_backup_id');
+          localGist = '';
+          try {
+            const contaminatedLogs = await db.dietLogs.where('source').equals('LINE_BOT').toArray();
+            if (contaminatedLogs.length > 0) {
+              for (const cl of contaminatedLogs) {
+                await db.dietLogs.delete(cl.id);
+              }
+              console.log(`🧹 [自癒修復] 已為訪客自動清理 ${contaminatedLogs.length} 筆混入之他人紀錄！`);
+            }
+          } catch (cleanErr) {
+            console.warn("自癒清除紀錄時發生非致命錯誤:", cleanErr);
+          }
+        }
+      }
+
       // 3. Realtime Synchronize with Google Apps Script Backend (LINE Bot sync)
-      const localGist = safeGetStorage('gist_backup_id') || query.gistId || '';
-      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id') || 'web_user';
+      const effectiveUserId = query.userId || query.user || profile?.userId || safeGetStorage('line_user_id') || getOrCreateClientId();
       const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
       if (effectiveUserId) {
@@ -1047,31 +1076,41 @@ function App() {
           if (res.ok) {
             const gasData = await res.json();
             if (gasData.gistId) {
-              safeSetStorage('gist_backup_id', gasData.gistId);
+              // 🛡️ 防串資料防護：只有 LINE 驗證用戶或本地已具備該 Gist ID 時才允許繼承
+              if (isRealLineUser || (localGist && localGist === gasData.gistId)) {
+                safeSetStorage('gist_backup_id', gasData.gistId);
+              } else {
+                console.warn("🛡️ [安全防護] 拒絕非 LINE 驗證訪客自動繼承後端 Gist ID:", gasData.gistId);
+              }
             }
             if (gasData.lineUserName || gasData.userName) {
-              const unifiedName = gasData.lineUserName || gasData.userName;
-              safeSetStorage('user_name', unifiedName);
-              if (gasData.lineUserName) safeSetStorage('line_user_name', gasData.lineUserName);
-              setUserName(unifiedName);
-              console.log(`👤 [GAS Sync] 從 LINE 後端同步統一使用者名稱: ${unifiedName}`);
+              if (isRealLineUser) {
+                const unifiedName = gasData.lineUserName || gasData.userName;
+                safeSetStorage('user_name', unifiedName);
+                if (gasData.lineUserName) safeSetStorage('line_user_name', gasData.lineUserName);
+                setUserName(unifiedName);
+                console.log(`👤 [GAS Sync] 從 LINE 後端同步統一使用者名稱: ${unifiedName}`);
+              }
             }
             if (gasData.goals) {
-              const cal = Number(gasData.goals.calories) || 2000;
-              const pro = Number(gasData.goals.protein) || 100;
-              const wat = Number(gasData.goals.water) || 2500;
+              const hasLocalCal = !!localCal;
+              if (isRealLineUser || !hasLocalCal) {
+                const cal = Number(gasData.goals.calories) || 2000;
+                const pro = Number(gasData.goals.protein) || 100;
+                const wat = Number(gasData.goals.water) || 2500;
 
-              await db.settings.put({ key: 'calorie_goal', value: cal });
-              await db.settings.put({ key: 'protein_goal', value: pro });
-              await db.settings.put({ key: 'water_goal', value: wat });
+                await db.settings.put({ key: 'calorie_goal', value: cal });
+                await db.settings.put({ key: 'protein_goal', value: pro });
+                await db.settings.put({ key: 'water_goal', value: wat });
 
-              setGoals(prev => ({
-                ...prev,
-                calories: cal,
-                protein: pro,
-                water: wat
-              }));
-              console.log(`📥 [Goals Sync] 成功從 LINE/雲端同步體態目標: ${cal}卡 / ${pro}g蛋 / ${wat}ml水`);
+                setGoals(prev => ({
+                  ...prev,
+                  calories: cal,
+                  protein: pro,
+                  water: wat
+                }));
+                console.log(`📥 [Goals Sync] 成功從 LINE/雲端同步體態目標: ${cal}卡 / ${pro}g蛋 / ${wat}ml水`);
+              }
             }
 
             // ⭐ 常用餐點雙向同步

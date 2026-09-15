@@ -8,10 +8,28 @@ import { getLocalDateString } from './constants';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
+export function getOrCreateClientId() {
+  if (typeof window === 'undefined') return 'client_node';
+  try {
+    let cid = localStorage.getItem('daily_diet_client_id');
+    const isGeneric = !cid || cid === 'web_user' || cid === 'default_user' || cid === 'web_client' || cid === 'unknown';
+    if (isGeneric) {
+      cid = 'client_' + Date.now().toString(36) + '_' + Math.random().toString(36).substring(2, 9);
+      localStorage.setItem('daily_diet_client_id', cid);
+    }
+    return cid;
+  } catch (e) {
+    return 'client_' + Math.random().toString(36).substring(2, 9);
+  }
+}
+
 export function getEffectiveIds() {
   let userId = '';
   let gistId = '';
   let userName = '';
+  const isGeneric = (s) => !s || ['web_user', 'default_user', 'web_client', 'unknown'].includes(String(s).trim().toLowerCase());
+  const isGistId = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
+
   try {
     userId = localStorage.getItem('line_user_id') || '';
     userName = localStorage.getItem('line_user_name') || localStorage.getItem('user_name') || '';
@@ -25,11 +43,10 @@ export function getEffectiveIds() {
       if (!gistId && q.get('gistId')) gistId = q.get('gistId');
     }
     // Web 用戶：若 caller 名稱拿不到，就用他的名字（排除 Gist ID 誤當用戶名）
-    const isGistId = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
     if (isGistId(userName)) {
       userName = '';
     }
-    if (!userName && userId && !userId.startsWith('U') && userId !== 'default_user' && !isGistId(userId)) {
+    if (!userName && userId && !userId.startsWith('U') && !isGeneric(userId) && !isGistId(userId)) {
       userName = userId;
     }
     // 🛡️ 若維護者姓名存在 MAINTAINER_NAME_KEY，優先補全
@@ -44,11 +61,16 @@ export function getEffectiveIds() {
       userName = 'Winnie Lin';
     }
   } catch (e) {}
-  const isGist = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
-  const effectiveUserId = (userId && userId !== 'default_user' && !isGist(userId)) ? userId : (userName || 'default_user');
-  const effectiveUserName = (userName && !isGist(userName)) ? userName : (userId && !userId.startsWith('U') && !isGist(userId) ? userId : '');
+
+  const effectiveUserId = (userId && !isGeneric(userId) && !isGistId(userId)) 
+    ? userId 
+    : (userName && !isGeneric(userName) && !isGistId(userName) ? userName : getOrCreateClientId());
+  const effectiveUserName = (userName && !isGistId(userName) && !isGeneric(userName)) 
+    ? userName 
+    : (userId && !userId.startsWith('U') && !isGistId(userId) && !isGeneric(userId) ? userId : '');
+
   return { 
-    userId: isGist(effectiveUserId) ? 'default_user' : effectiveUserId, 
+    userId: isGistId(effectiveUserId) ? getOrCreateClientId() : effectiveUserId, 
     userName: effectiveUserName, 
     gistId 
   };

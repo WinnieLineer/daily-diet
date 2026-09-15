@@ -9,7 +9,7 @@ import { APP_VERSION } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
 import { liffService } from '../lib/liffService';
-import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud } from '../lib/syncService';
+import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateClientId } from '../lib/syncService';
 
 
 const VERSION_HISTORY = [
@@ -600,6 +600,36 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       }
       alert(t('gist_id_saved') || "Gist ID saved!");
     }
+  };
+
+  const handleUnlinkGist = async () => {
+    if (!confirm(t('confirm_unlink_gist') || "確定要解除此 Gist 雲端綁定嗎？\n\n解除後：\n1. 本機將停止與此 Gist 進行任何雲端同步。\n2. 您可選擇一併清除由雲端混入的非本機餐點紀錄。\n3. 您在本手機記錄的飲食紀錄不會遺失。")) {
+      return;
+    }
+    safeRemoveStorage('gist_backup_id');
+    localStorage.removeItem('gist_backup_id');
+    setGistId('');
+    setCurrentGistId('');
+
+    const shouldClean = confirm(t('confirm_clean_cloud_logs') || "是否同時清除從雲端同步進來的餐點紀錄（標記為 LINE 雲端來源的紀錄）？\n\n若您的紀錄曾與他人串聯，建議點擊「確定」進行清理；若為本人的紀錄請點擊「取消」保留。");
+    if (shouldClean) {
+      try {
+        const lineLogs = await db.dietLogs.where('source').equals('LINE_BOT').toArray();
+        if (lineLogs.length > 0) {
+          for (const l of lineLogs) {
+            await db.dietLogs.delete(l.id);
+          }
+          alert(`🎉 已成功解除雲端綁定，並清除 ${lineLogs.length} 筆混入紀錄！`);
+        } else {
+          alert("🎉 已成功解除雲端綁定！");
+        }
+      } catch (err) {
+        alert("🎉 已解除雲端綁定！");
+      }
+    } else {
+      alert("🎉 已成功解除雲端綁定！");
+    }
+    refreshStats();
   };
 
   useEffect(() => {
@@ -1314,6 +1344,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             💬 在 LINE 一鍵送出綁定
                           </a>
                         )}
+                        {currentGistId && (
+                          <button
+                            type="button"
+                            onClick={handleUnlinkGist}
+                            className="bg-rose-50 text-rose-700 py-2 px-3 rounded-xl border-2 border-black font-black text-xs active:scale-95 hover:bg-rose-100 transition-all text-center shadow-neo-xs flex items-center justify-center gap-1.5"
+                          >
+                            <X size={14} />
+                            解除雲端綁定
+                          </button>
+                        )}
                         <button
                           type="button"
                           onClick={() => setIsEditingGist(!isEditingGist)}
@@ -1539,7 +1579,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   contact: contactForm.contact || '',
                                   device: navigator.userAgent,
                                   userName: safeGetStorage('user_name') || safeGetStorage('line_user_name') || 'Web 用戶',
-                                  userId: safeGetStorage('line_user_id') || 'web_user',
+                                  userId: safeGetStorage('line_user_id') || getOrCreateClientId(),
                                   client: 'daily-diet-web'
                                 };
 
