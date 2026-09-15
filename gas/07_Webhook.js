@@ -32,6 +32,8 @@ function doGet(e) {
     const incomingCaller = e?.parameter?.caller || e?.parameter?.userName || '';
 
     const props = PropertiesService.getScriptProperties();
+    const allProps = props.getProperties();
+    const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN') || '';
     const pat = props.getProperty('GITHUB_PAT');
     const isAdmin = verifyAdminAccess(e, props);
 
@@ -114,7 +116,6 @@ function doGet(e) {
 
     // 🔗 核心修復：若 userId 不是 LINE 原生 ID（非 U 開頭），透過 Gist ID 或 用戶名稱 反查真實的 LINE 用戶綁定！
     if (!userId || !userId.startsWith('U') || userId === 'default_user' || userId === 'undefined') {
-      const allProps = props.getProperties();
       // 1. 優先以 Gist ID 反查
       if (incomingGist) {
         for (const k in allProps) {
@@ -159,10 +160,10 @@ function doGet(e) {
     // 🛡️ LINE 原生用戶 (U 開頭) 的名稱由 LINE Profile API / props 取得，優先於 Web 前端傳入的暫存 caller
     const isGistStr = (s) => s && (/^[0-9a-fA-F]{20,40}$/.test(String(s).trim()) || /^gist[-_]/i.test(String(s).trim()));
     const cleanCaller = isGistStr(incomingCaller) ? '' : incomingCaller;
-    const cleanUserIdName = (!userId.startsWith('U') && userId !== 'default_user' && !isGistStr(userId)) ? userId : '';
+    const cleanUserIdName = (!userId.startsWith('U') && userId !== 'default_user' && userId !== 'web_user' && !isGistStr(userId)) ? userId : '';
     const resolvedLineName = (userId && userId.startsWith('U')) ? (props.getProperty(`USER_NAME_${userId}`) || getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || '') : '';
     const webCallerName = resolvedLineName || cleanCaller || cleanUserIdName || (isGistStr(userId) && userId.toLowerCase() === '9a48b4604260e1a58a6d976f38c544b5' ? 'Winnie Lin' : '');
-    if (webCallerName && !isGistStr(webCallerName) && userId && !userId.startsWith('U') && userId !== 'default_user' && !isGistStr(userId)) {
+    if (webCallerName && !isGistStr(webCallerName) && userId && !userId.startsWith('U') && userId !== 'default_user' && userId !== 'web_user' && !isGistStr(userId)) {
       props.setProperty(`USER_NAME_${userId}`, webCallerName);
     }
 
@@ -773,6 +774,10 @@ function doPost(e) {
 
     const action = e.parameter?.action || data?.action;
     const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
+    const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN') || '';
+    const GITHUB_PAT = props.getProperty('GITHUB_PAT');
+    const LIFF_ID = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
+    currentToken = CHANNEL_ACCESS_TOKEN;
 
     // 🛡️ 0.1 維護者登入安全校驗端點 (POST 支援，在 Google Apps Script 後端執行，前端完全無法窺探)
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
@@ -1009,10 +1014,7 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
-    const GITHUB_PAT = props.getProperty('GITHUB_PAT');
-    const LIFF_ID = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
-    currentToken = CHANNEL_ACCESS_TOKEN;
+    // 🛡️ LINE 存取權杖與環境常數已於頂層初始化完成
 
     for (let i = 0; i < events.length; i++) {
       const event = events[i];
