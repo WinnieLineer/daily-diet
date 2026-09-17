@@ -1566,7 +1566,13 @@ function App() {
           const lastSeenVersion = safeGetStorage('last_seen_version');
           console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
           
-          if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
+          // 📢 強制彈出 v3.3.50 雲端服務修復公告（每位用戶未點關閉前保證彈出一次）
+          const hasSeenPatchNotice = safeGetStorage('seen_patch_3350');
+          if (!hasSeenPatchNotice) {
+            console.log("[VersionCheck] Triggering service restoration announcement modal!");
+            setLastSeenVersionState(lastSeenVersion || '3.3.49');
+            setShowWhatsNew(true);
+          } else if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
             console.log("[VersionCheck] Version changed from", lastSeenVersion, "to", APP_VERSION);
 
@@ -1997,6 +2003,7 @@ function App() {
               onClose={() => {
                 setShowWhatsNew(false);
                 safeSetStorage('last_seen_version', APP_VERSION);
+                safeSetStorage('seen_patch_3350', 'true');
               }}
             />
           )}
