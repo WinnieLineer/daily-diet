@@ -365,6 +365,26 @@ function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
       if (typeof recordSystemLog === 'function') {
         recordSystemLog('LINE發送失敗', 'line_api', flexMessage.altText || 'Flex卡片', `HTTP ${code}`, errBody);
       }
+      // 🛡️ 備援機制：若 Flex 卡片發送失敗，自動主動推播 (push) 純文字降級版給用戶，絕不讓用戶以為機器人斷線或無回應
+      if (userId && typeof userId === 'string' && userId.startsWith('U')) {
+        try {
+          const fallbackText = (flexMessage && flexMessage.altText) ? flexMessage.altText : '飲食紀錄已更新';
+          UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+            method: "post",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${accessToken}`
+            },
+            payload: JSON.stringify({
+              to: userId,
+              messages: [{ type: "text", text: fallbackText }]
+            }),
+            muteHttpExceptions: true
+          });
+        } catch (pushErr) {
+          console.warn("備援推播失敗:", pushErr);
+        }
+      }
     }
   } catch (err) {
     console.error("🚨 [LINE Flex 發送失敗]:", err);

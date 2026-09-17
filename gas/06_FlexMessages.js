@@ -926,14 +926,16 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                     layout: "vertical",
                     backgroundColor: isOverCal ? "#E11D48" : (calPercent >= 90 ? "#16A34A" : "#FDE047"),
                     flex: Math.min(100, Math.max(2, calPercent)),
-                    height: "100%"
+                    height: "100%",
+                    contents: [{ type: "filler" }]
                   }] : []),
                   ...(calPercent < 100 ? [{
                     type: "box",
                     layout: "vertical",
                     backgroundColor: "#F4F4F5",
                     flex: Math.max(1, 100 - calPercent),
-                    height: "100%"
+                    height: "100%",
+                    contents: [{ type: "filler" }]
                   }] : [])
                 ]
               }
