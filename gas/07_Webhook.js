@@ -53,6 +53,31 @@ function doGet(e) {
     const pat = props.getProperty('GITHUB_PAT');
     const isAdmin = verifyAdminAccess(e, props);
 
+    // 🔍 0.05 診斷今日總結 Flex 訊息產生與系統日誌
+    if (action === 'diagnoseDailySummary') {
+      const targetUser = e?.parameter?.userId || props.getProperty('ADMIN_LINE_USER_ID') || '';
+      const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
+      let flexJson = '';
+      let flexError = null;
+      let summaryFlex = null;
+      try {
+        summaryFlex = generateDailySummaryFlex(targetUser, null, liffId, '', props);
+        flexJson = JSON.stringify(summaryFlex);
+      } catch (err) {
+        flexError = err.stack || err.message;
+      }
+      const logs = (typeof getRecentLogsData === 'function') ? getRecentLogsData(20, 1) : [];
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'ok',
+        targetUser,
+        flexError,
+        jsonLength: flexJson.length,
+        isOverLimit: flexJson.length > 30000,
+        recentLogs: logs.map(l => ({ time: l.time, type: l.type, user: l.userName, input: l.input, output: l.output })),
+        summaryFlex: flexError ? null : summaryFlex
+      }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 🛡️ 0.1 維護者登入安全校驗端點 (供 Web 前端進行身分校驗，簽發暫態 Session Token，絕不洩露後端主密碼)
     if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
       const cache = CacheService.getScriptCache();
