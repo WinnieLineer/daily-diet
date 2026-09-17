@@ -45,7 +45,7 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.3.42';
+export const LATEST_WHATSNEW_VERSION = '3.3.50';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
@@ -120,6 +120,56 @@ const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
             </div>
 
             <div className="space-y-5">
+              {/* 🟢 雲端服務修復公告卡片 (v3.3.50) */}
+              <div className="p-5 bg-gradient-to-br from-emerald-50 via-teal-50 to-cyan-50 border-4 border-black rounded-3xl shadow-neo mb-6">
+                <div className="flex items-center gap-2.5 mb-3">
+                  <div className="w-10 h-10 bg-emerald-500 border-2 border-black rounded-2xl flex items-center justify-center shadow-neo-xs text-white shrink-0">
+                    <ShieldCheck size={22} strokeWidth={3} />
+                  </div>
+                  <div>
+                    <span className="inline-block px-2 py-0.5 bg-emerald-600 text-white rounded-md text-[10px] font-black uppercase tracking-wider mb-1">
+                      🟢 服務修復公告 v{version}
+                    </span>
+                    <h4 className="font-black text-base tracking-tight text-zinc-950 leading-tight">
+                      雲端雙向同步與 LINE Bot 服務已全面恢復正常
+                    </h4>
+                  </div>
+                </div>
+
+                <div className="space-y-3 text-xs text-zinc-800 font-bold leading-relaxed border-t-2 border-dashed border-zinc-300 pt-3">
+                  <p className="text-zinc-900 leading-relaxed">
+                    親愛的 Daily-Diet 用戶您好：日前因後端 Google Apps Script 雲端通訊閘道存取權限與 OAuth 憑證過期，導致部分用戶發生 LINE 訊息無回應及 Web 雲端備份同步中斷。目前開發團隊已完成權限重新發布與全線修復，各項服務現已恢復正常運作！
+                  </p>
+
+                  <div className="bg-white/90 border-2 border-black rounded-2xl p-3 space-y-1.5 shadow-neo-xs">
+                    <div className="text-[11px] font-black text-emerald-950 flex items-center gap-1.5">
+                      <span className="text-sm">⏱️</span> 異常影響範圍與時間
+                    </div>
+                    <ul className="text-[11px] text-zinc-700 space-y-1 list-disc list-inside leading-relaxed">
+                      <li><strong>影響時間</strong>：2026/09/15 至 2026/09/17</li>
+                      <li><strong>LINE Bot</strong>：訊息回覆、拍照營養辨識、體重與排便打卡出現暫時性無法連線或逾時。</li>
+                      <li><strong>Web 雲端備份</strong>：本地紀錄上傳至 Google 雲端與 Gist 備份暫時中止。</li>
+                    </ul>
+                  </div>
+
+                  <div className="bg-white/90 border-2 border-black rounded-2xl p-3.5 space-y-2 shadow-neo-xs">
+                    <div className="text-[11px] font-black text-indigo-950 flex items-center gap-1.5">
+                      <span className="text-sm">🛡️</span> 本機資料 100% 完整無虞保證
+                    </div>
+                    <p className="text-[11px] text-zinc-700 leading-relaxed">
+                      <strong>請安心使用！</strong>所有在異常期間於手機或電腦端輸入的飲食、體重、排便與水分紀錄，均安全完整地保存在您本機的離線儲存空間（IndexedDB）中，<strong>沒有任何記錄遺失</strong>。
+                    </p>
+                    <p className="text-[11px] text-zinc-700 leading-relaxed">
+                      隨著雲端閘道恢復，系統已為您<strong>自動重新建立連線並完成雙向補同步</strong>，無須手動重新輸入！
+                    </p>
+                  </div>
+
+                  <p className="text-[11px] text-emerald-950 bg-emerald-100/90 p-3 rounded-2xl border-2 border-emerald-300 leading-relaxed">
+                    🐼 造成您的不便與等待致上最深的歉意！我們已加強連線監控與憑證預警機制，感謝大家一直以來的包容與支持～請繼續健康記錄每一餐！
+                  </p>
+                </div>
+              </div>
+
               {/* 🚨 緊急修復公告卡片 (v3.3.42) */}
               <div className="p-5 bg-gradient-to-br from-rose-50 via-amber-50 to-orange-50 border-4 border-black rounded-3xl shadow-neo mb-6">
                 <div className="flex items-center gap-2.5 mb-3">

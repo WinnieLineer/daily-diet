@@ -5367,7 +5367,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
 
   return {
     type: "flex",
-    altText: isEn ? "Remember to sleep early tonight! Good night!" : "今天要早點睡喔 ! 晚安!",
+    altText: isEn ? "🟢 Service Restored & Version Update Announcement 🐼" : "🟢 服務全面修復與更新公告 🐼",
     contents: {
       type: "bubble",
       size: "mega",
@@ -5381,13 +5381,15 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: isEn ? "🌙 BEDTIME NOTE & UPDATE" : "🌙 睡前悄悄話與貼心升級", color: "#FDE047", weight: "bold", size: "xs", flex: 0 },
-              { type: "text", text: isEn ? "v3.3.0 Release" : "熊貓教練暖心問候", color: "#A1A1AA", size: "xxs", align: "end" }
+              { type: "text", text: isEn ? "🟢 SERVICE RESTORED" : "🟢 雲端服務全面修復公告", color: "#4ADE80", weight: "bold", size: "xs", flex: 0 },
+              { type: "text", text: isEn ? "v3.3.50 Release" : "v3.3.50 穩定性升級", color: "#A1A1AA", size: "xxs", align: "end" }
             ]
           },
           {
             type: "text",
-            text: isEn ? "✨ Sleep well tonight & explore your new tools below 🐼" : "✨ 今天要早點睡喔！晚安～教練今晚也為您悄悄準備了實用新升級 🐼",
+            text: isEn 
+              ? "✨ Google Apps Script & LINE sync fully restored! Your logs are safe and auto-syncing 🐼" 
+              : "✨ 雲端通訊閘道已全面修復！LINE 與 Web 雙向同步正常運作，本機記錄 100% 完整無虞 🐼",
             color: "#FFFFFF",
             weight: "bold",
             size: "sm",
@@ -5413,7 +5415,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#F3E8FF",
+                backgroundColor: "#ECFDF5",
                 borderColor: "#000000",
                 borderWidth: "2px",
                 cornerRadius: "12px",
@@ -5426,16 +5428,16 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     contents: [
                       {
                         type: "text",
-                        text: isEn ? "🌙 Good Night & Sleep Well" : "🌙 晚安！睡前貼心叮嚀",
+                        text: isEn ? "🛡️ Outage Scope & Resolution" : "🛡️ 異常範圍與修復說明",
                         weight: "bold",
                         size: "sm",
-                        color: "#000000",
+                        color: "#065F46",
                         flex: 1
                       },
                       {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#7C3AED",
+                        backgroundColor: "#059669",
                         cornerRadius: "10px",
                         width: isEn ? "48px" : "38px",
                         height: "20px",
@@ -5445,7 +5447,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                         contents: [
                           {
                             type: "text",
-                            text: isEn ? "REST" : "晚安",
+                            text: isEn ? "FIXED" : "已修復",
                             size: "xxs",
                             color: "#FFFFFF",
                             weight: "bold",
@@ -5459,34 +5461,24 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                   {
                     type: "text",
                     text: isEn
-                      ? "Put down your phone and wind down tonight! Deep sleep is your body's natural fat burner ✨ Try this 3-min stretch to relax. Plus, Coach Panda quietly rolled out new upgrades for you below! 👇"
-                      : "今晚早點放下手機好好睡一覺吧！優質深層睡眠才是身體天然最強燃脂劑 ✨ 睡前花 3 分鐘跟著短影音舒緩放鬆～另外，教練今晚也為大家悄悄升級了超實用的全新功能喔！👇",
+                      ? "• Impact Time: 2026/09/15 - 09/17\n• Scope: LINE Bot replies & cloud sync gateway\n• Data Safety: All client records are fully preserved in local storage and now auto-synced back to cloud!"
+                      : "• 影響時間：2026/09/15 至 09/17\n• 影響範圍：LINE Bot 訊息回覆與雲端同步閘道\n• 資料安全：期間手機與網頁本地記錄完整保留無遺失，現已全面恢復雙向即時同步！",
                     size: "xs",
-                    color: "#4C1D95",
+                    color: "#064E3B",
                     margin: "xs",
                     wrap: true
-                  },
-                  {
-                    type: "box",
-                    layout: "vertical",
-                    margin: "sm",
-                    contents: [
-                      createNeoFlexButton({
-                        label: isEn ? "🧘‍♀️ 3-min Relaxation Reel" : "🧘‍♀️ 3分鐘睡前舒緩短影音",
-                        variant: "accent",
-                        size: "sm",
-                        action: {
-                          type: "uri",
-                          label: isEn ? "Watch Reel" : "舒緩短影音",
-                          uri: "https://www.instagram.com/reels/Dc3vGMrPcDx/"
-                        }
-                      })
-                    ]
                   }
                 ]
               }
             ]
           },
+          buildFeatureCard(
+            "🔄",
+            isEn ? "Seamless Cloud Sync" : "Web & LINE 雙向同步",
+            isEn ? "Logged data flows instantly between LINE, Web App, and your private Gist backup." : "LINE 與 Web 紀錄即時雙向連動，並無縫備份至個人專屬 Gist 雲端！",
+            isEn ? "ONLINE" : "連線中",
+            "#DCFCE7"
+          ),
           buildFeatureCard(
             "⚖️",
             isEn ? "Weight Log & Delta" : "LINE 體重快速記錄",
@@ -5507,13 +5499,6 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             isEn ? "Type \"Weight chart\" to render 10-day curve & 7-day poop badges right inside LINE!" : "輸入「體重趨勢」或「體重紀錄」，直接在 LINE 對話框繪製近 10 天折線圖與 7 日便便狀態！",
             isEn ? "CHART" : "圖表",
             "#F3E8FF"
-          ),
-          buildFeatureCard(
-            "🔄",
-            isEn ? "Seamless Cloud Sync" : "Web & LINE 雙向同步",
-            isEn ? "Logged data flows instantly between LINE, Web App, and your private Gist backup." : "LINE 與 Web 紀錄即時雙向連動，並無縫備份至個人專屬 Gist 雲端！",
-            isEn ? "SYNC" : "同步",
-            "#DCFCE7"
           )
         ]
       },
