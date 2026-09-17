@@ -5369,7 +5369,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
 
   return {
     type: "flex",
-    altText: isEn ? "🟢 Service Restored & Version Update Announcement 🐼" : "🟢 服務全面修復與更新公告 🐼",
+    altText: isEn ? "🟢 Service Restored Announcement 🐼" : "🟢 雲端服務全面恢復公告 🐼",
     contents: {
       type: "bubble",
       size: "mega",
@@ -5383,14 +5383,14 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: isEn ? "🟢 SERVICE RESTORED" : "🟢 雲端服務全面修復公告", color: "#4ADE80", weight: "bold", size: "xs", flex: 0 },
-              { type: "text", text: isEn ? "v3.3.52 Release" : "v3.3.52 穩定性升級", color: "#A1A1AA", size: "xxs", align: "end" }
+              { type: "text", text: isEn ? "🟢 SERVICE RESTORED" : "🟢 雲端服務全面恢復公告", color: "#4ADE80", weight: "bold", size: "xs", flex: 0 },
+              { type: "text", text: isEn ? "System Operational" : "全線正常運作", color: "#A1A1AA", size: "xxs", align: "end" }
             ]
           },
           {
             type: "text",
             text: isEn 
-              ? "✨ Google Apps Script & LINE sync fully restored! Your logs are safe and auto-syncing 🐼" 
+              ? "✨ Cloud sync & LINE Bot fully restored! All client logs are safe & auto-synced 🐼" 
               : "✨ 雲端通訊閘道已全面修復！LINE 與 Web 雙向同步正常運作，本機記錄 100% 完整無虞 🐼",
             color: "#FFFFFF",
             weight: "bold",
@@ -5475,33 +5475,50 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             ]
           },
           buildFeatureCard(
+            "🤖",
+            isEn ? "LINE Smart Assistant" : "LINE 智能對話與拍照分析",
+            isEn ? "Photo nutrition analysis, text/voice logging, and daily summaries are running stably." : "餐點拍照辨識、文字/語音打卡、今日總結回傳已全線恢復正常運作！",
+            isEn ? "ACTIVE" : "運作中",
+            "#F0FDF4",
+            "#059669"
+          ),
+          buildFeatureCard(
             "🔄",
-            isEn ? "Seamless Cloud Sync" : "Web & LINE 雙向同步",
-            isEn ? "Logged data flows instantly between LINE, Web App, and your private Gist backup." : "LINE 與 Web 紀錄即時雙向連動，並無縫備份至個人專屬 Gist 雲端！",
+            isEn ? "Two-way Live Sync" : "Web ↔ LINE 即時雙向同步",
+            isEn ? "Logged data flows seamlessly between LINE and Web App. Auto-resynced without manual entry." : "手機與網頁兩端資料即時互通，異常期間資料已自動補同步，無需手動補登！",
             isEn ? "ONLINE" : "連線中",
-            "#DCFCE7"
+            "#EFF6FF",
+            "#2563EB"
           ),
           buildFeatureCard(
-            "⚖️",
-            isEn ? "Weight Log & Delta" : "LINE 體重快速記錄",
-            isEn ? "Just type \"Weight 65.2\" or \"65kg\". Auto-computes diff vs previous log with coach tips!" : "輸入「體重 65.2」或「65kg」秒記！自動計算與前次增減差額，教練即時給予建議！",
-            isEn ? "NEW" : "全新",
-            "#EFF6FF"
+            "☁️",
+            isEn ? "Private Gist Backup" : "個人 Gist 雲端安全備份",
+            isEn ? "Your personal private cloud backup is securely operating with periodic synchronization." : "個人私有雲端資料備份通道已全面暢通，定時雙重備援守護數據！",
+            isEn ? "SECURE" : "安全",
+            "#FEF3C7",
+            "#D97706"
           ),
-          buildFeatureCard(
-            "💩",
-            isEn ? "Poop & Digestion Tracker" : "便便排便打卡",
-            isEn ? "Send \"Poop\" or \"💩\". Auto-tracks elapsed time since last log to monitor gut health!" : "輸入「便便」、「排便」或「💩」打卡！自動統計距離上次相隔時長，掌握腸道健康！",
-            isEn ? "NEW" : "全新",
-            "#FEF3C7"
-          ),
-          buildFeatureCard(
-            "📈",
-            isEn ? "Visual Weight & Poop Chart" : "LINE 專屬走勢圖表",
-            isEn ? "Type \"Weight chart\" to render 10-day curve & 7-day poop badges right inside LINE!" : "輸入「體重趨勢」或「體重紀錄」，直接在 LINE 對話框繪製近 10 天折線圖與 7 日便便狀態！",
-            isEn ? "CHART" : "圖表",
-            "#F3E8FF"
-          )
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF9C3",
+            borderColor: "#000000",
+            borderWidth: "1.5px",
+            cornerRadius: "10px",
+            paddingAll: "8px",
+            contents: [
+              {
+                type: "text",
+                text: isEn
+                  ? "🐼 Thank you for your patience! Coach Panda is back and ready to support your healthy journey ✨"
+                  : "🐼 感謝大家的體諒與陪伴，造成不便深感抱歉！熊貓教練已精神百倍回歸，請繼續享受健康美味的每一餐 ✨",
+                size: "xxs",
+                color: "#713F12",
+                weight: "bold",
+                wrap: true
+              }
+            ]
+          }
         ]
       },
       footer: {
@@ -5520,50 +5537,17 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               uri: appTargetUrl
             }
           }),
-          {
-            type: "box",
-            layout: "horizontal",
-            spacing: "sm",
-            contents: [
-              createNeoFlexButton({
-                label: isEn ? "⚖️ Weight" : "⚖️ 記體重",
-                variant: "white",
-                size: "sm",
-                flex: 1,
-                action: {
-                  type: "postback",
-                  label: isEn ? "Weight" : "記體重",
-                  data: JSON.stringify({ action: 'promptWeight' }),
-                  inputOption: "openKeyboard",
-                  fillInText: isEn ? "Weight 60.0" : "體重 60.0"
-                }
-              }),
-              createNeoFlexButton({
-                label: isEn ? "💩 Poop" : "💩 便便打卡",
-                variant: "white",
-                size: "sm",
-                flex: 1,
-                action: {
-                  type: "postback",
-                  label: isEn ? "Poop" : "便便打卡",
-                  data: JSON.stringify({ action: 'logPoop' }),
-                  displayText: isEn ? "💩 Log Poop" : "💩 便便打卡"
-                }
-              }),
-              createNeoFlexButton({
-                label: isEn ? "📈 Chart" : "📈 體重走勢",
-                variant: "white",
-                size: "sm",
-                flex: 1,
-                action: {
-                  type: "postback",
-                  label: isEn ? "Chart" : "體重趨勢",
-                  data: JSON.stringify({ action: 'weightTrend' }),
-                  displayText: isEn ? "📈 Weight Chart" : "📈 體重趨勢"
-                }
-              })
-            ]
-          }
+          createNeoFlexButton({
+            label: isEn ? "📊 View Today's Summary" : "📊 查看今日總結",
+            variant: "white",
+            size: "md",
+            action: {
+              type: "postback",
+              label: isEn ? "Summary" : "今日總結",
+              data: JSON.stringify({ action: 'daily_summary' }),
+              displayText: isEn ? "Daily Summary" : "今日總結"
+            }
+          })
         ]
       }
     }

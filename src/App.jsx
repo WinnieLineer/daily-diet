@@ -78,7 +78,7 @@ export const isNewer = (newVer, oldVer) => {
 };
 
 // 📢 Latest version with release notes configured in WhatsNew modal (only bump when major/feature notes are added)
-export const LATEST_WHATSNEW_VERSION = '3.3.52';
+export const LATEST_WHATSNEW_VERSION = '3.3.58';
 
 const getLocalDateString = () => {
   const now = new Date();
@@ -1566,11 +1566,11 @@ function App() {
           const lastSeenVersion = safeGetStorage('last_seen_version');
           console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
           
-          // 📢 強制彈出 v3.3.50 雲端服務修復公告（每位用戶未點關閉前保證彈出一次）
-          const hasSeenPatchNotice = safeGetStorage('seen_patch_3350');
+          // 📢 強制彈出雲端服務全面修復公告（每位用戶未點關閉前保證彈出一次）
+          const hasSeenPatchNotice = safeGetStorage('seen_patch_3358');
           if (!hasSeenPatchNotice) {
             console.log("[VersionCheck] Triggering service restoration announcement modal!");
-            setLastSeenVersionState(lastSeenVersion || '3.3.49');
+            setLastSeenVersionState(lastSeenVersion || '3.3.57');
             setShowWhatsNew(true);
           } else if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
             const isFrom16 = lastSeenVersion?.startsWith('1.6');
@@ -2003,7 +2003,7 @@ function App() {
               onClose={() => {
                 setShowWhatsNew(false);
                 safeSetStorage('last_seen_version', APP_VERSION);
-                safeSetStorage('seen_patch_3350', 'true');
+                safeSetStorage('seen_patch_3358', 'true');
               }}
             />
           )}
