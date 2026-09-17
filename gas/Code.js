@@ -143,3 +143,63 @@ function fixPoisonedUserNames() {
   }
   console.log(`🎉 暱稱修復程序完成！共更正/清除了 ${fixedCount} 筆異常名稱。`);
 }
+
+/**
+ * 📢 一鍵推播「最新版本與服務修復公告卡片」給所有 LINE 好友 (Broadcast)
+ * 💡 若要先推給自己測試，可傳入自己的 LINE User ID：sendAnnouncementBroadcast('Uxxxxxxxxxxxx')
+ */
+function sendAnnouncementBroadcast(testUserId) {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+  const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
+  
+  if (!token) {
+    console.error('❌ 找不到 LINE_CHANNEL_ACCESS_TOKEN，無法發送推播！');
+    return;
+  }
+  
+  const targetUser = testUserId || props.getProperty('ADMIN_LINE_USER_ID') || '';
+  const flexMsg = generateFeatureAnnouncementFlex(targetUser || 'default_user', liffId, '', props, 'zh');
+  
+  if (testUserId && String(testUserId).startsWith('U')) {
+    console.log(`🚀 正在向測試用戶 [${testUserId}] 發送測試公告...`);
+    pushFlexMessage(testUserId, flexMsg, token, props);
+    console.log(`✅ 測試公告已成功送達 ${testUserId}！`);
+  } else {
+    console.log('📣 正在向全體 LINE 好友發送官方廣播 (Broadcast)...');
+    const res = broadcastFlexMessage(flexMsg, token);
+    console.log('📊 廣播執行結果：', JSON.stringify(res));
+    if (res.success) {
+      console.log('🎉 恭喜！官方更新公告已成功推播給所有好友！');
+    } else {
+      console.error('⚠️ 廣播失敗或受配額限制：', res.response || res.error);
+    }
+  }
+}
+
+/**
+ * 📊 查詢本月 LINE 官方帳號剩餘可推播訊息額度
+ */
+function checkLineMessageQuota() {
+  const props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+  if (!token) {
+    console.error('❌ 找不到 LINE_CHANNEL_ACCESS_TOKEN');
+    return;
+  }
+  try {
+    const quotaRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota", {
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    const consumptionRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota/consumption", {
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    console.log('📊 本月總額度：', quotaRes.getContentText());
+    console.log('📈 本月已發送數：', consumptionRes.getContentText());
+  } catch (e) {
+    console.error('查詢額度失敗：', e.message);
+  }
+}
+
