@@ -5378,94 +5378,88 @@ function generateBugReportAckFlex(userText, isSuccess, lang) {
 }
 
 /**
- * 🚀 全新功能升級通知卡片 (體重追蹤、便便打卡、走勢圖表)
+ * 🛠️ 官方服務全面恢復公告 (LINE Flex 專用卡片)
+ * 精緻無行銷內容、純粹且細緻的故障修復與全線運作通報
  */
 function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang) {
   const isEn = lang === 'en';
   const appTargetUrl = 'https://liff.line.me/' + liffId + '?userId=' + (userId || '') + (userGistId ? '&gistId=' + userGistId : '');
 
-  function buildFeatureCard(emoji, title, desc, tag, bgColor, borderColor = "#000000") {
-    const innerCard = {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: bgColor,
-      borderColor: borderColor,
-      borderWidth: "2px",
-      cornerRadius: "12px",
-      paddingAll: "10px",
-      contents: [
-        {
-          type: "box",
-          layout: "horizontal",
-          alignItems: "center",
-          contents: [
-            { type: "text", text: `${emoji} ${title}`, weight: "bold", size: "sm", color: "#000000", flex: 1, wrap: true },
-            {
-              type: "box",
-              layout: "vertical",
-              backgroundColor: "#000000",
-              cornerRadius: "10px",
-              width: isEn ? "52px" : "44px",
-              height: "20px",
-              alignItems: "center",
-              justifyContent: "center",
-              flex: 0,
-              contents: [
-                { type: "text", text: tag, size: "xxs", color: "#FDE047", weight: "bold", align: "center", gravity: "center" }
-              ]
-            }
-          ]
-        },
-        {
-          type: "text",
-          text: desc,
-          size: "xs",
-          color: "#3F3F46",
-          margin: "xs",
-          wrap: true
-        }
-      ]
-    };
-
-    return {
-      type: "box",
-      layout: "vertical",
-      backgroundColor: "#000000",
-      cornerRadius: "14px",
-      paddingBottom: "3px",
-      paddingEnd: "3px",
-      contents: [innerCard]
-    };
-  }
-
   return {
     type: "flex",
-    altText: isEn ? "🟢 Service Restored Announcement 🐼" : "🟢 雲端服務全面恢復公告 🐼",
+    altText: isEn ? "🟢 Official Notice: Service Fully Restored 🐼" : "🟢 官方通報：雲端通訊閘道已全面修復完成 🐼",
     contents: {
       type: "bubble",
       size: "mega",
       header: {
         type: "box",
         layout: "vertical",
-        backgroundColor: "#18181B",
-        paddingAll: "14px",
+        backgroundColor: "#09090B",
+        paddingAll: "16px",
         contents: [
           {
             type: "box",
             layout: "horizontal",
+            alignItems: "center",
             contents: [
-              { type: "text", text: isEn ? "🟢 SERVICE RESTORED" : "🟢 雲端服務全面恢復公告", color: "#4ADE80", weight: "bold", size: "xs", flex: 0 },
-              { type: "text", text: isEn ? "System Operational" : "全線正常運作", color: "#A1A1AA", size: "xxs", align: "end" }
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#064E3B",
+                borderColor: "#059669",
+                borderWidth: "1px",
+                cornerRadius: "10px",
+                paddingStart: "8px",
+                paddingEnd: "8px",
+                paddingTop: "3px",
+                paddingBottom: "3px",
+                alignItems: "center",
+                spacing: "xs",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    backgroundColor: "#34D399",
+                    cornerRadius: "10px",
+                    width: "6px",
+                    height: "6px",
+                    contents: [{ type: "filler" }]
+                  },
+                  {
+                    type: "text",
+                    text: isEn ? "OFFICIAL NOTICE" : "官方維護通報",
+                    color: "#A7F3D0",
+                    weight: "bold",
+                    size: "xxs"
+                  }
+                ]
+              },
+              {
+                type: "text",
+                text: "2026.09.17",
+                color: "#71717A",
+                size: "xxs",
+                align: "end",
+                weight: "bold"
+              }
             ]
           },
           {
             type: "text",
-            text: isEn 
-              ? "✨ Cloud sync & LINE Bot fully restored! All client logs are safe & auto-synced 🐼" 
-              : "✨ 雲端通訊閘道已全面修復！LINE 與 Web 雙向同步正常運作，本機記錄 100% 完整無虞 🐼",
-            color: "#FFFFFF",
+            text: isEn ? "System Operational & Restored" : "雲端通訊閘道已全面修復完成",
+            color: "#FAFAFA",
             weight: "bold",
-            size: "sm",
+            size: "md",
+            margin: "sm",
+            wrap: true
+          },
+          {
+            type: "text",
+            text: isEn 
+              ? "All LINE bot messaging & cloud sync channels are verified and running normally."
+              : "LINE 訊息接收、智能回傳與雲端雙向同步服務已全線檢測通過並穩定運作。",
+            color: "#A1A1AA",
+            size: "xxs",
             margin: "xs",
             wrap: true
           }
@@ -5476,104 +5470,175 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         layout: "vertical",
         spacing: "md",
         paddingAll: "14px",
+        backgroundColor: "#FFFFFF",
         contents: [
+          // 區塊 1: 故障說明與誠摯致歉
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#F8FAFC",
+            borderColor: "#E2E8F0",
+            borderWidth: "1.5px",
+            cornerRadius: "12px",
+            paddingAll: "12px",
+            contents: [
+              {
+                type: "text",
+                text: isEn ? "📋 Incident Brief & Apology" : "📋 異常概述與致歉說明",
+                weight: "bold",
+                size: "xs",
+                color: "#334155"
+              },
+              {
+                type: "text",
+                text: isEn
+                  ? "Dear user, due to a cloud credential gateway issue over the past two days, some LINE messages and sync requests experienced timeouts. We sincerely apologize for any inconvenience caused during this period."
+                  : "親愛的用戶您好：日前因雲端中繼通訊閘道權限與連線憑證異常，導致部分時段 LINE 官方帳號未能即時回覆訊息及同步記錄。團隊已完成全面修復與架構加固，對造成的不便致上最深切的歉意！",
+                size: "xxs",
+                color: "#475569",
+                margin: "xs",
+                wrap: true
+              }
+            ]
+          },
+          // 區塊 2: 處置與承諾重點清單 (細緻專業)
           {
             type: "box",
             layout: "vertical",
             backgroundColor: "#000000",
-            cornerRadius: "14px",
+            cornerRadius: "12px",
             paddingBottom: "3px",
             paddingEnd: "3px",
             contents: [
               {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#ECFDF5",
+                backgroundColor: "#F0FDF4",
                 borderColor: "#000000",
                 borderWidth: "2px",
-                cornerRadius: "12px",
-                paddingAll: "10px",
+                cornerRadius: "10px",
+                paddingAll: "12px",
+                spacing: "sm",
                 contents: [
                   {
                     type: "box",
                     layout: "horizontal",
-                    alignItems: "center",
                     contents: [
-                      {
-                        type: "text",
-                        text: isEn ? "🛡️ Outage Scope & Resolution" : "🛡️ 異常範圍與修復說明",
-                        weight: "bold",
-                        size: "sm",
-                        color: "#065F46",
-                        flex: 1
-                      },
+                      { type: "text", text: isEn ? "🛡️ Key Resolutions" : "🛡️ 修復進度與資料保障", weight: "bold", size: "xs", color: "#166534", flex: 1 },
                       {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#059669",
-                        cornerRadius: "10px",
-                        width: isEn ? "48px" : "38px",
-                        height: "20px",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        backgroundColor: "#16A34A",
+                        cornerRadius: "8px",
+                        paddingStart: "6px",
+                        paddingEnd: "6px",
+                        paddingTop: "2px",
+                        paddingBottom: "2px",
                         flex: 0,
                         contents: [
-                          {
-                            type: "text",
-                            text: isEn ? "FIXED" : "已修復",
-                            size: "xxs",
-                            color: "#FFFFFF",
-                            weight: "bold",
-                            align: "center",
-                            gravity: "center"
-                          }
+                          { type: "text", text: isEn ? "100% SECURED" : "已全數解決", size: "xxs", color: "#FFFFFF", weight: "bold" }
                         ]
                       }
                     ]
                   },
+                  // 項目 1
                   {
-                    type: "text",
-                    text: isEn
-                      ? "• Impact Time: 2026/09/15 - 09/17\n• Scope: LINE Bot replies & cloud sync gateway\n• Data Safety: All client records are fully preserved in local storage and now auto-synced back to cloud!"
-                      : "• 影響時間：2026/09/15 至 09/17\n• 影響範圍：LINE Bot 訊息回覆與雲端同步閘道\n• 資料安全：期間手機與網頁本地記錄完整保留無遺失，現已全面恢復雙向即時同步！",
-                    size: "xs",
-                    color: "#064E3B",
-                    margin: "xs",
-                    wrap: true
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    alignItems: "flex-start",
+                    contents: [
+                      { type: "text", text: "•", size: "xs", color: "#15803D", weight: "bold", flex: 0 },
+                      {
+                        type: "text",
+                        text: isEn 
+                          ? "Data Integrity: 100% of your diary logs on device/web remain fully intact with zero loss, and are now re-synced."
+                          : "資料完整性：期間您於手機或網頁端的所有飲食記錄均完整妥善保存，未有任何遺失，現已自動完成雲端對齊。",
+                        size: "xxs",
+                        color: "#14532D",
+                        flex: 1,
+                        wrap: true
+                      }
+                    ]
+                  },
+                  // 項目 2
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    alignItems: "flex-start",
+                    contents: [
+                      { type: "text", text: "•", size: "xs", color: "#15803D", weight: "bold", flex: 0 },
+                      {
+                        type: "text",
+                        text: isEn
+                          ? "Pipeline Hardened: Regenerated API tokens, updated GAS deployment gateway, and added automatic retry mechanisms."
+                          : "連線加固：全面重構 API 通信權限憑證，升級 Google Apps Script 閘道與通訊容錯重試機制。",
+                        size: "xxs",
+                        color: "#14532D",
+                        flex: 1,
+                        wrap: true
+                      }
+                    ]
                   }
                 ]
               }
             ]
           },
-          buildFeatureCard(
-            "🤖",
-            isEn ? "LINE Smart Assistant" : "LINE 智能對話與拍照分析",
-            isEn ? "Photo nutrition analysis, text/voice logging, and daily summaries are running stably." : "餐點拍照辨識、文字/語音打卡、今日總結回傳已全線恢復正常運作！",
-            isEn ? "ACTIVE" : "運作中",
-            "#F0FDF4",
-            "#059669"
-          ),
-          buildFeatureCard(
-            "🔄",
-            isEn ? "Two-way Live Sync" : "Web ↔ LINE 即時雙向同步",
-            isEn ? "Logged data flows seamlessly between LINE and Web App. Auto-resynced without manual entry." : "手機與網頁兩端資料即時互通，異常期間資料已自動補同步，無需手動補登！",
-            isEn ? "ONLINE" : "連線中",
-            "#EFF6FF",
-            "#2563EB"
-          ),
-          buildFeatureCard(
-            "☁️",
-            isEn ? "Private Gist Backup" : "個人 Gist 雲端安全備份",
-            isEn ? "Your personal private cloud backup is securely operating with periodic synchronization." : "個人私有雲端資料備份通道已全面暢通，定時雙重備援守護數據！",
-            isEn ? "SECURE" : "安全",
-            "#FEF3C7",
-            "#D97706"
-          ),
+          // 區塊 3: 核心服務監控狀態矩陣 (極簡、細緻、具科技感)
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#FEF9C3",
-            borderColor: "#000000",
+            backgroundColor: "#FAFAFA",
+            borderColor: "#E4E4E7",
+            borderWidth: "1.5px",
+            cornerRadius: "10px",
+            paddingAll: "10px",
+            spacing: "xs",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                contents: [
+                  { type: "text", text: isEn ? "SERVICE STATUS" : "核心服務狀態驗證", size: "xxs", color: "#71717A", weight: "bold", flex: 1 },
+                  { type: "text", text: isEn ? "ALL GREEN" : "全數正常", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 1 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "💬 LINE Messaging & Bot" : "💬 LINE 訊息回覆與解析", size: "xxs", color: "#27272A", flex: 3 },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "🔄 Cloud Two-way Sync" : "🔄 雲端雙向資料同步", size: "xxs", color: "#27272A", flex: 3 },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2 }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "📊 Daily Summary & Charts" : "📊 每日飲食與蛋白質總結", size: "xxs", color: "#27272A", flex: 3 },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2 }
+                ]
+              }
+            ]
+          },
+          // 區塊 4: 暖心收尾小結
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEFCE8",
+            borderColor: "#FDE047",
             borderWidth: "1.5px",
             cornerRadius: "10px",
             paddingAll: "8px",
@@ -5581,8 +5646,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               {
                 type: "text",
                 text: isEn
-                  ? "🐼 Thank you for your patience! Coach Panda is back and ready to support your healthy journey ✨"
-                  : "🐼 感謝大家的體諒與陪伴，造成不便深感抱歉！熊貓教練已精神百倍回歸，請繼續享受健康美味的每一餐 ✨",
+                  ? "🐼 Coach Panda is ready! Thank you for staying with Daily-Diet. You can now use all functions normally ✨"
+                  : "🐼 熊貓教練已精神百倍回歸！感謝您的包容與支持，現在可繼續正常記錄與查詢每一餐 ✨",
                 size: "xxs",
                 color: "#713F12",
                 weight: "bold",
@@ -5599,7 +5664,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "📱 Open Personal Diet Diary" : "📱 開啟個人飲食日記",
+            label: isEn ? "📱 Open Diet Diary" : "📱 開啟個人飲食日記",
             variant: "accent",
             size: "md",
             action: {
