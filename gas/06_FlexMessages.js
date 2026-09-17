@@ -5382,7 +5382,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             layout: "horizontal",
             contents: [
               { type: "text", text: isEn ? "🟢 SERVICE RESTORED" : "🟢 雲端服務全面修復公告", color: "#4ADE80", weight: "bold", size: "xs", flex: 0 },
-              { type: "text", text: isEn ? "v3.3.50 Release" : "v3.3.50 穩定性升級", color: "#A1A1AA", size: "xxs", align: "end" }
+              { type: "text", text: isEn ? "v3.3.52 Release" : "v3.3.52 穩定性升級", color: "#A1A1AA", size: "xxs", align: "end" }
             ]
           },
           {

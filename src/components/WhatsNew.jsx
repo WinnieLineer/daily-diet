@@ -45,7 +45,7 @@ export const isNewer = (newVer, oldVer) => {
   return false;
 };
 
-export const LATEST_WHATSNEW_VERSION = '3.3.50';
+export const LATEST_WHATSNEW_VERSION = '3.3.52';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
   if (!lastSeenVersion) return false;
@@ -131,7 +131,7 @@ const WhatsNew = ({ version = APP_VERSION, onClose, lastSeenVersion }) => {
                       🟢 服務修復公告 v{version}
                     </span>
                     <h4 className="font-black text-base tracking-tight text-zinc-950 leading-tight">
-                      雲端雙向同步與 LINE Bot 服務已全面恢復正常
+                      雲端雙向同步與 LINE Bot 服務已全面恢復正常 (v{version})
                     </h4>
                   </div>
                 </div>
