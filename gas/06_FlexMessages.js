@@ -720,9 +720,25 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   const calPercent = calGoal > 0 ? Math.round((totalCal / calGoal) * 100) : 0;
   const isOverCal = calGoal > 0 && totalCal > calGoal;
 
+  const proPercent = proGoal > 0 ? Math.round((totalPro / proGoal) * 100) : 0;
+  const isProReached = proGoal > 0 && totalPro >= proGoal;
+  const remainingPro = Math.max(0, proGoal - totalPro);
+
   let coachTip = isEn ? "Building your healthy diet habit, keep it up! 🐼" : "飲食紀錄養成中，繼續保持！🐼";
   if (isToday) {
-    if (isOverCal) {
+    if (isProReached && isOverCal) {
+      coachTip = isEn 
+        ? `Protein target reached (${totalPro}g)! Calories slightly over by ${totalCal - calGoal} kcal, take a relaxing walk! 💪🔥` 
+        : `蛋白質完美達標 ${totalPro}g！熱量稍超標 ${totalCal - calGoal} kcal，多喝水走動消化喔！💪🔥`;
+    } else if (isProReached) {
+      coachTip = isEn 
+        ? `Awesome! Daily protein target reached (${totalPro}g / ${proGoal}g)! Muscles are fueled! 💪🥩` 
+        : `太棒了！今日蛋白質已達標 (${totalPro}g / ${proGoal}g)，肌肉獲得充分營養！💪🥩`;
+    } else if (remainingPro > 0 && remainingPro <= 25) {
+      coachTip = isEn 
+        ? `Almost there! Just ${remainingPro}g protein left to reach your goal today! 🥩` 
+        : `蛋白質距離達標只差 ${remainingPro}g，可以補充顆茶葉蛋或無糖豆漿喔！🥩🥚`;
+    } else if (isOverCal) {
       const overCal = totalCal - calGoal;
       coachTip = isEn 
         ? `Daily calorie goal exceeded by ${overCal} kcal (${calPercent}%)! Drink plenty of water and take a walk! 🔥` 
@@ -730,10 +746,14 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     } else if (remainingCal <= 400) {
       coachTip = isEn ? "Calorie intake is well-balanced, almost hitting your target! 💪" : "熱量控制得非常剛好，即將完美達標！💪";
     } else {
-      coachTip = isEn ? `You can still enjoy about ${remainingCal} kcal of nutritious food today! 🥗` : `今天還可以再補充約 ${remainingCal} kcal 的營養餐點！🥗`;
+      coachTip = isEn 
+        ? `You can still enjoy about ${remainingCal} kcal (${remainingPro}g protein) of nutritious food today! 🥗` 
+        : `今天還可以再補充約 ${remainingCal} kcal 與 ${remainingPro}g 蛋白質！🥗`;
     }
   } else {
-    coachTip = isEn ? `Summary for ${todayStr}! Calorie target reached: ${calPercent}% 🐼` : `這是 ${todayStr} 的歷史戰報！當天總熱量達成率為 ${calPercent}% 🐼`;
+    coachTip = isEn 
+      ? `Summary for ${todayStr}! Protein: ${proPercent}%, Calorie: ${calPercent}% 🐼` 
+      : `這是 ${todayStr} 的歷史戰報！蛋白質達成率 ${proPercent}% · 熱量 ${calPercent}% 🐼`;
   }
 
   const headerTitle = isToday
@@ -743,8 +763,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
   return {
     type: "flex",
     altText: isToday
-      ? (isEn ? `📊 Today's Summary: ${totalCal} / ${calGoal} kcal (${calPercent}%)` : `📊 今日飲食總結：已攝取 ${totalCal} / ${calGoal} kcal (${calPercent}%)`)
-      : (isEn ? `📅 ${todayStr} Summary: ${totalCal} / ${calGoal} kcal (${calPercent}%)` : `📅 ${todayStr} 飲食總結：已攝取 ${totalCal} / ${calGoal} kcal (${calPercent}%)`),
+      ? (isEn ? `📊 Today: Protein ${totalPro}/${proGoal}g (${proPercent}%) · ${totalCal}/${calGoal} kcal` : `📊 今日總結：蛋白質 ${totalPro}/${proGoal}g (${proPercent}%) · 熱量 ${totalCal}/${calGoal} kcal`)
+      : (isEn ? `📅 ${todayStr}: Protein ${totalPro}/${proGoal}g (${proPercent}%) · ${totalCal}/${calGoal} kcal` : `📅 ${todayStr} 總結：蛋白質 ${totalPro}/${proGoal}g (${proPercent}%) · 熱量 ${totalCal}/${calGoal} kcal`),
     contents: {
       type: "bubble",
       size: "mega",
@@ -893,7 +913,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
               ]
             }
           ]),
-          // ⚡ Neo 熱量達標進度條
+          // 🥩 當日蛋白質達標進度看板 (輔以熱量控制進度)
           {
             type: "box",
             layout: "vertical",
@@ -902,41 +922,92 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             borderWidth: "2.5px",
             cornerRadius: "14px",
             paddingAll: "10px",
+            spacing: "sm",
             contents: [
+              // 1. 🥩 當日蛋白質達標進度 (主力進度條)
               {
                 type: "box",
-                layout: "horizontal",
+                layout: "vertical",
                 contents: [
-                  { type: "text", text: isEn ? "⚡ Calorie Target Progress" : "⚡ 每日熱量達標進度", size: "xxs", weight: "bold", color: "#71717A", flex: 3 },
-                  { type: "text", text: `${totalCal} / ${calGoal} kcal (${calPercent}%)`, size: "xxs", weight: "bold", color: isOverCal ? "#E11D48" : "#000000", align: "end", flex: 4 }
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: isEn ? "🥩 Protein Target Progress" : "🥩 當日蛋白質達標進度", size: "xxs", weight: "bold", color: "#1E40AF", flex: 5 },
+                      { type: "text", text: `${totalPro} / ${proGoal}g (${proPercent}%)`, size: "xxs", weight: "bold", color: isProReached ? "#16A34A" : "#1E40AF", align: "end", flex: 4 }
+                    ]
+                  },
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    backgroundColor: "#EFF6FF",
+                    borderColor: "#000000",
+                    borderWidth: "2px",
+                    cornerRadius: "8px",
+                    height: "12px",
+                    margin: "xs",
+                    contents: [
+                      ...(proPercent > 0 ? [{
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: isProReached ? "#16A34A" : "#2563EB",
+                        flex: Math.min(100, Math.max(2, proPercent)),
+                        height: "100%",
+                        contents: [{ type: "filler" }]
+                      }] : []),
+                      ...(proPercent < 100 ? [{
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#EFF6FF",
+                        flex: Math.max(1, 100 - proPercent),
+                        height: "100%",
+                        contents: [{ type: "filler" }]
+                      }] : [])
+                    ]
+                  }
                 ]
               },
+              // 2. ⚡ 每日熱量控制進度
               {
                 type: "box",
-                layout: "horizontal",
-                backgroundColor: "#F4F4F5",
-                borderColor: "#000000",
-                borderWidth: "2px",
-                cornerRadius: "8px",
-                height: "12px",
-                margin: "xs",
+                layout: "vertical",
                 contents: [
-                  ...(calPercent > 0 ? [{
+                  {
                     type: "box",
-                    layout: "vertical",
-                    backgroundColor: isOverCal ? "#E11D48" : (calPercent >= 90 ? "#16A34A" : "#FDE047"),
-                    flex: Math.min(100, Math.max(2, calPercent)),
-                    height: "100%",
-                    contents: [{ type: "filler" }]
-                  }] : []),
-                  ...(calPercent < 100 ? [{
+                    layout: "horizontal",
+                    contents: [
+                      { type: "text", text: isEn ? "⚡ Calorie Target Progress" : "⚡ 每日熱量控制進度", size: "xxs", weight: "bold", color: "#71717A", flex: 5 },
+                      { type: "text", text: `${totalCal} / ${calGoal} kcal (${calPercent}%)`, size: "xxs", weight: "bold", color: isOverCal ? "#E11D48" : "#71717A", align: "end", flex: 4 }
+                    ]
+                  },
+                  {
                     type: "box",
-                    layout: "vertical",
+                    layout: "horizontal",
                     backgroundColor: "#F4F4F5",
-                    flex: Math.max(1, 100 - calPercent),
-                    height: "100%",
-                    contents: [{ type: "filler" }]
-                  }] : [])
+                    borderColor: "#000000",
+                    borderWidth: "1.5px",
+                    cornerRadius: "6px",
+                    height: "8px",
+                    margin: "xs",
+                    contents: [
+                      ...(calPercent > 0 ? [{
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: isOverCal ? "#E11D48" : (calPercent >= 90 ? "#16A34A" : "#FDE047"),
+                        flex: Math.min(100, Math.max(2, calPercent)),
+                        height: "100%",
+                        contents: [{ type: "filler" }]
+                      }] : []),
+                      ...(calPercent < 100 ? [{
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#F4F4F5",
+                        flex: Math.max(1, 100 - calPercent),
+                        height: "100%",
+                        contents: [{ type: "filler" }]
+                      }] : [])
+                    ]
+                  }
                 ]
               }
             ]
