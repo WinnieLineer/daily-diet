@@ -64,7 +64,7 @@ const DEFAULT_PERSONA = 'tsundere'; // 'tsundere' | 'gentle' | 'hardcore'
 const DEFAULT_LANGUAGE = 'zh';      // 'zh' | 'en'
 
 // 📧 預設開發者與管理員通知信箱 (收件者)
-const DEFAULT_ADMIN_EMAIL = 'matainer@winnie-lin.space';
+const DEFAULT_ADMIN_EMAIL = 'maintainer@winnie-lin.space';
 
 // 📮 預設系統自動化發信信箱 (寄件者)
 const DEFAULT_SENDER_EMAIL = 'auto-message@winnie-lin.space';

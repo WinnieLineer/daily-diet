@@ -349,7 +349,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [resendCooldown, setResendCooldown] = useState(0); // 60s cooldown
   const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
   const [isResendingOtp, setIsResendingOtp] = useState(false);
-  const [maskedEmail, setMaskedEmail] = useState('mat***@winnie-lin.space');
+  const [maskedEmail, setMaskedEmail] = useState('mai***@winnie-lin.space');
   const [otpSuccessMsg, setOtpSuccessMsg] = useState('');
   const otpInputRef = useRef(null);
 

@@ -38,7 +38,7 @@ function verifyAdminAccess(e, props) {
 /**
  * 📧 統一取得系統通知郵件發送設定
  * 預設寄件者: auto-message@winnie-lin.space
- * 預設收件者: matainer@winnie-lin.space
+ * 預設收件者: maintainer@winnie-lin.space
  */
 function getSystemEmailOptions(extraOptions, props) {
   if (!props) props = PropertiesService.getScriptProperties();
@@ -98,7 +98,7 @@ function sendOtpToAdmin(otpCode, configuredUser, props) {
   if (!props) props = PropertiesService.getScriptProperties();
   const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
   const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
-  const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'matainer@winnie-lin.space';
+  const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'maintainer@winnie-lin.space';
 
   let lineSent = false;
   let emailSent = false;
@@ -119,7 +119,7 @@ function sendOtpToAdmin(otpCode, configuredUser, props) {
     }
   }
 
-  // 2. Email 寄送 (雙軌並進，發送至 matainer@winnie-lin.space)
+  // 2. Email 寄送 (雙軌並進，發送至 maintainer@winnie-lin.space)
   if (adminEmail) {
     try {
       const subject = `🔐 [Daily-Diet] 後台登入動態驗證碼：${otpCode}`;
@@ -231,11 +231,11 @@ function handleMaintainerAuthActions(action, paramData, props) {
 
       // 發送 OTP 至 LINE 與 Email
       const dispatchResult = sendOtpToAdmin(otpCode, configuredUser, props);
-      const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'matainer@winnie-lin.space';
+      const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'maintainer@winnie-lin.space';
       const emailParts = adminEmail.split('@');
       const maskedEmail = emailParts.length === 2 
         ? `${emailParts[0].slice(0, 3)}***@${emailParts[1]}`
-        : 'mat***@winnie-lin.space';
+        : 'mai***@winnie-lin.space';
 
       return {
         status: 'ok',
@@ -995,7 +995,7 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
-      const targetEmail = e?.parameter?.email || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space';
+      const targetEmail = e?.parameter?.email || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space';
       const senderEmail = (typeof DEFAULT_SENDER_EMAIL !== 'undefined' && DEFAULT_SENDER_EMAIL) || props.getProperty('SENDER_EMAIL') || 'auto-message@winnie-lin.space';
       const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
       const testSub = `🐼 Daily-Diet 郵件發送診斷測試 (${timeNow})`;
@@ -3154,7 +3154,7 @@ function sendBugReportNotification(params) {
     const candidateEmails = [
       props && props.getProperty('ADMIN_EMAIL'),
       props && props.getProperty('DEVELOPER_EMAIL'),
-      (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space'
+      (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space'
     ];
     try {
       const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -3386,7 +3386,7 @@ function sendErrorAlertToWeb3Forms(info) {
       const candidateEmails = [
         props && props.getProperty('ADMIN_EMAIL'),
         props && props.getProperty('DEVELOPER_EMAIL'),
-        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space'
+        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space'
       ];
       try {
         const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -3484,7 +3484,7 @@ function sendMaintainerLoginNotification(info) {
       const candidateEmails = [
         props && props.getProperty('ADMIN_EMAIL'),
         props && props.getProperty('DEVELOPER_EMAIL'),
-        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space'
+        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space'
       ];
       try {
         const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -3547,7 +3547,7 @@ function verifyLineSignature(rawBody, signature, channelSecret) {
  * 🧪 在 Google Apps Script 編輯器手動執行此函式以完成一次性郵件發送權限授權
  */
 function testMailAuthorization() {
-  const testEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space';
+  const testEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space';
   const testOptions = getEmailSendOptions({
     to: testEmail,
     subject: '🐼 Daily-Diet 郵件權限授權測試信',
