@@ -36,13 +36,69 @@ function verifyAdminAccess(e, props) {
 }
 
 /**
+ * 📧 統一取得系統通知郵件發送設定
+ * 預設寄件者: auto-message@winnie-lin.space
+ * 預設收件者: matainer@winnie-lin.space
+ */
+function getSystemEmailOptions(extraOptions, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const senderEmail = (typeof DEFAULT_SENDER_EMAIL !== 'undefined' && DEFAULT_SENDER_EMAIL) || props.getProperty('SENDER_EMAIL') || 'auto-message@winnie-lin.space';
+  
+  const options = Object.assign({
+    name: `Daily-Diet 官方通知 (${senderEmail})`,
+    replyTo: senderEmail
+  }, extraOptions || {});
+
+  // 若發信 Google 帳戶具備該別名授權，可指定 from
+  try {
+    const aliases = GmailApp.getAliases();
+    if (aliases && aliases.includes(senderEmail)) {
+      options.from = senderEmail;
+    }
+  } catch (aliasErr) {
+    // 忽略別名檢查異常
+  }
+  return options;
+}
+
+/**
+ * 📧 統一寄送系統郵件 (MailApp 優先，GmailApp 備援)
+ */
+function sendSystemEmail(to, subject, body, extraOptions, props) {
+  const mailOptions = getSystemEmailOptions(Object.assign({
+    to: to,
+    subject: subject,
+    body: body
+  }, extraOptions || {}), props);
+
+  let success = false;
+  let error = '';
+
+  try {
+    MailApp.sendEmail(mailOptions);
+    success = true;
+  } catch (mailErr) {
+    error = mailErr.message || String(mailErr);
+    try {
+      GmailApp.sendEmail(to, subject, body, mailOptions);
+      success = true;
+      error = '';
+    } catch (gmailErr) {
+      error = `MailApp: ${error} | GmailApp: ${gmailErr.message || String(gmailErr)}`;
+    }
+  }
+
+  return { success, error };
+}
+
+/**
  * 📨 發送 OTP 動態驗證碼至管理員 LINE 官方帳號與 Email 信箱
  */
 function sendOtpToAdmin(otpCode, configuredUser, props) {
   if (!props) props = PropertiesService.getScriptProperties();
   const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
   const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
-  const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'hi@winnie-lin.space';
+  const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'matainer@winnie-lin.space';
 
   let lineSent = false;
   let emailSent = false;
@@ -63,7 +119,7 @@ function sendOtpToAdmin(otpCode, configuredUser, props) {
     }
   }
 
-  // 2. Email 寄送 (雙軌並進)
+  // 2. Email 寄送 (雙軌並進，發送至 matainer@winnie-lin.space)
   if (adminEmail) {
     try {
       const subject = `🔐 [Daily-Diet] 後台登入動態驗證碼：${otpCode}`;
@@ -92,25 +148,19 @@ function sendOtpToAdmin(otpCode, configuredUser, props) {
     ⚠️ <strong>安全提示</strong>：此驗證碼僅供管理員 Winnie 登入使用。若非您本人發起，請儘速確認密碼安全。
   </div>
   <p style="font-size: 11px; color: #A1A1AA; margin-top: 20px; text-align: center;">
-    此為 Daily-Diet 系統自動發送之安全通知，請勿直接回覆。
+    此為 Daily-Diet 系統自動發送之安全通知 (auto-message@winnie-lin.space)，請勿直接回覆。
   </p>
 </div>`;
 
-      try {
-        MailApp.sendEmail({
-          to: adminEmail,
-          subject: subject,
-          body: textBody,
-          htmlBody: htmlBody
-        });
-        emailSent = true;
-      } catch (mailErr) {
-        GmailApp.sendEmail(adminEmail, subject, textBody, { htmlBody: htmlBody });
-        emailSent = true;
+      const result = sendSystemEmail(adminEmail, subject, textBody, { htmlBody: htmlBody }, props);
+      emailSent = result.success;
+      if (emailSent) {
+        console.log(`✅ [Admin OTP] 動態驗證碼郵件已成功寄送至 ${adminEmail}`);
+      } else {
+        console.warn(`⚠️ [Admin OTP] 寄送郵件失敗: ${result.error}`);
       }
-      console.log(`✅ [Admin OTP] 動態驗證碼郵件已成功寄送至 ${adminEmail}`);
     } catch (emailErr) {
-      console.warn('⚠️ [Admin OTP] 寄送郵件失敗:', emailErr);
+      console.warn('⚠️ [Admin OTP] 寄送郵件發生例外:', emailErr);
     }
   }
 
@@ -181,15 +231,20 @@ function handleMaintainerAuthActions(action, paramData, props) {
 
       // 發送 OTP 至 LINE 與 Email
       const dispatchResult = sendOtpToAdmin(otpCode, configuredUser, props);
+      const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'matainer@winnie-lin.space';
+      const emailParts = adminEmail.split('@');
+      const maskedEmail = emailParts.length === 2 
+        ? `${emailParts[0].slice(0, 3)}***@${emailParts[1]}`
+        : 'mat***@winnie-lin.space';
 
       return {
         status: 'ok',
         otpRequired: true,
         expiresIn: 300,
-        maskedEmail: 'hi***@winnie-lin.space',
+        maskedEmail: maskedEmail,
         lineSent: dispatchResult.lineSent,
         emailSent: dispatchResult.emailSent,
-        message: '動態驗證碼已發送至您的 LINE 官方帳號與管理員信箱 (hi@winnie-lin.space)'
+        message: `動態驗證碼已發送至您的 LINE 官方帳號與管理員信箱 (${adminEmail})`
       };
     } else {
       cache.put(failKey, String(failCount + 1), 900);
@@ -940,26 +995,15 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
-      const targetEmail = e?.parameter?.email || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space';
+      const targetEmail = e?.parameter?.email || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space';
+      const senderEmail = (typeof DEFAULT_SENDER_EMAIL !== 'undefined' && DEFAULT_SENDER_EMAIL) || props.getProperty('SENDER_EMAIL') || 'auto-message@winnie-lin.space';
       const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
       const testSub = `🐼 Daily-Diet 郵件發送診斷測試 (${timeNow})`;
-      const testBody = `這是一封來自 Daily-Diet LINE Bot 的測試郵件！\n\n⏰ 測試時間：${timeNow} (UTC+8)\n📬 收件信箱：${targetEmail}\n\n若您收到此信，代表 Google Apps Script 郵件發送服務（MailApp）運作 100% 正常！`;
+      const testBody = `這是一封來自 Daily-Diet 的測試郵件！\n\n⏰ 測試時間：${timeNow} (UTC+8)\n📤 寄件者：${senderEmail}\n📬 收件信箱：${targetEmail}\n\n若您收到此信，代表 Google Apps Script 郵件發送服務運作 100% 正常！`;
 
-      let isSent = false;
-      let errDetail = '';
-      try {
-        MailApp.sendEmail({ to: targetEmail, subject: testSub, body: testBody });
-        isSent = true;
-      } catch (mErr) {
-        errDetail = mErr.message || String(mErr);
-        try {
-          GmailApp.sendEmail(targetEmail, testSub, testBody);
-          isSent = true;
-          errDetail = '';
-        } catch (gErr) {
-          errDetail = `MailApp: ${errDetail} | GmailApp: ${gErr.message || String(gErr)}`;
-        }
-      }
+      const sendRes = sendSystemEmail(targetEmail, testSub, testBody, {}, props);
+      const isSent = sendRes.success;
+      const errDetail = sendRes.error;
 
       if (isSent) {
         return ContentService.createTextOutput(JSON.stringify({
@@ -3110,7 +3154,7 @@ function sendBugReportNotification(params) {
     const candidateEmails = [
       props && props.getProperty('ADMIN_EMAIL'),
       props && props.getProperty('DEVELOPER_EMAIL'),
-      (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space'
+      (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space'
     ];
     try {
       const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -3122,26 +3166,13 @@ function sendBugReportNotification(params) {
     const validEmails = [...new Set(candidateEmails.filter(Boolean))];
     if (validEmails.length > 0) {
       targetEmailStr = validEmails.join(',');
-      try {
-        MailApp.sendEmail({
-          to: targetEmailStr,
-          subject: subject,
-          body: textBody
-        });
-        console.log(`📧 [MailApp] 已成功將問題回報寄送至開發者信箱: ${targetEmailStr}`);
+      const sendRes = sendSystemEmail(targetEmailStr, subject, textBody, {}, props);
+      if (sendRes.success) {
+        console.log(`📧 [sendSystemEmail] 已成功將問題回報寄送至開發者信箱: ${targetEmailStr}`);
         mailSuccess = true;
-      } catch (mailErr) {
-        console.warn(`⚠️ [MailApp] 失敗，嘗試 GmailApp 備援:`, mailErr);
-        errorDetail = mailErr.message || String(mailErr);
-        try {
-          GmailApp.sendEmail(targetEmailStr, subject, textBody);
-          console.log(`📧 [GmailApp] 已成功將問題回報寄送至開發者信箱: ${targetEmailStr}`);
-          mailSuccess = true;
-          errorDetail = '';
-        } catch (gErr) {
-          console.warn(`⚠️ [GmailApp] 亦失敗:`, gErr);
-          errorDetail = `MailApp: ${errorDetail} | GmailApp: ${gErr.message || String(gErr)}`;
-        }
+      } else {
+        errorDetail = sendRes.error;
+        console.warn(`⚠️ [sendSystemEmail] 發送問題回報失敗:`, errorDetail);
       }
     }
   } catch (err) {
@@ -3350,12 +3381,12 @@ function sendErrorAlertToWeb3Forms(info) {
       errStack ? `\n📜 呼叫堆疊 (Stack Trace)：\n${errStack}` : ''
     ].join('\n');
 
-    // 1. Google 原生 MailApp 直送開發者信箱
+    // 1. Google 原生 sendSystemEmail 直送開發者信箱 (MailApp + GmailApp 備援)
     try {
       const candidateEmails = [
         props && props.getProperty('ADMIN_EMAIL'),
         props && props.getProperty('DEVELOPER_EMAIL'),
-        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space'
+        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space'
       ];
       try {
         const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -3363,15 +3394,15 @@ function sendErrorAlertToWeb3Forms(info) {
       } catch (e) {}
       const validEmails = [...new Set(candidateEmails.filter(Boolean))];
       if (validEmails.length > 0) {
-        MailApp.sendEmail({
-          to: validEmails.join(','),
-          subject: subject,
-          body: messageContent
-        });
-        console.log(`📧 [MailApp] 成功寄送異常報告至開發者信箱: ${validEmails.join(',')}`);
+        const sendRes = sendSystemEmail(validEmails.join(','), subject, messageContent, {}, props);
+        if (sendRes.success) {
+          console.log(`📧 [sendSystemEmail] 成功寄送異常報告至開發者信箱: ${validEmails.join(',')}`);
+        } else {
+          console.warn("⚠️ [sendSystemEmail] 發送異常郵件失敗:", sendRes.error);
+        }
       }
     } catch (mailErr) {
-      console.warn("⚠️ [MailApp] 發送異常郵件失敗:", mailErr);
+      console.warn("⚠️ [Mail] 處理異常郵件發送例外:", mailErr);
     }
 
     // 2. Web3Forms 備援
@@ -3382,7 +3413,7 @@ function sendErrorAlertToWeb3Forms(info) {
         payload: JSON.stringify({
           access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
           subject: subject,
-          from_name: '🐼 Daily-Diet 異常監控小幫手',
+          from_name: '🐼 Daily-Diet 異常監控小幫手 (auto-message@winnie-lin.space)',
           time: timeStr,
           user_name: userName,
           user_id: maskedUserId,
@@ -3448,12 +3479,12 @@ function sendMaintainerLoginNotification(info) {
       `💡 安全提醒：此通知為系統安全審核紀錄。若非您本人操作，請儘速檢查維護密鑰與帳號權限。`
     ].join('\n');
 
-    // 1. Google 原生 MailApp 直送開發者信箱
+    // 1. Google 原生 sendSystemEmail 直送開發者信箱
     try {
       const candidateEmails = [
         props && props.getProperty('ADMIN_EMAIL'),
         props && props.getProperty('DEVELOPER_EMAIL'),
-        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space'
+        (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space'
       ];
       try {
         const effectiveUser = Session.getEffectiveUser().getEmail();
@@ -3461,15 +3492,15 @@ function sendMaintainerLoginNotification(info) {
       } catch (e) {}
       const validEmails = [...new Set(candidateEmails.filter(Boolean))];
       if (validEmails.length > 0) {
-        MailApp.sendEmail({
-          to: validEmails.join(','),
-          subject: subject,
-          body: messageContent
-        });
-        console.log(`📧 [MailApp] 成功寄送維護者登入安全通知至: ${validEmails.join(',')}`);
+        const sendRes = sendSystemEmail(validEmails.join(','), subject, messageContent, {}, props);
+        if (sendRes.success) {
+          console.log(`📧 [sendSystemEmail] 成功寄送維護者登入安全通知至: ${validEmails.join(',')}`);
+        } else {
+          console.warn("⚠️ [sendSystemEmail] 發送登入安全通知郵件失敗:", sendRes.error);
+        }
       }
     } catch (mailErr) {
-      console.warn("⚠️ [MailApp] 發送登入安全通知郵件失敗:", mailErr);
+      console.warn("⚠️ [Mail] 發送登入安全通知郵件發生例外:", mailErr);
     }
 
     // 2. Web3Forms 備援
@@ -3480,7 +3511,7 @@ function sendMaintainerLoginNotification(info) {
         payload: JSON.stringify({
           access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
           subject: subject,
-          from_name: '🛡️ Daily-Diet 安全守門員',
+          from_name: '🛡️ Daily-Diet 安全守門員 (auto-message@winnie-lin.space)',
           time: timeStr,
           user_name: userName,
           ip: ip,
@@ -3516,12 +3547,13 @@ function verifyLineSignature(rawBody, signature, channelSecret) {
  * 🧪 在 Google Apps Script 編輯器手動執行此函式以完成一次性郵件發送權限授權
  */
 function testMailAuthorization() {
-  const testEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'hi@winnie-lin.space';
-  MailApp.sendEmail({
+  const testEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'matainer@winnie-lin.space';
+  const testOptions = getEmailSendOptions({
     to: testEmail,
     subject: '🐼 Daily-Diet 郵件權限授權測試信',
-    body: '恭喜！若您收到這封信，代表 Google Apps Script 的 MailApp 寄信權限已完全授權成功！'
+    body: '恭喜！若您收到這封信，代表 Google Apps Script 郵件發送服務已完全授權成功！'
   });
+  MailApp.sendEmail(testOptions);
   console.log('✅ 測試信已寄出至: ' + testEmail);
   return 'SUCCESS';
 }

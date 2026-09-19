@@ -2152,7 +2152,8 @@ function getRecentLogsData(limit, days) {
       const sheet = ss.getSheets()[0];
       const lastRow = sheet.getLastRow();
       if (lastRow > 1) {
-        const maxFetch = Math.min(lastRow - 1, 500);
+        // 🚀 擴增回溯筆數：依據請求上限與時間窗口動態拉取（預設至少 4,000 筆），避免短時間大量操作沖刷掉過去紀錄
+        const maxFetch = Math.min(lastRow - 1, Math.max(targetLimit * 5, 4000));
         const startRow = lastRow - maxFetch + 1;
         const lastCol = sheet.getLastColumn();
         const fetchCols = Math.min(Math.max(lastCol, 9), 10);
