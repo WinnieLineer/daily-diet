@@ -6187,4 +6187,138 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
   };
 }
 
+/**
+ * 🔐 管理員後台登入 OTP 動態驗證碼 Flex 卡片
+ */
+function generateAdminOtpFlex(otpCode, validMinutes) {
+  const formattedOtp = String(otpCode || '').replace(/(\d{3})(\d{3})/, '$1 $2');
+  const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+  return {
+    type: "flex",
+    altText: `🔐 [後台登入驗證碼] 您的驗證碼為：${otpCode} (5分鐘有效)`,
+    contents: {
+      type: "bubble",
+      size: "kilo",
+      header: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#18181B",
+        paddingAll: "14px",
+        contents: [
+          {
+            type: "box",
+            layout: "horizontal",
+            alignItems: "center",
+            contents: [
+              {
+                type: "box",
+                layout: "horizontal",
+                backgroundColor: "#2563EB",
+                cornerRadius: "8px",
+                paddingStart: "6px",
+                paddingEnd: "6px",
+                paddingTop: "2px",
+                paddingBottom: "2px",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: "2FA AUTH", color: "#FFFFFF", weight: "bold", size: "xxs" }
+                ]
+              },
+              { type: "text", text: "Daily-Diet 管理後台", color: "#A1A1AA", size: "xxs", align: "end", weight: "bold" }
+            ]
+          },
+          {
+            type: "text",
+            text: "🔐 後台登入動態驗證碼",
+            color: "#FFFFFF",
+            weight: "bold",
+            size: "md",
+            margin: "sm"
+          }
+        ]
+      },
+      body: {
+        type: "box",
+        layout: "vertical",
+        backgroundColor: "#FFFFFF",
+        paddingAll: "16px",
+        spacing: "md",
+        contents: [
+          {
+            type: "text",
+            text: "您正在登入 Daily-Diet 維護者後台 (#/admin)，請在登入頁面輸入以下 6 位數一次性驗證碼：",
+            size: "xs",
+            color: "#52525B",
+            wrap: true
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#000000",
+            cornerRadius: "14px",
+            paddingBottom: "3px",
+            paddingEnd: "3px",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#EFF6FF",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingAll: "12px",
+                alignItems: "center",
+                contents: [
+                  {
+                    type: "text",
+                    text: formattedOtp,
+                    weight: "bold",
+                    size: "xxl",
+                    color: "#1D4ED8",
+                    align: "center"
+                  },
+                  {
+                    type: "text",
+                    text: `⏱️ 有效時間：${validMinutes || 5} 分鐘`,
+                    size: "xxs",
+                    color: "#3B82F6",
+                    weight: "bold",
+                    margin: "xs"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#FEF2F2",
+            borderColor: "#FECACA",
+            borderWidth: "1px",
+            cornerRadius: "8px",
+            paddingAll: "8px",
+            contents: [
+              {
+                type: "text",
+                text: "⚠️ 若非您本人操作，代表維護者密碼可能已洩露，請立即檢查並變更密碼！",
+                size: "xxs",
+                color: "#991B1B",
+                wrap: true
+              }
+            ]
+          },
+          {
+            type: "text",
+            text: `發送時間：${timeStr}`,
+            size: "xxs",
+            color: "#A1A1AA",
+            align: "center"
+          }
+        ]
+      }
+    }
+  };
+}
+
+
 

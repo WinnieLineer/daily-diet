@@ -43,6 +43,8 @@ import {
   Users,
   Sparkles,
   Trash2,
+  KeyRound,
+  Send,
   X
 } from 'lucide-react';
 import NeoButton from './NeoButton';
@@ -340,6 +342,39 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [isShaking, setIsShaking] = useState(false);
   const [isRegisteringAudit, setIsRegisteringAudit] = useState(false);
 
+  // 🔐 2FA / OTP Login States
+  const [loginStep, setLoginStep] = useState('CREDENTIALS'); // 'CREDENTIALS' | 'OTP'
+  const [otpInput, setOtpInput] = useState('');
+  const [otpCountdown, setOtpCountdown] = useState(300); // 5 minutes
+  const [resendCooldown, setResendCooldown] = useState(0); // 60s cooldown
+  const [isVerifyingOtp, setIsVerifyingOtp] = useState(false);
+  const [isResendingOtp, setIsResendingOtp] = useState(false);
+  const [maskedEmail, setMaskedEmail] = useState('hi***@winnie-lin.space');
+  const [otpSuccessMsg, setOtpSuccessMsg] = useState('');
+  const otpInputRef = useRef(null);
+
+  // ⏱️ OTP Expiration Countdown (5 minutes)
+  useEffect(() => {
+    let timer = null;
+    if (loginStep === 'OTP' && otpCountdown > 0) {
+      timer = setInterval(() => {
+        setOtpCountdown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [loginStep, otpCountdown]);
+
+  // ⏱️ Resend OTP Cooldown (60 seconds)
+  useEffect(() => {
+    let timer = null;
+    if (loginStep === 'OTP' && resendCooldown > 0) {
+      timer = setInterval(() => {
+        setResendCooldown((prev) => (prev > 0 ? prev - 1 : 0));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [loginStep, resendCooldown]);
+
   // 📊 Dashboard Data States
   const [rawLogs, setRawLogs] = useState([]);
   const [aiQuota, setAiQuota] = useState(null);
@@ -507,6 +542,48 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   };
 
   // Handle Login & Issue Permanent Pass (透過後端 GAS 進行動態身分安全校驗，POST 傳輸)
+  // 🛡️ Helper: Complete Authentication & Establish Permanent Pass
+  const completeAuthentication = async (validatedToken, validatedUser) => {
+    safeSetStorage(PERMANENT_TOKEN_KEY, validatedToken);
+    safeSetStorage(MAINTAINER_NAME_KEY, validatedUser);
+    setPermanentToken(validatedToken);
+    setMaintainerName(validatedUser);
+    setIsAuthenticated(true);
+    setAuthError('');
+    setLoginStep('CREDENTIALS');
+    setOtpInput('');
+
+    // Collect device & IP info and record to backend
+    const info = await collectDeviceInfo();
+    info.userName = validatedUser;
+    safeSetStorage(CLIENT_INFO_KEY, JSON.stringify(info));
+    setClientInfo(info);
+
+    // Instantly inject a local login record so user immediately sees their own login log
+    const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
+    const instantLoginLog = {
+      time: nowStr,
+      userName: validatedUser,
+      userId: 'Maintainer',
+      type: '維護者登入',
+      input: `IP: ${info.ip} · 位置: ${info.location}`,
+      aiResult: `OS: ${info.os} · 瀏覽器: ${info.browser} · 螢幕: ${info.device}`,
+      output: `✅ OTP 雙重身分驗證通過，永久通行證已核發 (${nowStr})`,
+      source: 'Web 維護者後台 (#/admin)',
+      ip: info.ip,
+      location: info.location,
+      device: `${info.os} · ${info.browser}`
+    };
+    setRawLogs((prev) => [instantLoginLog, ...prev]);
+
+    // Report to GAS with verified token
+    await recordMaintainerAuditToBackend(info, validatedToken, validatedUser);
+
+    // Fetch dashboard data with new token
+    fetchDashboardData(false, retentionDays, logLimit, validatedToken);
+  };
+
+  // Step 1: Handle Initial Credentials Login (密碼校驗並觸發 LINE / Email OTP)
   const handleLogin = async (e) => {
     if (e) e.preventDefault();
     const cleanInput = passwordInput.trim();
@@ -519,6 +596,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
     setIsRegisteringAudit(true);
     setAuthError('');
+    setOtpSuccessMsg('');
 
     try {
       // 🛡️ 嚴格使用 POST 發送身分驗證，絕不在 GET URL 查詢字串傳輸敏感密碼
@@ -534,50 +612,30 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       });
       const data = await postRes.json();
 
+      // Case A: 既有有效 Session Token (直接核發進入)
       if (data && data.status === 'ok' && data.authenticated) {
-        const validatedToken = data.token || cleanInput;
-        const validatedUser = data.userName || cleanName;
-
-        safeSetStorage(PERMANENT_TOKEN_KEY, validatedToken);
-        safeSetStorage(MAINTAINER_NAME_KEY, validatedUser);
-        setPermanentToken(validatedToken);
-        setMaintainerName(validatedUser);
-        setIsAuthenticated(true);
-        setAuthError('');
-
-        // Collect device & IP info and record to backend
-        const info = await collectDeviceInfo();
-        info.userName = validatedUser;
-        safeSetStorage(CLIENT_INFO_KEY, JSON.stringify(info));
-        setClientInfo(info);
-
-        // Instantly inject a local login record so user immediately sees their own login log
-        const nowStr = new Date().toLocaleString('zh-TW', { hour12: false });
-        const instantLoginLog = {
-          time: nowStr,
-          userName: validatedUser,
-          userId: 'Maintainer',
-          type: '維護者登入',
-          input: `IP: ${info.ip} · 位置: ${info.location}`,
-          aiResult: `OS: ${info.os} · 瀏覽器: ${info.browser} · 螢幕: ${info.device}`,
-          output: `✅ 永久通行證已核發 (${nowStr})`,
-          source: 'Web 維護者後台 (#/admin)',
-          ip: info.ip,
-          location: info.location,
-          device: `${info.os} · ${info.browser}`
-        };
-        setRawLogs((prev) => [instantLoginLog, ...prev]);
-
-        // Report to GAS with verified token
-        await recordMaintainerAuditToBackend(info, validatedToken, validatedUser);
-
-        // Fetch dashboard data with new token
-        fetchDashboardData(false, retentionDays, logLimit, validatedToken);
-      } else {
-        setAuthError(data.message || (isEn ? 'Incorrect account or password. Access denied.' : '帳號或密碼不正確，存取被拒絕。'));
-        setIsShaking(true);
-        setTimeout(() => setIsShaking(false), 600);
+        await completeAuthentication(data.token || cleanInput, data.userName || cleanName);
+        return;
       }
+
+      // Case B: 密碼驗證通過，要求輸入 6 位數 OTP (切換至 Step 2)
+      if (data && data.status === 'ok' && data.otpRequired) {
+        setLoginStep('OTP');
+        setOtpInput('');
+        setOtpCountdown(data.expiresIn || 300);
+        setResendCooldown(60);
+        if (data.maskedEmail) setMaskedEmail(data.maskedEmail);
+        setAuthError('');
+        setTimeout(() => {
+          if (otpInputRef.current) otpInputRef.current.focus();
+        }, 150);
+        return;
+      }
+
+      // Case C: 驗證失敗
+      setAuthError(data?.message || (isEn ? 'Incorrect account or password. Access denied.' : '帳號或密碼不正確，存取被拒絕。'));
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 600);
     } catch (err) {
       console.error('維護者身分驗證失敗:', err);
       setAuthError(isEn ? 'Network error or service unavailable. Please retry.' : '連線失敗或後端未回應，請檢查網路後再試。');
@@ -585,6 +643,95 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       setTimeout(() => setIsShaking(false), 600);
     } finally {
       setIsRegisteringAudit(false);
+    }
+  };
+
+  // Step 2: Handle 6-digit OTP Verification
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+    const cleanOtp = otpInput.trim().replace(/\s+/g, '');
+    const cleanName = maintainerNameInput.trim() || DEFAULT_MAINTAINER_USER;
+
+    if (!cleanOtp || cleanOtp.length < 6) {
+      setAuthError(isEn ? 'Please enter a 6-digit OTP' : '請輸入完整的 6 位數動態驗證碼');
+      return;
+    }
+
+    if (otpCountdown === 0) {
+      setAuthError(isEn ? 'OTP has expired. Please resend a new one.' : '驗證碼已逾時，請點擊「重新發送驗證碼」。');
+      return;
+    }
+
+    setIsVerifyingOtp(true);
+    setAuthError('');
+
+    try {
+      const postRes = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'verifyMaintainerOtp',
+          user: cleanName,
+          otp: cleanOtp,
+          timestamp: Date.now()
+        })
+      });
+      const data = await postRes.json();
+
+      if (data && data.status === 'ok' && data.authenticated) {
+        await completeAuthentication(data.token, data.userName || cleanName);
+      } else {
+        setAuthError(data?.message || (isEn ? 'Invalid OTP. Access denied.' : '驗證碼不正確，存取被拒絕。'));
+        setIsShaking(true);
+        setTimeout(() => setIsShaking(false), 600);
+      }
+    } catch (err) {
+      console.error('OTP 驗證失敗:', err);
+      setAuthError(isEn ? 'Network error. Please retry.' : '驗證連線失敗，請檢查網路後再試。');
+      setIsShaking(true);
+      setTimeout(() => setIsShaking(false), 600);
+    } finally {
+      setIsVerifyingOtp(false);
+    }
+  };
+
+  // Step 3: Handle Resend OTP (具有 60 秒冷卻保護)
+  const handleResendOtp = async () => {
+    if (resendCooldown > 0 || isResendingOtp) return;
+    const cleanPass = passwordInput.trim();
+    const cleanName = maintainerNameInput.trim() || DEFAULT_MAINTAINER_USER;
+
+    setIsResendingOtp(true);
+    setAuthError('');
+    setOtpSuccessMsg('');
+
+    try {
+      const postRes = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'resendMaintainerOtp',
+          user: cleanName,
+          pass: cleanPass,
+          timestamp: Date.now()
+        })
+      });
+      const data = await postRes.json();
+
+      if (data && data.status === 'ok') {
+        setOtpCountdown(data.expiresIn || 300);
+        setResendCooldown(60);
+        setOtpInput('');
+        setOtpSuccessMsg(isEn ? 'A new OTP has been sent!' : '全新驗證碼已發送至您的 LINE 與信箱！');
+        setTimeout(() => setOtpSuccessMsg(''), 5000);
+        if (otpInputRef.current) otpInputRef.current.focus();
+      } else {
+        setAuthError(data?.message || (isEn ? 'Failed to resend OTP.' : '重新發送失敗，請稍候再試。'));
+      }
+    } catch (err) {
+      setAuthError(isEn ? 'Network error. Please retry.' : '重發連線失敗，請稍候再試。');
+    } finally {
+      setIsResendingOtp(false);
     }
   };
 
@@ -600,6 +747,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     setPermanentToken('');
     setClientInfo(null);
     setPasswordInput('');
+    setOtpInput('');
+    setLoginStep('CREDENTIALS');
   };
 
   // Fetch Dashboard Logs and Quota from GAS (支援自訂留存天數與筆數，攜帶後端權杖)
@@ -1123,85 +1272,226 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           className="w-full max-w-md"
         >
           <div className="bg-white border-4 border-black rounded-[2.5rem] shadow-neo p-6 sm:p-8 space-y-6">
-            {/* Header */}
-            <div className="text-center space-y-3">
-              <div className="w-20 h-20 bg-accent border-4 border-black rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-neo-sm">
-                🛡️
-              </div>
-              <div>
-                <span className="bg-black text-white px-3 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase">
-                  Maintainer Access
-                </span>
-                <h2 className="text-2xl font-black italic tracking-tight mt-2">
-                  {isEn ? 'System Log & API Monitor' : '雲端運作日誌與 API 監控中心'}
-                </h2>
-                <p className="text-xs font-bold text-zinc-500 mt-1 leading-relaxed">
-                  {isEn 
-                    ? 'Enter your maintainer name and password to issue a permanent pass on this device. Device info & IP will be logged.'
-                    : '請輸入維護者名稱與密碼，驗證通過後將為此裝置永久核發通行證。系統將同步記錄本次登入之 IP 與位置資訊。'}
-                </p>
-              </div>
-            </div>
+            <AnimatePresence mode="wait">
+              {loginStep === 'CREDENTIALS' ? (
+                <motion.div
+                  key="step-credentials"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  {/* Header */}
+                  <div className="text-center space-y-3">
+                    <div className="w-20 h-20 bg-accent border-4 border-black rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-neo-sm">
+                      🛡️
+                    </div>
+                    <div>
+                      <span className="bg-black text-white px-3 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase">
+                        Maintainer Access · Step 1
+                      </span>
+                      <h2 className="text-2xl font-black italic tracking-tight mt-2">
+                        {isEn ? 'System Log & API Monitor' : '雲端運作日誌與 API 監控中心'}
+                      </h2>
+                      <p className="text-xs font-bold text-zinc-500 mt-1 leading-relaxed">
+                        {isEn 
+                          ? 'Enter your maintainer name and password. A 6-digit OTP will be sent to your LINE and email.'
+                          : '請輸入維護者帳號與密碼，通過後系統將自動發送 6 位數 OTP 驗證碼至您的 LINE 與信箱。'}
+                      </p>
+                    </div>
+                  </div>
 
-            {/* Password Form */}
-            <form onSubmit={handleLogin} className="space-y-4">
-              {/* Maintainer Name Field */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
-                  {isEn ? 'Maintainer Account' : '維護者帳號'}
-                </label>
-                <div className="relative">
-                  <input
-                    type="text"
-                    value={maintainerNameInput}
-                    onChange={(e) => setMaintainerNameInput(e.target.value)}
-                    placeholder={isEn ? 'Enter account' : '請輸入帳號'}
-                    className="w-full bg-zinc-50 border-4 border-black p-3.5 pl-10 rounded-2xl font-bold text-sm outline-none focus:bg-white shadow-neo-xs transition-colors"
-                  />
-                  <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                </div>
-              </div>
+                  {/* Password Form */}
+                  <form onSubmit={handleLogin} className="space-y-4">
+                    {/* Maintainer Name Field */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
+                        {isEn ? 'Maintainer Account' : '維護者帳號'}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          value={maintainerNameInput}
+                          onChange={(e) => setMaintainerNameInput(e.target.value)}
+                          placeholder={isEn ? 'Enter account' : '請輸入帳號'}
+                          className="w-full bg-zinc-50 border-4 border-black p-3.5 pl-10 rounded-2xl font-bold text-sm outline-none focus:bg-white shadow-neo-xs transition-colors"
+                        />
+                        <User size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                      </div>
+                    </div>
 
-              {/* Security Password Field */}
-              <div className="space-y-1.5">
-                <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
-                  {isEn ? 'Maintainer Security Password' : '維護者身分驗證密碼'}
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPassword ? 'text' : 'password'}
-                    value={passwordInput}
-                    onChange={(e) => setPasswordInput(e.target.value)}
-                    placeholder={isEn ? 'Enter password' : '請輸入密碼'}
-                    className="w-full bg-zinc-50 border-4 border-black p-3.5 pr-12 pl-10 rounded-2xl font-mono font-bold text-base outline-none focus:bg-white shadow-neo-xs transition-colors"
-                    autoFocus
-                  />
-                  <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-black transition-colors"
-                  >
-                    {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                  </button>
-                </div>
-                {authError && (
-                  <p className="text-xs font-black text-rose-600 flex items-center gap-1.5 mt-2 ml-1">
-                    <AlertTriangle size={14} />
-                    {authError}
-                  </p>
-                )}
-              </div>
+                    {/* Security Password Field */}
+                    <div className="space-y-1.5">
+                      <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block ml-1">
+                        {isEn ? 'Maintainer Security Password' : '維護者身分驗證密碼'}
+                      </label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          value={passwordInput}
+                          onChange={(e) => setPasswordInput(e.target.value)}
+                          placeholder={isEn ? 'Enter password' : '請輸入密碼'}
+                          className="w-full bg-zinc-50 border-4 border-black p-3.5 pr-12 pl-10 rounded-2xl font-mono font-bold text-base outline-none focus:bg-white shadow-neo-xs transition-colors"
+                          autoFocus
+                        />
+                        <Lock size={18} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400" />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 text-zinc-400 hover:text-black transition-colors"
+                        >
+                          {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                        </button>
+                      </div>
+                      {authError && (
+                        <p className="text-xs font-black text-rose-600 flex items-center gap-1.5 mt-2 ml-1">
+                          <AlertTriangle size={14} />
+                          {authError}
+                        </p>
+                      )}
+                    </div>
 
-              <NeoButton
-                type="submit"
-                variant="black"
-                className="w-full h-14 text-base font-black italic shadow-neo-sm active:scale-95"
-              >
-                <ShieldCheck size={20} className="mr-2 text-accent" />
-                {isEn ? 'Unlock & Issue Permanent Pass' : '解鎖並永久核發通行證'}
-              </NeoButton>
-            </form>
+                    <NeoButton
+                      type="submit"
+                      variant="black"
+                      disabled={isRegisteringAudit}
+                      className="w-full h-14 text-base font-black italic shadow-neo-sm active:scale-95 flex items-center justify-center gap-2"
+                    >
+                      <KeyRound size={20} className="text-accent" />
+                      {isRegisteringAudit 
+                        ? (isEn ? 'Verifying...' : '校驗身分中...') 
+                        : (isEn ? 'Verify & Request OTP' : '驗證身分並取得 OTP')}
+                    </NeoButton>
+                  </form>
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="step-otp"
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -10 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6"
+                >
+                  {/* Header */}
+                  <div className="text-center space-y-3">
+                    <div className="w-20 h-20 bg-blue-100 border-4 border-black rounded-3xl mx-auto flex items-center justify-center text-4xl shadow-neo-sm">
+                      🔐
+                    </div>
+                    <div>
+                      <span className="bg-blue-600 text-white px-3 py-0.5 rounded-full text-[10px] font-black tracking-widest uppercase">
+                        2FA Authentication · Step 2
+                      </span>
+                      <h2 className="text-2xl font-black italic tracking-tight mt-2">
+                        {isEn ? 'Enter 6-Digit OTP' : '請輸入 6 位數動態驗證碼'}
+                      </h2>
+                      <p className="text-xs font-bold text-zinc-600 mt-1 leading-relaxed">
+                        {isEn 
+                          ? `OTP has been sent to your LINE and email (${maskedEmail}).`
+                          : `驗證碼已推播至您的 LINE 官方帳號與管理員信箱 (${maskedEmail})。`}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* OTP Form */}
+                  <form onSubmit={handleVerifyOtp} className="space-y-4">
+                    <div className="space-y-2">
+                      <div className="relative">
+                        <input
+                          ref={otpInputRef}
+                          type="text"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={6}
+                          value={otpInput}
+                          onChange={(e) => {
+                            const val = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+                            setOtpInput(val);
+                            if (val.length === 6) {
+                              setTimeout(() => {
+                                document.getElementById('otp-submit-btn')?.click();
+                              }, 80);
+                            }
+                          }}
+                          placeholder="••••••"
+                          className="w-full bg-blue-50/50 border-4 border-black p-4 rounded-2xl font-mono font-black text-3xl tracking-[0.35em] text-center outline-none focus:bg-white shadow-neo-xs transition-colors text-blue-800"
+                          autoFocus
+                        />
+                      </div>
+
+                      {/* Timer & Resend Status */}
+                      <div className="flex items-center justify-between text-xs font-bold px-1">
+                        <span className={`flex items-center gap-1 font-mono ${otpCountdown === 0 ? 'text-rose-600 font-black' : 'text-zinc-500'}`}>
+                          <Clock size={13} />
+                          {otpCountdown > 0 
+                            ? `有效時間：${Math.floor(otpCountdown / 60)}:${String(otpCountdown % 60).padStart(2, '0')}`
+                            : '驗證碼已逾時'}
+                        </span>
+
+                        <button
+                          type="button"
+                          onClick={handleResendOtp}
+                          disabled={resendCooldown > 0 || isResendingOtp}
+                          className={`text-xs font-black underline decoration-2 underline-offset-2 flex items-center gap-1 transition-colors ${
+                            resendCooldown > 0 || isResendingOtp
+                              ? 'text-zinc-400 cursor-not-allowed no-underline'
+                              : 'text-blue-600 hover:text-blue-800'
+                          }`}
+                        >
+                          <RefreshCw size={12} className={isResendingOtp ? 'animate-spin' : ''} />
+                          {resendCooldown > 0 
+                            ? `重新發送 (${resendCooldown}s)`
+                            : (isResendingOtp ? '發送中...' : '重新發送驗證碼')}
+                        </button>
+                      </div>
+
+                      {otpSuccessMsg && (
+                        <p className="text-xs font-black text-emerald-600 flex items-center gap-1.5 mt-1 ml-1 bg-emerald-50 border border-emerald-300 p-2 rounded-xl">
+                          <CheckCircle2 size={14} className="shrink-0" />
+                          {otpSuccessMsg}
+                        </p>
+                      )}
+
+                      {authError && (
+                        <p className="text-xs font-black text-rose-600 flex items-center gap-1.5 mt-1 ml-1 bg-rose-50 border border-rose-300 p-2 rounded-xl">
+                          <AlertTriangle size={14} className="shrink-0" />
+                          {authError}
+                        </p>
+                      )}
+                    </div>
+
+                    <NeoButton
+                      id="otp-submit-btn"
+                      type="submit"
+                      variant="black"
+                      disabled={isVerifyingOtp || otpInput.length < 6}
+                      className="w-full h-14 text-base font-black italic shadow-neo-sm active:scale-95 flex items-center justify-center gap-2 disabled:opacity-50"
+                    >
+                      <ShieldCheck size={20} className="text-accent" />
+                      {isVerifyingOtp 
+                        ? (isEn ? 'Verifying OTP...' : '驗證動態密碼中...') 
+                        : (isEn ? 'Verify & Access Dashboard' : '確認驗證並登入後台')}
+                    </NeoButton>
+                  </form>
+
+                  {/* Back to Step 1 */}
+                  <div className="pt-2 text-center">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setLoginStep('CREDENTIALS');
+                        setAuthError('');
+                        setOtpSuccessMsg('');
+                      }}
+                      className="text-xs font-black text-zinc-500 hover:text-black hover:underline transition-colors"
+                    >
+                      ← 返回重新輸入帳號密碼
+                    </button>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* Back Button */}
             <div className="pt-2 border-t-2 border-dashed border-zinc-200">

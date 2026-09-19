@@ -35,6 +35,284 @@ function verifyAdminAccess(e, props) {
   return false;
 }
 
+/**
+ * 📨 發送 OTP 動態驗證碼至管理員 LINE 官方帳號與 Email 信箱
+ */
+function sendOtpToAdmin(otpCode, configuredUser, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+  const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
+  const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'hi@winnie-lin.space';
+
+  let lineSent = false;
+  let emailSent = false;
+
+  // 1. LINE 推播
+  if (adminLineId && token) {
+    try {
+      if (typeof generateAdminOtpFlex === 'function') {
+        const otpFlex = generateAdminOtpFlex(otpCode, 5);
+        pushFlexMessage(adminLineId, otpFlex, token, props);
+      } else {
+        pushTextMessage(adminLineId, `🔐 [Daily-Diet 後台登入驗證碼]\n您的 6 位數驗證碼為：${otpCode}\n有效時間：5 分鐘。\n若非本人操作請儘速檢查密碼！`, token, props);
+      }
+      lineSent = true;
+      console.log(`✅ [Admin OTP] LINE 動態驗證碼已成功推播至管理員 (${adminLineId.slice(-6)})`);
+    } catch (lineErr) {
+      console.warn('⚠️ [Admin OTP] 推播 LINE 失敗:', lineErr);
+    }
+  }
+
+  // 2. Email 寄送 (雙軌並進)
+  if (adminEmail) {
+    try {
+      const subject = `🔐 [Daily-Diet] 後台登入動態驗證碼：${otpCode}`;
+      const textBody = `【Daily-Diet 後台登入動態驗證碼】\n\n您的 6 位數一次性驗證碼為：${otpCode}\n\n有效時間：5 分鐘\n\n若非您本人操作，代表您的管理員密碼可能已洩露，請立即檢查！\n\n時間：${new Date().toLocaleString('zh-TW', { hour12: false })}`;
+      
+      const htmlBody = `
+<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 2px solid #000000; border-radius: 16px; background-color: #ffffff; box-shadow: 4px 4px 0px #000000;">
+  <div style="display: inline-block; padding: 4px 10px; background-color: #2563EB; color: #ffffff; font-size: 11px; font-weight: 800; border-radius: 6px; letter-spacing: 1px;">
+    2FA SECURITY NOTICE
+  </div>
+  <h2 style="font-size: 20px; font-weight: 900; color: #18181b; margin-top: 14px; margin-bottom: 8px;">
+    🔐 後台管理員登入動態驗證碼
+  </h2>
+  <p style="font-size: 13px; color: #52525b; line-height: 1.6; margin-bottom: 20px;">
+    您好，系統偵測到正在登入 Daily-Diet 維護者後台（#/admin）。請於登入驗證頁面輸入以下 6 位數一次性驗證碼：
+  </p>
+  <div style="text-align: center; margin: 20px 0; padding: 18px; background-color: #EFF6FF; border: 2px solid #2563EB; border-radius: 12px;">
+    <span style="font-size: 34px; font-weight: 900; letter-spacing: 6px; color: #1D4ED8; font-family: monospace;">
+      ${otpCode}
+    </span>
+    <div style="font-size: 12px; color: #2563EB; font-weight: bold; margin-top: 6px;">
+      ⏱️ 有效期限：5 分鐘內有效
+    </div>
+  </div>
+  <div style="padding: 10px 14px; background-color: #FEF2F2; border: 1px solid #FECACA; border-radius: 8px; font-size: 12px; color: #991B1B; line-height: 1.5;">
+    ⚠️ <strong>安全提示</strong>：此驗證碼僅供管理員 Winnie 登入使用。若非您本人發起，請儘速確認密碼安全。
+  </div>
+  <p style="font-size: 11px; color: #A1A1AA; margin-top: 20px; text-align: center;">
+    此為 Daily-Diet 系統自動發送之安全通知，請勿直接回覆。
+  </p>
+</div>`;
+
+      try {
+        MailApp.sendEmail({
+          to: adminEmail,
+          subject: subject,
+          body: textBody,
+          htmlBody: htmlBody
+        });
+        emailSent = true;
+      } catch (mailErr) {
+        GmailApp.sendEmail(adminEmail, subject, textBody, { htmlBody: htmlBody });
+        emailSent = true;
+      }
+      console.log(`✅ [Admin OTP] 動態驗證碼郵件已成功寄送至 ${adminEmail}`);
+    } catch (emailErr) {
+      console.warn('⚠️ [Admin OTP] 寄送郵件失敗:', emailErr);
+    }
+  }
+
+  return { lineSent, emailSent };
+}
+
+/**
+ * 🛡️ 統整維護者身分驗證與 OTP 雙重認證處理函式
+ */
+function handleMaintainerAuthActions(action, paramData, props) {
+  const cache = CacheService.getScriptCache();
+  const failKey = 'MAINTAINER_AUTH_FAIL_COUNT';
+  const otpFailKey = 'MAINTAINER_OTP_FAIL_COUNT';
+  const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
+  const configuredUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+
+  if (!configuredPass) {
+    console.warn('⚠️ MAINTAINER_PASS 尚未於指令碼屬性中設定，身分驗證被拒絕。');
+    return {
+      status: 'error',
+      authenticated: false,
+      message: '系統安全提醒：維護者密碼尚未於指令碼屬性中設定，請聯繫管理員配置。'
+    };
+  }
+
+  // ── 階段 1：帳號密碼驗證 (verifyMaintainerAuth / verifyAuth) ──
+  if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
+    const failCount = Number(cache.get(failKey) || 0);
+    if (failCount >= 5) {
+      console.warn(`🚨 [防暴力破解] 維護者登入嘗試失敗超過 5 次，系統已鎖定 15 分鐘！`);
+      return {
+        status: 'error',
+        code: 'RATE_LIMIT',
+        authenticated: false,
+        message: '安全防護：登入失敗次數過多，為維護安全系統已鎖定 15 分鐘，請稍候再試。'
+      };
+    }
+
+    const incomingPass = String(paramData?.pass || paramData?.password || paramData?.token || '').trim();
+    const incomingUser = String(paramData?.user || paramData?.userName || '').trim();
+    const isUserMatch = incomingUser && incomingUser.toLowerCase() === configuredUser.toLowerCase();
+
+    // 檢查是否為既有的有效 Session Token (跨午夜容錯)
+    const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
+    const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
+    const isSessionTokenMatch = incomingPass && (incomingPass === todayToken || incomingPass === yesterdayToken);
+
+    if (isUserMatch && isSessionTokenMatch) {
+      // 既有合法權杖，直接通過身分校驗 (供頁面自動刷新復原狀態)
+      cache.remove(failKey);
+      return {
+        status: 'ok',
+        authenticated: true,
+        token: incomingPass,
+        userName: configuredUser
+      };
+    }
+
+    const isPasswordMatch = incomingPass && incomingPass === configuredPass;
+    if (isUserMatch && isPasswordMatch) {
+      cache.remove(failKey);
+
+      // 產生 6 位數密碼級隨機 OTP
+      const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+      cache.put('MAINTAINER_LOGIN_OTP', otpCode, 300); // 5 分鐘有效
+      cache.put('MAINTAINER_OTP_USER', configuredUser, 300);
+      cache.remove(otpFailKey);
+
+      // 發送 OTP 至 LINE 與 Email
+      const dispatchResult = sendOtpToAdmin(otpCode, configuredUser, props);
+
+      return {
+        status: 'ok',
+        otpRequired: true,
+        expiresIn: 300,
+        maskedEmail: 'hi***@winnie-lin.space',
+        lineSent: dispatchResult.lineSent,
+        emailSent: dispatchResult.emailSent,
+        message: '動態驗證碼已發送至您的 LINE 官方帳號與管理員信箱 (hi@winnie-lin.space)'
+      };
+    } else {
+      cache.put(failKey, String(failCount + 1), 900);
+      return {
+        status: 'error',
+        authenticated: false,
+        message: '身分驗證失敗：維護者帳號或密碼不正確'
+      };
+    }
+  }
+
+  // ── 階段 2：輸入 OTP 驗證完成登入 (verifyMaintainerOtp) ──
+  if (action === 'verifyMaintainerOtp') {
+    const otpFailCount = Number(cache.get(otpFailKey) || 0);
+    if (otpFailCount >= 5) {
+      return {
+        status: 'error',
+        code: 'RATE_LIMIT',
+        authenticated: false,
+        message: '安全防護：OTP 驗證失敗次數過多，為維護安全系統已鎖定 15 分鐘，請稍候再試。'
+      };
+    }
+
+    const incomingOtp = String(paramData?.otp || '').trim().replace(/\s+/g, '');
+    const incomingUser = String(paramData?.user || paramData?.userName || '').trim();
+    const cachedOtp = cache.get('MAINTAINER_LOGIN_OTP');
+    const cachedUser = cache.get('MAINTAINER_OTP_USER') || configuredUser;
+
+    if (!cachedOtp) {
+      return {
+        status: 'error',
+        code: 'EXPIRED',
+        authenticated: false,
+        message: '驗證碼已逾時或不存在，請點擊「重新發送驗證碼」。'
+      };
+    }
+
+    if (incomingUser && incomingUser.toLowerCase() !== cachedUser.toLowerCase()) {
+      return {
+        status: 'error',
+        authenticated: false,
+        message: '使用者名稱不相符，存取被拒絕。'
+      };
+    }
+
+    if (incomingOtp === cachedOtp) {
+      // 驗證成功！清除 OTP 避免重複使用
+      cache.remove('MAINTAINER_LOGIN_OTP');
+      cache.remove('MAINTAINER_OTP_USER');
+      cache.remove(otpFailKey);
+      cache.remove(failKey);
+
+      const sessionToken = generateSessionToken(configuredUser, configuredPass, 0) || configuredPass;
+      recordSystemLog('維護者OTP登入', 'Maintainer', 'OTP雙重驗證', '驗證成功', '管理員已通過 LINE/Email OTP 雙重驗證成功登入後台', configuredUser);
+
+      return {
+        status: 'ok',
+        authenticated: true,
+        token: sessionToken,
+        userName: configuredUser,
+        message: '雙重身分驗證成功！'
+      };
+    } else {
+      const newFailCount = otpFailCount + 1;
+      cache.put(otpFailKey, String(newFailCount), 900);
+      const remaining = Math.max(0, 5 - newFailCount);
+      return {
+        status: 'error',
+        code: 'INVALID_OTP',
+        authenticated: false,
+        remainingAttempts: remaining,
+        message: remaining > 0 
+          ? `驗證碼不正確，請重新確認 (剩餘 ${remaining} 次嘗試機會)`
+          : '驗證碼錯誤次數過多，系統已鎖定 15 分鐘。'
+      };
+    }
+  }
+
+  // ── 重新發送 OTP (resendMaintainerOtp) ──
+  if (action === 'resendMaintainerOtp') {
+    const cooldownKey = 'MAINTAINER_OTP_RESEND_COOLDOWN';
+    if (cache.get(cooldownKey)) {
+      return {
+        status: 'error',
+        code: 'COOLDOWN',
+        message: '發送請求過於頻繁，請等待 60 秒冷卻時間後再試。'
+      };
+    }
+
+    const incomingPass = String(paramData?.pass || paramData?.password || '').trim();
+    const incomingUser = String(paramData?.user || paramData?.userName || '').trim();
+    const isUserMatch = incomingUser && incomingUser.toLowerCase() === configuredUser.toLowerCase();
+    const isPassMatch = incomingPass && incomingPass === configuredPass;
+
+    if (!isUserMatch || !isPassMatch) {
+      return {
+        status: 'error',
+        authenticated: false,
+        message: '重發驗證碼失敗：身分憑證不相符。'
+      };
+    }
+
+    cache.put(cooldownKey, '1', 60); // 60 秒冷卻
+    const otpCode = String(Math.floor(100000 + Math.random() * 900000));
+    cache.put('MAINTAINER_LOGIN_OTP', otpCode, 300);
+    cache.put('MAINTAINER_OTP_USER', configuredUser, 300);
+    cache.remove(otpFailKey);
+
+    const dispatchResult = sendOtpToAdmin(otpCode, configuredUser, props);
+
+    return {
+      status: 'ok',
+      otpRequired: true,
+      expiresIn: 300,
+      lineSent: dispatchResult.lineSent,
+      emailSent: dispatchResult.emailSent,
+      message: '全新動態驗證碼已重新發送至您的 LINE 官方帳號與管理員信箱！'
+    };
+  }
+
+  return null;
+}
+
 function doGet(e) {
   try {
     const action = e?.parameter?.action;
@@ -54,61 +332,16 @@ function doGet(e) {
     const isAdmin = verifyAdminAccess(e, props);
 
 
-    // 🛡️ 0.1 維護者登入安全校驗端點 (供 Web 前端進行身分校驗，簽發暫態 Session Token，絕不洩露後端主密碼)
-    if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
-      const cache = CacheService.getScriptCache();
-      const failKey = 'MAINTAINER_AUTH_FAIL_COUNT';
-      const failCount = Number(cache.get(failKey) || 0);
-      if (failCount >= 5) {
-        console.warn(`🚨 [防暴力破解] 維護者登入嘗試失敗超過 5 次，系統已鎖定 15 分鐘！`);
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'error', 
-          code: 'RATE_LIMIT',
-          authenticated: false, 
-          message: '安全防護：登入失敗次數過多，為維護安全系統已鎖定 15 分鐘，請稍候再試。' 
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
-
-      const incomingPass = e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
-      const incomingUser = e?.parameter?.user || e?.parameter?.userName || '';
-      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
-      const configuredUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
-
-      if (!configuredPass) {
-        console.warn('⚠️ MAINTAINER_PASS 尚未於指令碼屬性中設定，身分驗證被拒絕。');
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'error', 
-          authenticated: false, 
-          message: '系統安全提醒：維護者密碼尚未於指令碼屬性中設定，請至 GAS 指令碼屬性配置 MAINTAINER_PASS。' 
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
-
-      const isUserMatch = incomingUser && incomingUser.trim().toLowerCase() === configuredUser.toLowerCase();
-      const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
-      const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
-      const isPassMatch = incomingPass && (
-        incomingPass === configuredPass ||
-        incomingPass === todayToken ||
-        incomingPass === yesterdayToken
-      );
-
-      if (isUserMatch && isPassMatch) {
-        cache.remove(failKey);
-        const sessionToken = todayToken || configuredPass;
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'ok', 
-          authenticated: true, 
-          token: sessionToken, 
-          userName: configuredUser 
-        })).setMimeType(ContentService.MimeType.JSON);
-      } else {
-        cache.put(failKey, String(failCount + 1), 900);
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'error', 
-          authenticated: false, 
-          message: '身分驗證失敗：維護者帳號或密碼不正確' 
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
+    // 🛡️ 0.1 維護者登入與 OTP 雙重認證端點 (GET 支援)
+    if (action === 'verifyMaintainerAuth' || action === 'verifyAuth' || action === 'verifyMaintainerOtp' || action === 'resendMaintainerOtp') {
+      const paramData = {
+        pass: e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token,
+        user: e?.parameter?.user || e?.parameter?.userName,
+        otp: e?.parameter?.otp
+      };
+      const authRes = handleMaintainerAuthActions(action, paramData, props);
+      return ContentService.createTextOutput(JSON.stringify(authRes))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // 📬 0.2 Web 用戶反饋 / 問題回報端點 (GET 支援，具備 Cache 5 分鐘冷卻鎖與長度截斷防護)
@@ -848,61 +1081,16 @@ function doPost(e) {
     const LIFF_ID = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
     currentToken = CHANNEL_ACCESS_TOKEN;
 
-    // 🛡️ 0.1 維護者登入安全校驗端點 (POST 支援，簽發暫態 Session Token，絕不洩露後端主密碼)
-    if (action === 'verifyMaintainerAuth' || action === 'verifyAuth') {
-      const cache = CacheService.getScriptCache();
-      const failKey = 'MAINTAINER_AUTH_FAIL_COUNT';
-      const failCount = Number(cache.get(failKey) || 0);
-      if (failCount >= 5) {
-        console.warn(`🚨 [防暴力破解] 維護者登入嘗試失敗超過 5 次，系統已鎖定 15 分鐘！`);
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'error', 
-          code: 'RATE_LIMIT',
-          authenticated: false, 
-          message: '安全防護：登入失敗次數過多，為維護安全系統已鎖定 15 分鐘，請稍候再試。' 
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
-
-      const incomingPass = data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token;
-      const incomingUser = data?.user || data?.userName || e?.parameter?.user || e?.parameter?.userName || '';
-      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
-      const configuredUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
-
-      if (!configuredPass) {
-        console.warn('⚠️ MAINTAINER_PASS 尚未於指令碼屬性中設定，身分驗證被拒絕。');
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'error', 
-          authenticated: false, 
-          message: '系統安全提醒：維護者密碼尚未於指令碼屬性中設定，請聯繫管理員配置。' 
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
-
-      const isUserMatch = incomingUser && incomingUser.trim().toLowerCase() === configuredUser.toLowerCase();
-      const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
-      const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
-      const isPassMatch = incomingPass && (
-        incomingPass === configuredPass ||
-        incomingPass === todayToken ||
-        incomingPass === yesterdayToken
-      );
-
-      if (isUserMatch && isPassMatch) {
-        cache.remove(failKey);
-        const sessionToken = todayToken || configuredPass;
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'ok', 
-          authenticated: true, 
-          token: sessionToken, 
-          userName: configuredUser 
-        })).setMimeType(ContentService.MimeType.JSON);
-      } else {
-        cache.put(failKey, String(failCount + 1), 900);
-        return ContentService.createTextOutput(JSON.stringify({ 
-          status: 'error', 
-          authenticated: false, 
-          message: '身分驗證失敗：維護者帳號或密碼不正確' 
-        })).setMimeType(ContentService.MimeType.JSON);
-      }
+    // 🛡️ 0.1 維護者登入與 OTP 雙重認證端點 (POST 支援)
+    if (action === 'verifyMaintainerAuth' || action === 'verifyAuth' || action === 'verifyMaintainerOtp' || action === 'resendMaintainerOtp') {
+      const paramData = {
+        pass: data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token,
+        user: data?.user || data?.userName || e?.parameter?.user || e?.parameter?.userName,
+        otp: data?.otp || e?.parameter?.otp
+      };
+      const authRes = handleMaintainerAuthActions(action, paramData, props);
+      return ContentService.createTextOutput(JSON.stringify(authRes))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // 📬 0.2 Web 用戶反饋 / 問題回報端點 (POST 支援，具備 Cache 5 分鐘冷卻鎖與長度截斷防護)
