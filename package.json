@@ -1,6 +1,6 @@
 {
   "name": "glowing-helix",
-  "version": "3.3.61",
+  "version": "3.3.62",
   "description": "",
   "main": "index.js",
   "type": "module",
@@ -12,6 +12,7 @@
     "preview": "vite preview",
     "gas:push": "npx @google/clasp push --force",
     "gas:deploy": "node scripts/deploy-gas.js",
+    "copy:clasp": "powershell -Command \"Get-Content $HOME\\.clasprc.json -Raw | Set-Clipboard; Write-Host '✅ .clasprc.json has been copied to clipboard!'\"",
     "lint:flex": "node scripts/detect-flex-overflow.js",
     "prepare": "husky"
   },
