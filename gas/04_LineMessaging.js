@@ -513,3 +513,29 @@ function broadcastFlexMessage(flexMessage, accessToken) {
   }
 }
 
+/**
+ * 全局廣播純文字訊息給所有好友用戶 (使用 LINE Official Account Broadcast API)
+ */
+function broadcastTextMessage(text, accessToken) {
+  if (!accessToken || !text) return { success: false, error: 'Missing token or text' };
+  try {
+    const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/broadcast", {
+      method: "post",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${accessToken}`
+      },
+      payload: JSON.stringify({
+        messages: [{ type: "text", text: String(text).slice(0, 5000) }]
+      }),
+      muteHttpExceptions: true
+    });
+    const code = res.getResponseCode();
+    const respText = res.getContentText();
+    return { success: code === 200, code: code, response: respText };
+  } catch (err) {
+    console.error("🚨 [LINE 全局廣播文字失敗]:", err);
+    return { success: false, error: err.message };
+  }
+}
+

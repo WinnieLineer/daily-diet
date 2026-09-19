@@ -45,7 +45,9 @@ import {
   Trash2,
   KeyRound,
   Send,
-  X
+  X,
+  Megaphone,
+  Radio
 } from 'lucide-react';
 import NeoButton from './NeoButton';
 
@@ -352,6 +354,17 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [maskedEmail, setMaskedEmail] = useState('mai***@winnie-lin.space');
   const [otpSuccessMsg, setOtpSuccessMsg] = useState('');
   const otpInputRef = useRef(null);
+
+  // 📢 LINE Official Broadcast & Push States (Encrypted Auth)
+  const [showLineBroadcastModal, setShowLineBroadcastModal] = useState(false);
+  const [broadcastTarget, setBroadcastTarget] = useState('TEST'); // 'TEST' | 'ALL'
+  const [testTargetUserId, setTestTargetUserId] = useState('U3f46f4967396654a938c4146a4497c66'); // Winnie's admin LINE ID
+  const [broadcastType, setBroadcastType] = useState('FLEX'); // 'FLEX' | 'TEXT'
+  const [customBroadcastText, setCustomBroadcastText] = useState('');
+  const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
+  const [broadcastResult, setBroadcastResult] = useState(null); // { status, message, details }
+  const [lineQuota, setLineQuota] = useState(null); // { totalQuota, usedMessages, remainingMessages }
+  const [isLoadingQuota, setIsLoadingQuota] = useState(false);
 
   // ⏱️ OTP Expiration Countdown (5 minutes)
   useEffect(() => {
@@ -871,6 +884,90 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       alert(isEn ? `Failed: ${err.message}` : `執行失敗：${err.message}`);
     } finally {
       setIsPurgingInvalid(false);
+    }
+  };
+
+  // 📊 查詢 LINE 官方帳號可用額度
+  const fetchLineQuota = async () => {
+    setIsLoadingQuota(true);
+    try {
+      const activeToken = permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
+      const res = await fetch(`${GAS_API_URL}?action=getLineQuota&token=${encodeURIComponent(activeToken)}`);
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setLineQuota(data);
+      }
+    } catch (err) {
+      console.warn('查詢 LINE 配額失敗:', err);
+    } finally {
+      setIsLoadingQuota(false);
+    }
+  };
+
+  // 🚀 發送 LINE 官方廣播或指定測試推播 (需加密簽名認證)
+  const handleSendLineBroadcast = async () => {
+    const isAll = broadcastTarget === 'ALL';
+    const targetDesc = isAll 
+      ? (isEn ? 'ALL LINE friends (Broadcast)' : '全體 LINE 官方帳號好友 (群發廣播)') 
+      : (isEn ? `Test Admin Account (${testTargetUserId})` : `測試管理員帳號 (${testTargetUserId})`);
+    
+    const typeDesc = broadcastType === 'FLEX'
+      ? (isEn ? 'Latest Feature & Fix Announcement (Flex Card)' : '最新版本服務修復與功能升級公告 (Flex 官方卡片)')
+      : (isEn ? `Custom Text: "${customBroadcastText.slice(0, 30)}..."` : `自訂文字訊息: 「${customBroadcastText.slice(0, 30)}...」`);
+
+    if (broadcastType === 'TEXT' && !customBroadcastText.trim()) {
+      alert(isEn ? 'Please enter message content!' : '請輸入自訂推播訊息內容！');
+      return;
+    }
+
+    if (!isAll && (!testTargetUserId.trim() || !testTargetUserId.startsWith('U'))) {
+      alert(isEn ? 'Please provide a valid LINE User ID starting with U!' : '請輸入有效的 LINE User ID（以 U 開頭）！');
+      return;
+    }
+
+    const confirmPrompt = isAll
+      ? (isEn 
+          ? `⚠️ HIGH RISK WARNING!\n\nYou are about to send a REAL BROADCAST to ALL LINE FRIENDS.\n\nType: ${typeDesc}\nTarget: ${targetDesc}\n\nAre you 100% sure you want to proceed?`
+          : `⚠️ 高風險操作確認！\n\n您即將向【全體 LINE 好友】發送官方推播廣播！\n\n內容：${typeDesc}\n目標：${targetDesc}\n\n這將即時消耗 LINE 官方訊息配額。確定要立即送出嗎？`)
+      : (isEn
+          ? `Confirm sending test message?\n\nType: ${typeDesc}\nTarget: ${targetDesc}`
+          : `確定要發送測試推播嗎？\n\n內容：${typeDesc}\n目標：${targetDesc}`);
+
+    if (!window.confirm(confirmPrompt)) return;
+
+    setIsSendingBroadcast(true);
+    setBroadcastResult(null);
+
+    try {
+      const activeToken = permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
+      const payload = {
+        action: 'broadcastAnnouncement',
+        token: activeToken,
+        messageType: broadcastType === 'TEXT' ? 'text' : 'flex',
+        message: customBroadcastText.trim(),
+        targetUser: isAll ? '' : testTargetUserId.trim()
+      };
+
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+
+      const data = await res.json();
+      setBroadcastResult(data);
+
+      if (data.status === 'ok') {
+        alert(isEn ? '✅ LINE message sent successfully!' : '✅ LINE 訊息已成功送出！');
+        fetchLineQuota();
+      } else {
+        alert(isEn ? `Failed: ${data.message || 'Unknown error'}` : `發送失敗：${data.message || '未知錯誤'}`);
+      }
+    } catch (err) {
+      setBroadcastResult({ status: 'error', message: err.message });
+      alert(isEn ? `Error: ${err.message}` : `送出發生錯誤：${err.message}`);
+    } finally {
+      setIsSendingBroadcast(false);
     }
   };
 
@@ -1680,6 +1777,19 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             >
               <Trash2 size={14} className={isPurgingInvalid ? 'animate-spin' : ''} />
               <span className="hidden sm:inline">{isPurgingInvalid ? (isEn ? 'Cleaning...' : '清理中...') : (isEn ? 'Purge Invalid' : '清理異常用戶日誌')}</span>
+            </button>
+
+            {/* LINE Official Broadcast Hub (Encrypted Auth) */}
+            <button
+              onClick={() => {
+                setShowLineBroadcastModal(true);
+                fetchLineQuota();
+              }}
+              className="h-10 px-3 bg-[#06C755] hover:bg-[#05b34c] border-2 border-black rounded-2xl flex items-center gap-1.5 text-xs font-black text-white transition-all shadow-neo-xs hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5"
+              title="開啟 LINE 官方廣播與推播控制台 (需加密認證)"
+            >
+              <Megaphone size={14} className="text-white shrink-0" />
+              <span>{isEn ? 'LINE Broadcast' : 'LINE 廣播推播'}</span>
             </button>
           </div>
         </div>
@@ -3131,6 +3241,293 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           )}
         </div>
       )}
+
+      {/* 📢 LINE 官方廣播與推播控制台 Modal (加密憑證認證) */}
+      <AnimatePresence>
+        {showLineBroadcastModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white border-4 border-black rounded-[2.5rem] p-6 shadow-neo-lg max-w-xl w-full my-8 space-y-5 relative max-h-[90vh] overflow-y-auto"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b-2 border-zinc-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-[#06C755] border-2 border-black flex items-center justify-center shadow-neo-xs">
+                    <Megaphone size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-black tracking-tight">
+                      {isEn ? 'LINE Official Broadcast Hub' : 'LINE 官方推播與廣播控制台'}
+                    </h2>
+                    <p className="text-[11px] font-bold text-zinc-400">
+                      {isEn ? 'Encrypted admin broadcast terminal' : '維護者專用 · 具備 HMAC-SHA256 加密認證'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowLineBroadcastModal(false)}
+                  className="w-8 h-8 rounded-full border-2 border-black bg-zinc-100 hover:bg-zinc-200 flex items-center justify-center text-black font-black transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* 🛡️ Encrypted Token Security Indicator */}
+              <div className="bg-emerald-50 border-2 border-emerald-500 rounded-2xl p-3 flex items-center gap-2.5">
+                <ShieldCheck size={18} className="text-emerald-600 shrink-0" />
+                <div className="flex-1 text-xs">
+                  <span className="font-black text-emerald-900">
+                    {isEn ? 'Encrypted Auth Active:' : '🔒 憑證加密保護中：'}
+                  </span>{' '}
+                  <span className="font-mono text-[11px] text-emerald-800">
+                    {permanentToken ? `HMAC-SHA256 (${permanentToken.slice(0, 8)}...${permanentToken.slice(-6)})` : '已通過 2FA 驗證通行'}
+                  </span>
+                </div>
+              </div>
+
+              {/* 📊 LINE Quota Card */}
+              <div className="bg-zinc-50 border-2 border-black rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-zinc-500 uppercase tracking-wider flex items-center gap-1.5">
+                    <Radio size={14} className="text-[#06C755]" />
+                    {isEn ? 'Monthly Message Quota' : 'LINE 官方帳號本月發送額度'}
+                  </span>
+                  <button
+                    onClick={fetchLineQuota}
+                    disabled={isLoadingQuota}
+                    className="text-[11px] font-bold text-zinc-600 hover:text-black flex items-center gap-1 hover:underline"
+                  >
+                    <RefreshCw size={12} className={isLoadingQuota ? 'animate-spin' : ''} />
+                    {isEn ? 'Check Quota' : '重新查詢額度'}
+                  </button>
+                </div>
+                <div className="grid grid-cols-3 gap-2 pt-1 text-center">
+                  <div className="bg-white border-2 border-zinc-200 rounded-xl p-2">
+                    <div className="text-[10px] font-bold text-zinc-400">{isEn ? 'Total Quota' : '總配額'}</div>
+                    <div className="text-sm font-black font-mono text-zinc-900">
+                      {lineQuota?.totalQuota !== undefined ? lineQuota.totalQuota : (isLoadingQuota ? '...' : '未讀取')}
+                    </div>
+                  </div>
+                  <div className="bg-white border-2 border-zinc-200 rounded-xl p-2">
+                    <div className="text-[10px] font-bold text-zinc-400">{isEn ? 'Used Messages' : '已發送'}</div>
+                    <div className="text-sm font-black font-mono text-amber-600">
+                      {lineQuota?.usedMessages !== undefined ? `${lineQuota.usedMessages} 則` : (isLoadingQuota ? '...' : '—')}
+                    </div>
+                  </div>
+                  <div className="bg-white border-2 border-zinc-200 rounded-xl p-2">
+                    <div className="text-[10px] font-bold text-zinc-400">{isEn ? 'Remaining' : '剩餘可用'}</div>
+                    <div className="text-sm font-black font-mono text-emerald-600">
+                      {lineQuota?.remainingMessages !== undefined ? `${lineQuota.remainingMessages} 則` : (isLoadingQuota ? '...' : '—')}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* 🎯 Target Mode Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-black text-zinc-800 block">
+                  {isEn ? '1. Select Target Audience' : '1. 選擇推播發送目標'}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastTarget('TEST')}
+                    className={`p-3 rounded-2xl border-2 border-black text-left font-bold text-xs transition-all shadow-neo-xs flex items-center gap-2 ${
+                      broadcastTarget === 'TEST' 
+                        ? 'bg-emerald-100 text-emerald-950 font-black ring-2 ring-emerald-500' 
+                        : 'bg-white text-zinc-700 hover:bg-zinc-50'
+                    }`}
+                  >
+                    <span className="text-base">🧪</span>
+                    <div>
+                      <div className="font-black">{isEn ? 'Test Push (Safe)' : '測試推播 (推薦)'}</div>
+                      <div className="text-[10px] opacity-70">{isEn ? 'Push to specific User ID only' : '僅發送給指定管理者 ID'}</div>
+                    </div>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastTarget('ALL')}
+                    className={`p-3 rounded-2xl border-2 border-black text-left font-bold text-xs transition-all shadow-neo-xs flex items-center gap-2 ${
+                      broadcastTarget === 'ALL' 
+                        ? 'bg-rose-100 text-rose-950 font-black ring-2 ring-rose-500' 
+                        : 'bg-white text-zinc-700 hover:bg-zinc-50'
+                    }`}
+                  >
+                    <span className="text-base">📣</span>
+                    <div>
+                      <div className="font-black text-rose-900">{isEn ? 'Broadcast to ALL' : '全體好友廣播'}</div>
+                      <div className="text-[10px] text-rose-700">{isEn ? 'Sends to all LINE friends' : '群發所有好友 · 消耗配額'}</div>
+                    </div>
+                  </button>
+                </div>
+
+                {/* Target User ID Input (When TEST is selected) */}
+                {broadcastTarget === 'TEST' ? (
+                  <div className="space-y-1 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-zinc-500">
+                      <span>{isEn ? 'Target LINE User ID:' : '目標 LINE 用戶識別碼 (User ID)：'}</span>
+                      <button
+                        type="button"
+                        onClick={() => setTestTargetUserId('U3f46f4967396654a938c4146a4497c66')}
+                        className="text-[10px] text-emerald-600 hover:underline"
+                      >
+                        {isEn ? 'Fill Admin ID' : '填入管理員預設 ID'}
+                      </button>
+                    </div>
+                    <input
+                      type="text"
+                      value={testTargetUserId}
+                      onChange={(e) => setTestTargetUserId(e.target.value.trim())}
+                      placeholder="Uxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+                      className="w-full px-3 py-2 text-xs font-mono font-bold bg-zinc-50 border-2 border-black rounded-xl focus:outline-none focus:ring-2 focus:ring-black"
+                    />
+                  </div>
+                ) : (
+                  <div className="p-3 bg-rose-50 border-2 border-rose-300 rounded-2xl text-[11px] font-bold text-rose-800 space-y-1">
+                    <div className="flex items-center gap-1 text-rose-900 font-black">
+                      <AlertTriangle size={14} />
+                      {isEn ? 'Broadcast Warning' : '高風險廣播提醒'}
+                    </div>
+                    <p>
+                      {isEn 
+                        ? 'This action will instantly send the message to every friend of the LINE Official Account. Please ensure you have tested with a test user first!'
+                        : '此操作將即時向所有加入 LINE 官方帳號的好友群發推播，並計入每月訊息總額度！建議發送前先透過「測試推播」預覽效果。'}
+                    </p>
+                  </div>
+                )}
+              </div>
+
+              {/* 🎛️ Message Type Selection */}
+              <div className="space-y-2">
+                <label className="text-xs font-black text-zinc-800 block">
+                  {isEn ? '2. Select Message Type' : '2. 選擇推播訊息類型'}
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastType('FLEX')}
+                    className={`p-2.5 rounded-2xl border-2 border-black text-center text-xs font-black transition-all ${
+                      broadcastType === 'FLEX' 
+                        ? 'bg-zinc-900 text-white shadow-neo-xs' 
+                        : 'bg-white text-zinc-700 hover:bg-zinc-100'
+                    }`}
+                  >
+                    🚀 {isEn ? 'Feature Update (Flex)' : '最新版本升級公告 (Flex)'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setBroadcastType('TEXT')}
+                    className={`p-2.5 rounded-2xl border-2 border-black text-center text-xs font-black transition-all ${
+                      broadcastType === 'TEXT' 
+                        ? 'bg-zinc-900 text-white shadow-neo-xs' 
+                        : 'bg-white text-zinc-700 hover:bg-zinc-100'
+                    }`}
+                  >
+                    💬 {isEn ? 'Custom Text Message' : '自訂文字訊息 (Text)'}
+                  </button>
+                </div>
+
+                {/* Content preview or input */}
+                {broadcastType === 'FLEX' ? (
+                  <div className="p-3 bg-amber-50 border-2 border-amber-300 rounded-2xl text-[11px] font-bold text-amber-900">
+                    💡 {isEn 
+                      ? 'Will send the refined Official Feature Announcement Flex Message with rich card formatting and quick navigation buttons.' 
+                      : '將自動發送精美排版之「最新服務修復與功能升級公告」Flex 官方互動卡片，不包含舊版歷史雜訊。'}
+                  </div>
+                ) : (
+                  <div className="space-y-1.5 pt-1">
+                    <div className="flex items-center justify-between text-[11px] font-bold text-zinc-500">
+                      <span>{isEn ? 'Message Content (max 5000 chars):' : '自訂訊息內容（上限 5000 字）：'}</span>
+                      <span className="font-mono">{customBroadcastText.length}/5000</span>
+                    </div>
+                    <textarea
+                      rows={3}
+                      value={customBroadcastText}
+                      onChange={(e) => setCustomBroadcastText(e.target.value)}
+                      placeholder={isEn ? 'Enter custom broadcast message...' : '輸入要推播給好友的即時通知文字...'}
+                      className="w-full p-3 text-xs font-bold bg-zinc-50 border-2 border-black rounded-xl focus:outline-none focus:ring-2 focus:ring-black leading-relaxed"
+                    />
+                    {/* Quick Template Chips */}
+                    <div className="flex flex-wrap gap-1.5 pt-0.5">
+                      <span className="text-[10px] font-bold text-zinc-400 self-center">
+                        {isEn ? 'Templates:' : '常用範本：'}
+                      </span>
+                      {[
+                        '📢 【Daily-Diet 服務修復公告】全系統功能已全面升級並穩定運作，感謝各位支持！',
+                        '🎉 【新功能上線】後台已支援 2FA 動態驗證與多項健康數據分析，快來體驗吧！',
+                        '🐼 【熊貓教練健康提醒】今天記得攝取足夠水分與蛋白質喔！'
+                      ].map((tpl, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => setCustomBroadcastText(tpl)}
+                          className="px-2 py-0.5 bg-zinc-100 hover:bg-zinc-200 border border-zinc-300 rounded-lg text-[10px] font-bold text-zinc-700"
+                        >
+                          {tpl.slice(0, 14)}...
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* ⚡ Execution Result Banner */}
+              {broadcastResult && (
+                <div className={`p-3.5 border-2 border-black rounded-2xl text-xs font-bold ${
+                  broadcastResult.status === 'ok' 
+                    ? 'bg-emerald-50 text-emerald-900 border-emerald-500' 
+                    : 'bg-rose-50 text-rose-900 border-rose-500'
+                }`}>
+                  <div className="flex items-center gap-2 font-black mb-1">
+                    {broadcastResult.status === 'ok' ? '✅' : '❌'}
+                    <span>{broadcastResult.status === 'ok' ? (isEn ? 'Dispatch Succeeded!' : '推播已成功送達！') : (isEn ? 'Dispatch Failed' : '推播失敗')}</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed">
+                    {broadcastResult.message || JSON.stringify(broadcastResult.details || broadcastResult)}
+                  </p>
+                </div>
+              )}
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-2.5 pt-2 border-t-2 border-zinc-100">
+                <NeoButton
+                  type="button"
+                  variant="zinc"
+                  onClick={() => setShowLineBroadcastModal(false)}
+                  className="text-xs h-10 px-4"
+                >
+                  {isEn ? 'Close' : '關閉'}
+                </NeoButton>
+                <button
+                  type="button"
+                  onClick={handleSendLineBroadcast}
+                  disabled={isSendingBroadcast}
+                  className={`h-10 px-5 rounded-2xl border-2 border-black text-xs font-black text-white shadow-neo-xs hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 transition-all flex items-center gap-2 disabled:opacity-50 ${
+                    broadcastTarget === 'ALL' 
+                      ? 'bg-rose-600 hover:bg-rose-700' 
+                      : 'bg-[#06C755] hover:bg-[#05b34c]'
+                  }`}
+                >
+                  <Send size={14} className={isSendingBroadcast ? 'animate-spin' : ''} />
+                  <span>
+                    {isSendingBroadcast
+                      ? (isEn ? 'Sending with Encrypted Auth...' : '加密驗證送出中...')
+                      : (broadcastTarget === 'ALL' 
+                          ? (isEn ? 'Confirm Broadcast to ALL' : '📣 確認全體廣播 (加密認證)') 
+                          : (isEn ? 'Send Test Push' : '🚀 送出測試推播 (加密認證)')
+                        )
+                    }
+                  </span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Footer Spacer */}
       <div className="h-12" />

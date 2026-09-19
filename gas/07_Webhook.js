@@ -15,11 +15,11 @@
  * 同時相容原始主密碼以及暫態 HMAC-SHA256 Session Token
  * 遵循安全原則：若環境中尚未設定 MAINTAINER_PASS，一律拒絕存取 (Fail-Closed)
  */
-function verifyAdminAccess(e, props) {
+function verifyAdminAccess(e, props, postData) {
   if (!props) props = PropertiesService.getScriptProperties();
   const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
   if (!configuredPass) return false;
-  const incomingToken = e?.parameter?.token || e?.parameter?.adminKey || e?.parameter?.pass || e?.parameter?.password;
+  const incomingToken = e?.parameter?.token || e?.parameter?.adminKey || e?.parameter?.pass || e?.parameter?.password || postData?.token || postData?.adminKey || postData?.pass || postData?.password;
   if (!incomingToken) return false;
 
   // 1. 直接主密碼校驗 (支援既有自動化腳本或直接傳遞)
@@ -33,6 +33,42 @@ function verifyAdminAccess(e, props) {
   if (yesterdayToken && incomingToken === yesterdayToken) return true;
 
   return false;
+}
+
+/**
+ * 📊 查詢 LINE 官方帳號本月發送配額與已使用則數
+ */
+function getLineQuotaInfo(token) {
+  let total = '未知';
+  let used = 0;
+  let rawQuota = {};
+  let rawConsumption = {};
+  try {
+    const quotaRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota", {
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    rawQuota = JSON.parse(quotaRes.getContentText() || '{}');
+    if (rawQuota.value !== undefined) total = rawQuota.value;
+    else if (rawQuota.type === 'none') total = '無上限';
+  } catch (e) {}
+  try {
+    const consumptionRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota/consumption", {
+      headers: { Authorization: `Bearer ${token}` },
+      muteHttpExceptions: true
+    });
+    rawConsumption = JSON.parse(consumptionRes.getContentText() || '{}');
+    if (rawConsumption.totalUsage !== undefined) used = rawConsumption.totalUsage;
+  } catch (e) {}
+
+  const remaining = typeof total === 'number' ? (total - used) : total;
+  return {
+    totalQuota: total,
+    usedMessages: used,
+    remainingMessages: remaining,
+    rawQuota: rawQuota,
+    rawConsumption: rawConsumption
+  };
 }
 
 /**
@@ -825,26 +861,38 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 10.8 觸發 LINE 全員功能升級廣播 (限維護者授權)
-    if (action === 'broadcastAnnouncement' || action === 'broadcastUpdate') {
+    // 10.8 觸發 LINE 全員功能升級廣播或訊息推播 (限維護者授權，需加密認證)
+    if (action === 'broadcastAnnouncement' || action === 'broadcastUpdate' || action === 'sendLineMessage' || action === 'pushLineMessage') {
       if (!isAdmin) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized maintainer access' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
       const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
       const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
-      const testUser = e?.parameter?.testUser || e?.parameter?.userId;
-      const flexMsg = generateFeatureAnnouncementFlex(testUser || 'default_user', liffId, '', props, 'zh');
-      
+      const targetUser = (e?.parameter?.targetUser || e?.parameter?.testUser || e?.parameter?.userId || '').trim();
+      const messageType = e?.parameter?.messageType || (action === 'sendLineMessage' || action === 'pushLineMessage' ? 'text' : 'flex');
+      const customText = (e?.parameter?.message || e?.parameter?.text || '').trim();
+
       let res;
-      if (testUser && testUser.startsWith('U')) {
-        pushFlexMessage(testUser, flexMsg, token, props);
-        res = { status: 'ok', type: 'test_push', target: testUser, message: `已成功推播測試功能公告至用戶 ${testUser}` };
+      if (messageType === 'text' && customText) {
+        if (targetUser && targetUser.startsWith('U')) {
+          pushTextMessage(targetUser, customText, token, props);
+          res = { status: 'ok', type: 'test_push_text', target: targetUser, message: `已成功推播自訂文字訊息至用戶 ${targetUser}` };
+        } else {
+          const bRes = typeof broadcastTextMessage === 'function' ? broadcastTextMessage(customText, token) : { success: false, error: 'broadcastTextMessage not found' };
+          res = { status: bRes.success ? 'ok' : 'error', type: 'broadcast_text', details: bRes, message: bRes.success ? '全體純文字訊息已成功廣播！' : '廣播失敗' };
+        }
       } else {
-        const bRes = broadcastFlexMessage(flexMsg, token);
-        res = { status: bRes.success ? 'ok' : 'error', type: 'broadcast', details: bRes };
+        const flexMsg = generateFeatureAnnouncementFlex(targetUser || 'default_user', liffId, '', props, 'zh');
+        if (targetUser && targetUser.startsWith('U')) {
+          pushFlexMessage(targetUser, flexMsg, token, props);
+          res = { status: 'ok', type: 'test_push_flex', target: targetUser, message: `已成功推播測試公告卡片至用戶 ${targetUser}` };
+        } else {
+          const bRes = broadcastFlexMessage(flexMsg, token);
+          res = { status: bRes.success ? 'ok' : 'error', type: 'broadcast_flex', details: bRes, message: bRes.success ? '全體功能升級公告卡片已成功廣播！' : '廣播失敗' };
+        }
       }
-      recordSystemLog('管理員推播公告', 'admin', action, JSON.stringify(res), '執行功能更新推播', '管理員');
+      recordSystemLog('管理員推播公告', 'admin', action, JSON.stringify(res), `執行 LINE ${res.type}`, '管理員');
       return ContentService.createTextOutput(JSON.stringify(res))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -856,37 +904,9 @@ function doGet(e) {
           .setMimeType(ContentService.MimeType.JSON);
       }
       const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
-      let total = '未知';
-      let used = 0;
-      let rawQuota = {};
-      let rawConsumption = {};
-      try {
-        const quotaRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota", {
-          headers: { Authorization: `Bearer ${token}` },
-          muteHttpExceptions: true
-        });
-        rawQuota = JSON.parse(quotaRes.getContentText() || '{}');
-        if (rawQuota.value !== undefined) total = rawQuota.value;
-        else if (rawQuota.type === 'none') total = '無上限';
-      } catch (e) {}
-      try {
-        const consumptionRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/quota/consumption", {
-          headers: { Authorization: `Bearer ${token}` },
-          muteHttpExceptions: true
-        });
-        rawConsumption = JSON.parse(consumptionRes.getContentText() || '{}');
-        if (rawConsumption.totalUsage !== undefined) used = rawConsumption.totalUsage;
-      } catch (e) {}
-
-      const remaining = typeof total === 'number' ? (total - used) : total;
-      return ContentService.createTextOutput(JSON.stringify({
-        status: 'ok',
-        totalQuota: total,
-        usedMessages: used,
-        remainingMessages: remaining,
-        rawQuota: rawQuota,
-        rawConsumption: rawConsumption
-      }, null, 2)).setMimeType(ContentService.MimeType.JSON);
+      const quotaData = getLineQuotaInfo(token);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', ...quotaData }, null, 2))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // 11. 實時運作日誌 API (限維護者授權存取)
@@ -1258,6 +1278,55 @@ function doPost(e) {
       );
 
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 🛡️ 0.4 管理員 LINE 官方訊息推播與廣播端點 (POST 支援，需嚴格加密憑證驗證)
+    if (action === 'broadcastAnnouncement' || action === 'broadcastUpdate' || action === 'sendLineMessage' || action === 'pushLineMessage') {
+      const isAdmin = verifyAdminAccess(e, props, data);
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized maintainer access' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const token = CHANNEL_ACCESS_TOKEN;
+      const liffId = LIFF_ID;
+      const targetUser = (data?.targetUser || data?.testUser || data?.userId || e?.parameter?.targetUser || e?.parameter?.testUser || e?.parameter?.userId || '').trim();
+      const messageType = data?.messageType || e?.parameter?.messageType || (action === 'sendLineMessage' || action === 'pushLineMessage' ? 'text' : 'flex');
+      const customText = (data?.message || data?.text || e?.parameter?.message || e?.parameter?.text || '').trim();
+
+      let res;
+      if (messageType === 'text' && customText) {
+        if (targetUser && targetUser.startsWith('U')) {
+          pushTextMessage(targetUser, customText, token, props);
+          res = { status: 'ok', type: 'test_push_text', target: targetUser, message: `已成功推播自訂文字訊息至用戶 ${targetUser}` };
+        } else {
+          const bRes = typeof broadcastTextMessage === 'function' ? broadcastTextMessage(customText, token) : { success: false, error: 'broadcastTextMessage not found' };
+          res = { status: bRes.success ? 'ok' : 'error', type: 'broadcast_text', details: bRes, message: bRes.success ? '全體純文字訊息已成功廣播！' : '廣播失敗' };
+        }
+      } else {
+        const flexMsg = generateFeatureAnnouncementFlex(targetUser || 'default_user', liffId, '', props, 'zh');
+        if (targetUser && targetUser.startsWith('U')) {
+          pushFlexMessage(targetUser, flexMsg, token, props);
+          res = { status: 'ok', type: 'test_push_flex', target: targetUser, message: `已成功推播測試公告卡片至用戶 ${targetUser}` };
+        } else {
+          const bRes = broadcastFlexMessage(flexMsg, token);
+          res = { status: bRes.success ? 'ok' : 'error', type: 'broadcast_flex', details: bRes, message: bRes.success ? '全體功能升級公告卡片已成功廣播！' : '廣播失敗' };
+        }
+      }
+      recordSystemLog('管理員推播公告', 'admin', action, JSON.stringify(res), `執行 LINE ${res.type}`, '管理員');
+      return ContentService.createTextOutput(JSON.stringify(res))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 📊 0.5 查詢 LINE 官方帳號本月發送額度與已使用則數 (POST 支援)
+    if (action === 'getLineQuota' || action === 'checkQuota') {
+      const isAdmin = verifyAdminAccess(e, props, data);
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized maintainer access' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const quotaData = getLineQuotaInfo(CHANNEL_ACCESS_TOKEN);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', ...quotaData }, null, 2))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
