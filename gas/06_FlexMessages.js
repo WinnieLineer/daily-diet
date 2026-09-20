@@ -2111,7 +2111,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
           size: "xs",
           color: isToday ? "#000000" : "#52525B",
           weight: isToday ? "bold" : "regular",
-          flex: 4
+          flex: 3,
+          wrap: false
         },
         {
           type: "box",
@@ -2119,7 +2120,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
           backgroundColor: "#F4F4F5",
           cornerRadius: "6px",
           height: "12px",
-          flex: 5,
+          flex: 4,
           contents: [
             {
               type: "box",
@@ -2139,7 +2140,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
           weight: "bold",
           color: isToday ? "#E11D48" : "#18181B",
           align: "end",
-          flex: 3
+          flex: 5,
+          wrap: false
         }
       ]
     };
