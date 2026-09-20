@@ -622,7 +622,43 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
     totalWater += Number(log.water) || 0;
     totalCarbs += Number(log.carbs) || 0;
     totalFat += Number(log.fat) || 0;
+  });
 
+  const MAX_DISPLAY_MEALS = 6;
+  const hasMoreMeals = allLogs.length > MAX_DISPLAY_MEALS;
+  const displayLogs = hasMoreMeals ? allLogs.slice(-MAX_DISPLAY_MEALS) : allLogs;
+
+  if (hasMoreMeals) {
+    mealItems.push({
+      type: "box",
+      layout: "horizontal",
+      backgroundColor: "#FEF9C3",
+      borderColor: "#CA8A04",
+      borderWidth: "1px",
+      cornerRadius: "8px",
+      paddingAll: "6px",
+      margin: "xs",
+      action: {
+        type: "postback",
+        label: isEn ? "View All" : "查看全部",
+        data: JSON.stringify({ action: 'manageMeals', date: todayStr }),
+        displayText: isEn ? (isToday ? "Manage Today's Logs" : `Manage ${todayStr} Logs`) : (isToday ? "管理今日紀錄" : `管理 ${todayStr} 紀錄`)
+      },
+      contents: [
+        {
+          type: "text",
+          text: isEn ? `⬆️ ${allLogs.length - MAX_DISPLAY_MEALS} earlier meals (tap to view all)` : `⬆️ 還有 ${allLogs.length - MAX_DISPLAY_MEALS} 筆較早紀錄（點此查看全部）`,
+          size: "xxs",
+          color: "#854D0E",
+          weight: "bold",
+          align: "center",
+          flex: 1
+        }
+      ]
+    });
+  }
+
+  displayLogs.forEach((log) => {
     let timeText = log.time || '';
     if (!timeText && log.timestamp) {
       try {
@@ -638,13 +674,12 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
       'water': '🚰'
     };
     const catPrefix = log.category && catEmojiMap[log.category] ? `${catEmojiMap[log.category]} ` : '';
-    const timePrefix = timeText ? `${timeText} ` : '';
-    const displayName = log.dish_name || (isEn ? 'Meal' : '美味餐點');
-
-    const cleanDisplay = displayName.replace(/^[0-9]+(?:\.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().slice(0, 22);
+    const rawDishName = log.dish_name || (isEn ? 'Meal' : '美味餐點');
+    const cleanDisplay = (rawDishName.replace(/^[0-9]+(?:\.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().slice(0, 22)) || (isEn ? 'Meal' : '餐點');
     const hasPhoto = !!(log.image_url || log.photo_url);
     const calVal = Number(log.calories) || 0;
     const proVal = Number(log.protein) || 0;
+    const timeBadgeText = (hasPhoto ? "📸 " : "") + (timeText ? timeText.trim() : (isToday ? (isEn ? "Today" : "今日") : (isEn ? "Logged" : "已記")));
 
     mealItems.push({
       type: "box",
@@ -677,7 +712,7 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
             },
             {
               type: "text",
-              text: (hasPhoto ? "📸 " : "") + (timePrefix || ''),
+              text: timeBadgeText,
               size: "xxs",
               color: "#71717A",
               align: "end",
@@ -700,8 +735,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
               type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
               contents: [{ type: "text", text: `🥩 ${proVal}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
             }] : []),
+            { type: "filler" },
             {
-              type: "box", layout: "horizontal", backgroundColor: "#FDE047", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "2px", paddingBottom: "2px", marginLeft: "auto",
+              type: "box", layout: "horizontal", backgroundColor: "#FDE047", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "2px", paddingBottom: "2px",
               contents: [{ type: "text", text: isEn ? "🔍 Details" : "🔍 詳情", size: "xxs", color: "#000000", weight: "bold" }]
             }
           ]
