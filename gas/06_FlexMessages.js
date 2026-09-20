@@ -728,17 +728,17 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
           margin: "xs",
           contents: [
             {
-              type: "box", layout: "horizontal", backgroundColor: "#FFF1F2", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-              contents: [{ type: "text", text: `🔥 ${calVal} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+              type: "box", layout: "horizontal", backgroundColor: "#FFF1F2", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", flex: 0,
+              contents: [{ type: "text", text: `🔥 ${calVal} kcal`, size: "xxs", color: "#E11D48", weight: "bold", flex: 0 }]
             },
             ...(proVal > 0 ? [{
-              type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-              contents: [{ type: "text", text: `🥩 ${proVal}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+              type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", flex: 0,
+              contents: [{ type: "text", text: `🥩 ${proVal}g`, size: "xxs", color: "#2563EB", weight: "bold", flex: 0 }]
             }] : []),
             { type: "filler" },
             {
-              type: "box", layout: "horizontal", backgroundColor: "#FDE047", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "2px", paddingBottom: "2px",
-              contents: [{ type: "text", text: isEn ? "🔍 Details" : "🔍 詳情", size: "xxs", color: "#000000", weight: "bold" }]
+              type: "box", layout: "horizontal", backgroundColor: "#FDE047", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "2px", paddingBottom: "2px", flex: 0,
+              contents: [{ type: "text", text: isEn ? "🔍 Details" : "🔍 詳情", size: "xxs", color: "#000000", weight: "bold", flex: 0 }]
             }
           ]
         }
@@ -969,8 +969,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: isEn ? "🥩 Protein Target Progress" : "🥩 當日蛋白質達標進度", size: "xxs", weight: "bold", color: "#1E40AF", flex: 5 },
-                      { type: "text", text: `${totalPro} / ${proGoal}g (${proPercent}%)`, size: "xxs", weight: "bold", color: isProReached ? "#16A34A" : "#1E40AF", align: "end", flex: 4 }
+                      { type: "text", text: isEn ? "🥩 Protein Target" : "🥩 當日蛋白質進度", size: "xxs", weight: "bold", color: "#1E40AF", flex: 0 },
+                      { type: "text", text: `${totalPro} / ${proGoal}g (${proPercent}%)`, size: "xxs", weight: "bold", color: isProReached ? "#16A34A" : "#1E40AF", align: "end", flex: 1, wrap: false }
                     ]
                   },
                   {
@@ -1012,8 +1012,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: isEn ? "⚡ Calorie Target Progress" : "⚡ 每日熱量控制進度", size: "xxs", weight: "bold", color: "#71717A", flex: 5 },
-                      { type: "text", text: `${totalCal} / ${calGoal} kcal (${calPercent}%)`, size: "xxs", weight: "bold", color: isOverCal ? "#E11D48" : "#71717A", align: "end", flex: 4 }
+                      { type: "text", text: isEn ? "⚡ Calorie Target" : "⚡ 每日熱量進度", size: "xxs", weight: "bold", color: "#71717A", flex: 0 },
+                      { type: "text", text: `${totalCal} / ${calGoal} kcal (${calPercent}%)`, size: "xxs", weight: "bold", color: isOverCal ? "#E11D48" : "#71717A", align: "end", flex: 1, wrap: false }
                     ]
                   },
                   {
