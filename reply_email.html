@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>Daily Diet - 精美版回信助手</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+    body {
+      font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "Hiragino Sans GB", "Microsoft JhengHei", "微軟正黑體", sans-serif;
+      background: #F4F4F5;
+      margin: 0;
+      padding: 30px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    .action-panel {
+      background: #FFFFFF;
+      border: 3px solid #000000;
+      border-radius: 16px;
+      box-shadow: 6px 6px 0px #000000;
+      max-width: 680px;
+      width: 100%;
+      padding: 24px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .action-panel h2 {
+      margin-top: 0;
+      font-size: 22px;
+      color: #000000;
+    }
+    .lang-tabs {
+      display: inline-flex;
+      background: #F4F4F5;
+      border: 2px solid #000000;
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 16px;
+    }
+    .lang-tab {
+      padding: 8px 18px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+    .lang-tab.active {
+      background: #000000;
+      color: #FDE047;
+    }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 10px;
+    }
+    .action-btn {
+      padding: 14px 22px;
+      border: 2px solid #000000;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .action-btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0px #000000;
+    }
+    .btn-copy {
+      background: #FDE047;
+      color: #000000;
+    }
+    .btn-gmail {
+      background: #EA4335;
+      color: #FFFFFF;
+    }
+    .toast {
+      display: none;
+      color: #16A34A;
+      font-weight: bold;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    /* Email Preview Container */
+    .email-wrapper {
+      max-width: 640px;
+      width: 100%;
+      background: #FFFFFF;
+      border: 2px solid #000000;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 8px 8px 0px rgba(0,0,0,0.15);
+      font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "Hiragino Sans GB", "Microsoft JhengHei", "微軟正黑體", sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 控制面板 -->
+  <div class="action-panel">
+    <h2>🐼 Daily Diet 精美圖文回信助手</h2>
+    <p style="color: #64748B; font-size: 14px; line-height: 1.5; margin: 6px 0 10px;">
+      字體已全面加入 <code>&lt;font face="Microsoft YaHei"&gt;</code> 與無襯線黑體保護！
+    </p>
+
+    <div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 10px; padding: 12px 16px; margin: 10px 0 16px; font-size: 13px; color: #92400E; text-align: left; line-height: 1.6;">
+      💡 <b>為什麼在您的電腦上看簡字感覺比較細？</b><br>
+      因為您的 Windows 是<b>台灣繁體系統</b>，遇到純簡體字（如「账、马」）時系統會調用細字重；但<b>收件人在新加坡/馬來西亞的手機（iPhone / Android）上，所有簡字都是 100% 粗細均勻的標準黑體</b>！<br>
+      👉 若您希望在自己的畫面上看起來最自然飽滿，也可點選下方【<b>繁體中文版</b>】寄出（星馬華人讀繁體中文完全毫無障礙）！
+    </div>
+
+    <!-- 語言切換 -->
+    <div class="lang-tabs">
+      <button class="lang-tab active" id="tabSc" onclick="switchLang('sc')">簡體中文版（星馬習慣）</button>
+      <button class="lang-tab" id="tabTc" onclick="switchLang('tc')">繁體中文版（字體最飽滿均勻）</button>
+    </div>
+
+    <div class="btn-group">
+      <button class="action-btn btn-copy" onclick="copyRichHtml()">
+        📋 一鍵複製精美圖文信（推薦直接貼到 Gmail）
+      </button>
+      <a class="action-btn btn-gmail" id="gmailBtn" target="_blank" href="#">
+        📮 開啟 Gmail 撰寫新信件
+      </a>
+    </div>
+    <div id="toast" class="toast">🎉 精美排版信件已複製到剪貼簿！在 Gmail 內文處按 Ctrl + V (貼上) 即可！</div>
+  </div>
+
+  <!-- 精美信件 HTML 容器（用於預覽與富文本複製） -->
+  <div class="email-wrapper" id="emailContent">
+    <!-- 內容由 JavaScript 動態填入，保證乾淨統一的 font-family -->
+  </div>
+
+  <script>
+    const emailData = {
+      sc: {
+        subject: "感谢您对 Daily Diet 的喜爱与宝贵反馈！🐼✨（附 LINE 加入方式与使用说明）",
+        headerTitle: "感谢您对日常饮食的喜爱与支持 ✨",
+        greeting: "你好！",
+        intro: "非常感谢你在 <b>Threads</b> 上看到分享并特地留下宝贵的使用反馈！能够收到来自<b>新加坡与马来西亚</b>朋友的真诚鼓励与喜爱，真的超级开心，也给我们带来了巨大的动力！",
+        
+        q1Title: "💬 1. 为什么 LINE 搜不到？以及如何成功加上",
+        q1Desc: "LINE 的官方服务账号在搜索时，<b>前面必须要包含「@」符号</b>（如果不加 @，系统会默认作为普通个人号查找，从而显示查无此人）：",
+        q1IdLabel: "🆔 官方账号 ID：",
+        q1IdHint: "(一定要加 @ 符号)",
+        q1Btn: "📲 点击直接跳转 LINE 官方加好友",
+        q1WaTitle: "🌟 海外专属好消息（WhatsApp 版本筹备中）：",
+        q1WaDesc: "考虑到新加坡、马来西亚、港澳等海外朋友平时不常使用 LINE，我们<b>目前已正式规划制作 WhatsApp 版本的智能记餐助手</b>！届时上线后，您将能直接在熟悉的 WhatsApp 里拍照与记录饮食！",
+        q1LangTitle: "🌏 简体中文界面规划：",
+        q1LangDesc: "同时，我们也已把【简体中文语言界面】排入开发排程中！未来的版本将支持一键切换简体/繁体中文，让星马的朋友们使用起来更亲切顺手！",
+        q1PwaTitle: "📱 手机网页版（PWA 免安装）：",
+        q1PwaDesc: "您也可以直接使用 iPhone Safari 打开 <b><a href=\"https://winnie-lin.space/daily-diet/\" style=\"color: #2563EB; text-decoration: underline; font-family: inherit;\">Daily Diet 网页版</a></b>，点击下方分享图标选择<b>「添加到主屏幕」</b>，不用聊天软件也能当成独立 App 使用！",
+        
+        q2Title: "🏃‍♂️ 2. 关于「运动减了多少卡路里」的计算与营养学考量",
+        q2Desc: "你提出的这个建议非常实用，也是许多搭配运动减脂的朋友经常探讨的问题！关于为什么系统目前没有单独扣除运动卡路里，主要有以下科学依据：",
+        q2Point1Title: "🎯 1. 目标制定时已预先包含运动量（TDEE 机制）",
+        q2Point1Desc: "在 Daily Diet 设定目标时，计算每日总消耗时已让您选择了<b>「活动量等级（如每周运动 1~3 天、3~5 天）」</b>。这意味着：<b>您每周运动所消耗的热量，已经平均分摊到每一天的热量预算里了！</b>",
+        q2Point2Title: "⚠️ 2. 避免「热量重复计算（Double Counting）」",
+        q2Point2Desc: "如果当天去运动又额外把消耗的卡路里扣除（或多吃回来），在营养学上会造成运动热量被<b>重复计算了两次</b>，反而容易不小心吃多，导致辛苦运动却影响减脂成效。",
+        q2DietTipTitle: "💪 专业营养师建议策略：",
+        q2DietTipDesc: "建议把每日运动消耗当作<b>加速减脂的「健康红利」</b>，饮食上专注<b>稳定达标蛋白质、控制在建议热量范围</b>，这样不仅肌肉线条更漂亮，体重管理也会最扎实、最不易反弹！",
+        
+        outro: "再次真诚感谢你的支持与宝贵建议！随着 Daily Diet 持续迭代，若对后续 WhatsApp 版本或使用上有任何想法，随时欢迎给我发信交流。<br><b>祝你在新加坡生活顺心，运动与减脂计划大获成功！🔥🐼</b>",
+        authorRole: "Daily Diet 独立开发者"
+      },
+      tc: {
+        subject: "感謝您對 Daily Diet 的喜愛與寶貴反饋！🐼✨（附 LINE 加入方式與使用說明）",
+        headerTitle: "感謝您對日常飲食的喜愛與支持 ✨",
+        greeting: "你好！",
+        intro: "非常感謝你在 <b>Threads</b> 上看到分享並特地留下寶貴的使用反饋！能夠收到來自<b>新加坡與馬來西亞</b>朋友的真誠鼓勵與喜愛，真的超級開心，也給我們帶來了巨大的動力！",
+        
+        q1Title: "💬 1. 為什麼 LINE 搜不到？以及如何成功加上",
+        q1Desc: "LINE 的官方服務帳號在搜尋時，<b>前面必須要包含「@」符號</b>（如果不加 @，系統會預設作為普通個人號查找，從而顯示查無此人）：",
+        q1IdLabel: "🆔 官方帳號 ID：",
+        q1IdHint: "(一定要加 @ 符號)",
+        q1Btn: "📲 點擊直接跳轉 LINE 官方加好友",
+        q1WaTitle: "🌟 海外專屬好消息（WhatsApp 版本籌備中）：",
+        q1WaDesc: "考慮到新加坡、馬來西亞、港澳等海外朋友平時不常使用 LINE，我們<b>目前已正式規劃製作 WhatsApp 版本的智能記餐助手</b>！屆時上線後，您將能直接在熟悉的 WhatsApp 裡拍照與記錄飲食！",
+        q1LangTitle: "🌏 簡體中文介面規劃：",
+        q1LangDesc: "同時，我們也已把【簡體中文語言介面】排入開發排程中！未來的版本將支援一鍵切換簡體/繁體中文，讓星馬的朋友們使用起來更親切順手！",
+        q1PwaTitle: "📱 手機網頁版（PWA 免安裝）：",
+        q1PwaDesc: "您也可以直接使用 iPhone Safari 打開 <b><a href=\"https://winnie-lin.space/daily-diet/\" style=\"color: #2563EB; text-decoration: underline; font-family: inherit;\">Daily Diet 網頁版</a></b>，點擊下方分享圖標選擇<b>「加入主畫面」</b>，不用聊天軟體也能當成獨立 App 使用！",
+        
+        q2Title: "🏃‍♂️ 2. 關於「運動減了多少卡路里」的計算與營養學考量",
+        q2Desc: "你提出的這個建議非常實用，也是許多搭配運動減脂的朋友經常探討的問題！關於為什麼系統目前沒有單獨扣除運動卡路里，主要有以下科學依據：",
+        q2Point1Title: "🎯 1. 目標制定時已預先包含運動量（TDEE 機制）",
+        q2Point1Desc: "在 Daily Diet 設定目標時，計算每日總消耗時已讓您選擇了<b>「活動量等級（如每週運動 1~3 天、3~5 天）」</b>。這意味著：<b>您每週運動所消耗的熱量，已經平均分攤到每一天的熱量預算裡了！</b>",
+        q2Point2Title: "⚠️ 2. 避免「熱量重複計算（Double Counting）」",
+        q2Point2Desc: "如果當天去運動又額外把消耗的卡路里扣除（或多吃回來），在營養學上會造成運動熱量被<b>重複計算了兩次</b>，反而容易不小心吃多，導致辛苦運動卻影響減脂成效。",
+        q2DietTipTitle: "💪 專業營養師建議策略：",
+        q2DietTipDesc: "建議把每日運動消耗當作<b>加速減脂的「健康紅利」</b>，飲食上專注<b>穩定達標蛋白質、控制在建議熱量範圍</b>，這樣不僅肌肉線條更漂亮，體重管理也會最扎實、最不易復胖！",
+        
+        outro: "再次真誠感謝你的支持與寶貴建議！隨著 Daily Diet 持續迭代，若對後續 WhatsApp 版本或使用上有任何想法，隨時歡迎給我發信交流。<br><b>祝你在新加坡生活順心，運動與減脂計劃大獲成功！🔥🐼</b>",
+        authorRole: "Daily Diet 獨立開發者"
+      }
+    };
+
+    let currentLang = 'sc';
+
+    function getFontStyle() {
+      if (currentLang === 'sc') {
+        return 'font-family: "Microsoft YaHei", "微软雅黑", "PingFang SC", "Hiragino Sans GB", sans-serif;';
+      } else {
+        return 'font-family: "Microsoft JhengHei", "微軟正黑體", "PingFang TC", "Hiragino Sans TC", sans-serif;';
+      }
+    }
+
+    function getFontFace() {
+      return currentLang === 'sc' ? 'Microsoft YaHei, 微软雅黑, PingFang SC, sans-serif' : 'Microsoft JhengHei, 微軟正黑體, PingFang TC, sans-serif';
+    }
+
+    function renderEmail() {
+      const d = emailData[currentLang];
+      const fontStyle = getFontStyle();
+      const fontFace = getFontFace();
+      const langAttr = currentLang === 'sc' ? 'zh-Hans' : 'zh-Hant';
+      const html = `
+        <font face="${fontFace}">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" lang="${langAttr}" style="background-color: #FFFFFF; ${fontStyle} color: #18181B; line-height: 1.6;">
+          <tr>
+            <td style="background-color: #000000; padding: 24px 30px; text-align: left; ${fontStyle}">
+              <span style="display: inline-block; background-color: #FDE047; color: #000000; font-weight: 900; font-size: 13px; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px; ${fontStyle}">
+                🐼 DAILY DIET
+              </span>
+              <div style="color: #FFFFFF; font-size: 20px; font-weight: bold; margin-top: 8px; ${fontStyle}">
+                ${d.headerTitle}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px 30px 20px 30px; ${fontStyle}">
+              <p style="font-size: 16px; color: #18181B; margin: 0 0 16px 0; ${fontStyle}">
+                <b>${d.greeting}</b>
+              </p>
+              <p style="font-size: 15px; color: #3F3F46; margin: 0 0 24px 0; line-height: 1.7; ${fontStyle}">
+                ${d.intro}
+              </p>
+
+              <!-- 區塊 1 -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FEF9C3; border: 2px solid #000000; border-radius: 14px; margin-bottom: 24px; ${fontStyle}">
+                <tr>
+                  <td style="padding: 20px; ${fontStyle}">
+                    <div style="font-size: 16px; font-weight: bold; color: #713F12; margin-bottom: 12px; ${fontStyle}">
+                      ${d.q1Title}
+                    </div>
+                    <p style="font-size: 14px; color: #854D0E; margin: 0 0 12px 0; line-height: 1.6; ${fontStyle}">
+                      ${d.q1Desc}
+                    </p>
+                    <div style="background-color: #FFFFFF; border: 1.5px solid #EAB308; border-radius: 8px; padding: 10px 14px; font-size: 15px; font-weight: bold; color: #000000; display: inline-block; margin-bottom: 16px; ${fontStyle}">
+                      ${d.q1IdLabel}<span style="color: #059669; font-size: 16px; ${fontStyle}">@618iipof</span> <span style="font-size: 12px; color: #71717A; font-weight: normal; ${fontStyle}">${d.q1IdHint}</span>
+                    </div>
+                    <div style="margin: 8px 0 16px 0; ${fontStyle}">
+                      <a href="https://line.me/R/ti/p/@618iipof" target="_blank" style="background-color: #06C755; color: #FFFFFF; font-weight: bold; font-size: 15px; padding: 12px 24px; border-radius: 10px; text-decoration: none; display: inline-block; border: 2px solid #000000; box-shadow: 3px 3px 0px #000000; ${fontStyle}">
+                        ${d.q1Btn}
+                      </a>
+                    </div>
+                    <div style="background-color: rgba(255,255,255,0.7); border-radius: 8px; padding: 12px; font-size: 13px; color: #713F12; line-height: 1.6; ${fontStyle}">
+                      <b>${d.q1WaTitle}</b><br>
+                      ${d.q1WaDesc}<br><br>
+                      <b>${d.q1LangTitle}</b><br>
+                      ${d.q1LangDesc}<br><br>
+                      <b>${d.q1PwaTitle}</b><br>
+                      ${d.q1PwaDesc}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <!-- 區塊 2 -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #EFF6FF; border: 2px solid #000000; border-radius: 14px; margin-bottom: 24px; ${fontStyle}">
+                <tr>
+                  <td style="padding: 20px; ${fontStyle}">
+                    <div style="font-size: 16px; font-weight: bold; color: #1E40AF; margin-bottom: 12px; ${fontStyle}">
+                      ${d.q2Title}
+                    </div>
+                    <p style="font-size: 14px; color: #1E3A8A; margin: 0 0 12px 0; line-height: 1.6; ${fontStyle}">
+                      ${d.q2Desc}
+                    </p>
+                    <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border: 1.5px solid #93C5FD; border-radius: 10px; margin-bottom: 14px; ${fontStyle}">
+                      <tr>
+                        <td style="padding: 14px; ${fontStyle}">
+                          <div style="font-size: 14px; font-weight: bold; color: #1E40AF; margin-bottom: 6px; ${fontStyle}">
+                            ${d.q2Point1Title}
+                          </div>
+                          <div style="font-size: 13px; color: #475569; line-height: 1.6; ${fontStyle}">
+                            ${d.q2Point1Desc}
+                          </div>
+                        </td>
+                      </tr>
+                      <tr>
+                        <td style="padding: 0 14px 14px 14px; ${fontStyle}">
+                          <div style="font-size: 14px; font-weight: bold; color: #DC2626; margin-bottom: 6px; ${fontStyle}">
+                            ${d.q2Point2Title}
+                          </div>
+                          <div style="font-size: 13px; color: #475569; line-height: 1.6; ${fontStyle}">
+                            ${d.q2Point2Desc}
+                          </div>
+                        </td>
+                      </tr>
+                    </table>
+                    <div style="background-color: #DBEAFE; border-radius: 8px; padding: 12px; font-size: 13px; color: #1E40AF; line-height: 1.6; ${fontStyle}">
+                      <b>${d.q2DietTipTitle}</b><br>
+                      ${d.q2DietTipDesc}
+                    </div>
+                  </td>
+                </tr>
+              </table>
+
+              <p style="font-size: 15px; color: #3F3F46; line-height: 1.7; margin: 0 0 20px 0; ${fontStyle}">
+                ${d.outro}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #F8FAFC; border-top: 1.5px solid #E2E8F0; padding: 24px 30px; ${fontStyle}">
+              <div style="font-size: 15px; font-weight: bold; color: #0F172A; ${fontStyle}">
+                Winnie Lin
+              </div>
+              <div style="font-size: 13px; color: #64748B; margin-top: 2px; ${fontStyle}">
+                ${d.authorRole}
+              </div>
+              <div style="font-size: 12px; color: #94A3B8; margin-top: 8px; ${fontStyle}">
+                🌐 官方網站：<a href="https://winnie-lin.space/daily-diet/" target="_blank" style="color: #2563EB; text-decoration: none; ${fontStyle}">https://winnie-lin.space/daily-diet/</a>
+              </div>
+            </td>
+          </tr>
+        </table>
+        </font>
+      `;
+
+      document.getElementById('emailContent').innerHTML = html;
+      const gmailUri = 'https://mail.google.com/mail/?view=cm&fs=1&su=' + encodeURIComponent(d.subject);
+      document.getElementById('gmailBtn').href = gmailUri;
+    }
+
+    function switchLang(lang) {
+      currentLang = lang;
+      document.getElementById('tabSc').className = 'lang-tab ' + (lang === 'sc' ? 'active' : '');
+      document.getElementById('tabTc').className = 'lang-tab ' + (lang === 'tc' ? 'active' : '');
+      renderEmail();
+    }
+
+    function copyRichHtml() {
+      const emailEl = document.getElementById('emailContent');
+      const htmlContent = emailEl.innerHTML;
+      const textContent = emailEl.innerText;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const blobHtml = new Blob([htmlContent], { type: 'text/html' });
+        const blobText = new Blob([textContent], { type: 'text/plain' });
+        const item = new ClipboardItem({
+          'text/html': blobHtml,
+          'text/plain': blobText
+        });
+        navigator.clipboard.write([item]).then(() => {
+          showToast();
+        }).catch(err => {
+          fallbackCopy();
+        });
+      } else {
+        fallbackCopy();
+      }
+    }
+
+    function fallbackCopy() {
+      const emailEl = document.getElementById('emailContent');
+      const range = document.createRange();
+      range.selectNode(emailEl);
+      window.getSelection().removeAllRanges();
+      window.getSelection().addRange(range);
+      try {
+        document.execCommand('copy');
+        window.getSelection().removeAllRanges();
+        showToast();
+      } catch (err) {
+        alert("複製失敗，請手動全選進行複製。");
+      }
+    }
+
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.style.display = 'block';
+      setTimeout(() => { toast.style.display = 'none'; }, 4000);
+    }
+
+    // 初次載入渲染
+    renderEmail();
+  </script>
+
+</body>
+</html>

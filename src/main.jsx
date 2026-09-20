@@ -305,6 +305,9 @@ window.addEventListener('unhandledrejection', (event) => {
     reasonStr.includes('NetworkError') ||
     reasonStr.includes('cannot be updated') ||
     reasonStr.includes('Failed to upload to Gist') ||
+    reasonStr.includes('Unable to open cursor') ||
+    combined.includes('open cursor') ||
+    reasonStr.includes('DatabaseClosedError') ||
     reasonStr.includes('dynamically imported module') ||
     reasonStr.includes('Importing a module script failed') ||
     stack.includes('registerSW') ||
