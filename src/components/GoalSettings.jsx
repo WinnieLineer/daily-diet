@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db, calculateStreak } from '../db';
@@ -664,6 +665,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     }
   }, [activeTab]);
 
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = '';
+      };
+    }
+  }, [isOpen]);
+
   return (
     <div className="relative">
       <NeoButton
@@ -675,8 +685,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         <Settings size={20} />
       </NeoButton>
 
-      <AnimatePresence>
-        {isOpen && (
+      {typeof document !== 'undefined' && createPortal(
+        <AnimatePresence>
+          {isOpen && (
           <motion.div
             className="fixed inset-0 z-[300] flex items-center justify-center p-4 bg-black/40 backdrop-blur-md"
             initial={{ opacity: 0 }}
@@ -2054,10 +2065,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence>,
+      document.body
+    )}
 
       {/* QR Code Lightbox Modal */}
-      {selectedQr && (
+      {typeof document !== 'undefined' && selectedQr && createPortal(
         <div
           className="fixed inset-0 z-[400] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md cursor-zoom-out animate-fade-in"
           onClick={() => setSelectedQr(null)}
@@ -2108,7 +2121,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
               {shopText.closeWindow}
             </button>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
