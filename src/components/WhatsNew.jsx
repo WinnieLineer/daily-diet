@@ -23,7 +23,7 @@ export const isNewer = (newVer, oldVer) => {
 export const LATEST_WHATSNEW_VERSION = '3.3.58';
 
 export const hasWhatsNewContent = (lastSeenVersion) => {
-  if (!lastSeenVersion) return true;
+  if (!lastSeenVersion) return false;
   return isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
 };
 

@@ -1519,14 +1519,6 @@ function App() {
 
         if (remoteVersion && remoteVersion !== APP_VERSION) {
           console.log(`[VersionCheck] Mismatch! Remote: ${remoteVersion}, Local: ${APP_VERSION}`);
-          
-          // 強制檢查：即使版本不對，如果是 2.0.8 用戶也要先看到公告
-          const lastSeen = safeGetStorage('last_seen_version');
-          if (lastSeen === '2.0.8') {
-            console.log("[VersionCheck] Emergency trigger for 2.0.8 patch notes!");
-            setLastSeenVersionState(lastSeen);
-            setShowWhatsNew(true);
-          }
 
           const lastReloadAttempt = safeGetStorage('last_reload_version');
           if (lastReloadAttempt === remoteVersion) {
@@ -1562,29 +1554,25 @@ function App() {
             window.location.href = targetUrl;
           }
         } else {
-          // If version matches, check if we should show the "What's New" intro
+          // If version matches, check if we should show the "What's New" modal
           const lastSeenVersion = safeGetStorage('last_seen_version');
           console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
           
-          // 📢 強制彈出雲端服務全面修復公告（每位用戶未點關閉前保證彈出一次）
-          const hasSeenPatchNotice = safeGetStorage('seen_patch_3358');
-          if (!hasSeenPatchNotice) {
-            console.log("[VersionCheck] Triggering service restoration announcement modal!");
-            setLastSeenVersionState(lastSeenVersion || '3.3.57');
-            setShowWhatsNew(true);
-          } else if (lastSeenVersion && lastSeenVersion !== APP_VERSION) {
-            const isFrom16 = lastSeenVersion?.startsWith('1.6');
+          if (!lastSeenVersion) {
+            // 新用戶首次進入，直接標記為已看最新版本，不彈出過去的更新公告打擾
+            safeSetStorage('last_seen_version', APP_VERSION);
+          } else if (lastSeenVersion !== APP_VERSION) {
             console.log("[VersionCheck] Version changed from", lastSeenVersion, "to", APP_VERSION);
 
-            // Only show What's New modal if there are ACTUAL new feature release notes configured!
-            const hasNewContent = !isFrom16 && isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
+            // 只有當新版本配置了比用戶已看版本更新的公告時，才彈出 WhatsNew
+            const hasNewContent = isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
 
             if (hasNewContent) {
-              console.log("[VersionCheck] Triggering WhatsNew modal!");
+              console.log("[VersionCheck] Triggering WhatsNew modal for new release notes!");
               setLastSeenVersionState(lastSeenVersion);
               setShowWhatsNew(true);
             } else {
-              // Only silently advance version if there is no major WhatsNew release notes to show
+              // 一般小版本修復與維護，靜默推進版本，避免已看過的用戶反覆看到舊卡片
               safeSetStorage('last_seen_version', APP_VERSION);
             }
           }
@@ -2003,7 +1991,6 @@ function App() {
               onClose={() => {
                 setShowWhatsNew(false);
                 safeSetStorage('last_seen_version', APP_VERSION);
-                safeSetStorage('seen_patch_3358', 'true');
               }}
             />
           )}

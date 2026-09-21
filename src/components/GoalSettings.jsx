@@ -569,7 +569,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         if (data.favorites) await db.favorites.bulkAdd(data.favorites.map(({ id, ...r }) => r));
       });
       if (data.localStorage) {
-        Object.entries(data.localStorage).forEach(([key, value]) => { if (value !== null) safeSetStorage(key, value); });
+        Object.entries(data.localStorage).forEach(([key, value]) => {
+          if (key === 'last_seen_version') {
+            // 🛡️ 防倒退：避免還原歷史雲端備份時把已看版本倒退回舊版，導致重複彈出過期公告卡片
+            const current = safeGetStorage('last_seen_version');
+            if (!current) {
+              safeSetStorage(key, value || APP_VERSION);
+            }
+            return;
+          }
+          if (value !== null) safeSetStorage(key, value);
+        });
 
         // 👤 使用者名稱統一規則：若有 LINE 名稱則優先以 LINE 名稱為準；若無，則採用 Gist 備份中最早設定的名稱
         const currentLineName = lineProfile?.displayName || safeGetStorage('line_user_name');
