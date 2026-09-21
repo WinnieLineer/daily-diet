@@ -2,30 +2,9 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import { ShieldCheck, X, CheckCircle2, Clock, Cloud, Sparkles, RefreshCw, Lock, Activity, MapPin, LayoutGrid } from 'lucide-react';
 import NeoButton from './NeoButton';
-import { APP_VERSION } from '../lib/constants';
+import { APP_VERSION, CURRENT_WHATSNEW_ID } from '../lib/constants';
 
-export const isNewer = (newVer, oldVer) => {
-  if (!oldVer) return true;
-  const cleanNew = String(newVer || '').replace(/^[vV]/, '').trim();
-  const cleanOld = String(oldVer || '').replace(/^[vV]/, '').trim();
-  if (cleanNew === cleanOld) return false;
-  const n = cleanNew.split('.').map(Number);
-  const o = cleanOld.split('.').map(Number);
-  for (let i = 0; i < Math.max(n.length, o.length); i++) {
-    const nVal = isNaN(n[i]) ? 0 : n[i];
-    const oVal = isNaN(o[i]) ? 0 : o[i];
-    if (nVal > oVal) return true;
-    if (nVal < oVal) return false;
-  }
-  return false;
-};
-
-export const LATEST_WHATSNEW_VERSION = '3.3.77';
-
-export const hasWhatsNewContent = (lastSeenVersion) => {
-  if (!lastSeenVersion) return false;
-  return isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
-};
+export { CURRENT_WHATSNEW_ID };
 
 const FeatureItem = ({ icon: Icon, title, desc, badge = "全新功能", iconBg = "bg-amber-100", iconColor = "text-amber-800" }) => (
   <div className="flex items-start gap-3.5 p-3.5 bg-white border-2 border-black rounded-2xl shadow-neo-xs">

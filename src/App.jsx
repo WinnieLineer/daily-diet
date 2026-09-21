@@ -16,7 +16,7 @@ import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 import { t, getLanguage, setLanguage } from './lib/translations';
-import { APP_VERSION, ENABLE_520_THEME, isValidLocation } from './lib/constants';
+import { APP_VERSION, ENABLE_520_THEME, isValidLocation, CURRENT_WHATSNEW_ID } from './lib/constants';
 import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
 
@@ -876,6 +876,17 @@ function App() {
   useEffect(() => {
     const handleOpenWhatsNew = () => setShowWhatsNew(true);
     window.addEventListener('open-whatsnew', handleOpenWhatsNew);
+
+    // 📢 只要用戶尚未看過此版本的更新公告，且非首次新手導覽，便自動彈出一次！
+    try {
+      const seenId = safeGetStorage('seen_whatsnew_id');
+      const isOnboarding = !safeGetStorage('onboarding_seen') && !isLineEntry();
+      if (seenId !== CURRENT_WHATSNEW_ID && !isOnboarding) {
+        console.log('[WhatsNew] Unread update card detected, displaying:', CURRENT_WHATSNEW_ID);
+        setShowWhatsNew(true);
+      }
+    } catch (e) {}
+
     return () => window.removeEventListener('open-whatsnew', handleOpenWhatsNew);
   }, []);
 
@@ -1554,7 +1565,8 @@ function App() {
   
   const handleOnboardingComplete = () => {
     safeSetStorage('onboarding_seen', 'true');
-    safeSetStorage('last_seen_version', APP_VERSION); // 🚀 Mark version as seen to prevent immediate What's New modal
+    safeSetStorage('seen_whatsnew_id', CURRENT_WHATSNEW_ID); // 標記已看，避免新手進入後被打斷
+    safeSetStorage('last_seen_version', APP_VERSION);
     setUserName(safeGetStorage('user_name') || '');
     setShowOnboarding(false);
   };
@@ -1613,29 +1625,6 @@ function App() {
             searchParams.set('v', remoteVersion);
             const targetUrl = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${currentHash}`;
             window.location.href = targetUrl;
-          }
-        } else {
-          // If version matches, check if we should show the "What's New" modal
-          const lastSeenVersion = safeGetStorage('last_seen_version');
-          console.log("[VersionCheck] Current:", APP_VERSION, "LastSeen:", lastSeenVersion);
-          
-          if (!lastSeenVersion) {
-            // 新用戶首次進入，直接標記為已看最新版本，不彈出過去的更新公告打擾
-            safeSetStorage('last_seen_version', APP_VERSION);
-          } else if (lastSeenVersion !== APP_VERSION) {
-            console.log("[VersionCheck] Version changed from", lastSeenVersion, "to", APP_VERSION);
-
-            // 只有當新版本配置了比用戶已看版本更新的公告時，才彈出 WhatsNew
-            const hasNewContent = isNewer(LATEST_WHATSNEW_VERSION, lastSeenVersion);
-
-            if (hasNewContent) {
-              console.log("[VersionCheck] Triggering WhatsNew modal for new release notes!");
-              setLastSeenVersionState(lastSeenVersion);
-              setShowWhatsNew(true);
-            } else {
-              // 一般小版本修復與維護，靜默推進版本，避免已看過的用戶反覆看到舊卡片
-              safeSetStorage('last_seen_version', APP_VERSION);
-            }
           }
         }
       } catch (err) {
@@ -2051,6 +2040,7 @@ function App() {
               lastSeenVersion={lastSeenVersionState}
               onClose={() => {
                 setShowWhatsNew(false);
+                safeSetStorage('seen_whatsnew_id', CURRENT_WHATSNEW_ID);
                 safeSetStorage('last_seen_version', APP_VERSION);
               }}
             />
