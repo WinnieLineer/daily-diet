@@ -2125,8 +2125,8 @@ function App() {
               >
                 <div className={twMerge(
                   "flex items-center justify-between px-2.5 py-1 rounded-xl border-2 border-black text-[10px] font-black shadow-neo-xs transition-colors",
-                  syncState === 'syncing' ? "bg-amber-300 text-amber-950" : 
-                  syncState === 'synced' ? "bg-emerald-400 text-emerald-950" : "bg-rose-300 text-rose-950"
+                  syncState === 'syncing' ? "bg-white text-black" : 
+                  syncState === 'synced' ? "bg-accent text-black" : "bg-zinc-100 text-zinc-900"
                 )}>
                   <div className="flex items-center gap-1.5 min-w-0">
                     {syncState === 'syncing' && <RefreshCw size={11} className="animate-spin shrink-0 text-black" />}
@@ -2138,7 +2138,7 @@ function App() {
                       {syncState === 'error' && (currentLang === 'en' ? 'Sync interrupted, saved locally' : '連線中斷，已轉為本機離線保存')}
                     </span>
                   </div>
-                  <span className="text-[8px] font-mono px-1.5 py-0.5 bg-black/10 rounded-md shrink-0 ml-2 font-black">
+                  <span className="text-[8px] font-mono px-1.5 py-0.5 bg-black text-accent rounded-md shrink-0 ml-2 font-black">
                     {syncState === 'syncing' ? 'SYNC' : 'OK'}
                   </span>
                 </div>
@@ -2152,43 +2152,47 @@ function App() {
               <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none relative truncate">
                 {userName ? (
                   <span className="flex flex-col min-w-0">
-                    <span className="text-amber-500 text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5 truncate notranslate font-black" translate="no">
+                    <span className="text-zinc-500 text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5 truncate notranslate font-black" translate="no">
                       <span>{userName}</span>
                       <span>{t('title_possessive')}</span>
                     </span>
-                    <span className="flex items-center gap-1 text-zinc-950">
-                      <span className="truncate">{t('app_title')}</span>
+                    <span className="flex items-center gap-1">
+                      <span className="truncate bg-accent text-black px-1.5 py-0.5 rounded-lg border-2 border-black shadow-neo-xs font-black">
+                        {t('app_title')}
+                      </span>
                       {ENABLE_520_THEME && (
-                        <span className="text-[8px] font-black italic bg-rose-500 text-white px-1.5 py-0.5 rounded-md shadow-sm shrink-0">
+                        <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-sm shrink-0">
                           520
                         </span>
                       )}
                     </span>
                   </span>
                 ) : (
-                  <span className="flex items-center gap-1 text-zinc-950">
-                    <span>{t('app_title')}</span>
+                  <span className="flex items-center gap-1">
+                    <span className="truncate bg-accent text-black px-1.5 py-0.5 rounded-lg border-2 border-black shadow-neo-xs font-black">
+                      {t('app_title')}
+                    </span>
                     {ENABLE_520_THEME && (
-                      <span className="text-[8px] font-black italic bg-rose-500 text-white px-1.5 py-0.5 rounded-md shadow-sm shrink-0">
+                      <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-sm shrink-0">
                         520
                       </span>
                     )}
                   </span>
                 )}
               </h1>
-              <div className="flex items-center gap-1.5 mt-0.5">
+              <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[8px] font-bold text-zinc-400 notranslate font-mono" translate="no">v{APP_VERSION}</span>
-                {/* 雲端同步輕量狀態微燈號 */}
+                {/* 雲端同步輕量狀態微燈號（黃黑白深淺體系） */}
                 <div 
                   className="flex items-center gap-1 cursor-pointer group"
                   onClick={triggerManualSync}
                   title={syncState === 'syncing' ? '同步中' : '點擊手動同步'}
                 >
                   <span className={twMerge(
-                    "w-1.5 h-1.5 rounded-full transition-colors",
-                    syncState === 'syncing' ? "bg-amber-500 animate-ping" : "bg-emerald-500 group-hover:scale-125"
+                    "w-1.5 h-1.5 rounded-full border border-black transition-all",
+                    syncState === 'syncing' ? "bg-accent animate-ping" : "bg-accent group-hover:scale-125"
                   )} />
-                  <span className="text-[8px] font-bold text-zinc-400 group-hover:text-zinc-700">
+                  <span className="text-[8px] font-bold text-zinc-400 group-hover:text-black transition-colors">
                     {syncState === 'syncing' ? (currentLang === 'en' ? 'syncing' : '同步中') : (currentLang === 'en' ? 'cloud' : '雲端')}
                   </span>
                 </div>
@@ -2199,16 +2203,29 @@ function App() {
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
               <HeaderClock lastLocation={lastLocation} />
               
-              {/* 🌐 快速雙語切換按鈕 */}
-              <NeoButton 
-                variant="white"
-                className="h-8.5 sm:h-9.5 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 font-black text-[10px] sm:text-xs rounded-xl shadow-neo-xs hover:bg-zinc-50 active:translate-y-0.5"
+              {/* 🌐 快速雙語切換按鈕（黃黑白深淺區別） */}
+              <button 
+                type="button"
                 onClick={toggleLanguage}
+                className="h-8.5 sm:h-9.5 px-2 bg-white border-2 border-black rounded-xl shadow-neo-xs flex items-center gap-1 hover:bg-zinc-50 active:translate-y-0.5 transition-all cursor-pointer select-none shrink-0"
                 title={currentLang === 'en' ? "切換至繁體中文" : "Switch to English"}
               >
                 <span className="text-xs">🌐</span>
-                <span className="font-mono font-black">{currentLang === 'en' ? 'EN' : '中'}</span>
-              </NeoButton>
+                <div className="flex items-center rounded-lg border border-black overflow-hidden text-[9px] font-black leading-none">
+                  <span className={twMerge(
+                    "px-1.5 py-1 transition-colors",
+                    currentLang === 'zh' ? "bg-accent text-black font-black" : "bg-white text-zinc-400 hover:text-black"
+                  )}>
+                    中
+                  </span>
+                  <span className={twMerge(
+                    "px-1.5 py-1 transition-colors border-l border-black",
+                    currentLang === 'en' ? "bg-accent text-black font-black" : "bg-white text-zinc-400 hover:text-black"
+                  )}>
+                    EN
+                  </span>
+                </div>
+              </button>
 
               {/* 週結算報告 */}
               <NeoButton 
