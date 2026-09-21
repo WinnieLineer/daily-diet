@@ -128,7 +128,7 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
 class ErrorBoundary extends React.Component {
   constructor(props) {
     super(props);
-    this.state = { hasError: false, error: null, errorInfo: null };
+    this.state = { hasError: false, error: null, errorInfo: null, isClearing: false, copied: false };
   }
 
   static getDerivedStateFromError(error) {
@@ -178,41 +178,110 @@ class ErrorBoundary extends React.Component {
     reportWebErrorToWeb3Forms('React ErrorBoundary Crash', error?.message || error?.toString(), errorInfo?.componentStack);
   }
 
+  handleClearCacheAndReload = async () => {
+    this.setState({ isClearing: true });
+    try {
+      if ('serviceWorker' in navigator) {
+        const registrations = await navigator.serviceWorker.getRegistrations();
+        for (const registration of registrations) {
+          await registration.unregister();
+        }
+      }
+      if ('caches' in window) {
+        const keys = await caches.keys();
+        for (const key of keys) {
+          await caches.delete(key);
+        }
+      }
+    } catch (e) {
+      console.warn('Failed clearing cache:', e);
+    }
+    const hash = window.location.hash || '';
+    window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now() + hash;
+  };
+
+  handleGoHome = () => {
+    window.location.href = window.location.origin + window.location.pathname + '?t=' + Date.now();
+  };
+
+  handleCopyError = () => {
+    try {
+      const text = `${this.state.error?.toString()}\n\n${this.state.errorInfo?.componentStack || ''}`;
+      navigator.clipboard.writeText(text);
+      this.setState({ copied: true });
+      setTimeout(() => this.setState({ copied: false }), 2000);
+    } catch (e) {}
+  };
+
   render() {
     if (this.state.hasError) {
       return (
-        <div style={{ padding: '20px', background: '#ffebee', color: '#c62828', minHeight: '100vh', fontFamily: 'monospace' }}>
-          <h1 style={{ fontSize: '18px', fontWeight: 'bold', marginBottom: '10px' }}>App Crashed!</h1>
-          <details style={{ whiteSpace: 'pre-wrap', wordBreak: 'break-word', fontSize: '12px' }}>
-            <summary style={{ fontWeight: 'bold', marginBottom: '10px', cursor: 'pointer' }}>
-              {this.state.error && this.state.error.toString()}
-            </summary>
-            {this.state.errorInfo && this.state.errorInfo.componentStack}
-          </details>
-          <div style={{ marginTop: '20px' }} id="global-errors"></div>
-          <button 
-            onClick={async () => { 
-              try {
-                if ('serviceWorker' in navigator) {
-                  const registrations = await navigator.serviceWorker.getRegistrations();
-                  for (const registration of registrations) {
-                    await registration.unregister();
-                  }
-                }
-                if ('caches' in window) {
-                  const keys = await caches.keys();
-                  for (const key of keys) {
-                    await caches.delete(key);
-                  }
-                }
-              } catch (e) {}
-              const hash = window.location.hash || '';
-              window.location.href = window.location.origin + window.location.pathname + '?v=' + Date.now() + hash;
-            }}
-            style={{ marginTop: '20px', padding: '10px 15px', background: '#c62828', color: 'white', border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer' }}
-          >
-            Clear Cache & Reload
-          </button>
+        <div className="min-h-screen min-h-dvh bg-[#F8FAFC] flex items-center justify-center p-4 selection:bg-accent selection:text-black">
+          <div className="max-w-md w-full bg-white border-4 border-black rounded-[2.5rem] shadow-neo p-6 sm:p-8 flex flex-col items-center text-center relative">
+            {/* 🐼 可愛吉祥物徽章 */}
+            <div className="w-20 h-20 bg-amber-100 border-4 border-black rounded-3xl flex items-center justify-center text-4xl shadow-neo-sm mb-4 select-none animate-bounce">
+              🐼
+            </div>
+
+            {/* 標題與友善說明 */}
+            <h1 className="text-xl sm:text-2xl font-black italic tracking-tight text-zinc-950 mb-2">
+              哎呀！遇到小插曲 🐾
+            </h1>
+            <p className="text-xs sm:text-sm font-bold text-zinc-500 leading-relaxed mb-6 max-w-xs">
+              可能剛好遇上新功能版本更新，或是瀏覽器暫存需要重新同步。<br />
+              <span className="text-zinc-700 font-black">請放心，您的飲食與體重紀錄都妥善保存在本機！</span>
+            </p>
+
+            {/* 核心操作按鈕群組 (Neo-Brutalist 風格) */}
+            <div className="w-full space-y-2.5">
+              <button
+                type="button"
+                onClick={this.handleClearCacheAndReload}
+                disabled={this.state.isClearing}
+                className="w-full bg-accent hover:bg-yellow-300 active:translate-x-[3px] active:translate-y-[3px] active:shadow-none text-black border-4 border-black py-3.5 px-4 rounded-2xl font-black text-sm shadow-neo transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              >
+                <span className="text-base">{this.state.isClearing ? '⏳' : '🔄'}</span>
+                <span>{this.state.isClearing ? '正在清理快取並載入最新版...' : '清除快取並重新載入 (Clear Cache)'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={this.handleGoHome}
+                className="w-full bg-white hover:bg-zinc-50 active:translate-x-[2px] active:translate-y-[2px] active:shadow-none text-zinc-800 border-4 border-black py-2.5 px-4 rounded-2xl font-black text-xs shadow-neo-sm transition-all flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <span>🏠</span>
+                <span>嘗試直接返回首頁</span>
+              </button>
+            </div>
+
+            {/* 技術診斷摺疊區 (平時收合，不造成用戶恐慌) */}
+            <details className="w-full mt-6 text-left border-2 border-black/15 rounded-2xl overflow-hidden bg-zinc-50 group">
+              <summary className="px-3.5 py-2.5 text-[11px] font-black cursor-pointer select-none text-zinc-500 hover:text-zinc-800 flex items-center justify-between list-none">
+                <span className="flex items-center gap-1.5">
+                  <span>🔍</span>
+                  <span>技術診斷資訊 (Technical Details)</span>
+                </span>
+                <span className="text-xs text-zinc-400 group-open:rotate-180 transition-transform">▼</span>
+              </summary>
+              <div className="p-3 bg-zinc-100 border-t-2 border-black/10 text-[10px] font-mono leading-relaxed overflow-x-auto whitespace-pre-wrap break-all max-h-44 text-zinc-700">
+                <div className="font-bold text-rose-600 mb-2">
+                  {this.state.error && this.state.error.toString()}
+                </div>
+                <div className="text-zinc-500 text-[9px] mb-3">
+                  {this.state.errorInfo && this.state.errorInfo.componentStack}
+                </div>
+                <div className="pt-2 border-t border-zinc-200 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={this.handleCopyError}
+                    className="px-2.5 py-1 bg-white border-2 border-black rounded-lg text-[9px] font-black text-black shadow-neo-xs hover:bg-zinc-100 cursor-pointer"
+                  >
+                    {this.state.copied ? '✓ 已複製到剪貼簿' : '📋 複製錯誤日誌'}
+                  </button>
+                </div>
+              </div>
+            </details>
+          </div>
         </div>
       );
     }
