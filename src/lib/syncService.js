@@ -93,6 +93,12 @@ function debounce(fn, waitMs = 350) {
   };
 }
 
+export function notifySyncStatus(status) {
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('app-sync-status', { detail: { status } }));
+  }
+}
+
 // 🛡️ 餐點同步隊列（防止突發多筆記帳造成 Gist 409 衝突與伺服器過載）
 const mealSyncQueue = [];
 let isProcessingMealQueue = false;
@@ -100,6 +106,7 @@ let isProcessingMealQueue = false;
 async function processMealSyncQueue() {
   if (isProcessingMealQueue || mealSyncQueue.length === 0) return;
   isProcessingMealQueue = true;
+  notifySyncStatus('syncing');
 
   while (mealSyncQueue.length > 0) {
     const nextTask = mealSyncQueue.shift();
@@ -114,6 +121,7 @@ async function processMealSyncQueue() {
   }
 
   isProcessingMealQueue = false;
+  notifySyncStatus('synced');
 }
 
 /**

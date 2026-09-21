@@ -128,6 +128,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [activeTitle, setActiveTitle] = useState(() => safeGetStorage('panda_active_title') || '');
   const [hasPersonas, setHasPersonas] = useState(safeGetStorage('panda_persona_unlocked') === 'true');
   const [activePersona, setActivePersona] = useState(() => safeGetStorage('panda_active_persona') || 'tsundere');
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && syncStatus !== 'idle') {
+      const statusMap = { syncing: 'syncing', success: 'synced', error: 'error' };
+      window.dispatchEvent(new CustomEvent('app-sync-status', { detail: { status: statusMap[syncStatus] || syncStatus } }));
+    }
+  }, [syncStatus]);
   const [lineProfile, setLineProfile] = useState(null);
   const [currentGistId, setCurrentGistId] = useState(() => safeGetStorage('gist_backup_id') || getCurrentGistId() || '');
   const [copiedGist, setCopiedGist] = useState(false);
