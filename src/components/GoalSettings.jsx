@@ -15,6 +15,17 @@ import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateC
 
 const VERSION_HISTORY = [
   { 
+    version: '3.3.77', 
+    date: '2026-09-21', 
+    features: [
+      '📌 頂部設定列改為固定置頂（Sticky Header），隨滑隨用', 
+      '🔄 新增雲端雙向即時同步動態提示膠囊與微型狀態燈號',
+      '📍 智慧地點標記優化：過濾未知地點並升級雙重地理反查',
+      '🛡️ 全新新野獸派友善異常防護介面與一鍵快取重新整理',
+      '✨ 設定彈窗全新 Portal 架構，徹底解決滑動跑版'
+    ] 
+  },
+  { 
     version: '3.3.42', 
     date: '2026-09-15', 
     features: [
