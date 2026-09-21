@@ -884,6 +884,23 @@ function App() {
   });
   const [newVersionAvailable, setNewVersionAvailable] = useState(false);
   const [syncState, setSyncState] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'error'
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState(64);
+
+  useEffect(() => {
+    if (!headerRef.current) return;
+    const updateHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(headerRef.current.offsetHeight);
+      }
+    };
+    updateHeight();
+    if (typeof ResizeObserver !== 'undefined') {
+      const observer = new ResizeObserver(updateHeight);
+      observer.observe(headerRef.current);
+      return () => observer.disconnect();
+    }
+  }, []);
 
   useEffect(() => {
     const handleSyncStatus = (e) => {
@@ -2054,7 +2071,7 @@ function App() {
               initial={{ opacity: 0, y: -30, scale: 0.9 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: -20, scale: 0.9 }}
-              className="fixed top-6 left-1/2 -translate-x-1/2 z-[200] bg-white text-black px-5 py-3 rounded-2xl font-black text-sm shadow-neo border-4 border-black flex items-center gap-3 w-max max-w-[90vw] justify-center whitespace-nowrap"
+              className="fixed top-20 left-1/2 -translate-x-1/2 z-[200] bg-white text-black px-5 py-3 rounded-2xl font-black text-sm shadow-neo border-4 border-black flex items-center gap-3 w-max max-w-[90vw] justify-center whitespace-nowrap"
             >
               <div className="bg-emerald-500 p-1 rounded-full border-2 border-black">
                 <Check size={14} strokeWidth={4} className="text-white" />
@@ -2064,171 +2081,179 @@ function App() {
         )}
       </AnimatePresence>
 
-      {/* PWA New Version Floating Banner — 頂部細條，不遮擋底部熊貓教練 */}
-      <AnimatePresence>
-        {newVersionAvailable && (
-          <motion.div
-            key="pwa-version-banner"
-            initial={{ opacity: 0, y: -40 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -40 }}
-            className="fixed top-0 left-0 right-0 z-[250] bg-yellow-300 text-black border-b-4 border-black flex items-center justify-between px-4 py-2 shadow-neo"
-          >
-            <div className="flex items-center gap-2 text-xs font-black">
-              <span className="text-base">🎉</span>
-              <span>{currentLang === 'en' ? 'New version available!' : '熊貓教練有最新版本囉！'}</span>
-            </div>
-            <button
-              onClick={() => {
-                try { sessionStorage.removeItem('chunk_reload_count'); } catch (e) {}
-                window.location.reload();
-              }}
-              className="bg-black text-white px-3 py-1 rounded-lg border-2 border-black text-xs font-black shadow-sm active:translate-y-0.5 cursor-pointer hover:bg-neutral-800 transition-colors shrink-0"
-            >
-              {currentLang === 'en' ? 'Update Now' : '立即更新'}
-            </button>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* 🚀 固定列 Header（吸頂懸浮，下滑永遠停留在此） */}
-      <header className="sticky top-0 z-40 bg-[#F8FAFC]/95 backdrop-blur-md px-3 sm:px-4 pt-2.5 pb-2.5 border-b-[3px] sm:border-b-4 border-black shadow-neo-sm transition-all duration-200">
-        {/* 🔄 最上方動態同步狀態提示膠囊條 */}
+      {/* 🚀 真正永遠懸浮在最上方的固定列 Header */}
+      <header 
+        ref={headerRef}
+        className="fixed top-0 left-0 right-0 z-40 bg-[#F8FAFC]/95 backdrop-blur-md border-b-[3px] sm:border-b-4 border-black shadow-neo-sm transition-all duration-200"
+      >
+        {/* PWA New Version Floating Banner */}
         <AnimatePresence>
-          {syncState !== 'idle' && (
+          {newVersionAvailable && (
             <motion.div
-              initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-              animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
-              exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-              className="overflow-hidden"
+              key="pwa-version-banner"
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: 'auto' }}
+              exit={{ opacity: 0, height: 0 }}
+              className="bg-yellow-300 text-black border-b-2 border-black flex items-center justify-between px-4 py-1.5 shadow-sm"
             >
-              <div className={twMerge(
-                "flex items-center justify-between px-2.5 py-1 rounded-xl border-2 border-black text-[10px] font-black shadow-neo-xs transition-colors",
-                syncState === 'syncing' ? "bg-amber-300 text-amber-950" : 
-                syncState === 'synced' ? "bg-emerald-400 text-emerald-950" : "bg-rose-300 text-rose-950"
-              )}>
-                <div className="flex items-center gap-1.5 min-w-0">
-                  {syncState === 'syncing' && <RefreshCw size={11} className="animate-spin shrink-0 text-black" />}
-                  {syncState === 'synced' && <Check size={12} strokeWidth={4} className="shrink-0 text-black" />}
-                  {syncState === 'error' && <AlertCircle size={12} className="shrink-0 text-black" />}
-                  <span className="truncate">
-                    {syncState === 'syncing' && (currentLang === 'en' ? 'Syncing cloud data with LINE...' : '雲端資料雙向即時同步中...')}
-                    {syncState === 'synced' && (currentLang === 'en' ? 'All records synced with cloud!' : '資料已成功同步完成！')}
-                    {syncState === 'error' && (currentLang === 'en' ? 'Sync interrupted, saved locally' : '連線中斷，已轉為本機離線保存')}
-                  </span>
-                </div>
-                <span className="text-[8px] font-mono px-1.5 py-0.5 bg-black/10 rounded-md shrink-0 ml-2 font-black">
-                  {syncState === 'syncing' ? 'SYNC' : 'OK'}
-                </span>
+              <div className="flex items-center gap-2 text-xs font-black">
+                <span className="text-base">🎉</span>
+                <span>{currentLang === 'en' ? 'New version available!' : '熊貓教練有最新版本囉！'}</span>
               </div>
+              <button
+                onClick={() => {
+                  try { sessionStorage.removeItem('chunk_reload_count'); } catch (e) {}
+                  window.location.reload();
+                }}
+                className="bg-black text-white px-2.5 py-0.5 rounded-lg border border-black text-xs font-black active:translate-y-0.5 cursor-pointer hover:bg-neutral-800 transition-colors shrink-0"
+              >
+                {currentLang === 'en' ? 'Update Now' : '立即更新'}
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
 
-        <div className="flex justify-between items-center gap-2">
-          {/* 左側：品牌、用戶與版本 */}
-          <div className="flex flex-col shrink min-w-0">
-            <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none relative truncate">
-              {userName ? (
-                <span className="flex flex-col min-w-0">
-                  <span className="text-amber-500 text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5 truncate notranslate font-black" translate="no">
-                    <span>{userName}</span>
-                    <span>{t('title_possessive')}</span>
+        <div className="max-w-lg mx-auto px-3 sm:px-4 pt-2.5 pb-2.5">
+          {/* 🔄 最上方動態同步狀態提示膠囊條 */}
+          <AnimatePresence>
+            {syncState !== 'idle' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
+                animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
+                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
+                className="overflow-hidden"
+              >
+                <div className={twMerge(
+                  "flex items-center justify-between px-2.5 py-1 rounded-xl border-2 border-black text-[10px] font-black shadow-neo-xs transition-colors",
+                  syncState === 'syncing' ? "bg-amber-300 text-amber-950" : 
+                  syncState === 'synced' ? "bg-emerald-400 text-emerald-950" : "bg-rose-300 text-rose-950"
+                )}>
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    {syncState === 'syncing' && <RefreshCw size={11} className="animate-spin shrink-0 text-black" />}
+                    {syncState === 'synced' && <Check size={12} strokeWidth={4} className="shrink-0 text-black" />}
+                    {syncState === 'error' && <AlertCircle size={12} className="shrink-0 text-black" />}
+                    <span className="truncate">
+                      {syncState === 'syncing' && (currentLang === 'en' ? 'Syncing cloud data with LINE...' : '雲端資料雙向即時同步中...')}
+                      {syncState === 'synced' && (currentLang === 'en' ? 'All records synced with cloud!' : '資料已成功同步完成！')}
+                      {syncState === 'error' && (currentLang === 'en' ? 'Sync interrupted, saved locally' : '連線中斷，已轉為本機離線保存')}
+                    </span>
+                  </div>
+                  <span className="text-[8px] font-mono px-1.5 py-0.5 bg-black/10 rounded-md shrink-0 ml-2 font-black">
+                    {syncState === 'syncing' ? 'SYNC' : 'OK'}
                   </span>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="flex justify-between items-center gap-2">
+            {/* 左側：品牌、用戶與版本 */}
+            <div className="flex flex-col shrink min-w-0">
+              <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none relative truncate">
+                {userName ? (
+                  <span className="flex flex-col min-w-0">
+                    <span className="text-amber-500 text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5 truncate notranslate font-black" translate="no">
+                      <span>{userName}</span>
+                      <span>{t('title_possessive')}</span>
+                    </span>
+                    <span className="flex items-center gap-1 text-zinc-950">
+                      <span className="truncate">{t('app_title')}</span>
+                      {ENABLE_520_THEME && (
+                        <span className="text-[8px] font-black italic bg-rose-500 text-white px-1.5 py-0.5 rounded-md shadow-sm shrink-0">
+                          520
+                        </span>
+                      )}
+                    </span>
+                  </span>
+                ) : (
                   <span className="flex items-center gap-1 text-zinc-950">
-                    <span className="truncate">{t('app_title')}</span>
+                    <span>{t('app_title')}</span>
                     {ENABLE_520_THEME && (
                       <span className="text-[8px] font-black italic bg-rose-500 text-white px-1.5 py-0.5 rounded-md shadow-sm shrink-0">
                         520
                       </span>
                     )}
                   </span>
-                </span>
-              ) : (
-                <span className="flex items-center gap-1 text-zinc-950">
-                  <span>{t('app_title')}</span>
-                  {ENABLE_520_THEME && (
-                    <span className="text-[8px] font-black italic bg-rose-500 text-white px-1.5 py-0.5 rounded-md shadow-sm shrink-0">
-                      520
-                    </span>
-                  )}
-                </span>
-              )}
-            </h1>
-            <div className="flex items-center gap-1.5 mt-0.5">
-              <span className="text-[8px] font-bold text-zinc-400 notranslate font-mono" translate="no">v{APP_VERSION}</span>
-              {/* 雲端同步輕量狀態微燈號 */}
-              <div 
-                className="flex items-center gap-1 cursor-pointer group"
-                onClick={triggerManualSync}
-                title={syncState === 'syncing' ? '同步中' : '點擊手動同步'}
-              >
-                <span className={twMerge(
-                  "w-1.5 h-1.5 rounded-full transition-colors",
-                  syncState === 'syncing' ? "bg-amber-500 animate-ping" : "bg-emerald-500 group-hover:scale-125"
-                )} />
-                <span className="text-[8px] font-bold text-zinc-400 group-hover:text-zinc-700">
-                  {syncState === 'syncing' ? (currentLang === 'en' ? 'syncing' : '同步中') : (currentLang === 'en' ? 'cloud' : '雲端')}
-                </span>
+                )}
+              </h1>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[8px] font-bold text-zinc-400 notranslate font-mono" translate="no">v{APP_VERSION}</span>
+                {/* 雲端同步輕量狀態微燈號 */}
+                <div 
+                  className="flex items-center gap-1 cursor-pointer group"
+                  onClick={triggerManualSync}
+                  title={syncState === 'syncing' ? '同步中' : '點擊手動同步'}
+                >
+                  <span className={twMerge(
+                    "w-1.5 h-1.5 rounded-full transition-colors",
+                    syncState === 'syncing' ? "bg-amber-500 animate-ping" : "bg-emerald-500 group-hover:scale-125"
+                  )} />
+                  <span className="text-[8px] font-bold text-zinc-400 group-hover:text-zinc-700">
+                    {syncState === 'syncing' ? (currentLang === 'en' ? 'syncing' : '同步中') : (currentLang === 'en' ? 'cloud' : '雲端')}
+                  </span>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* 右側：時鐘與快捷操作列 */}
-          <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
-            <HeaderClock lastLocation={lastLocation} />
-            
-            {/* 🌐 快速雙語切換按鈕 */}
-            <NeoButton 
-              variant="white"
-              className="h-8.5 sm:h-9.5 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 font-black text-[10px] sm:text-xs rounded-xl shadow-neo-xs hover:bg-zinc-50 active:translate-y-0.5"
-              onClick={toggleLanguage}
-              title={currentLang === 'en' ? "切換至繁體中文" : "Switch to English"}
-            >
-              <span className="text-xs">🌐</span>
-              <span className="font-mono font-black">{currentLang === 'en' ? 'EN' : '中'}</span>
-            </NeoButton>
+            {/* 右側：時鐘與快捷操作列 */}
+            <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
+              <HeaderClock lastLocation={lastLocation} />
+              
+              {/* 🌐 快速雙語切換按鈕 */}
+              <NeoButton 
+                variant="white"
+                className="h-8.5 sm:h-9.5 px-2 sm:px-2.5 flex items-center gap-1 shrink-0 font-black text-[10px] sm:text-xs rounded-xl shadow-neo-xs hover:bg-zinc-50 active:translate-y-0.5"
+                onClick={toggleLanguage}
+                title={currentLang === 'en' ? "切換至繁體中文" : "Switch to English"}
+              >
+                <span className="text-xs">🌐</span>
+                <span className="font-mono font-black">{currentLang === 'en' ? 'EN' : '中'}</span>
+              </NeoButton>
 
-            {/* 週結算報告 */}
-            <NeoButton 
-              variant={new Date().getDay() === 0 ? "accent" : "black"} 
-              className={twMerge(
-                "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 p-0 flex items-center justify-center relative shrink-0 rounded-xl shadow-neo-xs active:translate-y-0.5",
-                new Date().getDay() === 0 ? "bg-accent text-black border-black animate-pulse" : "bg-black text-white"
-              )}
-              onClick={() => setShowWeeklyReport(true)}
-              title="週結算報告"
-            >
-              <BarChart2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'}`} />
-              {new Date().getDay() === 0 && (
-                <span className="absolute -top-1 -right-1 flex h-3 w-3 sm:h-3.5 sm:w-3.5">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-accent border border-black flex items-center justify-center text-[6px] sm:text-[7px] font-black text-black">週</span>
-                </span>
-              )}
-            </NeoButton>
+              {/* 週結算報告 */}
+              <NeoButton 
+                variant={new Date().getDay() === 0 ? "accent" : "black"} 
+                className={twMerge(
+                  "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 p-0 flex items-center justify-center relative shrink-0 rounded-xl shadow-neo-xs active:translate-y-0.5",
+                  new Date().getDay() === 0 ? "bg-accent text-black border-black animate-pulse" : "bg-black text-white"
+                )}
+                onClick={() => setShowWeeklyReport(true)}
+                title="週結算報告"
+              >
+                <BarChart2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'}`} />
+                {new Date().getDay() === 0 && (
+                  <span className="absolute -top-1 -right-1 flex h-3 w-3 sm:h-3.5 sm:w-3.5">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-accent border border-black flex items-center justify-center text-[6px] sm:text-[7px] font-black text-black">週</span>
+                  </span>
+                )}
+              </NeoButton>
 
-            {/* 目標與設定 */}
-            <Suspense fallback={<div className="w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 bg-zinc-100 rounded-xl border-2 border-black animate-pulse" />}>
-              <GoalSettings 
-                initialTab={settingsTab} 
-                onGoalsUpdated={refreshData} 
-                onWatchTutorial={() => setShowOnboarding(true)}
-                onLanguageChanged={() => {
-                  setAdvice('');
-                  setCurrentLang(getLanguage());
-                }}
-                userName={userName}
-                onSetUserName={handleNameSave}
-                onToggleLayoutEdit={() => setIsEditingLayout(!isEditingLayout)}
-                isEditingLayout={isEditingLayout}
-                pwaPrompt={pwaPrompt}
-                onPwaPromptUsed={() => setPwaPrompt(null)}
-              />
-            </Suspense>
+              {/* 目標與設定 */}
+              <Suspense fallback={<div className="w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 bg-zinc-100 rounded-xl border-2 border-black animate-pulse" />}>
+                <GoalSettings 
+                  initialTab={settingsTab} 
+                  onGoalsUpdated={refreshData} 
+                  onWatchTutorial={() => setShowOnboarding(true)}
+                  onLanguageChanged={() => {
+                    setAdvice('');
+                    setCurrentLang(getLanguage());
+                  }}
+                  userName={userName}
+                  onSetUserName={handleNameSave}
+                  onToggleLayoutEdit={() => setIsEditingLayout(!isEditingLayout)}
+                  isEditingLayout={isEditingLayout}
+                  pwaPrompt={pwaPrompt}
+                  onPwaPromptUsed={() => setPwaPrompt(null)}
+                />
+              </Suspense>
+            </div>
           </div>
         </div>
       </header>
+
+      {/* 配合懸浮 Header 實際高度的動態佔位 Spacer，確保吸頂懸浮時內容不被遮蔽 */}
+      <div style={{ height: headerHeight }} className="shrink-0 transition-all duration-200" aria-hidden="true" />
 
       {/* 🚀 主要可滾動區域 */}
       <main className="p-4 pt-3 space-y-6 flex-1">
