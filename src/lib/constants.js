@@ -1,7 +1,7 @@
 export const ANALYSIS_DURATION_SECONDS = 15; // 🕒 Adjusted to 15s based on actual generation time
 export const IMAGE_MAX_DIMENSION = 1024;    // 📸 Back to 1024px to read labels clearly
 export const IMAGE_QUALITY = 0.8;           // 💎 Higher quality
-export const APP_VERSION = '3.3.71';         // 🏷️ Application Version (from package.json)
+export const APP_VERSION = '3.3.72';         // 🏷️ Application Version (from package.json)
 export const ENABLE_520_THEME = false;      // 💖 520 Festive decorations toggle
 
 /**
@@ -15,4 +15,26 @@ export function getLocalDateString(d = new Date()) {
   const month = String(dateObj.getMonth() + 1).padStart(2, '0');
   const day = String(dateObj.getDate()).padStart(2, '0');
   return `${year}-${month}-${day}`;
+}
+
+/**
+ * 📍 驗證是否為有效地理位置名稱（過濾未知、未定位、無等無意義占位符）
+ */
+export function isValidLocation(loc) {
+  if (!loc || typeof loc !== 'string') return false;
+  const trimmed = loc.trim();
+  if (!trimmed || trimmed === '-' || trimmed === '—') return false;
+  const lower = trimmed.toLowerCase();
+  if (
+    lower === 'unknown' || 
+    lower === 'unknown location' || 
+    lower === 'null' || 
+    lower === 'undefined' ||
+    trimmed === '未知' || 
+    trimmed === '未知地點' || 
+    trimmed === '未知位置' ||
+    trimmed === '未定位' ||
+    trimmed === '無'
+  ) return false;
+  return true;
 }

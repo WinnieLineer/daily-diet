@@ -15,7 +15,7 @@ import { getPandaAdvice, analyzeFoodText } from './lib/groq';
 import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart, Sparkles, Loader2 } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { t, getLanguage, setLanguage } from './lib/translations';
-import { APP_VERSION, ENABLE_520_THEME } from './lib/constants';
+import { APP_VERSION, ENABLE_520_THEME, isValidLocation } from './lib/constants';
 import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
 
@@ -749,17 +749,18 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
             </span>
           )}
 
-          {log.location && typeof log.location === 'string' && (
+          {isValidLocation(log.location) && (
             <span className="text-[9px] font-bold text-zinc-400 flex items-center gap-0.5 truncate bg-zinc-50 px-1.5 py-0.5 rounded-lg border border-black/5">
               <MapPin size={8} />
               {(() => {
                 try {
-                  const parts = log.location.split(' ');
-                  if (!parts || parts.length === 0) return log.location;
+                  const cleanLoc = log.location.trim();
+                  const parts = cleanLoc.split(' ');
+                  if (!parts || parts.length === 0) return cleanLoc;
                   const citySub = parts[0]; 
-                  return citySub && citySub.length > 3 ? citySub.substring(3) : (citySub || '');
+                  return citySub && citySub.length > 3 ? citySub.substring(3) : (citySub || cleanLoc);
                 } catch (e) {
-                  return '';
+                  return log.location;
                 }
               })()}
             </span>
@@ -847,7 +848,7 @@ const HeaderClock = React.memo(function HeaderClock({ lastLocation }) {
       <div className="text-[9px] sm:text-xs text-black whitespace-nowrap notranslate" translate="no">
         {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
       </div>
-      {lastLocation && (
+      {isValidLocation(lastLocation) && (
         <div className="text-[7px] sm:text-[9px] text-gray-400 italic truncate max-w-[70px] sm:max-w-[120px] whitespace-nowrap">
           📍 {lastLocation}
         </div>
@@ -1758,8 +1759,8 @@ function App() {
     const todayLogs = allLogs.filter(log => log.date === today);
     setRecentLogs(todayLogs);
     
-    // Find last location
-    const lastWithLocation = allLogs.find(log => log.location);
+    // Find last location (ignoring invalid or unknown placeholders)
+    const lastWithLocation = allLogs.find(log => isValidLocation(log.location));
     setLastLocation(lastWithLocation ? lastWithLocation.location : null);
     
     const historyEntries = allLogs.filter(log => log.date !== today);

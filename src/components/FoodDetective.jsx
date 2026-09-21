@@ -10,7 +10,7 @@ import { syncMealToCloud, syncDeleteFavorite, syncReorderFavorites } from '../li
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ANALYSIS_DURATION_SECONDS, IMAGE_MAX_DIMENSION, IMAGE_QUALITY } from '../lib/constants';
+import { ANALYSIS_DURATION_SECONDS, IMAGE_MAX_DIMENSION, IMAGE_QUALITY, isValidLocation } from '../lib/constants';
 
 const safeGetStorage = (key) => {
   try {
@@ -47,18 +47,15 @@ const DesktopCamera = ({ onCapture, onClose, onLocationReady }) => {
     }
     setupCamera();
 
-    const permissionGranted = safeGetStorage('location_granted') === 'true';
     if (navigator.geolocation && onLocationReady) {
-      if (permissionGranted) {
-        navigator.geolocation.getCurrentPosition(
-          pos => {
-            safeSetStorage('location_granted', 'true');
-            onLocationReady(pos.coords);
-          },
-          () => { },
-          { timeout: 8000, maximumAge: 30000 }
-        );
-      }
+      navigator.geolocation.getCurrentPosition(
+        pos => {
+          safeSetStorage('location_granted', 'true');
+          onLocationReady(pos.coords);
+        },
+        () => { },
+        { timeout: 8000, maximumAge: 30000 }
+      );
     }
 
     return () => {
@@ -365,27 +362,58 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   }, [mode, favoriteUpdateTrigger]);
 
   const reverseGeocode = async (lat, lon) => {
+    if (!lat || !lon) return null;
     setLocationLoading(true);
     try {
       const lang = getLanguage();
-      const acceptLang = lang === 'zh' ? 'zh-TW,zh;q=0.9' : 'en-US,en;q=0.9';
-      const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
-        headers: {
-          'Accept-Language': acceptLang,
-          'User-Agent': 'DailyDietApp/1.0'
+      const localityLang = lang === 'zh' ? 'zh' : 'en';
+
+      // 1. 優先嘗試 BigDataCloud 免費 Client API (專為瀏覽器設計，極快且無 CORS 限制)
+      try {
+        const bdcRes = await fetch(`https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=${localityLang}`, {
+          signal: AbortSignal.timeout(5000)
+        });
+        if (bdcRes.ok) {
+          const bdcData = await bdcRes.json();
+          const city = bdcData.city || bdcData.principalSubdivision || '';
+          const locality = bdcData.locality || '';
+          if (city || locality) {
+            const locName = `${city} ${locality}`.trim();
+            if (isValidLocation(locName)) return locName;
+          }
         }
-      });
-      const data = await response.json();
-      const addr = data.address;
-      const city = addr.city || addr.state || '';
-      const suburb = addr.suburb || addr.town || addr.district || '';
-      const road = addr.road || addr.pedestrian || '';
-      let houseNumber = addr.house_number || '';
-      if (houseNumber && !houseNumber.includes('號')) houseNumber += '號';
-      return `${city}${suburb} ${road}${houseNumber}`.trim();
+      } catch (bdcErr) {
+        console.warn("BigDataCloud geocode failed, trying OSM fallback:", bdcErr);
+      }
+
+      // 2. 備援方案：OpenStreetMap Nominatim
+      try {
+        const acceptLang = lang === 'zh' ? 'zh-TW,zh;q=0.9' : 'en-US,en;q=0.9';
+        const response = await fetch(`https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${lat}&lon=${lon}`, {
+          headers: {
+            'Accept-Language': acceptLang
+          },
+          signal: AbortSignal.timeout(5000)
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const addr = data.address || {};
+          const city = addr.city || addr.state || '';
+          const suburb = addr.suburb || addr.town || addr.district || '';
+          const road = addr.road || addr.pedestrian || '';
+          let houseNumber = addr.house_number || '';
+          if (houseNumber && !houseNumber.includes('號')) houseNumber += '號';
+          const osmName = `${city}${suburb} ${road}${houseNumber}`.trim();
+          if (isValidLocation(osmName)) return osmName;
+        }
+      } catch (osmErr) {
+        console.warn("Nominatim geocode failed:", osmErr);
+      }
+
+      return null;
     } catch (err) {
       console.error("Geocoding error:", err);
-      return t('unknown');
+      return null;
     } finally {
       setLocationLoading(false);
     }
@@ -396,15 +424,19 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       const cached = localStorage.getItem('last_known_location');
       if (!cached) return null;
       const data = JSON.parse(cached);
-      if (Date.now() - data.timestamp < 15 * 60 * 1000) return data.location;
+      if (data && isValidLocation(data.location)) {
+        if (Date.now() - data.timestamp < 15 * 60 * 1000) return data.location;
+      } else {
+        localStorage.removeItem('last_known_location');
+      }
     } catch (e) { }
     return null;
   };
 
   const saveLocationToCache = (location) => {
-    if (!location) return;
+    if (!isValidLocation(location)) return;
     try {
-      localStorage.setItem('last_known_location', JSON.stringify({ location, timestamp: Date.now() }));
+      localStorage.setItem('last_known_location', JSON.stringify({ location: location.trim(), timestamp: Date.now() }));
     } catch (e) {}
   };
 
@@ -414,11 +446,16 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     navigator.geolocation.getCurrentPosition(async (pos) => {
       try { localStorage.setItem('location_granted', 'true'); } catch (e) {}
       const loc = await reverseGeocode(pos.coords.latitude, pos.coords.longitude);
-      setResult(prev => ({ ...prev, location: loc }));
+      if (isValidLocation(loc)) {
+        setResult(prev => ({ ...prev, location: loc }));
+        saveLocationToCache(loc);
+      } else {
+        setResult(prev => ({ ...prev, location: null }));
+      }
     }, (err) => {
       console.error("Geolocation error:", err);
       setLocationLoading(false);
-    }, { timeout: 10000 });
+    }, { timeout: 10000, enableHighAccuracy: true });
   };
 
   const compressImage = (base64) => {
@@ -644,12 +681,23 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         } catch (err) { }
         if (navigator.geolocation) {
           try {
-            const permission = await navigator.permissions.query({ name: 'geolocation' });
-            if (permission.state === 'granted') {
+            let isAllowed = safeGetStorage('location_granted') === 'true';
+            if (navigator.permissions && navigator.permissions.query) {
+              try {
+                const permission = await navigator.permissions.query({ name: 'geolocation' });
+                if (permission.state === 'granted') isAllowed = true;
+                else if (permission.state === 'denied') isAllowed = false;
+              } catch (e) { }
+            }
+            if (isAllowed) {
               return await new Promise((resolve) => {
                 navigator.geolocation.getCurrentPosition(
-                  async (pos) => resolve(await reverseGeocode(pos.coords.latitude, pos.coords.longitude)),
-                  () => resolve(null), { timeout: 5000 }
+                  async (pos) => {
+                    safeSetStorage('location_granted', 'true');
+                    resolve(await reverseGeocode(pos.coords.latitude, pos.coords.longitude));
+                  },
+                  () => resolve(null), 
+                  { timeout: 5000, maximumAge: 60000 }
                 );
               });
             }
@@ -712,7 +760,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           ...result,
           ...newRes,
           dish_name: finalDishName,
-          location: result?.location || newRes.location || null
+          location: isValidLocation(result?.location) ? result.location : (isValidLocation(newRes.location) ? newRes.location : null)
         };
         setResult(updated);
         setOriginalResult(updated);
@@ -781,7 +829,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
     const timestamp = logDateObj.getTime();
 
-    const savedItem = { ...dataToSave, date: localDate, timestamp: timestamp, location: dataToSave.location || null, category: selectedCategory };
+    const savedItem = { ...dataToSave, date: localDate, timestamp: timestamp, location: isValidLocation(dataToSave.location) ? dataToSave.location.trim() : null, category: selectedCategory };
     await db.dietLogs.add(savedItem);
     syncMealToCloud(savedItem);
 
@@ -1304,7 +1352,37 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       )}
                       <div className="mb-4"><div className="text-[10px] font-black uppercase text-zinc-400 mb-1.5 ml-1">{t('portion_size')}</div><div className="flex overflow-x-auto no-scrollbar gap-2 -mx-1 px-1">{[0.5, 1, 1.5, 2].map(m => (<button key={m} onClick={() => { handleMultiplierChange(m); setShowCustomMultiplier(false); }} className={twMerge("px-2 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", multiplier === m && !showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>x{m}</button>))}<button onClick={() => { setShowCustomMultiplier(true); setMultiplierInput(''); }} className={twMerge("px-3 py-1.5 rounded-xl font-black text-[10px] border-2 transition-all", showCustomMultiplier ? "bg-black text-white border-black" : "bg-white text-black border-black/10 hover:border-black")}>{t('custom')}</button></div></div>
                       {showCustomMultiplier && <motion.div initial={{ opacity: 0, x: -10 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2 mb-4"><input type="number" step="0.1" min="0.1" value={multiplierInput} onChange={(e) => handleMultiplierChange(e.target.value)} className="w-20 border-4 border-black p-1.5 rounded-xl font-black text-center outline-none focus:bg-zinc-50 transition-all" autoFocus placeholder="1.0" /><span className="font-black text-xs">{t('times_portion')}</span></motion.div>}
-                      <div className="flex flex-wrap items-center gap-2 mt-2"><div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5"><MapPin size={14} className="text-zinc-400" /><span className="text-[10px] font-bold text-zinc-500">{locationLoading ? t('locating') : (result.location || t('unknown_location'))}</span>{!locationLoading && !result.location && (<button onClick={fetchCurrentLocation} className="text-accent hover:text-accent/80 ml-1"><RefreshCw size={12} className="animate-pulse" /></button>)}</div><div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">{['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (<button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>{t(cat)}</button>))}</div></div>
+                      <div className="flex flex-wrap items-center gap-2 mt-2">
+                        {(locationLoading || isValidLocation(result.location)) && (
+                          <div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5">
+                            <MapPin size={14} className="text-zinc-400" />
+                            <span className="text-[10px] font-bold text-zinc-600">
+                              {locationLoading ? (t('locating') || '定位中...') : result.location}
+                            </span>
+                            {!locationLoading && isValidLocation(result.location) && (
+                              <button onClick={fetchCurrentLocation} className="text-zinc-400 hover:text-black ml-1">
+                                <RefreshCw size={11} />
+                              </button>
+                            )}
+                          </div>
+                        )}
+                        {!locationLoading && !isValidLocation(result.location) && (
+                          <button
+                            onClick={fetchCurrentLocation}
+                            className="flex items-center gap-1.5 bg-zinc-50 hover:bg-zinc-100 px-2.5 py-1.5 rounded-xl border border-black/5 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors"
+                          >
+                            <MapPin size={13} className="text-zinc-400" />
+                            <span>{t('get_current_location') || '加入地點'}</span>
+                          </button>
+                        )}
+                        <div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">
+                          {['breakfast', 'lunch', 'dinner', 'snack'].map(cat => (
+                            <button key={cat} onClick={() => setSelectedCategory(cat)} className={twMerge("px-2 py-1 text-[9px] font-black uppercase rounded-lg", selectedCategory === cat ? "bg-black text-white" : "text-zinc-400 hover:text-zinc-600")}>
+                              {t(cat)}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
                       <div className="mt-4 mb-4">
                         <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1.5 ml-1">{t('log_time')}</label>
                         <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-1 overflow-hidden focus-within:border-black focus-within:bg-white transition-all">
