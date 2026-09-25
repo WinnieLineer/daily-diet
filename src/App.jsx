@@ -2112,38 +2112,6 @@ function App() {
         </AnimatePresence>
 
         <div className="max-w-lg mx-auto px-3 sm:px-4 pt-2.5 pb-2.5">
-          {/* 🔄 最上方動態同步狀態提示膠囊條 */}
-          <AnimatePresence>
-            {syncState !== 'idle' && (
-              <motion.div
-                initial={{ opacity: 0, height: 0, marginBottom: 0 }}
-                animate={{ opacity: 1, height: 'auto', marginBottom: 8 }}
-                exit={{ opacity: 0, height: 0, marginBottom: 0 }}
-                className="overflow-hidden"
-              >
-                <div className={twMerge(
-                  "flex items-center justify-between px-2.5 py-1 rounded-xl border-2 border-black text-[10px] font-black shadow-neo-xs transition-colors",
-                  syncState === 'syncing' ? "bg-white text-black" : 
-                  syncState === 'synced' ? "bg-accent text-black" : "bg-zinc-100 text-zinc-900"
-                )}>
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    {syncState === 'syncing' && <RefreshCw size={11} className="animate-spin shrink-0 text-black" />}
-                    {syncState === 'synced' && <Check size={12} strokeWidth={4} className="shrink-0 text-black" />}
-                    {syncState === 'error' && <AlertCircle size={12} className="shrink-0 text-black" />}
-                    <span className="truncate">
-                      {syncState === 'syncing' && (currentLang === 'en' ? 'Syncing cloud data with LINE...' : '雲端資料雙向即時同步中...')}
-                      {syncState === 'synced' && (currentLang === 'en' ? 'All records synced with cloud!' : '資料已成功同步完成！')}
-                      {syncState === 'error' && (currentLang === 'en' ? 'Sync interrupted, saved locally' : '連線中斷，已轉為本機離線保存')}
-                    </span>
-                  </div>
-                  <span className="text-[8px] font-mono px-1.5 py-0.5 bg-black text-accent rounded-md shrink-0 ml-2 font-black">
-                    {syncState === 'syncing' ? 'SYNC' : 'OK'}
-                  </span>
-                </div>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
           <div className="flex justify-between items-center gap-2">
             {/* 左側：品牌、用戶與版本 */}
             <div className="flex flex-col shrink min-w-0">
@@ -2180,18 +2148,36 @@ function App() {
               </h1>
               <div className="flex items-center gap-1.5 mt-1">
                 <span className="text-[8px] font-bold text-zinc-400 notranslate font-mono" translate="no">v{APP_VERSION}</span>
-                {/* 雲端同步輕量狀態微燈號（黃黑白深淺體系） */}
+                {/* 雲端 / LINE 同步狀態短字提示 */}
                 <div 
                   className="flex items-center gap-1 cursor-pointer group"
                   onClick={triggerManualSync}
-                  title={syncState === 'syncing' ? '同步中' : '點擊手動同步'}
+                  title={
+                    syncState === 'syncing' 
+                      ? (currentLang === 'en' ? 'Syncing data with LINE & Cloud...' : '資料正在與 LINE 及雲端即時同步中...')
+                      : syncState === 'synced'
+                        ? (currentLang === 'en' ? 'Synced with LINE! Click to refresh' : '已成功與 LINE 同步！點擊可手動同步')
+                        : syncState === 'error'
+                          ? (currentLang === 'en' ? 'Sync error, saved locally' : '連線異常，已轉為本機離線保存')
+                          : (currentLang === 'en' ? 'Click to sync with LINE' : '點擊手動同步 LINE')
+                  }
                 >
                   <span className={twMerge(
-                    "w-1.5 h-1.5 rounded-full border border-black transition-all",
-                    syncState === 'syncing' ? "bg-accent animate-ping" : "bg-accent group-hover:scale-125"
+                    "w-1.5 h-1.5 rounded-full border border-black transition-all shrink-0",
+                    syncState === 'syncing' ? "bg-accent animate-ping" : 
+                    syncState === 'synced' ? "bg-emerald-400" :
+                    syncState === 'error' ? "bg-rose-500" : "bg-accent group-hover:scale-125"
                   )} />
-                  <span className="text-[8px] font-bold text-zinc-400 group-hover:text-black transition-colors">
-                    {syncState === 'syncing' ? (currentLang === 'en' ? 'syncing' : '同步中') : (currentLang === 'en' ? 'cloud' : '雲端')}
+                  <span className={twMerge(
+                    "text-[8px] font-bold transition-colors leading-none",
+                    syncState === 'syncing' ? "text-black font-black" :
+                    syncState === 'synced' ? "text-emerald-700 font-bold" :
+                    syncState === 'error' ? "text-rose-600 font-bold" : "text-zinc-400 group-hover:text-black"
+                  )}>
+                    {syncState === 'syncing' ? (currentLang === 'en' ? 'LINE syncing...' : 'LINE 同步中...') :
+                     syncState === 'synced' ? (currentLang === 'en' ? 'LINE synced' : 'LINE 已同步') :
+                     syncState === 'error' ? (currentLang === 'en' ? 'offline' : '離線保存') :
+                     (currentLang === 'en' ? 'cloud' : '雲端')}
                   </span>
                 </div>
               </div>
