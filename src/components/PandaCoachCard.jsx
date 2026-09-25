@@ -1,7 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
-import { Flame } from 'lucide-react';
+import { Flame, Sparkles } from 'lucide-react';
+import { twMerge } from 'tailwind-merge';
 import { t, getLanguage } from '../lib/translations';
 import { PandaSticker } from './PandaStickers';
 
@@ -343,23 +344,23 @@ const PandaFace = ({ expression = 'normal', isSquished = false, hasCrown = false
   );
 };
 
-// Floating speech bubble
-const SpeechBubble = ({ text, visible }) => (
+// Floating speech bubble when dragging the panda outside its card
+const DragSpeechBubble = ({ text, visible }) => (
   <AnimatePresence>
     {visible && text && (
       <motion.div
         key={text}
-        initial={{ opacity: 0, scale: 0.85, y: 10 }}
+        initial={{ opacity: 0, scale: 0.85, y: -8 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.85 }}
-        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-auto w-[240px] sm:w-[320px]"
+        className="absolute top-full mt-2.5 left-1/2 -translate-x-1/2 z-[100] flex flex-col items-center pointer-events-none w-[200px] sm:w-[240px]"
       >
-        <div className="bg-black text-white border-4 border-black rounded-2xl px-5 py-3 text-sm font-black shadow-neo-sm text-center leading-relaxed tracking-tight italic">
+        <div 
+          className="w-0 h-0 border-l-[8px] border-l-transparent border-r-[8px] border-r-transparent border-b-[8px] border-b-black mb-[-1px]"
+        />
+        <div className="bg-black text-white border-2 border-black rounded-xl px-3.5 py-2 text-xs font-black shadow-neo-sm text-center leading-snug tracking-tight italic">
           {text}
         </div>
-        <div 
-          className="w-0 h-0 border-l-[10px] border-l-transparent border-r-[10px] border-r-transparent border-t-[10px] border-t-black"
-        />
       </motion.div>
     )}
   </AnimatePresence>
@@ -626,19 +627,24 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     </div>
   ) : advice;
 
+  const currentLang = getLanguage();
+
   return (
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       className="relative z-10 overflow-visible"
     >
-      <NeoCard className="bg-white p-4 sm:p-5 overflow-visible">
-        <div className="flex items-center gap-4 sm:gap-6 relative z-10 selection:bg-transparent rounded-[2rem] overflow-visible" style={{ WebkitTapHighlightColor: 'transparent' }}>
-          {/* Interactive Panda */}
-          <div className="relative flex-shrink-0 z-50 group/panda w-16 h-16 sm:w-20 sm:h-20">
-            <SpeechBubble text={bubble || currentAdviceText} visible={bubbleVisible || advice === 'ERROR_RETRY'} />
+      <NeoCard className="bg-white p-3.5 sm:p-5 overflow-visible">
+        <div className="flex items-center gap-3 sm:gap-5 relative z-10 selection:bg-transparent rounded-[2rem] overflow-visible" style={{ WebkitTapHighlightColor: 'transparent' }}>
+          {/* Interactive Panda Mascot */}
+          <div className="relative flex-shrink-0 z-40 group/panda w-16 h-16 sm:w-20 sm:h-20 select-none">
+            {/* Floating speech bubble ONLY during drag (pointing downwards so it never hides behind top header) */}
+            {isDragging && (
+              <DragSpeechBubble text={bubble || advice} visible={true} />
+            )}
 
-            {/* Particles */}
+            {/* Floating Reaction Particles */}
             {particles.map(({ id, emoji }) => (
               <FloatingEmoji
                 key={id}
@@ -684,31 +690,122 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
             </motion.div>
           </div>
 
-          {/* Text content */}
-          <div className="flex-1 min-w-0 space-y-1 relative z-10">
-            <div className="flex flex-wrap items-center justify-between gap-2 mb-1">
-              <div className="flex flex-wrap items-center gap-1.5">
+          {/* Interactive Dialogue Balloon (Points to the Panda Mascot, 100% immune to header obstruction) */}
+          <div 
+            onClick={handleClick}
+            className={twMerge(
+              "flex-1 min-w-0 p-3 sm:p-3.5 rounded-2xl border-3 border-black relative transition-all duration-200 cursor-pointer select-none",
+              bubbleVisible
+                ? "bg-amber-50 shadow-neo-sm ring-2 ring-accent/80 scale-[1.01]"
+                : "bg-zinc-50/90 shadow-neo-xs hover:bg-amber-50/50 hover:shadow-neo-sm"
+            )}
+          >
+            {/* Comic speech bubble tail pointing left directly at the Panda */}
+            <div className="hidden sm:block absolute top-5 -left-[10px] w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[10px] border-r-black pointer-events-none" />
+            <div className={twMerge(
+              "hidden sm:block absolute top-5 -left-[7px] w-0 h-0 border-t-[7px] border-t-transparent border-b-[7px] border-b-transparent border-r-[8px] pointer-events-none transition-colors",
+              bubbleVisible ? "border-r-amber-50" : "border-r-zinc-50"
+            )} />
+
+            {/* Header Row: Persona / Name + Speaking Status + Streak */}
+            <div className="flex flex-wrap items-center justify-between gap-1 mb-1">
+              <div className="flex items-center gap-1.5 flex-wrap">
                 {activeTitle ? (
-                  <span className="text-[9px] font-black bg-accent border-2 border-black text-black px-1.5 py-0.5 rounded-lg rotate-1 scale-95 shadow-neo-sm transform">
+                  <span className="text-[9px] font-black bg-accent border-2 border-black text-black px-1.5 py-0.5 rounded-lg rotate-1 shadow-neo-xs">
                     {activeTitle}
                   </span>
                 ) : (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-black bg-zinc-100 px-2 py-0.5 rounded-lg border-2 border-black shadow-neo-xs">
-                    {t('panda_coach_name')}
+                  <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-black bg-white px-2 py-0.5 rounded-lg border border-black shadow-neo-xs flex items-center gap-1">
+                    <span>🐼</span>
+                    <span>{t('panda_coach_name')}</span>
                   </span>
                 )}
+
+                {/* Animated Speaking indicator when interacting */}
+                <AnimatePresence>
+                  {bubbleVisible && (
+                    <motion.span
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      className="text-[8px] font-black bg-black text-accent px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-neo-xs"
+                    >
+                      <span className="flex h-1.5 w-1.5 relative">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75" />
+                        <span className="relative inline-flex rounded-full h-1.5 w-1.5 bg-accent" />
+                      </span>
+                      <span>{currentLang === 'en' ? 'Speaking' : '互動中'}</span>
+                    </motion.span>
+                  )}
+                </AnimatePresence>
               </div>
+
               {streak > 0 && (
-                <div className="flex items-center gap-1 bg-amber-100 text-amber-950 px-2.5 py-0.5 rounded-full border-2 border-black shadow-neo-xs">
-                  <Flame size={12} className="fill-amber-500 text-amber-600" />
-                  <span className="text-[10px] font-black italic">{streak} {t('streak_text')}</span>
+                <div className="flex items-center gap-1 bg-amber-200/80 text-amber-950 px-2 py-0.5 rounded-full border border-black shadow-neo-xs shrink-0">
+                  <Flame size={10} className="fill-amber-500 text-amber-600" />
+                  <span className="text-[9px] font-black italic">{streak} {t('streak_text')}</span>
                 </div>
               )}
             </div>
-            <div className="relative group/advice">
-              <p className="text-base sm:text-lg font-bold text-black leading-snug italic transition-all">
-                {advice === 'ERROR_RETRY' ? (t('ai_error') || '連線出錯了') : (advice || t('default_panda_advice'))}
-              </p>
+
+            {/* Dynamic Dialogue Text with AnimatePresence */}
+            <div className="relative min-h-[36px] sm:min-h-[40px] flex items-center">
+              <AnimatePresence mode="wait">
+                {bubbleVisible && bubble ? (
+                  <motion.div
+                    key={`bubble-${bubble}`}
+                    initial={{ opacity: 0, y: 3, scale: 0.98 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: -3, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    className="w-full"
+                  >
+                    <p className="text-xs sm:text-sm font-black text-black leading-snug italic tracking-tight">
+                      "{bubble}"
+                    </p>
+                  </motion.div>
+                ) : advice === 'ERROR_RETRY' ? (
+                  <motion.div
+                    key="error-retry"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="w-full flex items-center gap-2"
+                  >
+                    <span className="text-xs font-bold text-black">{t('ai_error') || "連線中斷了..."}</span>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onRetryAdvice) onRetryAdvice();
+                      }}
+                      className="text-[11px] bg-black text-white px-2.5 py-0.5 rounded-lg border border-black font-black flex items-center gap-1 hover:bg-neutral-800 transition-colors shadow-neo-xs cursor-pointer"
+                    >
+                      <Flame size={11} fill="currentColor" className="text-accent" />
+                      {t('retry_button') || "點我重試"}
+                    </button>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key={`advice-${advice || 'default'}`}
+                    initial={{ opacity: 0, y: 3 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: -3 }}
+                    transition={{ duration: 0.2 }}
+                    className="w-full"
+                  >
+                    <p className="text-xs sm:text-sm font-bold text-black leading-snug italic transition-all">
+                      {advice || t('default_panda_advice')}
+                    </p>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Subtle Interactive Hint */}
+            <div className="flex justify-end items-center mt-1">
+              <span className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400 flex items-center gap-0.5">
+                <span>💡 {currentLang === 'en' ? 'Tap or poke panda' : '點擊或戳戳熊貓 🐾'}</span>
+              </span>
             </div>
           </div>
         </div>
