@@ -49,8 +49,8 @@ const ProgressRing = ({ value, max, label }) => {
           <span className={`text-sm sm:text-lg font-black ${percentage > 100 && label.includes('🔥') ? 'text-rose-500 animate-pulse' : ''}`}>{percentage}%</span>
         </div>
       </div>
-      <span className="mt-2 font-black text-[10px] sm:text-xs uppercase tracking-tight text-zinc-500">{label}</span>
-      <span className="text-[9px] sm:text-[10px] opacity-40 font-mono font-bold mt-0.5">
+      <span className="mt-2 font-black text-[10px] sm:text-xs uppercase tracking-tight text-zinc-600">{label}</span>
+      <span className="text-[9px] sm:text-[10px] text-zinc-500 font-mono font-black mt-0.5">
         {value}/{max}{unit}
       </span>
     </div>

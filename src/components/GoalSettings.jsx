@@ -687,14 +687,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   return (
     <div className="relative">
-      <NeoButton
+      <button
+        type="button"
         data-settings-btn
-        variant="white"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-3"
+        className="w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 p-0 flex items-center justify-center rounded-xl bg-white text-black border-2 border-black shadow-neo-xs active:translate-y-0.5 hover:bg-zinc-50 transition-all cursor-pointer shrink-0"
+        title={t('settings')}
       >
-        <Settings size={20} />
-      </NeoButton>
+        <Settings size={18} className="transition-transform group-hover:rotate-45" />
+      </button>
 
       {typeof document !== 'undefined' && createPortal(
         <AnimatePresence>
@@ -756,11 +757,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <div className="space-y-2">
                       <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 ml-1">{t('settings_language')}</label>
                       <div className="grid grid-cols-2 gap-3">
-                        {[{ id: 'zh', name: '中文' }, { id: 'en', name: 'English' }].map(lang => (
-                          <button key={lang.id} onClick={() => handleLanguageChange(lang.id)} className={`p-3 rounded-xl border-4 font-black italic text-sm transition-all ${getLanguage() === lang.id ? 'bg-black text-white border-black shadow-neo-sm' : 'bg-white border-zinc-100'}`}>
-                            {lang.name}
-                          </button>
-                        ))}
+                        {[{ id: 'zh', name: '繁體中文' }, { id: 'en', name: 'English' }].map(lang => {
+                          const isSelected = getLanguage() === lang.id;
+                          return (
+                            <button
+                              key={lang.id}
+                              type="button"
+                              onClick={() => handleLanguageChange(lang.id)}
+                              className={`p-3 rounded-2xl border-3 sm:border-4 font-black italic text-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 ${
+                                isSelected 
+                                  ? 'bg-black text-white border-black shadow-neo-sm' 
+                                  : 'bg-white text-black border-black hover:bg-yellow-50 shadow-neo-xs'
+                              }`}
+                            >
+                              <span>{lang.name}</span>
+                              {isSelected && <span className="w-2 h-2 rounded-full bg-accent inline-block" />}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
 
@@ -883,7 +897,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   onClick={() => liffService.login()}
                                   className="w-full bg-zinc-100 text-zinc-700 font-bold py-1.5 rounded-xl border border-black/20 text-[10px] hover:bg-zinc-200 active:scale-95 transition-all text-center"
                                 >
-                                  🌐 透過 LINE 網頁授權頭像與名稱（選填）
+                                  🔗 透過 LINE 網頁授權頭像與名稱（選填）
                                 </button>
                               )}
                             </div>

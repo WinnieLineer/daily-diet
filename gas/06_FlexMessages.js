@@ -4272,7 +4272,7 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
 
   return {
     type: "flex",
-    altText: "🌐 語言設定 / Select Language",
+    altText: "🔤 語言設定 / Select Language",
     contents: {
       type: "bubble",
       size: "mega",
@@ -4287,12 +4287,12 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
             layout: "horizontal",
             contents: [
               { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: "🌐 LANGUAGE", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🔤 LANGUAGE", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
           {
             type: "text",
-            text: "🌐 語言設定 / Select Language",
+            text: "🔤 語言設定 / Select Language",
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
@@ -4982,14 +4982,14 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                 spacing: "sm",
                 contents: [
                   buildMenuBtn(
-                    isEn ? "🌐 Language" : "🌐 語言切換",
+                    isEn ? "🔤 Language" : "🔤 語言切換",
                     {
                       type: "postback",
                       label: isEn ? "Language" : "語言切換",
                       data: JSON.stringify({ action: 'chooseLanguage' }),
                       displayText: isEn ? "Language" : "切換語言"
                     },
-                    "#E0F2FE"
+                    "#FEF9C3"
                   )
                 ]
               }

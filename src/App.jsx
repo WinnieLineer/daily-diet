@@ -19,6 +19,7 @@ import { t, getLanguage, setLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME, isValidLocation, CURRENT_WHATSNEW_ID } from './lib/constants';
 import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
+import LanguageToggle from './components/LanguageToggle';
 
 // 🛡️ Safe Lazy Loader with Automatic Cache Busting on Deployment Update
 function lazyWithRetry(componentImport) {
@@ -775,37 +776,37 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="absolute inset-y-0 right-0 flex items-center gap-1 bg-accent border-l-4 border-black px-2 z-10"
+            className="absolute inset-y-0 right-0 flex items-center gap-1.5 bg-accent border-l-4 border-black px-2 z-10"
           >
             <button 
               onClick={(e) => { e.stopPropagation(); startEditing(log); }}
-              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+              className="p-1.5 bg-white text-black hover:bg-black hover:text-white transition-all rounded-xl border-2 border-black shadow-neo-xs active:scale-90"
               title={t('edit')}
             >
-              <Pencil size={18} />
+              <Pencil size={15} />
             </button>
             <button 
               onClick={(e) => { e.stopPropagation(); deleteLog(log.id); }}
-              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+              className="p-1.5 bg-white text-black hover:bg-rose-500 hover:text-white hover:border-black transition-all rounded-xl border-2 border-black shadow-neo-xs active:scale-90"
               title={t('delete')}
             >
-              <Trash2 size={18} />
+              <Trash2 size={15} />
             </button>
             {log.image && (
               <button 
                 onClick={(e) => { e.stopPropagation(); onShowDetail(log); setShowActions(false); }}
-                className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+                className="p-1.5 bg-white text-black hover:bg-black hover:text-white transition-all rounded-xl border-2 border-black shadow-neo-xs active:scale-90"
                 title={t('details')}
               >
-                <Info size={18} />
+                <Info size={15} />
               </button>
             )}
             <button 
               onClick={(e) => { e.stopPropagation(); if (onAddToFavorite) onAddToFavorite(log); setShowActions(false); }}
-              className="p-2 hover:bg-black hover:text-white transition-all rounded-xl border-2 border-transparent"
+              className="p-1.5 bg-white text-black hover:bg-black hover:text-white transition-all rounded-xl border-2 border-black shadow-neo-xs active:scale-90"
               title={t('added_to_favorites')}
             >
-              <Star size={18} />
+              <Star size={15} />
             </button>
           </motion.div>
         )}
@@ -844,13 +845,17 @@ const HeaderClock = React.memo(function HeaderClock({ lastLocation }) {
     return () => clearInterval(timer);
   }, []);
 
+  const dateStr = now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/');
+  const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
+
   return (
-    <div className="bg-white border-[3px] sm:border-4 border-black px-1.5 py-0.5 sm:px-3 sm:py-1.5 rounded-xl sm:rounded-2xl font-black shadow-neo-sm flex flex-col items-end justify-center shrink-0">
-      <div className="text-[9px] sm:text-xs text-black whitespace-nowrap notranslate" translate="no">
-        {now.toLocaleDateString('zh-TW', { year: 'numeric', month: '2-digit', day: '2-digit' }).replace(/-/g, '/')} {now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false })}
+    <div className="bg-white border-2 border-black px-2 py-1 rounded-xl font-black shadow-neo-xs flex flex-col items-end justify-center shrink-0 h-8.5 sm:h-9.5">
+      <div className="text-[10px] sm:text-xs text-black whitespace-nowrap notranslate font-mono leading-tight" translate="no">
+        <span className="hidden sm:inline">{dateStr} </span>
+        <span>{timeStr}</span>
       </div>
       {isValidLocation(lastLocation) && (
-        <div className="text-[7px] sm:text-[9px] text-gray-400 italic truncate max-w-[70px] sm:max-w-[120px] whitespace-nowrap">
+        <div className="text-[7px] sm:text-[8px] text-zinc-500 font-bold truncate max-w-[65px] sm:max-w-[110px] whitespace-nowrap leading-none mt-0.5">
           📍 {lastLocation}
         </div>
       )}
@@ -891,18 +896,21 @@ function App() {
   }, []);
 
   const [userName, setUserName] = useState(() => {
-    return safeGetStorage('line_user_name') || safeGetStorage('user_name') || '';
+    const raw = safeGetStorage('line_user_name') || safeGetStorage('user_name') || '';
+    const trimmed = String(raw).trim();
+    return (trimmed === '?' || trimmed === 'undefined' || trimmed === 'null') ? '' : trimmed;
   });
   const [newVersionAvailable, setNewVersionAvailable] = useState(false);
   const [syncState, setSyncState] = useState('idle'); // 'idle' | 'syncing' | 'synced' | 'error'
   const headerRef = useRef(null);
-  const [headerHeight, setHeaderHeight] = useState(64);
+  const [headerHeight, setHeaderHeight] = useState(88);
 
   useEffect(() => {
     if (!headerRef.current) return;
     const updateHeight = () => {
       if (headerRef.current) {
-        setHeaderHeight(headerRef.current.offsetHeight);
+        const rect = headerRef.current.getBoundingClientRect();
+        setHeaderHeight(Math.max(rect.height, headerRef.current.offsetHeight));
       }
     };
     updateHeight();
@@ -911,7 +919,7 @@ function App() {
       observer.observe(headerRef.current);
       return () => observer.disconnect();
     }
-  }, []);
+  }, [syncState, newVersionAvailable]);
 
   useEffect(() => {
     const handleSyncStatus = (e) => {
@@ -2074,7 +2082,7 @@ function App() {
       {/* 🚀 真正永遠懸浮在最上方的固定列 Header */}
       <header 
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-40 bg-[#F8FAFC]/95 backdrop-blur-md border-b-[3px] sm:border-b-4 border-black shadow-neo-sm transition-all duration-200"
+        className="fixed top-0 left-0 right-0 z-50 bg-[#F8FAFC]/95 backdrop-blur-md border-b-[3px] sm:border-b-4 border-black shadow-neo-sm transition-all duration-200"
       >
         {/* PWA New Version Floating Banner */}
         <AnimatePresence>
@@ -2140,7 +2148,7 @@ function App() {
             {/* 左側：品牌、用戶與版本 */}
             <div className="flex flex-col shrink min-w-0">
               <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none relative truncate">
-                {userName ? (
+                {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' ? (
                   <span className="flex flex-col min-w-0">
                     <span className="text-zinc-500 text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5 truncate notranslate font-black" translate="no">
                       <span>{userName}</span>
@@ -2193,36 +2201,18 @@ function App() {
             <div className="flex items-center gap-1 sm:gap-1.5 shrink-0">
               <HeaderClock lastLocation={lastLocation} />
               
-              {/* 🌐 快速雙語切換按鈕（黃黑白深淺區別） */}
-              <button 
-                type="button"
-                onClick={toggleLanguage}
-                className="h-8.5 sm:h-9.5 px-2 bg-white border-2 border-black rounded-xl shadow-neo-xs flex items-center gap-1 hover:bg-zinc-50 active:translate-y-0.5 transition-all cursor-pointer select-none shrink-0"
-                title={currentLang === 'en' ? "切換至繁體中文" : "Switch to English"}
-              >
-                <span className="text-xs">🌐</span>
-                <div className="flex items-center rounded-lg border border-black overflow-hidden text-[9px] font-black leading-none">
-                  <span className={twMerge(
-                    "px-1.5 py-1 transition-colors",
-                    currentLang === 'zh' ? "bg-accent text-black font-black" : "bg-white text-zinc-400 hover:text-black"
-                  )}>
-                    中
-                  </span>
-                  <span className={twMerge(
-                    "px-1.5 py-1 transition-colors border-l border-black",
-                    currentLang === 'en' ? "bg-accent text-black font-black" : "bg-white text-zinc-400 hover:text-black"
-                  )}>
-                    EN
-                  </span>
-                </div>
-              </button>
+              {/* 雙語滑動開關（新野獸派風格） */}
+              <LanguageToggle 
+                currentLang={currentLang} 
+                onToggle={toggleLanguage} 
+              />
 
               {/* 週結算報告 */}
-              <NeoButton 
-                variant={new Date().getDay() === 0 ? "accent" : "black"} 
+              <button 
+                type="button"
                 className={twMerge(
-                  "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 p-0 flex items-center justify-center relative shrink-0 rounded-xl shadow-neo-xs active:translate-y-0.5",
-                  new Date().getDay() === 0 ? "bg-accent text-black border-black animate-pulse" : "bg-black text-white"
+                  "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 p-0 flex items-center justify-center relative shrink-0 rounded-xl border-2 border-black shadow-neo-xs active:translate-y-0.5 cursor-pointer transition-all",
+                  new Date().getDay() === 0 ? "bg-accent text-black animate-pulse" : "bg-black text-white hover:bg-zinc-800"
                 )}
                 onClick={() => setShowWeeklyReport(true)}
                 title="週結算報告"
@@ -2234,7 +2224,7 @@ function App() {
                     <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-accent border border-black flex items-center justify-center text-[6px] sm:text-[7px] font-black text-black">週</span>
                   </span>
                 )}
-              </NeoButton>
+              </button>
 
               {/* 目標與設定 */}
               <Suspense fallback={<div className="w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 bg-zinc-100 rounded-xl border-2 border-black animate-pulse" />}>

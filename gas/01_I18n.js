@@ -128,7 +128,7 @@ const I18N_DICT = {
   qrPickDate: { zh: "📅 查日期", en: "📅 Pick Date" },
 
   // 語言設定 (Language Selection)
-  langSelectTitle: { zh: "🌐 選擇偏好語言 / Language", en: "🌐 Select Language / 語言" },
+  langSelectTitle: { zh: "🔤 選擇偏好語言 / Language", en: "🔤 Select Language / 語言" },
   langSelectDesc: { zh: "選擇後所有 LINE 訊息與圖文選單將切換為該語言", en: "All LINE messages and menus will switch to this language." },
   langSwitchedEn: { zh: "Language switched to English! 🇺🇸\nYour Rich Menu and bot messages have been updated.", en: "Language switched to English! 🇺🇸\nYour Rich Menu and bot messages have been updated." },
   langSwitchedZh: { zh: "語言已切換為繁體中文！🇹🇼\n您的圖文選單與訊息回覆已同步更新。", en: "語言已切換為繁體中文！🇹🇼\n您的圖文選單與訊息回覆已同步更新。" },

@@ -352,7 +352,7 @@ const SpeechBubble = ({ text, visible }) => (
         initial={{ opacity: 0, scale: 0.85, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.85 }}
-        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-[150] flex flex-col items-center pointer-events-auto w-[240px] sm:w-[320px]"
+        className="absolute bottom-full mb-3 left-1/2 -translate-x-1/2 z-30 flex flex-col items-center pointer-events-auto w-[240px] sm:w-[320px]"
       >
         <div className="bg-black text-white border-4 border-black rounded-2xl px-5 py-3 text-sm font-black shadow-neo-sm text-center leading-relaxed tracking-tight italic">
           {text}
@@ -693,14 +693,14 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                     {activeTitle}
                   </span>
                 ) : (
-                  <span className="text-[10px] font-black uppercase tracking-wider text-zinc-400 bg-zinc-100 px-1.5 py-0.5 rounded border border-zinc-200">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-black bg-zinc-100 px-2 py-0.5 rounded-lg border-2 border-black shadow-neo-xs">
                     {t('panda_coach_name')}
                   </span>
                 )}
               </div>
               {streak > 0 && (
-                <div className="flex items-center gap-1 bg-orange-50 text-orange-600 px-2 py-0.5 rounded-full border border-orange-200 shadow-sm">
-                  <Flame size={10} className="fill-orange-500" />
+                <div className="flex items-center gap-1 bg-amber-100 text-amber-950 px-2.5 py-0.5 rounded-full border-2 border-black shadow-neo-xs">
+                  <Flame size={12} className="fill-amber-500 text-amber-600" />
                   <span className="text-[10px] font-black italic">{streak} {t('streak_text')}</span>
                 </div>
               )}
