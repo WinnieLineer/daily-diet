@@ -1929,17 +1929,19 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
     const ss = getOrCreateLogSheet(props);
     if (ss) {
       const sheet = ss.getSheets()[0];
+      // 🛡️ 防範試算表公式注入攻擊 (CSV / Formula Injection, CWE-1236)
+      const sanitizeCell = (v) => (typeof v === 'string' && /^[=\+\-@\t\r]/.test(v)) ? `'${v}` : v;
       sheet.appendRow([
-        logItem.time, 
-        displayName, 
-        userId, 
-        logItem.type, 
-        logItem.input, 
-        logItem.aiResult, 
-        logItem.output,
-        logItem.ip,
-        logItem.location,
-        logItem.device || ''
+        sanitizeCell(logItem.time), 
+        sanitizeCell(displayName), 
+        sanitizeCell(userId), 
+        sanitizeCell(logItem.type), 
+        sanitizeCell(logItem.input), 
+        sanitizeCell(logItem.aiResult), 
+        sanitizeCell(logItem.output), 
+        sanitizeCell(logItem.ip), 
+        sanitizeCell(logItem.location), 
+        sanitizeCell(logItem.device || '')
       ]);
     }
   } catch (sheetErr) {

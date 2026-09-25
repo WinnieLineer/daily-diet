@@ -1627,7 +1627,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                           </button>
                           <button 
                             onClick={async () => {
-                              await db.favorites.update(item.id, {
+                              const updatedFav = {
                                 dish_name: editFavValues.dish_name,
                                 calories: Number(editFavValues.calories) || 0,
                                 protein: Number(editFavValues.protein) || 0,
@@ -1635,9 +1635,31 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                                 carbs: Number(editFavValues.carbs) || 0,
                                 fat: Number(editFavValues.fat) || 0,
                                 description: editFavValues.description || ''
-                              });
+                              };
+                              await db.favorites.update(item.id, updatedFav);
                               setEditingFavId(null);
                               loadFavorites();
+
+                              // ☁️ 雙向同步編輯後的常用至 LINE/GAS 與 Gist
+                              syncAddFavorite(updatedFav);
+                              const currentGist = getCurrentGistId();
+                              if (currentGist) {
+                                Promise.all([
+                                  db.dietLogs.toArray(),
+                                  db.weightLogs.toArray(),
+                                  db.settings.toArray(),
+                                  db.favorites.toArray()
+                                ]).then(([dietLogs, weightLogs, settings, favorites]) => {
+                                  return uploadToGist({
+                                    dietLogs: dietLogs.map(({ image, ...rest }) => rest),
+                                    weightLogs,
+                                    settings,
+                                    favorites
+                                  }, currentGist);
+                                }).catch((e) => {
+                                  console.warn("[Gist] Background favorite edit sync skipped:", e?.message);
+                                });
+                              }
                             }}
                             className="flex-1 bg-black text-white border-4 border-black font-black py-2 rounded-xl hover:bg-black/90 flex items-center justify-center gap-1 text-xs"
                           >

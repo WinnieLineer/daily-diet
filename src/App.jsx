@@ -1196,42 +1196,86 @@ function App() {
               }
             }
 
-            // ⭐ 常用餐點雙向同步
+            // ⭐ 常用餐點雲端雙向對齊同步 (支援跨裝置刪除、新增與數值同步)
             if (gasData.favorites && Array.isArray(gasData.favorites)) {
               const localFavs = await db.favorites.toArray();
-              const localFavNames = new Set(localFavs.map(f => f.dish_name));
-              let addedCount = 0;
-              for (const fav of gasData.favorites) {
-                if (fav.dish_name && !localFavNames.has(fav.dish_name)) {
-                  await db.favorites.add({
-                    dish_name: fav.dish_name,
-                    calories: Number(fav.calories) || 0,
-                    protein: Number(fav.protein) || 0,
-                    water: Number(fav.water) || 0
-                  });
-                  localFavNames.add(fav.dish_name);
-                  addedCount++;
+              const remoteFavMap = new Map();
+              gasData.favorites.forEach((f, idx) => {
+                if (f && f.dish_name) {
+                  remoteFavMap.set(f.dish_name.trim(), { ...f, order: idx });
                 }
-              }
+              });
 
-              // 雙向反向同步：若本機 IndexedDB 有遠端缺失的常用餐點，自動補齊至 LINE / GAS 雲端
-              const remoteFavNames = new Set(gasData.favorites.map(f => f.dish_name));
-              const missingInRemote = localFavs.filter(f => f.dish_name && !remoteFavNames.has(f.dish_name));
-              if (missingInRemote.length > 0) {
-                for (const mFav of missingInRemote) {
-                  try {
-                    syncAddFavorite(mFav);
-                    console.log(`📤 [Favorites Reverse Sync] 自動補齊本地常用至 LINE/GAS: ${mFav.dish_name}`);
-                  } catch (e) {
-                    console.warn("常用餐點雙向同步失敗:", e);
+              let hasFavChanges = false;
+
+              // 🗑️ 刪除同步：若遠端已刪除某常用餐點，本機亦自動同步刪除 (徹底解決已刪除常用跨裝置無法同步的問題)
+              if (gasData.favorites.length > 0 || safeGetStorage('has_cloud_favorites_synced')) {
+                for (const lFav of localFavs) {
+                  const lName = (lFav.dish_name || '').trim();
+                  if (lName && !remoteFavMap.has(lName)) {
+                    await db.favorites.delete(lFav.id);
+                    hasFavChanges = true;
+                    console.log(`🗑️ [Favorites Sync] 偵測到遠端已刪除常用，本機同步移除: ${lName}`);
                   }
                 }
               }
 
-              if (addedCount > 0) {
+              // 📥 新增與更新同步：將遠端最新項目與數值寫入本機
+              const updatedLocalFavs = await db.favorites.toArray();
+              const localFavMap = new Map();
+              updatedLocalFavs.forEach(f => {
+                if (f && f.dish_name) localFavMap.set(f.dish_name.trim(), f);
+              });
+
+              for (const [rName, rFav] of remoteFavMap.entries()) {
+                const existing = localFavMap.get(rName);
+                if (!existing) {
+                  await db.favorites.add({
+                    dish_name: rFav.dish_name,
+                    calories: Number(rFav.calories) || 0,
+                    protein: Number(rFav.protein) || 0,
+                    water: Number(rFav.water) || 0,
+                    carbs: Number(rFav.carbs) || 0,
+                    fat: Number(rFav.fat) || 0,
+                    description: rFav.description || ''
+                  });
+                  hasFavChanges = true;
+                } else {
+                  // 比對數值是否在其他裝置被修改
+                  if (
+                    existing.calories !== Number(rFav.calories || 0) ||
+                    existing.protein !== Number(rFav.protein || 0) ||
+                    existing.water !== Number(rFav.water || 0) ||
+                    existing.carbs !== Number(rFav.carbs || 0) ||
+                    existing.fat !== Number(rFav.fat || 0)
+                  ) {
+                    await db.favorites.update(existing.id, {
+                      calories: Number(rFav.calories) || 0,
+                      protein: Number(rFav.protein) || 0,
+                      water: Number(rFav.water) || 0,
+                      carbs: Number(rFav.carbs) || 0,
+                      fat: Number(rFav.fat) || 0
+                    });
+                    hasFavChanges = true;
+                  }
+                }
+              }
+
+              // 初次連線時：若遠端為空且本機有既有常用餐點，才進行初次上傳備份
+              if (gasData.favorites.length === 0 && localFavs.length > 0 && !safeGetStorage('has_cloud_favorites_synced')) {
+                for (const mFav of localFavs) {
+                  try {
+                    syncAddFavorite(mFav);
+                  } catch (e) {}
+                }
+              }
+
+              safeSetStorage('has_cloud_favorites_synced', 'true');
+
+              if (hasFavChanges) {
                 setFavoriteUpdateTrigger(prev => prev + 1);
               }
-              console.log(`⭐ [Favorites Sync] 常用餐點同步完成（遠端 ${gasData.favorites.length} 筆，本機補入 ${addedCount} 筆，補齊至遠端 ${missingInRemote.length} 筆）`);
+              console.log(`⭐ [Favorites Sync] 常用餐點同步完成（遠端共 ${gasData.favorites.length} 筆，已對齊刪除與更新）`);
             }
 
             if (gasData.status === 'ok' && Array.isArray(gasData.todayLogs)) {
@@ -1422,22 +1466,38 @@ function App() {
               }
             }
 
-            // 同步雲端常用庫
+            // 同步雲端常用庫 (完全對齊同步：保留最新排序、更新數值並刪除遠端已移除之項目)
             if (cloudData.favorites && Array.isArray(cloudData.favorites)) {
               const localFavs = await db.favorites.toArray();
-              const localFavNames = new Set(localFavs.map(f => f.dish_name));
-              for (const fav of cloudData.favorites) {
-                if (fav.dish_name && !localFavNames.has(fav.dish_name)) {
-                  await db.favorites.add({
-                    dish_name: fav.dish_name,
-                    calories: Number(fav.calories) || 0,
-                    protein: Number(fav.protein) || 0,
-                    water: Number(fav.water) || 0
-                  });
-                  localFavNames.add(fav.dish_name);
+              if (cloudData.favorites.length > 0) {
+                await db.transaction('rw', db.favorites, async () => {
+                  await db.favorites.clear();
+                  await db.favorites.bulkAdd(cloudData.favorites.map(({ id, ...rest }) => ({
+                    dish_name: rest.dish_name,
+                    calories: Number(rest.calories) || 0,
+                    protein: Number(rest.protein) || 0,
+                    water: Number(rest.water) || 0,
+                    carbs: Number(rest.carbs) || 0,
+                    fat: Number(rest.fat) || 0,
+                    description: rest.description || ''
+                  })));
+                });
+                setFavoriteUpdateTrigger(prev => prev + 1);
+              } else if (cloudData.favorites.length === 0 && localFavs.length > 0) {
+                if (!cloudData.dietLogs || cloudData.dietLogs.length === 0) {
+                  if (effectiveGistId) {
+                    uploadToGist({
+                      dietLogs: (await db.dietLogs.toArray()).map(({ image, ...rest }) => rest),
+                      weightLogs: await db.weightLogs.toArray(),
+                      settings: await db.settings.toArray(),
+                      favorites: localFavs
+                    }, effectiveGistId).catch(() => {});
+                  }
+                } else {
+                  await db.favorites.clear();
+                  setFavoriteUpdateTrigger(prev => prev + 1);
                 }
               }
-              setFavoriteUpdateTrigger(prev => prev + 1);
             }
 
             // 同步雲端飲食歷史
