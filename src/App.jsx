@@ -849,13 +849,13 @@ const HeaderClock = React.memo(function HeaderClock({ lastLocation }) {
   const timeStr = now.toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false });
 
   return (
-    <div className="bg-white border-2 border-black px-2 py-1 rounded-xl font-black shadow-neo-xs flex flex-col items-end justify-center shrink-0 h-8.5 sm:h-9.5">
-      <div className="text-[10px] sm:text-xs text-black whitespace-nowrap notranslate font-mono leading-tight" translate="no">
+    <div className="bg-white border-2 border-black/80 px-1.5 sm:px-2 py-0.5 rounded-lg sm:rounded-xl font-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] flex flex-col items-end justify-center shrink-0 h-7 sm:h-8">
+      <div className="text-[9.5px] sm:text-[11px] text-black whitespace-nowrap notranslate font-mono leading-tight" translate="no">
         <span className="hidden sm:inline">{dateStr} </span>
         <span>{timeStr}</span>
       </div>
       {isValidLocation(lastLocation) && (
-        <div className="text-[7px] sm:text-[8px] text-zinc-500 font-bold truncate max-w-[65px] sm:max-w-[110px] whitespace-nowrap leading-none mt-0.5">
+        <div className="text-[6.5px] sm:text-[7.5px] text-zinc-500 font-bold truncate max-w-[55px] sm:max-w-[95px] whitespace-nowrap leading-none mt-0.5">
           📍 {lastLocation}
         </div>
       )}
@@ -2082,7 +2082,7 @@ function App() {
       {/* 🚀 真正永遠懸浮在最上方的固定列 Header */}
       <header 
         ref={headerRef}
-        className="fixed top-0 left-0 right-0 z-50 bg-[#F8FAFC]/95 backdrop-blur-md border-b-[3px] sm:border-b-4 border-black shadow-neo-sm transition-all duration-200"
+        className="fixed top-0 left-0 right-0 z-50 bg-[#F8FAFC]/95 backdrop-blur-md border-b-2 border-black/80 shadow-[0_2px_4px_rgba(0,0,0,0.03)] transition-all duration-200"
       >
         {/* PWA New Version Floating Banner */}
         <AnimatePresence>
@@ -2111,46 +2111,31 @@ function App() {
           )}
         </AnimatePresence>
 
-        <div className="max-w-lg mx-auto px-3 sm:px-4 pt-2.5 pb-2.5">
+        <div className="max-w-lg mx-auto px-3 sm:px-4 py-1.5 sm:py-2">
           <div className="flex justify-between items-center gap-2">
             {/* 左側：品牌、用戶與版本 */}
-            <div className="flex flex-col shrink min-w-0">
-              <h1 className="text-xs sm:text-base font-black italic tracking-tight leading-none relative truncate">
-                {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' ? (
-                  <span className="flex flex-col min-w-0">
-                    <span className="text-zinc-500 text-[9px] sm:text-[10px] uppercase tracking-wider block mb-0.5 truncate notranslate font-black" translate="no">
-                      <span>{userName}</span>
-                      <span>{t('title_possessive')}</span>
-                    </span>
-                    <span className="flex items-center gap-1">
-                      <span className="truncate bg-accent text-black px-1.5 py-0.5 rounded-lg border-2 border-black shadow-neo-xs font-black">
-                        {t('app_title')}
-                      </span>
-                      {ENABLE_520_THEME && (
-                        <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-sm shrink-0">
-                          520
-                        </span>
-                      )}
-                    </span>
-                  </span>
-                ) : (
-                  <span className="flex items-center gap-1">
-                    <span className="truncate bg-accent text-black px-1.5 py-0.5 rounded-lg border-2 border-black shadow-neo-xs font-black">
-                      {t('app_title')}
-                    </span>
-                    {ENABLE_520_THEME && (
-                      <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-sm shrink-0">
-                        520
-                      </span>
-                    )}
+            <div className="flex flex-col shrink min-w-0 justify-center">
+              <div className="flex items-center gap-1.5 min-w-0">
+                <span className="truncate bg-accent text-black px-1.5 py-0.5 rounded-md sm:rounded-lg border-1.5 sm:border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-[11px] sm:text-xs tracking-tight shrink-0">
+                  {t('app_title')}
+                </span>
+                {ENABLE_520_THEME && (
+                  <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-xs shrink-0">
+                    520
                   </span>
                 )}
-              </h1>
-              <div className="flex items-center gap-1.5 mt-1">
-                <span className="text-[8px] font-bold text-zinc-400 notranslate font-mono" translate="no">v{APP_VERSION}</span>
+                {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' && (
+                  <span className="text-[10px] sm:text-[11px] font-black text-zinc-600 truncate notranslate tracking-tight" translate="no">
+                    <span>{userName}</span>
+                    <span>{t('title_possessive')}</span>
+                  </span>
+                )}
+              </div>
+              <div className="flex items-center gap-1.5 mt-0.5">
+                <span className="text-[8px] sm:text-[8.5px] font-bold text-zinc-400 notranslate font-mono leading-none" translate="no">v{APP_VERSION}</span>
                 {/* 雲端 / LINE 同步狀態短字提示 */}
                 <div 
-                  className="flex items-center gap-1 cursor-pointer group"
+                  className="flex items-center gap-1 cursor-pointer group leading-none"
                   onClick={triggerManualSync}
                   title={
                     syncState === 'syncing' 
@@ -2169,7 +2154,7 @@ function App() {
                     syncState === 'error' ? "bg-rose-500" : "bg-accent group-hover:scale-125"
                   )} />
                   <span className={twMerge(
-                    "text-[8px] font-bold transition-colors leading-none",
+                    "text-[8px] sm:text-[8.5px] font-bold transition-colors leading-none",
                     syncState === 'syncing' ? "text-black font-black" :
                     syncState === 'synced' ? "text-emerald-700 font-bold" :
                     syncState === 'error' ? "text-rose-600 font-bold" : "text-zinc-400 group-hover:text-black"
@@ -2197,23 +2182,23 @@ function App() {
               <button 
                 type="button"
                 className={twMerge(
-                  "w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 p-0 flex items-center justify-center relative shrink-0 rounded-xl border-2 border-black shadow-neo-xs active:translate-y-0.5 cursor-pointer transition-all",
+                  "w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center relative shrink-0 rounded-lg sm:rounded-xl border-2 border-black/80 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 cursor-pointer transition-all",
                   new Date().getDay() === 0 ? "bg-accent text-black animate-pulse" : "bg-black text-white hover:bg-zinc-800"
                 )}
                 onClick={() => setShowWeeklyReport(true)}
                 title="週結算報告"
               >
-                <BarChart2 className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'}`} />
+                <BarChart2 className={`w-3.5 h-3.5 ${new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'}`} />
                 {new Date().getDay() === 0 && (
-                  <span className="absolute -top-1 -right-1 flex h-3 w-3 sm:h-3.5 sm:w-3.5">
+                  <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-3 w-3 sm:h-3.5 sm:w-3.5 bg-accent border border-black flex items-center justify-center text-[6px] sm:text-[7px] font-black text-black">週</span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-accent border border-black flex items-center justify-center text-[5.5px] sm:text-[6px] font-black text-black">週</span>
                   </span>
                 )}
               </button>
 
               {/* 目標與設定 */}
-              <Suspense fallback={<div className="w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 bg-zinc-100 rounded-xl border-2 border-black animate-pulse" />}>
+              <Suspense fallback={<div className="w-7 sm:w-8 h-7 sm:h-8 bg-zinc-100 rounded-lg sm:rounded-xl border-2 border-black/80 animate-pulse" />}>
                 <GoalSettings 
                   initialTab={settingsTab} 
                   onGoalsUpdated={refreshData} 

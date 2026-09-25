@@ -691,10 +691,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         type="button"
         data-settings-btn
         onClick={() => setIsOpen(!isOpen)}
-        className="w-8.5 h-8.5 sm:w-9.5 sm:h-9.5 p-0 flex items-center justify-center rounded-xl bg-white text-black border-2 border-black shadow-neo-xs active:translate-y-0.5 hover:bg-zinc-50 transition-all cursor-pointer shrink-0"
+        className="w-7 sm:w-8 h-7 sm:h-8 p-0 flex items-center justify-center rounded-lg sm:rounded-xl bg-white text-black border-2 border-black/80 shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] active:translate-y-0.5 hover:bg-zinc-50 transition-all cursor-pointer shrink-0"
         title={t('settings')}
       >
-        <Settings size={18} className="transition-transform group-hover:rotate-45" />
+        <Settings size={15} className="transition-transform group-hover:rotate-45" />
       </button>
 
       {typeof document !== 'undefined' && createPortal(
