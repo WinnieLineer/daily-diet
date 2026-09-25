@@ -47,7 +47,8 @@ import {
   Send,
   X,
   Megaphone,
-  Radio
+  Radio,
+  Camera
 } from 'lucide-react';
 import NeoButton from './NeoButton';
 
@@ -277,6 +278,18 @@ const normalizeLog = (item) => {
     return null;
   }
 
+  // 📸 提取 LINE 照片 Message ID (支援「傳送照片 (ID: 12345)」或「照片 Message ID: 12345」)
+  let photoMessageId = null;
+  const photoMatch = inputStr.match(/(?:ID:\s*|Message\s*ID:\s*)([0-9]{10,25})/i) || inputStr.match(/ID:\s*([0-9]+)/i);
+  if (photoMatch && photoMatch[1]) {
+    photoMessageId = photoMatch[1];
+  } else {
+    const outMatch = outputStr.match(/(?:ID:\s*|Message\s*ID:\s*)([0-9]{10,25})/i);
+    if (outMatch && outMatch[1]) {
+      photoMessageId = outMatch[1];
+    }
+  }
+
   return {
     time: formatUnifiedTimestamp(raw.time),
     userName: resolvedUserName,
@@ -289,7 +302,8 @@ const normalizeLog = (item) => {
     channel,
     ip,
     location,
-    device
+    device,
+    photoMessageId
   };
 };
 
@@ -445,6 +459,107 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const setRowTab = (rowId, tab) => {
     setRowInspectorTab((prev) => ({ ...prev, [rowId]: tab }));
   };
+
+  // 📸 方案一：按需即時調閱 LINE 用戶餐點照片狀態 (Modal & Session 快取)
+  const [photoModalState, setPhotoModalState] = useState({
+    isOpen: false,
+    messageId: null,
+    userName: '',
+    time: '',
+    loading: false,
+    error: null,
+    errorCode: null,
+    dataUrl: null,
+    sizeKb: null,
+  });
+  const [photoCache, setPhotoCache] = useState({});
+
+  const handleOpenPhotoPreview = async (messageId, logItem = {}) => {
+    if (!messageId) return;
+
+    const logTime = logItem.time || '';
+    const logUser = logItem.userName || '';
+
+    // 若本工作階段已載入過此照片，直接自快取即時開啟，免重複發送請求
+    if (photoCache[messageId]) {
+      setPhotoModalState({
+        isOpen: true,
+        messageId,
+        userName: logUser,
+        time: logTime,
+        loading: false,
+        error: null,
+        errorCode: null,
+        dataUrl: photoCache[messageId].dataUrl,
+        sizeKb: photoCache[messageId].sizeKb,
+      });
+      return;
+    }
+
+    setPhotoModalState({
+      isOpen: true,
+      messageId,
+      userName: logUser,
+      time: logTime,
+      loading: true,
+      error: null,
+      errorCode: null,
+      dataUrl: null,
+      sizeKb: null,
+    });
+
+    try {
+      const activeToken = permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
+      const targetUrl = `${GAS_API_URL}?action=getLinePhoto&messageId=${encodeURIComponent(messageId)}&token=${encodeURIComponent(activeToken)}&_t=${Date.now()}`;
+      const res = await fetch(targetUrl);
+      if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
+      const data = await res.json();
+
+      if (data.status === 'ok' && data.dataUrl) {
+        setPhotoCache((prev) => ({
+          ...prev,
+          [messageId]: { dataUrl: data.dataUrl, sizeKb: data.sizeKb }
+        }));
+        setPhotoModalState((prev) => ({
+          ...prev,
+          loading: false,
+          dataUrl: data.dataUrl,
+          sizeKb: data.sizeKb,
+          error: null,
+          errorCode: null,
+        }));
+      } else {
+        setPhotoModalState((prev) => ({
+          ...prev,
+          loading: false,
+          error: data.message || (isEn ? 'Failed to retrieve photo from LINE' : '無法自 LINE 伺服器獲取照片'),
+          errorCode: data.code || 'API_ERROR',
+        }));
+      }
+    } catch (err) {
+      setPhotoModalState((prev) => ({
+        ...prev,
+        loading: false,
+        error: err.message || (isEn ? 'Network error occurred while fetching photo' : '調閱照片時發生連線異常'),
+        errorCode: 'NETWORK_ERROR',
+      }));
+    }
+  };
+
+  const handleClosePhotoModal = () => {
+    setPhotoModalState((prev) => ({ ...prev, isOpen: false }));
+  };
+
+  // 鍵盤 Esc 鍵支援直接關閉照片預覽彈窗
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape' && photoModalState.isOpen) {
+        handleClosePhotoModal();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [photoModalState.isOpen]);
 
   // 🕵️ Collect Device, IP & Geo Location Info
   const collectDeviceInfo = async () => {
@@ -2697,7 +2812,25 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                           </span>
                         ) : (
                           <div className="space-y-0.5">
-                            {input && <div><strong className="text-black font-sans">{input}</strong></div>}
+                            {input && (
+                              <div className="flex items-center justify-between gap-2 flex-wrap">
+                                <strong className="text-black font-sans">{input}</strong>
+                                {log.photoMessageId && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenPhotoPreview(log.photoMessageId, log);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-amber-300 hover:bg-amber-400 text-black border border-black font-black text-[10px] shadow-neo-xs active:scale-95 transition-all cursor-pointer shrink-0"
+                                    title={isEn ? "View uploaded meal photo on-demand from LINE" : "點擊即時自 LINE 調閱用戶上傳的餐點原始照片"}
+                                  >
+                                    <span>📸</span>
+                                    <span>{isEn ? 'View Photo' : '查看照片'}</span>
+                                  </button>
+                                )}
+                              </div>
+                            )}
                             {aiResult && <div className="text-purple-700 text-[11px]">➔ {aiResult}</div>}
                             {output && <div className="text-emerald-700 text-[11px]">💬 {output}</div>}
                             {!input && !aiResult && !output && <div className="text-zinc-400 italic">—</div>}
@@ -2728,13 +2861,24 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                                   JSON
                                 </button>
                               </div>
-                              <button
-                                onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
-                                className="bg-black text-white text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 shadow-neo-xs"
-                              >
-                                {copiedId === `doc-${index}` ? <Check size={10} /> : <Copy size={10} />}
-                                {copiedId === `doc-${index}` ? 'Copied' : 'Copy'}
-                              </button>
+                              <div className="flex items-center gap-1.5">
+                                {log.photoMessageId && (
+                                  <button
+                                    onClick={() => handleOpenPhotoPreview(log.photoMessageId, log)}
+                                    className="bg-amber-300 hover:bg-amber-400 text-black text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 border border-black shadow-neo-xs transition-all"
+                                  >
+                                    <span>📸</span>
+                                    <span>{isEn ? 'Photo' : '照片'}</span>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
+                                  className="bg-black text-white text-[9px] font-black px-2 py-0.5 rounded-md flex items-center gap-1 shadow-neo-xs"
+                                >
+                                  {copiedId === `doc-${index}` ? <Check size={10} /> : <Copy size={10} />}
+                                  {copiedId === `doc-${index}` ? 'Copied' : 'Copy'}
+                                </button>
+                              </div>
                             </div>
                             <div className="p-3">
                               {currentTab === 'table' ? (
@@ -2942,11 +3086,25 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                             </td>
 
                             {/* Message / Payload Preview */}
-                            <td className="py-3 px-4 max-w-xs md:max-w-md xl:max-w-xl truncate text-zinc-600 font-mono text-[11px]">
-                              <div className="truncate">
+                            <td className="py-3 px-4 max-w-xs md:max-w-md xl:max-w-xl text-zinc-600 font-mono text-[11px]">
+                              <div className="flex items-center gap-2 flex-wrap">
                                 {input ? (
                                   <span className="text-zinc-900 font-sans font-medium">🗣️ {input}</span>
                                 ) : null}
+                                {log.photoMessageId && (
+                                  <button
+                                    type="button"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenPhotoPreview(log.photoMessageId, log);
+                                    }}
+                                    className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-amber-300 hover:bg-amber-400 text-black border border-black font-black text-[10px] shadow-neo-xs hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer shrink-0"
+                                    title={isEn ? "View uploaded meal photo on-demand from LINE" : "點擊即時自 LINE 調閱用戶上傳的餐點原始照片"}
+                                  >
+                                    <span>📸</span>
+                                    <span>{isEn ? "View Photo" : "查看照片"}</span>
+                                  </button>
+                                )}
                                 {aiResult ? (
                                   <span className="text-blue-700 ml-1">🤖 {aiResult}</span>
                                 ) : null}
@@ -3007,13 +3165,24 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                                       </div>
                                     </div>
 
-                                    <button
-                                      onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
-                                      className="bg-black text-white text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-neo-xs hover:bg-accent hover:text-black transition-all"
-                                    >
-                                      {copiedId === `doc-${index}` ? <Check size={12} /> : <Copy size={12} />}
-                                      {copiedId === `doc-${index}` ? 'Copied' : 'Copy JSON'}
-                                    </button>
+                                    <div className="flex items-center gap-2">
+                                      {log.photoMessageId && (
+                                        <button
+                                          onClick={() => handleOpenPhotoPreview(log.photoMessageId, log)}
+                                          className="bg-amber-300 hover:bg-amber-400 text-black text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1.5 border border-black shadow-neo-xs transition-all"
+                                        >
+                                          <span>📸</span>
+                                          <span>{isEn ? 'View Meal Photo' : '調閱餐點照片'}</span>
+                                        </button>
+                                      )}
+                                      <button
+                                        onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `doc-${index}`)}
+                                        className="bg-black text-white text-[10px] font-black px-2.5 py-1 rounded-lg flex items-center gap-1 shadow-neo-xs hover:bg-accent hover:text-black transition-all"
+                                      >
+                                        {copiedId === `doc-${index}` ? <Check size={12} /> : <Copy size={12} />}
+                                        {copiedId === `doc-${index}` ? 'Copied' : 'Copy JSON'}
+                                      </button>
+                                    </div>
                                   </div>
 
                                   {/* Inspector Content */}
@@ -3210,8 +3379,23 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                       <span className="text-[9px] font-black uppercase tracking-wider text-zinc-400 block">
                         {isEn ? 'User Input / Trigger' : '用戶輸入 / 觸發事件'}
                       </span>
-                      <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-3 font-mono text-xs font-bold text-zinc-800 break-words leading-relaxed">
-                        {input || '—'}
+                      <div className="bg-zinc-50 border-2 border-black/10 rounded-xl p-3 font-mono text-xs font-bold text-zinc-800 break-words leading-relaxed space-y-2">
+                        <div>{input || '—'}</div>
+                        {item.photoMessageId && (
+                          <div className="pt-0.5">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleOpenPhotoPreview(item.photoMessageId, item);
+                              }}
+                              className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-300 hover:bg-amber-400 text-black border-2 border-black font-black text-xs shadow-neo-xs hover:translate-x-[1px] hover:translate-y-[1px] transition-all cursor-pointer"
+                            >
+                              <span>📸</span>
+                              <span>{isEn ? "View LINE Photo" : "調閱用戶照片"}</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
                     </div>
 
@@ -3523,6 +3707,161 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     }
                   </span>
                 </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* 📸 Option 1: On-Demand LINE Meal Photo Preview Modal */}
+        {photoModalState.isOpen && (
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm"
+            onClick={handleClosePhotoModal}
+          >
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 10 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 10 }}
+              transition={{ duration: 0.15 }}
+              onClick={(e) => e.stopPropagation()}
+              className="bg-white border-4 border-black rounded-[2.5rem] shadow-neo-lg max-w-lg w-full overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="bg-amber-300 border-b-4 border-black px-6 py-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-8 h-8 rounded-xl bg-black text-amber-300 flex items-center justify-center font-black shrink-0">
+                    <Camera size={18} />
+                  </div>
+                  <div>
+                    <h3 className="font-black text-sm tracking-tight text-black flex items-center gap-2">
+                      <span>{isEn ? 'LINE User Meal Photo' : 'LINE 用戶餐點照片調閱'}</span>
+                      <span className="text-[10px] font-mono bg-black text-white px-2 py-0.5 rounded-full font-black">
+                        {isEn ? 'On-Demand Proxy' : '方案一：按需調閱'}
+                      </span>
+                    </h3>
+                    <p className="text-[11px] font-bold text-zinc-800">
+                      {photoModalState.userName ? `${photoModalState.userName} · ` : ''}{photoModalState.time || ''}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleClosePhotoModal}
+                  className="p-1.5 rounded-xl border-2 border-black bg-white hover:bg-black hover:text-white transition-colors cursor-pointer shadow-neo-xs active:scale-95"
+                  title={isEn ? "Close (Esc)" : "關閉 (Esc)"}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 overflow-y-auto flex-1 flex flex-col items-center justify-center min-h-[280px]">
+                {photoModalState.loading && (
+                  <div className="text-center space-y-4 py-8">
+                    <div className="w-12 h-12 border-4 border-black border-t-amber-400 rounded-full animate-spin mx-auto shadow-neo-xs" />
+                    <div className="space-y-1">
+                      <p className="font-black text-sm text-black">
+                        {isEn ? 'Fetching photo securely from LINE CDN...' : '正在向 LINE 官方伺服器安全調閱照片...'}
+                      </p>
+                      <p className="text-xs font-bold text-zinc-500 font-mono">
+                        Message ID: {photoModalState.messageId}
+                      </p>
+                    </div>
+                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 border border-black/20 text-[11px] font-bold text-zinc-600">
+                      <span>🔒 端到端私有調閱 · 不經第三方匿名圖床</span>
+                    </div>
+                  </div>
+                )}
+
+                {!photoModalState.loading && photoModalState.error && (
+                  <div className="text-center space-y-4 py-6 max-w-sm">
+                    <div className="w-14 h-14 rounded-2xl bg-rose-100 border-2 border-black text-rose-600 flex items-center justify-center mx-auto shadow-neo-sm">
+                      <AlertTriangle size={28} />
+                    </div>
+                    <div className="space-y-1.5">
+                      <h4 className="font-black text-base text-black">
+                        {photoModalState.errorCode === 'EXPIRED' 
+                          ? (isEn ? 'LINE Photo Temporary Cache Expired' : '⏳ LINE 官方暫存期已過')
+                          : (isEn ? 'Failed to Load Photo' : '無法調閱照片')}
+                      </h4>
+                      <p className="text-xs font-bold text-zinc-600 leading-relaxed">
+                        {photoModalState.error}
+                      </p>
+                    </div>
+                    {photoModalState.errorCode === 'EXPIRED' && (
+                      <div className="p-3 bg-amber-50 border-2 border-black/20 rounded-2xl text-left text-xs font-bold text-amber-900 space-y-1">
+                        <p>💡 <strong>說明：</strong>LINE 官方伺服器針對聊天室圖片僅提供數週之暫存保留期。此訊息已過期被 LINE 官方清理，因此無法再取得原始影像。</p>
+                        <p className="text-zinc-500 font-mono text-[10px]">Message ID: {photoModalState.messageId}</p>
+                      </div>
+                    )}
+                    <div className="flex items-center justify-center gap-2 pt-2">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenPhotoPreview(photoModalState.messageId, { userName: photoModalState.userName, time: photoModalState.time })}
+                        className="px-4 py-2 rounded-xl bg-zinc-100 hover:bg-zinc-200 border-2 border-black text-xs font-black shadow-neo-xs flex items-center gap-1.5"
+                      >
+                        <RefreshCw size={13} />
+                        <span>{isEn ? 'Retry' : '重新調閱'}</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={handleClosePhotoModal}
+                        className="px-4 py-2 rounded-xl bg-black text-white hover:bg-zinc-800 border-2 border-black text-xs font-black shadow-neo-xs"
+                      >
+                        {isEn ? 'Close' : '關閉視窗'}
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {!photoModalState.loading && photoModalState.dataUrl && (
+                  <div className="w-full space-y-3">
+                    <div className="relative rounded-2xl border-2 border-black overflow-hidden bg-zinc-950 flex items-center justify-center shadow-neo-sm max-h-[50vh]">
+                      <img
+                        src={photoModalState.dataUrl}
+                        alt="LINE user meal photo"
+                        className="w-full h-auto max-h-[50vh] object-contain select-none"
+                      />
+                    </div>
+
+                    {/* Photo Metadata & Actions */}
+                    <div className="bg-zinc-50 border-2 border-black rounded-2xl p-3 flex items-center justify-between gap-2 flex-wrap">
+                      <div className="flex items-center gap-2 text-xs font-mono font-bold text-zinc-700">
+                        <span className="bg-zinc-200 px-2 py-0.5 rounded border border-black/20 text-[10px]">
+                          ID: {photoModalState.messageId}
+                        </span>
+                        {photoModalState.sizeKb && (
+                          <span className="text-zinc-500 text-[11px]">
+                            {photoModalState.sizeKb} KB
+                          </span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <a
+                          href={photoModalState.dataUrl}
+                          download={`line-photo-${photoModalState.messageId}.jpg`}
+                          className="px-3 py-1.5 rounded-xl bg-amber-300 hover:bg-amber-400 text-black border-2 border-black font-black text-xs shadow-neo-xs flex items-center gap-1.5 transition-all"
+                        >
+                          <Download size={13} />
+                          <span>{isEn ? 'Download' : '下載照片'}</span>
+                        </a>
+                        <button
+                          type="button"
+                          onClick={handleClosePhotoModal}
+                          className="px-3 py-1.5 rounded-xl bg-zinc-100 hover:bg-zinc-200 text-black border-2 border-black font-black text-xs shadow-neo-xs transition-all"
+                        >
+                          {isEn ? 'Done' : '完成'}
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Privacy note */}
+                    <div className="text-[11px] font-bold text-zinc-500 flex items-center justify-between px-1">
+                      <span>🔒 透過 LINE 官方 Messaging API 安全直連調閱</span>
+                      <span className="text-emerald-700 font-mono">成本: $0 元</span>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </div>

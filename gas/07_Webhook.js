@@ -72,6 +72,94 @@ function getLineQuotaInfo(token) {
 }
 
 /**
+ * 📸 方案一：按需即時自 LINE 官方伺服器調閱用戶照片 (限維護者授權)
+ * 費用：$0 (LINE Content API 免費，不計入訊息推播配額)
+ * 隱私：端到端私有調閱，不經第三方圖床或外部伺服器
+ * @param {string} messageId LINE 訊息 ID
+ * @param {boolean} isAdmin 是否通過維護者身分驗證
+ * @param {GoogleAppsScript.Properties.Properties} [props]
+ * @returns {object} { status: 'ok'|'error', dataUrl?, messageId?, code?, message? }
+ */
+function handleGetLinePhoto(messageId, isAdmin, props) {
+  if (!isAdmin) {
+    return {
+      status: 'error',
+      code: 'UNAUTHORIZED',
+      message: 'Forbidden: 維護者身分驗證失敗，無權調閱用戶照片'
+    };
+  }
+
+  const cleanId = String(messageId || '').trim();
+  if (!cleanId || !/^[0-9]+$/.test(cleanId)) {
+    return {
+      status: 'error',
+      code: 'INVALID_ID',
+      message: '無效或未提供 LINE 訊息 ID (messageId)'
+    };
+  }
+
+  if (!props) props = PropertiesService.getScriptProperties();
+  const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
+  if (!token) {
+    return {
+      status: 'error',
+      code: 'CONFIG_ERROR',
+      message: '伺服端尚未設定 LINE_CHANNEL_ACCESS_TOKEN'
+    };
+  }
+
+  try {
+    const url = 'https://api-data.line.me/v2/bot/message/' + encodeURIComponent(cleanId) + '/content';
+    const res = UrlFetchApp.fetch(url, {
+      headers: {
+        'Authorization': 'Bearer ' + token
+      },
+      muteHttpExceptions: true
+    });
+
+    const statusCode = res.getResponseCode();
+
+    if (statusCode === 200) {
+      const blob = res.getBlob();
+      const contentType = blob.getContentType() || 'image/jpeg';
+      const bytes = blob.getBytes();
+      const base64 = Utilities.base64Encode(bytes);
+      const dataUrl = 'data:' + contentType + ';base64,' + base64;
+
+      return {
+        status: 'ok',
+        messageId: cleanId,
+        contentType: contentType,
+        sizeBytes: bytes.length,
+        sizeKb: Math.round(bytes.length / 1024),
+        dataUrl: dataUrl
+      };
+    } else if (statusCode === 404) {
+      return {
+        status: 'error',
+        code: 'EXPIRED',
+        httpStatus: 404,
+        message: 'LINE 伺服器已自動清理該照片（LINE 官方伺服器僅暫存數週，已逾期無法再次調閱）'
+      };
+    } else {
+      return {
+        status: 'error',
+        code: 'LINE_API_ERROR',
+        httpStatus: statusCode,
+        message: '向 LINE 伺服器請求照片失敗 (HTTP ' + statusCode + ')'
+      };
+    }
+  } catch (err) {
+    console.error('調閱 LINE 照片發生異常:', err);
+    return {
+      status: 'error',
+      code: 'FETCH_FAILED',
+      message: '調閱照片時發生網路或系統錯誤：' + (err.message || String(err))
+    };
+  }
+}
+
+/**
  * 📧 統一取得系統通知郵件發送設定
  * 預設寄件者: auto-message@winnie-lin.space
  * 預設收件者: maintainer@winnie-lin.space
@@ -909,6 +997,14 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 10.10 即時調閱 LINE 用戶餐點照片二進位影像 (方案一：按需調閱，限維護者授權)
+    if (action === 'getLinePhoto' || action === 'getLineImage') {
+      const messageId = e?.parameter?.messageId || e?.parameter?.id || '';
+      const photoResult = handleGetLinePhoto(messageId, isAdmin, props);
+      return ContentService.createTextOutput(JSON.stringify(photoResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 11. 實時運作日誌 API (限維護者授權存取)
     if (action === 'getRecentLogs') {
       if (!isAdmin) {
@@ -1327,6 +1423,15 @@ function doPost(e) {
       }
       const quotaData = getLineQuotaInfo(CHANNEL_ACCESS_TOKEN);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', ...quotaData }, null, 2))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 📸 0.6 即時調閱 LINE 用戶餐點照片 (方案一：按需調閱，POST 支援)
+    if (action === 'getLinePhoto' || action === 'getLineImage') {
+      const isAdmin = verifyAdminAccess(e, props, data);
+      const messageId = data?.messageId || data?.id || e?.parameter?.messageId || e?.parameter?.id || '';
+      const photoResult = handleGetLinePhoto(messageId, isAdmin, props);
+      return ContentService.createTextOutput(JSON.stringify(photoResult))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
