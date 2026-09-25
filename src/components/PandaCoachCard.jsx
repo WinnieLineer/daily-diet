@@ -1,7 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import NeoCard from './NeoCard';
 import { motion, useAnimation, AnimatePresence } from 'framer-motion';
-import { Flame, Sparkles } from 'lucide-react';
+import { Flame, Sparkles, MessageCircle } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { t, getLanguage } from '../lib/translations';
 import { PandaSticker } from './PandaStickers';
@@ -772,24 +772,25 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                   </span>
                 )}
 
-                {/* Animated Speaking indicator when interacting */}
-                <AnimatePresence>
+                {/* Comic Dialogue / Banter indicator when interacting */}
+                <AnimatePresence mode="wait">
                   {bubbleVisible ? (
                     <motion.span
-                      initial={{ opacity: 0, scale: 0.8 }}
+                      key="bubble-active"
+                      initial={{ opacity: 0, scale: 0.85 }}
                       animate={{ opacity: 1, scale: 1 }}
-                      exit={{ opacity: 0, scale: 0.8 }}
-                      className="text-[8px] font-black bg-black text-accent px-2 py-0.5 rounded-full flex items-center gap-1 shadow-neo-xs"
+                      exit={{ opacity: 0, scale: 0.85 }}
+                      transition={{ duration: 0.15 }}
+                      className="text-[8.5px] font-black bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-1"
                     >
-                      <span className="flex items-center gap-0.5 h-2">
-                        <span className="w-0.5 h-1.5 bg-accent rounded-full animate-bounce [animation-delay:-0.3s]" />
-                        <span className="w-0.5 h-2.5 bg-accent rounded-full animate-bounce [animation-delay:-0.15s]" />
-                        <span className="w-0.5 h-1.5 bg-accent rounded-full animate-bounce" />
-                      </span>
-                      <span>{currentLang === 'en' ? 'Speaking' : '開口中'}</span>
+                      <MessageCircle size={10} className="text-amber-900 fill-amber-300" />
+                      <span>{currentLang === 'en' ? 'Coach Banter' : '教練吐槽'}</span>
                     </motion.span>
                   ) : (
-                    <span className="text-[8px] font-bold text-amber-800/80 bg-amber-100/70 px-1.5 py-0.5 rounded-md border border-amber-200/80 hidden sm:inline-flex items-center gap-0.5">
+                    <span
+                      key="bubble-idle"
+                      className="text-[8px] font-bold text-amber-800/80 bg-amber-100/70 px-1.5 py-0.5 rounded-md border border-amber-200/80 hidden sm:inline-flex items-center gap-0.5"
+                    >
                       <Sparkles size={9} className="text-amber-600" />
                       <span>{currentLang === 'en' ? 'Daily Wisdom' : '日常碎碎念'}</span>
                     </span>
