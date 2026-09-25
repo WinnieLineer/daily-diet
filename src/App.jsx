@@ -875,7 +875,7 @@ function App() {
     return !safeGetStorage('onboarding_seen');
   });
   const [showWhatsNew, setShowWhatsNew] = useState(false);
-  const [lastSeenVersionState, setLastSeenVersionState] = useState(null);
+  const [lastSeenVersionState, setLastSeenVersionState] = useState(() => safeGetStorage('last_seen_version'));
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00' });
 
   useEffect(() => {
