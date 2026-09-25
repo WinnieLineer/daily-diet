@@ -90,11 +90,18 @@ function handleGetLinePhoto(messageId, isAdmin, props) {
   }
 
   const cleanId = String(messageId || '').trim();
+  // 📸 若為 Web 端上傳之照片 (wp_ 開頭)，轉交由 handleGetWebPhoto 處理
+  if (cleanId.startsWith('wp_') || cleanId.startsWith('web_')) {
+    if (typeof handleGetWebPhoto === 'function') {
+      return handleGetWebPhoto(cleanId, isAdmin, props);
+    }
+  }
+
   if (!cleanId || !/^[0-9]+$/.test(cleanId)) {
     return {
       status: 'error',
       code: 'INVALID_ID',
-      message: '無效或未提供 LINE 訊息 ID (messageId)'
+      message: '無效或未提供照片訊息 ID (messageId)'
     };
   }
 
@@ -897,7 +904,9 @@ function doGet(e) {
       const meal = { id, date, time, dish_name: dishName, calories, protein, carbs, fat, water, category, comment, source: 'WEB_APP' };
       const userGistId = incomingGist || getOrCreateUserGist(userId, pat, props);
       saveMealLog(userId, meal, userGistId, pat, props);
-      recordSystemLog('Web同步餐點', userId, dishName, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, `已同步儲存：【${dishName}】${calories} kcal · ${protein}g 蛋 · ${water}ml 水`, webCallerName || userId);
+      const incomingPhotoId = e?.parameter?.photoId;
+      const photoTag = incomingPhotoId ? ` (ID: ${incomingPhotoId})` : '';
+      recordSystemLog('Web同步餐點', userId, `${dishName}${photoTag}`, `${calories}卡 / ${protein}g蛋 / ${water}ml水`, `已同步儲存：【${dishName}】${calories} kcal · ${protein}g 蛋 · ${water}ml 水`, webCallerName || userId);
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', meal }))
         .setMimeType(ContentService.MimeType.JSON);
     }
@@ -1120,9 +1129,9 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 10.10 即時調閱 LINE 用戶餐點照片二進位影像 (方案一：按需調閱，限維護者授權)
-    if (action === 'getLinePhoto' || action === 'getLineImage') {
-      const messageId = e?.parameter?.messageId || e?.parameter?.id || '';
+    // 10.10 即時調閱餐點照片二進位影像 (支援 LINE 照片與 Web 照片庫，限維護者授權)
+    if (action === 'getLinePhoto' || action === 'getLineImage' || action === 'getWebPhoto') {
+      const messageId = e?.parameter?.messageId || e?.parameter?.photoId || e?.parameter?.id || '';
       const photoResult = handleGetLinePhoto(messageId, isAdmin, props);
       return ContentService.createTextOutput(JSON.stringify(photoResult))
         .setMimeType(ContentService.MimeType.JSON);
@@ -1549,12 +1558,23 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 📸 0.6 即時調閱 LINE 用戶餐點照片 (方案一：按需調閱，POST 支援)
-    if (action === 'getLinePhoto' || action === 'getLineImage') {
+    // 📸 0.6 即時調閱餐點照片 (支援 LINE 照片與 Web 照片庫，POST 支援)
+    if (action === 'getLinePhoto' || action === 'getLineImage' || action === 'getWebPhoto') {
       const isAdmin = verifyAdminAccess(e, props, data);
-      const messageId = data?.messageId || data?.id || e?.parameter?.messageId || e?.parameter?.id || '';
+      const messageId = data?.messageId || data?.photoId || data?.id || e?.parameter?.messageId || e?.parameter?.photoId || e?.parameter?.id || '';
       const photoResult = handleGetLinePhoto(messageId, isAdmin, props);
       return ContentService.createTextOutput(JSON.stringify(photoResult))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 📸 0.7 儲存 Web 用戶餐點照片至私有照片庫 (POST 支援)
+    if (action === 'saveWebPhoto' || action === 'uploadWebPhoto') {
+      const photoId = data?.photoId || data?.id || e?.parameter?.photoId;
+      const base64Data = data?.image || data?.dataUrl || data?.base64 || e?.parameter?.image;
+      const saveRes = (typeof saveWebPhoto === 'function') 
+        ? saveWebPhoto(photoId, base64Data, data, props)
+        : { status: 'error', message: 'saveWebPhoto not implemented' };
+      return ContentService.createTextOutput(JSON.stringify(saveRes))
         .setMimeType(ContentService.MimeType.JSON);
     }
 
@@ -1595,23 +1615,37 @@ function doPost(e) {
 
       if (action === 'analyzeMeal' || action === 'analyzeFoodImage') {
         const base64 = data?.image || data?.base64Image || e.parameter?.image;
+        let incomingPhotoId = data?.photoId || e.parameter?.photoId;
         aiCallerInfo.operation = 'Web照片辨識';
         const result = analyzeMealWithGeminiFull(base64, GEMINI_API_KEY, data?.context, data?.language, aiCallerInfo);
+
+        if (base64 && typeof saveWebPhoto === 'function') {
+          if (!incomingPhotoId) {
+            incomingPhotoId = 'wp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+          }
+          saveWebPhoto(incomingPhotoId, base64, {
+            userId: webUserId,
+            userName: webCaller,
+            dishName: result?.dish_name || '餐點'
+          }, props);
+        }
+
         if (result && typeof recordSystemLog === 'function') {
           const mUsed = result.model_used || 'Gemini';
           const fallbackNote = (result.failed_attempts && result.failed_attempts.length > 0)
             ? ` (前序 ${result.failed_attempts.length} 次重試)`
             : '';
+          const photoInputStr = incomingPhotoId ? `傳送照片 (ID: ${incomingPhotoId})` : '上傳餐點照片辨識';
           recordSystemLog(
             'Web照片辨識', 
             webUserId, 
-            '上傳餐點照片辨識', 
+            photoInputStr, 
             `[${mUsed}${fallbackNote}] ${result.dish_name || '餐點'} (${result.calories || 0}卡 / ${result.protein || 0}g蛋)`, 
             `[模型: ${mUsed}] 回傳分析結果：【${result.dish_name || '美味餐點'}】${result.calories || 0} kcal · ${result.protein || 0}g 蛋 · ${result.carbs || 0}g 碳 · ${result.fat || 0}g 脂${result.panda_comment ? ' · 教練：「' + result.panda_comment + '」' : ''}`,
             webCaller
           );
         }
-        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result }))
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: result, photoId: incomingPhotoId }))
           .setMimeType(ContentService.MimeType.JSON);
       }
       if (action === 'analyzeText' || action === 'analyzeFoodText') {

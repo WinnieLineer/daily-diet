@@ -6,11 +6,45 @@ import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCirc
 import { analyzeFoodImage, analyzeFoodText, recalculateFoodNutritionWithName } from '../lib/groq';
 import { db } from '../db';
 import { getCurrentGistId, uploadToGist } from '../lib/gistService';
-import { syncMealToCloud, syncDeleteFavorite, syncReorderFavorites } from '../lib/syncService';
+import { syncMealToCloud, syncDeleteFavorite, syncReorderFavorites, uploadWebPhoto } from '../lib/syncService';
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANALYSIS_DURATION_SECONDS, IMAGE_MAX_DIMENSION, IMAGE_QUALITY, isValidLocation } from '../lib/constants';
+
+/**
+ * 📸 產生適用於雲端私有照片庫之後台即時預覽高壓縮縮圖 (max 400px, 0.55 quality, ~15-25KB)
+ */
+const createThumbnail = (base64, maxDimension = 400, quality = 0.55) => {
+  return new Promise((resolve) => {
+    if (!base64 || typeof base64 !== 'string') {
+      return resolve(base64);
+    }
+    const img = new Image();
+    img.onload = () => {
+      try {
+        const canvas = document.createElement('canvas');
+        let width = img.width || 1;
+        let height = img.height || 1;
+        if (width > height) {
+          if (width > maxDimension) { height *= maxDimension / width; width = maxDimension; }
+        } else {
+          if (height > maxDimension) { width *= maxDimension / height; height = maxDimension; }
+        }
+        canvas.width = Math.round(width);
+        canvas.height = Math.round(height);
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return resolve(base64);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      } catch (e) {
+        resolve(base64);
+      }
+    };
+    img.onerror = () => resolve(base64);
+    img.src = base64;
+  });
+};
 
 const safeGetStorage = (key) => {
   try {
@@ -496,6 +530,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
 
   const performAnalysis = async (compressedBase64, locationPromise) => {
     const currentAnalysisId = ++analysisIdRef.current;
+    // 📸 為 Web 端照片產生唯一識別碼 (wp_ 開頭，與 LINE 數字 ID 區隔)
+    const currentPhotoId = 'wp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
     setAiLoading(true);
     setAiError(null);
     setLoadTime(ANALYSIS_DURATION_SECONDS);
@@ -525,10 +561,11 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
           waterGoal: goals.water,
           foodLogs: recentLogs.map(({ image, ...rest }) => rest),
           userName: userName,
-          userInstructions: userInstructions // New: Pass instructions
+          userInstructions: userInstructions,
+          photoId: currentPhotoId
         };
 
-        const res = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage());
+        const res = await analyzeFoodImage(compressedBase64, dailyContext, getLanguage(), currentPhotoId);
         if (currentAnalysisId !== analysisIdRef.current) return;
         data = res;
 
@@ -546,7 +583,8 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
       }
 
       if (currentAnalysisId === analysisIdRef.current && data && data.dish_name) {
-        const finalResult = { ...data, location };
+        const effectivePhotoId = data?.photoId || currentPhotoId;
+        const finalResult = { ...data, photoId: effectivePhotoId, location };
         setResult(finalResult);
         setOriginalResult(finalResult);
         setMultiplier(1);
@@ -555,6 +593,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         if (adviceUpdateLockRef) adviceUpdateLockRef.current = true;
         if (data.panda_comment && setAdvice) setAdvice(data.panda_comment);
         setUserInstructions(''); // Clear instructions after successful visual analysis
+
+        // 📸 背景自動壓縮並推播照片縮圖至私有雲端照片庫，供管理員後台即時調閱
+        createThumbnail(compressedBase64, 400, 0.55).then((thumb) => {
+          uploadWebPhoto(effectivePhotoId, thumb, data.dish_name);
+        }).catch((thumbErr) => {
+          console.warn('建立照片縮圖失敗:', thumbErr);
+        });
       }
     } catch (err) {
       if (currentAnalysisId !== analysisIdRef.current) return;
@@ -815,6 +860,15 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     }
     if (!dataToSave) return;
 
+    // 📸 確保有照片之餐點皆具備 photoId 與雲端私有照片庫縮圖存檔
+    if (dataToSave.image && !dataToSave.photoId) {
+      const generatedPhotoId = 'wp_' + Date.now() + '_' + Math.random().toString(36).substring(2, 7);
+      dataToSave.photoId = generatedPhotoId;
+      createThumbnail(dataToSave.image, 400, 0.55).then((thumb) => {
+        uploadWebPhoto(generatedPhotoId, thumb, dataToSave.dish_name);
+      }).catch((err) => console.warn('背景照片縮圖上傳失敗:', err));
+    }
+
     const logDateObj = new Date(logTime);
     if (goals.fasting_enabled) {
       const outside = isOutsideEatingWindow(logDateObj, goals.fasting_start, goals.fasting_end);
@@ -829,7 +883,14 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
     const localDate = `${logDateObj.getFullYear()}-${String(logDateObj.getMonth() + 1).padStart(2, '0')}-${String(logDateObj.getDate()).padStart(2, '0')}`;
     const timestamp = logDateObj.getTime();
 
-    const savedItem = { ...dataToSave, date: localDate, timestamp: timestamp, location: isValidLocation(dataToSave.location) ? dataToSave.location.trim() : null, category: selectedCategory };
+    const savedItem = { 
+      ...dataToSave, 
+      photoId: dataToSave.photoId || null,
+      date: localDate, 
+      timestamp: timestamp, 
+      location: isValidLocation(dataToSave.location) ? dataToSave.location.trim() : null, 
+      category: selectedCategory 
+    };
     await db.dietLogs.add(savedItem);
     syncMealToCloud(savedItem);
 

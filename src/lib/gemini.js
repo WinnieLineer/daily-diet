@@ -236,7 +236,7 @@ export function sanitizeAndBalanceNutrition(data, dishName = '') {
 /**
  * Analyze food image using Gemini Vision (or GAS fallback)
  */
-export async function analyzeFoodImage(base64Image, context = {}, language = 'zh') {
+export async function analyzeFoodImage(base64Image, context = {}, language = 'zh', photoId = null) {
   const { calories, calorieGoal, protein, proteinGoal, foodLogs = [], userName = '', userInstructions = '' } = context;
   const now = new Date();
   const currentHour = now.getHours();
@@ -321,9 +321,14 @@ History Today: ${foodStrip || 'None'}`;
     const proxyResult = await callGasProxy('analyzeMeal', {
       image: rawBase64,
       context,
-      language
+      language,
+      photoId: photoId || context?.photoId
     });
-    return sanitizeAndBalanceNutrition(proxyResult, proxyResult?.dish_name);
+    const sanitized = sanitizeAndBalanceNutrition(proxyResult, proxyResult?.dish_name);
+    if (proxyResult?.photoId) {
+      sanitized.photoId = proxyResult.photoId;
+    }
+    return sanitized;
   } catch (gasErr) {
     console.error("All AI Recognition methods failed:", gasErr);
     throw new Error(language === 'zh' ? "AI 辨識暫時繁忙，請稍後重試 🐼" : "AI analysis temporarily busy, please try again 🐼");

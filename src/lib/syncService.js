@@ -157,7 +157,8 @@ export async function syncMealToCloud(meal) {
   if (!meal) return;
   const { userName } = getEffectiveIds();
   const nowTime = meal.time || (meal.timestamp ? new Date(Number(meal.timestamp)).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) : new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }));
-  const params = buildSyncParams('saveMeal', {
+  
+  const customParams = {
     dishName: String(meal.dish_name || '餐點').slice(0, 100),
     cal: String(meal.calories || 0),
     pro: String(meal.protein || 0),
@@ -169,12 +170,18 @@ export async function syncMealToCloud(meal) {
     date: meal.date || getLocalDateString(),
     time: nowTime,
     id: String(meal.timestamp || meal.id || Date.now())
-  });
+  };
+
+  if (meal.photoId) {
+    customParams.photoId = String(meal.photoId);
+  }
+
+  const params = buildSyncParams('saveMeal', customParams);
 
   const task = async () => {
     try {
       await fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' });
-      console.log(`📤 [Web ➔ LINE Sync] 即時同步餐點成功: ${meal.dish_name} (${meal.calories} kcal)`);
+      console.log(`📤 [Web ➔ LINE Sync] 即時同步餐點成功: ${meal.dish_name} (${meal.calories} kcal)${meal.photoId ? ` [ID: ${meal.photoId}]` : ''}`);
     } catch (err) {
       console.warn("[Web ➔ LINE Sync] 同步失敗:", err);
     }
@@ -391,4 +398,41 @@ export function syncReorderFavorites(orderNames) {
     console.log(`🔀 [Web ➔ LINE Sync] 常用排序同步成功`);
   } catch (err) {}
 }
+
+/**
+ * 📸 即時將 Web 端縮圖上傳至 Google Apps Script 私有「Web照片庫」
+ * 用於維護者後台即時調閱用戶餐點原始照片 (端到端私有存取，不經第三方圖床)
+ * @param {string} photoId
+ * @param {string} thumbnailBase64
+ * @param {string} [dishName]
+ */
+export async function uploadWebPhoto(photoId, thumbnailBase64, dishName = '') {
+  if (!photoId || !thumbnailBase64) return;
+  const { userId, userName } = getEffectiveIds();
+
+  try {
+    const payload = JSON.stringify({
+      action: 'saveWebPhoto',
+      photoId: String(photoId),
+      image: thumbnailBase64,
+      userId: userId || 'web_user',
+      userName: userName || 'Web 用戶',
+      dishName: String(dishName || '餐點照片').slice(0, 100),
+      timestamp: Date.now()
+    });
+
+    // 🛡️ GAS POST 請求：使用 text/plain;charset=utf-8 避免觸發 CORS preflight OPTIONS
+    fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: payload,
+      mode: 'no-cors'
+    }).catch(err => console.warn('[Web ➔ Cloud Photo] 背景上傳照片異常:', err));
+
+    console.log(`📸 [Web ➔ Cloud Photo] Web 餐點照片已推播備份至私有照片庫 (ID: ${photoId})`);
+  } catch (e) {
+    console.warn('[Web ➔ Cloud Photo] 上傳照片失敗:', e);
+  }
+}
+
 

@@ -2136,6 +2136,193 @@ function initLogSheet() {
 }
 
 /**
+ * 📸 取得或初始化私有 Web 照片專屬工作表「Web照片庫」
+ * @param {GoogleAppsScript.Properties.Properties} [props]
+ * @returns {GoogleAppsScript.Spreadsheet.Sheet|null}
+ */
+function getOrCreateWebPhotoSheet(props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const ss = getOrCreateLogSheet(props);
+  if (!ss) return null;
+  let photoSheet = ss.getSheetByName('Web照片庫');
+  if (!photoSheet) {
+    try {
+      photoSheet = ss.insertSheet('Web照片庫');
+      photoSheet.appendRow(["照片識別碼", "上傳時間", "用戶識別碼", "用戶名稱", "餐點名稱", "照片資料庫一", "照片資料庫二"]);
+      const header = photoSheet.getRange(1, 1, 1, 7);
+      header.setBackground("#1E293B").setFontColor("#38BDF8").setFontWeight("bold").setFontSize(11);
+      photoSheet.setFrozenRows(1);
+      photoSheet.setColumnWidth(1, 200);
+      photoSheet.setColumnWidth(2, 160);
+      photoSheet.setColumnWidth(3, 160);
+      photoSheet.setColumnWidth(4, 140);
+      photoSheet.setColumnWidth(5, 180);
+      photoSheet.setColumnWidth(6, 200);
+      photoSheet.setColumnWidth(7, 200);
+    } catch (e) {
+      console.warn("建立 Web照片庫 工作表失敗:", e);
+      photoSheet = ss.getSheetByName('Web照片庫');
+    }
+  }
+  return photoSheet;
+}
+
+/**
+ * 📸 儲存 Web 用戶餐點照片至私有「Web照片庫」工作表
+ * 具備 45,000 字元分塊存檔機制與自動輪替清除（保留最新 1000 筆）
+ * @param {string} photoId
+ * @param {string} base64Data
+ * @param {object} metadata
+ * @param {GoogleAppsScript.Properties.Properties} [props]
+ * @returns {object} { status: 'ok'|'error', photoId }
+ */
+function saveWebPhoto(photoId, base64Data, metadata, props) {
+  if (!photoId || !base64Data) {
+    return { status: 'error', message: '缺少 photoId 或 base64Data' };
+  }
+  if (!props) props = PropertiesService.getScriptProperties();
+
+  try {
+    const photoSheet = getOrCreateWebPhotoSheet(props);
+    if (!photoSheet) {
+      return { status: 'error', message: '無法取得或建立 Web照片庫 試算表' };
+    }
+
+    const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    const userId = String(metadata?.userId || 'web_user').slice(0, 50);
+    const userName = String(metadata?.userName || metadata?.caller || 'Web 用戶').slice(0, 50);
+    const dishName = String(metadata?.dishName || metadata?.name || '美味餐點').slice(0, 100);
+
+    // 確保 base64 前綴完整
+    let cleanBase64 = String(base64Data).trim();
+    if (!cleanBase64.startsWith('data:image/')) {
+      cleanBase64 = `data:image/jpeg;base64,${cleanBase64}`;
+    }
+
+    // 分塊儲存以符合 Google 試算表單一儲存格 50,000 字元上限
+    const chunk1 = cleanBase64.slice(0, 45000);
+    const chunk2 = cleanBase64.length > 45000 ? cleanBase64.slice(45000, 90000) : '';
+
+    photoSheet.appendRow([
+      photoId,
+      timeStr,
+      userId,
+      userName,
+      dishName,
+      chunk1,
+      chunk2
+    ]);
+
+    // 🛡️ 自動輪替維護：超過 1000 筆時，批次刪除最舊的 100 筆，永續維持極速讀寫
+    const totalRows = photoSheet.getLastRow();
+    if (totalRows > 1000) {
+      try {
+        photoSheet.deleteRows(2, 100);
+      } catch (delErr) {
+        console.warn("輪替刪除舊照片紀錄失敗:", delErr);
+      }
+    }
+
+    return { status: 'ok', photoId: photoId };
+  } catch (err) {
+    console.error("儲存 Web 照片發生異常:", err);
+    return { status: 'error', message: err.message || String(err) };
+  }
+}
+
+/**
+ * 📸 自 Google 試算表私有工作表「Web照片庫」讀取並拼接還原 Web 照片
+ * 僅限通過 verifyAdminAccess 鑑權之管理員調閱
+ * @param {string} photoId
+ * @param {boolean} isAdmin
+ * @param {GoogleAppsScript.Properties.Properties} [props]
+ * @returns {object} { status: 'ok'|'error', dataUrl?, messageId?, code?, message? }
+ */
+function handleGetWebPhoto(photoId, isAdmin, props) {
+  if (!isAdmin) {
+    return {
+      status: 'error',
+      code: 'UNAUTHORIZED',
+      message: 'Forbidden: 管理員身分驗證失敗，無權調閱照片'
+    };
+  }
+
+  const cleanId = String(photoId || '').trim();
+  if (!cleanId) {
+    return {
+      status: 'error',
+      code: 'INVALID_ID',
+      message: '無效或未提供照片識別碼 (photoId)'
+    };
+  }
+
+  if (!props) props = PropertiesService.getScriptProperties();
+
+  try {
+    const photoSheet = getOrCreateWebPhotoSheet(props);
+    if (!photoSheet) {
+      return {
+        status: 'error',
+        code: 'SHEET_UNAVAILABLE',
+        message: '照片資料表暫不可用'
+      };
+    }
+
+    const lastRow = photoSheet.getLastRow();
+    if (lastRow <= 1) {
+      return {
+        status: 'error',
+        code: 'EXPIRED',
+        message: '照片庫中目前尚無紀錄或已過期'
+      };
+    }
+
+    // 倒序搜尋 (由新到舊，極速命中最近的照片)
+    const idRange = photoSheet.getRange(2, 1, lastRow - 1, 1).getValues();
+    let foundRow = -1;
+    for (let i = idRange.length - 1; i >= 0; i--) {
+      if (idRange[i][0] === cleanId) {
+        foundRow = i + 2;
+        break;
+      }
+    }
+
+    if (foundRow === -1) {
+      return {
+        status: 'error',
+        code: 'EXPIRED',
+        message: '未找到該 Web 照片或照片已過期清理'
+      };
+    }
+
+    const chunk1 = String(photoSheet.getRange(foundRow, 6).getValue() || '');
+    const chunk2 = String(photoSheet.getRange(foundRow, 7).getValue() || '');
+    const fullDataUrl = chunk1 + chunk2;
+
+    if (!fullDataUrl || !fullDataUrl.startsWith('data:image/')) {
+      return {
+        status: 'error',
+        code: 'INVALID_DATA',
+        message: '照片資料不完整或已損壞'
+      };
+    }
+
+    return {
+      status: 'ok',
+      dataUrl: fullDataUrl,
+      messageId: cleanId
+    };
+  } catch (err) {
+    console.error("調閱 Web 照片發生異常:", err);
+    return {
+      status: 'error',
+      code: 'FETCH_FAILED',
+      message: '調閱照片時發生錯誤：' + (err.message || String(err))
+    };
+  }
+}
+
+/**
  * 取得完整運作日誌：純伺服器內部 Multi-Slot 快取 + Google 試算表 (完全私有，絕無外部 Gist 洩漏)
  * @param {number} limit 最大回傳筆數 (預設 500)
  * @param {number} days 回溯天數 (預設 30 天)
