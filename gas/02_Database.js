@@ -1959,7 +1959,17 @@ function deduplicateLogs(logs) {
   const deduped = [];
   for (const log of (logs || [])) {
     if (!log) continue;
-    const timeStr = String(log.time || '').trim();
+    let timeStr = '';
+    if (log.time instanceof Date) {
+      try {
+        timeStr = Utilities.formatDate(log.time, "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+        log.time = timeStr;
+      } catch (e) {
+        timeStr = String(log.time || '').trim();
+      }
+    } else {
+      timeStr = String(log.time || '').trim();
+    }
     const userStr = String(log.userId || log.userName || '').trim();
     const typeStr = String(log.type || '').trim();
     const inputStr = String(log.input || '').slice(0, 30).trim();
@@ -2161,7 +2171,16 @@ function getRecentLogsData(limit, days) {
         const sheetLogs = [];
         for (let i = rawValues.length - 1; i >= 0; i--) {
           const row = rawValues[i];
-          const timeStr = String(row[0] || '').trim();
+          let timeStr = '';
+          if (row[0] instanceof Date) {
+            try {
+              timeStr = Utilities.formatDate(row[0], "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+            } catch (e) {
+              timeStr = String(row[0] || '').trim();
+            }
+          } else {
+            timeStr = String(row[0] || '').trim();
+          }
           if (!timeStr) continue;
           sheetLogs.push({
             time: timeStr,

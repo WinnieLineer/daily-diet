@@ -814,7 +814,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           const seen = new Set();
           const combined = [];
           for (const item of (fetchedLogs || [])) {
-            const timeStr = String(item.time || item[0] || '').trim();
+            const timeStr = formatUnifiedTimestamp(item.time || item[0] || '');
             const userStr = String(item.userId || item.userName || item[1] || item[2] || '').trim();
             const typeStr = String(item.type || item[3] || '').trim();
             const inputStr = String(item.input || item[4] || '').slice(0, 30).trim();
@@ -826,7 +826,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           }
           // 保留之前已載入的歷史日誌，防止任何短暫中斷導致日誌消失
           for (const item of (prev || [])) {
-            const timeStr = String(item.time || item[0] || '').trim();
+            const timeStr = formatUnifiedTimestamp(item.time || item[0] || '');
             const userStr = String(item.userId || item.userName || item[1] || item[2] || '').trim();
             const typeStr = String(item.type || item[3] || '').trim();
             const inputStr = String(item.input || item[4] || '').slice(0, 30).trim();
@@ -837,8 +837,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             }
           }
           combined.sort((a, b) => {
-            const timeA = String(a.time || a[0] || '');
-            const timeB = String(b.time || b[0] || '');
+            const timeA = formatUnifiedTimestamp(a.time || a[0] || '');
+            const timeB = formatUnifiedTimestamp(b.time || b[0] || '');
             return timeB.localeCompare(timeA);
           });
           return combined;
