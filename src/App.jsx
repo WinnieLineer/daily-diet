@@ -2111,12 +2111,12 @@ function App() {
           )}
         </AnimatePresence>
 
-        <div className="max-w-lg mx-auto px-3 sm:px-4 py-1.5 sm:py-2">
+        <div className="max-w-lg mx-auto px-3 sm:px-4 py-2 sm:py-2.5">
           <div className="flex justify-between items-center gap-2">
             {/* 左側：品牌、用戶與版本 */}
             <div className="flex flex-col shrink min-w-0 justify-center">
-              <div className="flex items-center gap-1.5 min-w-0">
-                <span className="truncate bg-accent text-black px-1.5 py-0.5 rounded-md sm:rounded-lg border-1.5 sm:border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-[11px] sm:text-xs tracking-tight shrink-0">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="truncate bg-accent text-black px-2 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight shrink-0">
                   {t('app_title')}
                 </span>
                 {ENABLE_520_THEME && (
@@ -2125,17 +2125,18 @@ function App() {
                   </span>
                 )}
                 {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' && (
-                  <span className="text-[10px] sm:text-[11px] font-black text-zinc-600 truncate notranslate tracking-tight" translate="no">
+                  <span className="text-[10px] sm:text-[11px] font-bold text-zinc-700 bg-white/90 border border-black/40 px-2 py-0.5 rounded-full shadow-[0.5px_0.5px_0px_rgba(0,0,0,0.4)] truncate max-w-[85px] sm:max-w-[130px] notranslate" translate="no">
                     <span>{userName}</span>
                     <span>{t('title_possessive')}</span>
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-1.5 mt-0.5">
-                <span className="text-[8px] sm:text-[8.5px] font-bold text-zinc-400 notranslate font-mono leading-none" translate="no">v{APP_VERSION}</span>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 notranslate font-mono leading-none tracking-wide" translate="no">v{APP_VERSION}</span>
+                <span className="text-zinc-300 text-[8px] leading-none select-none">•</span>
                 {/* 雲端 / LINE 同步狀態短字提示 */}
                 <div 
-                  className="flex items-center gap-1 cursor-pointer group leading-none"
+                  className="flex items-center gap-1.5 cursor-pointer group leading-none"
                   onClick={triggerManualSync}
                   title={
                     syncState === 'syncing' 
@@ -2154,15 +2155,15 @@ function App() {
                     syncState === 'error' ? "bg-rose-500" : "bg-accent group-hover:scale-125"
                   )} />
                   <span className={twMerge(
-                    "text-[8px] sm:text-[8.5px] font-bold transition-colors leading-none",
+                    "text-[9px] sm:text-[10px] font-bold transition-colors leading-none tracking-tight",
                     syncState === 'syncing' ? "text-black font-black" :
                     syncState === 'synced' ? "text-emerald-700 font-bold" :
-                    syncState === 'error' ? "text-rose-600 font-bold" : "text-zinc-400 group-hover:text-black"
+                    syncState === 'error' ? "text-rose-600 font-bold" : "text-zinc-500 group-hover:text-black"
                   )}>
                     {syncState === 'syncing' ? (currentLang === 'en' ? 'LINE syncing...' : 'LINE 同步中...') :
                      syncState === 'synced' ? (currentLang === 'en' ? 'LINE synced' : 'LINE 已同步') :
                      syncState === 'error' ? (currentLang === 'en' ? 'offline' : '離線保存') :
-                     (currentLang === 'en' ? 'cloud' : '雲端')}
+                     (currentLang === 'en' ? 'cloud' : '雲端同步')}
                   </span>
                 </div>
               </div>
