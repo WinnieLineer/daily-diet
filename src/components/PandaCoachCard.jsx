@@ -720,37 +720,37 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                 : "bg-gradient-to-br from-[#FFFDF5] via-[#FFFBEB] to-[#FEF3C7]/40 shadow-neo-xs hover:shadow-neo-sm hover:from-[#FFFBEB] hover:to-[#FEF3C7]/60"
             )}
           >
-            {/* Comic speech bubble tail pointing left directly at the Panda's cheek - visible on BOTH mobile & desktop */}
+            {/* Comic speech bubble tail pointing left directly at the Panda's cheek - 100% seamless junction */}
             <svg 
-              className="absolute top-7 sm:top-8 -left-[12px] w-[14px] h-[18px] pointer-events-none z-20 overflow-visible" 
-              viewBox="0 0 14 18" 
+              className="absolute top-[34px] sm:top-[38px] -left-[14px] w-[16px] h-[22px] pointer-events-none z-20 overflow-visible" 
+              viewBox="0 0 16 22" 
               fill="none"
             >
               {/* Soft shadow layer */}
               <path 
-                d="M14 1 C8 5 2 8 0 9 C2 10 8 13 14 17 Z" 
-                fill="#000" 
-                transform="translate(1, 1)"
-                opacity="0.2"
-              />
-              {/* Tail border and fill */}
-              <path 
-                d="M14 1 C8 5 2 8 0 9 C2 10 8 13 14 17 Z" 
-                className={twMerge(
-                  "transition-colors duration-200 stroke-black",
-                  bubbleVisible ? "fill-[#FFFBEB]" : "fill-[#FFFDF5]"
-                )}
+                d="M 14 2 Q 7 5, 0 11 Q 7 17, 14 22" 
+                stroke="rgba(0,0,0,0.18)" 
                 strokeWidth="2.5" 
-                strokeLinejoin="round" 
+                strokeLinecap="round" 
+                fill="none"
+                transform="translate(1, 1)"
               />
-              {/* Seamless blending seam mask */}
-              <line 
-                x1="13" y1="2" x2="13" y2="16" 
+              {/* Seamless fill extending inside the bubble (x=17) to cleanly cover parent border */}
+              <path 
+                d="M 17 -1 Q 7 3, 0 11 Q 7 17, 17 22 Z" 
                 className={twMerge(
                   "transition-colors duration-200",
-                  bubbleVisible ? "stroke-[#FFFBEB]" : "stroke-[#FFFDF5]"
-                )}
-                strokeWidth="4" 
+                  bubbleVisible ? "fill-[#FFFBEB]" : "fill-[#FFFDF5]"
+                )} 
+              />
+              {/* Crisp black outline - ONLY top and bottom curves, NO vertical base line! */}
+              <path 
+                d="M 14.5 0 Q 7 3, 0 11 Q 7 17, 14.5 21" 
+                stroke="black" 
+                strokeWidth="2.5" 
+                strokeLinecap="round" 
+                strokeLinejoin="round" 
+                fill="none" 
               />
             </svg>
 
