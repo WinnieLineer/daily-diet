@@ -160,6 +160,98 @@ function handleGetLinePhoto(messageId, isAdmin, props) {
 }
 
 /**
+ * 🛡️ 深度驗證 Web 端操作 LINE 用戶 (U 開頭) 的身份合法性
+ * 防範 IDOR (Insecure Direct Object Reference / BOLA, CWE-639) 橫向越權攻擊
+ * 
+ * 規則：
+ * 1. 若非 U 開頭之 LINE 原生帳號（如 web_user, client_xxx 或自訂名稱），放行（非屬受保護之 LINE 個人隱私帳戶）。
+ * 2. 若為管理員（通過 verifyAdminAccess），放行。
+ * 3. 若提供 idToken：
+ *    - 透過 LINE 官方 OAuth2 端點 (https://api.line.me/oauth2/v2.1/verify) 校驗。
+ *    - 若校驗成功且 sub === userId，放行（具 10 分鐘 Cache 快取避免重複請求）。
+ * 4. 若提供 gistId：
+ *    - 檢查是否與伺服端登記之 USER_GIST_${userId} 吻合（持有私密 Gist ID 憑證）。
+ *    - 若吻合，放行。
+ * 5. 以上皆不符合：拒絕存取 (401 / 403)。
+ */
+function verifyUserAccess(userId, e, props, postData) {
+  if (!userId) return { allowed: true };
+  const targetUid = String(userId).trim();
+  // 非 U 開頭之 LINE 帳號，不列入 LINE 原生帳號驗證
+  if (!targetUid.startsWith('U') || targetUid.length < 15) {
+    return { allowed: true, isVerifiedLine: false };
+  }
+
+  if (!props) props = PropertiesService.getScriptProperties();
+
+  // 1. 維護者特權存取
+  const isAdmin = verifyAdminAccess(e, props, postData);
+  if (isAdmin) {
+    return { allowed: true, isVerifiedLine: true, role: 'admin' };
+  }
+
+  const incomingToken = e?.parameter?.idToken || postData?.idToken || postData?.id_token;
+  const incomingGist = e?.parameter?.gistId || postData?.gistId;
+
+  // 2. LINE ID Token (JWT) 官方端點數位簽章鑑別
+  if (incomingToken && typeof incomingToken === 'string') {
+    const cache = CacheService.getScriptCache();
+    const tokenHash = Utilities.base64Encode(Utilities.computeDigest(Utilities.DigestAlgorithm.MD5, incomingToken)).slice(0, 24);
+    const cachedSub = cache.get(`VERIFIED_SUB_${tokenHash}`);
+    if (cachedSub && cachedSub === targetUid) {
+      return { allowed: true, isVerifiedLine: true, authMethod: 'cached_id_token' };
+    }
+
+    try {
+      const liffId = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
+      const defaultChannelId = liffId.split('-')[0] || '2011098313';
+      const channelId = props.getProperty('LINE_CHANNEL_ID') || defaultChannelId;
+      const verifyRes = UrlFetchApp.fetch('https://api.line.me/oauth2/v2.1/verify', {
+        method: 'post',
+        payload: {
+          id_token: incomingToken,
+          client_id: channelId
+        },
+        muteHttpExceptions: true
+      });
+
+      if (verifyRes.getResponseCode() === 200) {
+        const verifyData = JSON.parse(verifyRes.getContentText() || '{}');
+        if (verifyData.sub === targetUid) {
+          try {
+            cache.put(`VERIFIED_SUB_${tokenHash}`, targetUid, 600); // 快取 10 分鐘
+          } catch (_) {}
+          return { allowed: true, isVerifiedLine: true, authMethod: 'line_id_token' };
+        } else {
+          console.warn(`🚨 [IDOR 攔截] ID Token 簽發對象 (${verifyData.sub}) 與目標操作用戶 (${targetUid}) 不一致！`);
+          return { allowed: false, code: 'FORBIDDEN', reason: 'LINE ID Token 簽發對象不匹配' };
+        }
+      } else {
+        console.warn(`⚠️ [LINE ID Token 驗證未通過 (${verifyRes.getResponseCode()})]:`, verifyRes.getContentText().slice(0, 100));
+      }
+    } catch (tokenErr) {
+      console.warn("⚠️ LINE ID Token 校驗異常:", tokenErr);
+    }
+  }
+
+  // 3. 私密 Gist ID 憑證鑑別 (已綁定之跨裝置使用者)
+  if (incomingGist && typeof incomingGist === 'string') {
+    const boundGist = props.getProperty(`USER_GIST_${targetUid}`);
+    if (boundGist && boundGist === incomingGist.trim()) {
+      return { allowed: true, isVerifiedLine: true, authMethod: 'gist_secret_possession' };
+    }
+  }
+
+  // 4. 未具備任何合法授權憑證，拒絕處理 (防範未經授權之 IDOR 橫向探針)
+  console.warn(`🚨 [IDOR 越權存取攔截] 請求試圖以未認證身分存取/覆寫 LINE 原生用戶 ${targetUid}`);
+  return { 
+    allowed: false, 
+    code: 'UNAUTHORIZED', 
+    reason: '未經授權的 LINE 用戶識別碼。請自 LINE App 開啟或綁定雲端 Gist 憑證。' 
+  };
+}
+
+/**
  * 📧 統一取得系統通知郵件發送設定
  * 預設寄件者: auto-message@winnie-lin.space
  * 預設收件者: maintainer@winnie-lin.space
@@ -683,9 +775,33 @@ function doGet(e) {
       }
     }
 
+    // 🛡️ BOLA / IDOR 授權防禦：若目標帳號為 LINE 原生用戶 (U 開頭)，統一驗證存取授權 (CWE-639)
+    const userProtectedActions = [
+      'getGistId', 'getLogs', 'saveMeal', 'addMeal', 'deleteMeal', 'clearToday', 
+      'addFavorite', 'deleteFavorite', 'reorderFavorites', 'updateGoals', 
+      'updatePersona', 'updateLanguage', 'saveWeight', 'savePoop'
+    ];
+    if (userProtectedActions.includes(action) && userId && String(userId).startsWith('U')) {
+      const userAuth = verifyUserAccess(userId, e, props);
+      if (!userAuth.allowed) {
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          code: userAuth.code || 'UNAUTHORIZED',
+          message: userAuth.reason
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     // 1. 查詢/綁定個人 Gist ID
     if (action === 'getGistId' && userId) {
       if (incomingGist && !isGenericUserId(userId)) {
+        if (!verifyGistOwnership(incomingGist, userId, props)) {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            code: 'FORBIDDEN',
+            message: 'Forbidden: 無權存取該 Gist 資料來源'
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
         const existingGist = props.getProperty(`USER_GIST_${userId}`);
         if (!existingGist || isAdmin) {
           props.setProperty(`USER_GIST_${userId}`, incomingGist);
@@ -699,6 +815,13 @@ function doGet(e) {
     // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
     if (action === 'getLogs' && userId) {
       if (incomingGist && !isGenericUserId(userId)) {
+        if (!verifyGistOwnership(incomingGist, userId, props)) {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            code: 'FORBIDDEN',
+            message: 'Forbidden: 無權存取該 Gist 資料來源'
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
         const existingGist = props.getProperty(`USER_GIST_${userId}`);
         // 🛡️ 防竄改防護：若該 LINE 用戶已綁定 Gist，不允許透過無認證的公開 GET 覆寫其 Gist ID
         if (!existingGist || isAdmin) {

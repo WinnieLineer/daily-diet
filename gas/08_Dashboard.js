@@ -223,8 +223,11 @@ function fixLegacyFoodNameUsers() {
         resolvedName = userId;
       }
 
+      // 🛡️ 防範試算表公式注入攻擊 (CSV / Formula Injection, CWE-1236)
+      const sanitizeCell = (v) => (typeof v === 'string' && /^[=\+\-@\t\r]/.test(v)) ? `'${v}` : v;
+
       // 修正 B 欄 userName
-      sheet.getRange(rowNum, 2).setValue(resolvedName);
+      sheet.getRange(rowNum, 2).setValue(sanitizeCell(resolvedName));
 
       // 若 C 欄 userId 也是食物名，一併修正為預設 web_user
       if (isFoodLike(userId)) {
@@ -299,7 +302,8 @@ function deleteInvalidUserNameLogs(props) {
           deletedCount++;
         } else if (/^[0-9a-fA-F]{20,40}$/.test(uName) || /^gist[-_]/i.test(uName)) {
           const properName = 'Web 用戶';
-          sheet.getRange(r, 2).setValue(properName);
+          const sanitizeCell = (v) => (typeof v === 'string' && /^[=\+\-@\t\r]/.test(v)) ? `'${v}` : v;
+          sheet.getRange(r, 2).setValue(sanitizeCell(properName));
           if (/^[0-9a-fA-F]{20,40}$/.test(uId)) {
             sheet.getRange(r, 3).setValue('web_user');
           }

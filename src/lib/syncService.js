@@ -5,6 +5,7 @@
  */
 
 import { getLocalDateString } from './constants';
+import { liffService } from './liffService';
 
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 
@@ -74,11 +75,36 @@ export function getEffectiveIds() {
     ? userName 
     : (userId && !userId.startsWith('U') && !isGistId(userId) && !isGeneric(userId) ? userId : '');
 
+  let idToken = null;
+  try {
+    idToken = liffService.getIDToken();
+  } catch (e) {}
+
   return { 
     userId: isGistId(effectiveUserId) ? getOrCreateClientId() : effectiveUserId, 
     userName: effectiveUserName, 
-    gistId 
+    gistId,
+    idToken
   };
+}
+
+/**
+ * 🛡️ 統一建構攜帶授權憑證之雲端同步 URLSearchParams (包含 idToken 鑑別防禦 IDOR)
+ */
+export function buildSyncParams(action, customParams = {}) {
+  const { userId, userName, gistId, idToken } = getEffectiveIds();
+  const params = new URLSearchParams({
+    action,
+    userId,
+    ...customParams
+  });
+  if (userName) {
+    params.append('userName', userName);
+    params.append('caller', userName);
+  }
+  if (gistId) params.append('gistId', gistId);
+  if (idToken) params.append('idToken', idToken);
+  return params;
 }
 
 // ⏱️ 輕量防抖工具函數
@@ -128,13 +154,10 @@ async function processMealSyncQueue() {
  * 即時同步單筆餐點至 LINE 後端與 Gist
  */
 export async function syncMealToCloud(meal) {
-  const { userId, userName, gistId } = getEffectiveIds();
   if (!meal) return;
-
+  const { userName } = getEffectiveIds();
   const nowTime = meal.time || (meal.timestamp ? new Date(Number(meal.timestamp)).toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }) : new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false }));
-  const params = new URLSearchParams({
-    action: 'saveMeal',
-    userId,
+  const params = buildSyncParams('saveMeal', {
     dishName: String(meal.dish_name || '餐點').slice(0, 100),
     cal: String(meal.calories || 0),
     pro: String(meal.protein || 0),
@@ -147,11 +170,6 @@ export async function syncMealToCloud(meal) {
     time: nowTime,
     id: String(meal.timestamp || meal.id || Date.now())
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   const task = async () => {
     try {
@@ -170,7 +188,6 @@ export async function syncMealToCloud(meal) {
  * 即時同步刪除餐點至 LINE 後端與 Gist
  */
 export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
-  const { userId, userName, gistId } = getEffectiveIds();
   let targetId = '';
   let dishName = '';
 
@@ -182,17 +199,10 @@ export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
     dishName = optionalDishName || (isNaN(Number(targetOrId)) ? targetOrId : '');
   }
 
-  const params = new URLSearchParams({
-    action: 'deleteMeal',
-    userId,
+  const params = buildSyncParams('deleteMeal', {
     dishName: String(dishName || targetId),
     id: String(targetId || dishName)
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -205,10 +215,7 @@ export async function syncDeleteMealToCloud(targetOrId, optionalDishName) {
  * 實際執行目標更新
  */
 function doSyncGoals(goals) {
-  const { userId, userName, gistId } = getEffectiveIds();
-  const params = new URLSearchParams({
-    action: 'updateGoals',
-    userId,
+  const params = buildSyncParams('updateGoals', {
     calories: String(goals.calories || 2000),
     protein: String(goals.protein || 100),
     water: String(goals.water || 2500),
@@ -219,11 +226,6 @@ function doSyncGoals(goals) {
     fasting_start: String(goals.fasting_start || '12:00'),
     fasting_end: String(goals.fasting_end || '20:00')
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -249,17 +251,9 @@ export function syncGoalsToCloud(goals, immediate = false) {
  * 實際執行教練性格更新
  */
 function doSyncPersona(persona) {
-  const { userId, userName, gistId } = getEffectiveIds();
-  const params = new URLSearchParams({
-    action: 'updatePersona',
-    userId,
+  const params = buildSyncParams('updatePersona', {
     persona: String(persona || 'tsundere')
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -285,18 +279,10 @@ export function syncPersonaToCloud(persona, immediate = false) {
  * 實際執行語言更新
  */
 function doSyncLanguage(lang) {
-  const { userId, userName, gistId } = getEffectiveIds();
   const validLang = lang === 'en' ? 'en' : 'zh';
-  const params = new URLSearchParams({
-    action: 'updateLanguage',
-    userId,
+  const params = buildSyncParams('updateLanguage', {
     lang: validLang
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -322,21 +308,13 @@ export function syncLanguageToCloud(lang, immediate = false) {
  * 即時同步單筆體重至 LINE 後端與 Gist
  */
 export async function syncWeightToCloud(weightLog) {
-  const { userId, userName, gistId } = getEffectiveIds();
   if (!weightLog || !weightLog.weight) return;
 
-  const params = new URLSearchParams({
-    action: 'saveWeight',
-    userId,
+  const params = buildSyncParams('saveWeight', {
     weight: String(weightLog.weight),
     date: weightLog.date || getLocalDateString(),
     timestamp: String(weightLog.timestamp || Date.now())
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -349,20 +327,12 @@ export async function syncWeightToCloud(weightLog) {
  * 即時同步單筆排便打卡至 LINE 後端與 Gist
  */
 export async function syncPoopToCloud(poopLog) {
-  const { userId, userName, gistId } = getEffectiveIds();
   if (!poopLog) return;
 
-  const params = new URLSearchParams({
-    action: 'savePoop',
-    userId,
+  const params = buildSyncParams('savePoop', {
     timestamp: String(poopLog.timestamp || Date.now()),
     date: poopLog.date || getLocalDateString()
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -376,20 +346,12 @@ export async function syncPoopToCloud(poopLog) {
  */
 export function syncAddFavorite(favItem) {
   if (!favItem) return;
-  const { userId, userName, gistId } = getEffectiveIds();
-  const params = new URLSearchParams({
-    action: 'addFavorite',
-    userId,
+  const params = buildSyncParams('addFavorite', {
     name: favItem.dish_name || favItem.name || '常用餐點',
     cal: String(favItem.calories || 0),
     pro: String(favItem.protein || 0),
     wat: String(favItem.water || 0)
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -403,17 +365,9 @@ export function syncAddFavorite(favItem) {
  */
 export function syncDeleteFavorite(favNameOrId) {
   if (!favNameOrId) return;
-  const { userId, userName, gistId } = getEffectiveIds();
-  const params = new URLSearchParams({
-    action: 'deleteFavorite',
-    userId,
+  const params = buildSyncParams('deleteFavorite', {
     name: String(favNameOrId)
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })
@@ -427,17 +381,9 @@ export function syncDeleteFavorite(favNameOrId) {
  */
 export function syncReorderFavorites(orderNames) {
   if (!orderNames) return;
-  const { userId, userName, gistId } = getEffectiveIds();
-  const params = new URLSearchParams({
-    action: 'reorderFavorites',
-    userId,
+  const params = buildSyncParams('reorderFavorites', {
     order: String(orderNames)
   });
-  if (userName) {
-    params.append('userName', userName);
-    params.append('caller', userName);
-  }
-  if (gistId) params.append('gistId', gistId);
 
   try {
     fetch(`${GAS_URL}?${params.toString()}`, { mode: 'no-cors' })

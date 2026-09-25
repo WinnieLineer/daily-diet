@@ -1243,7 +1243,8 @@ CRITICAL RULES:
 // ========================================================
 
 function verifyWebAIRequest(data, e) {
-  const WEB_AI_SECRET = "DD_WEB_AI_SECURE_KEY_2026";
+  const props = PropertiesService.getScriptProperties();
+  const WEB_AI_SECRET = props.getProperty('WEB_AI_SECRET') || "DD_WEB_AI_SECURE_KEY_2026";
   const client = data?.client || e?.parameter?.client;
   const timestamp = Number(data?.timestamp || e?.parameter?.timestamp);
   const nonce = data?.nonce || e?.parameter?.nonce;

@@ -1020,7 +1020,7 @@ function getOrCreateUserGist(userId, pat, props) {
         'Content-Type': 'application/json'
       },
       payload: JSON.stringify({
-        description: `Daily Diet User Cloud Database - ${userId}`,
+        description: `Daily Diet User Cloud Database (${userId && userId.startsWith('U') ? userId.slice(-6) : 'Web'})`,
         public: false,
         files: {
           'daily-diet-backup.json': {
