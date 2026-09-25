@@ -2116,14 +2116,14 @@ function App() {
             {/* 左側：品牌、用戶與版本 */}
             <div className="flex flex-col shrink min-w-0 justify-center">
               <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' && (
-                  <span className="text-[10px] sm:text-[11px] font-bold text-zinc-700 bg-white/90 border border-black/40 px-2 py-0.5 rounded-full shadow-[0.5px_0.5px_0px_rgba(0,0,0,0.4)] truncate max-w-[95px] sm:max-w-[140px] notranslate shrink" translate="no">
-                    <span>{userName}</span>
-                    <span>{t('title_possessive')}</span>
-                  </span>
-                )}
-                <span className="truncate bg-accent text-black px-2 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight shrink-0">
-                  {t('app_title')}
+                <span className="truncate bg-accent text-black px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight shrink-0 inline-flex items-center gap-1">
+                  {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' && (
+                    <span className="font-bold text-black/85 truncate max-w-[95px] sm:max-w-[140px] notranslate shrink" translate="no">
+                      <span>{userName}</span>
+                      <span>{t('title_possessive')}</span>
+                    </span>
+                  )}
+                  <span>{t('app_title')}</span>
                 </span>
                 {ENABLE_520_THEME && (
                   <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-xs shrink-0">
