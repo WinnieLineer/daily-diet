@@ -128,6 +128,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [gistIdInput, setGistIdInput] = useState(getCurrentGistId() || '');
   const [showApiKey, setShowApiKey] = useState(false);
   const [showGithubPat, setShowGithubPat] = useState(false);
+  const [showAdvancedGist, setShowAdvancedGist] = useState(false);
 
   // 誠實支持商店擴展狀態
   const [hasCrown, setHasCrown] = useState(safeGetStorage('panda_sponsor_crown') === 'true');
@@ -1491,6 +1492,70 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           {syncStatus === 'syncing' ? '同步中...' : syncStatus === 'success' ? '✅ 已同步' : '手動同步'}
                         </button>
                       </div>
+                    </div>
+
+                    {/* ⚙️ 進階開發者選項：自訂個人 GitHub PAT (選填) */}
+                    <div className="pt-2">
+                      <button
+                        type="button"
+                        onClick={() => setShowAdvancedGist(prev => !prev)}
+                        className="text-[11px] font-black text-zinc-500 hover:text-black flex items-center gap-1.5 transition-colors select-none cursor-pointer"
+                      >
+                        <span>⚙️</span>
+                        <span>{isEn ? 'Advanced: Custom GitHub PAT (Optional)' : '進階設定：自訂個人 GitHub PAT（選填）'}</span>
+                        <ChevronDown size={14} className={`transform transition-transform ${showAdvancedGist ? 'rotate-180' : ''}`} />
+                      </button>
+
+                      <AnimatePresence>
+                        {showAdvancedGist && (
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-3 space-y-3 overflow-hidden text-left"
+                          >
+                            <div className="p-3.5 bg-zinc-50 border-2 border-black rounded-2xl space-y-2 shadow-neo-xs">
+                              <p className="text-[10px] font-bold text-zinc-600 leading-relaxed">
+                                💡 <b>雲端備份模式說明</b>：<br />
+                                • <b>預設模式（免 PAT）</b>：系統已內建雲端智慧代理，直接點選上方「手動同步」即可自動備份與還原，<b>一般用戶無需填寫此項</b>。<br />
+                                • <b>直連模式（個人 Token）</b>：若您無法使用 LINE、或希望資料 100% 直連您的個人 GitHub 帳號，可在此填寫具備 <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">gist</code> 權限之 Personal Access Token (PAT)。系統預設備份檔案名稱為 <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">daily-diet-backup.json</code>。
+                              </p>
+
+                              <div className="flex gap-2 w-full pt-1">
+                                <div className="flex-1 relative">
+                                  <input
+                                    type={showGithubPat ? "text" : "password"}
+                                    value={githubPat}
+                                    placeholder="ghp_xxxxxxxxxxxxxxxxxxxx"
+                                    onChange={e => setGithubPat(e.target.value)}
+                                    style={{ WebkitTextSecurity: showGithubPat ? 'none' : 'disc' }}
+                                    className="w-full bg-white border-2 border-black p-2.5 pr-9 rounded-xl font-mono font-bold text-[11px] shadow-sm outline-none"
+                                    autoComplete="off"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => setShowGithubPat(!showGithubPat)}
+                                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-black transition-colors"
+                                  >
+                                    {showGithubPat ? <EyeOff size={14} /> : <Eye size={14} />}
+                                  </button>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    const cleaned = (githubPat || '').trim();
+                                    safeSetStorage('github_pat', cleaned);
+                                    alert(cleaned ? '✅ 已成功儲存個人 GitHub PAT！現在資料將直接備份至您的 GitHub 帳號。' : 'ℹ️ 已清除個人 GitHub PAT，系統已改回預設雲端智慧同步。');
+                                  }}
+                                  className="bg-black text-white px-3.5 rounded-xl font-black text-xs active:scale-95 shadow-sm shrink-0"
+                                >
+                                  {t('save')}
+                                </button>
+                              </div>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     {isLocal && (

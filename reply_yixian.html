@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <title>Daily Diet - 回覆 yixianl254 專屬信件助手 🐼</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", sans-serif;
+      background: #F4F4F5;
+      margin: 0;
+      padding: 30px 15px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      -webkit-font-smoothing: antialiased;
+    }
+    .action-panel {
+      background: #FFFFFF;
+      border: 3px solid #000000;
+      border-radius: 20px;
+      box-shadow: 6px 6px 0px #000000;
+      max-width: 680px;
+      width: 100%;
+      padding: 24px;
+      margin-bottom: 24px;
+      text-align: center;
+    }
+    .action-panel h2 { margin-top: 0; font-size: 22px; color: #000000; }
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+    .action-btn {
+      padding: 14px 22px;
+      border: 2px solid #000000;
+      border-radius: 12px;
+      font-size: 15px;
+      font-weight: bold;
+      cursor: pointer;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: transform 0.1s, box-shadow 0.1s;
+    }
+    .action-btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0px #000000;
+    }
+    .btn-copy { background: #FDE047; color: #000000; }
+    .btn-gmail { background: #EA4335; color: #FFFFFF; }
+    .toast {
+      display: none;
+      color: #16A34A;
+      font-weight: bold;
+      margin-top: 12px;
+      font-size: 14px;
+    }
+    .email-wrapper {
+      max-width: 640px;
+      width: 100%;
+      background: #FFFFFF;
+      border: 2px solid #000000;
+      border-radius: 16px;
+      overflow: hidden;
+      box-shadow: 8px 8px 0px rgba(0,0,0,0.15);
+      font-family: "Microsoft JhengHei", "微軟正黑體", "Noto Sans TC", sans-serif;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 控制面板 -->
+  <div class="action-panel">
+    <h2>🐼 Daily Diet - 回覆 yixianl254 專屬信件助手</h2>
+    <p style="color: #64748B; font-size: 14px; line-height: 1.5; margin: 6px 0 10px;">
+      收件人：<b>yixianl254@gmail.com</b>｜主題：<b>Gist 雲端同步與 GitHub PAT 配置說明</b>
+    </p>
+
+    <div style="background: #FFFBEB; border: 1.5px solid #FCD34D; border-radius: 10px; padding: 12px 16px; margin: 10px 0 16px; font-size: 13px; color: #92400E; text-align: left; line-height: 1.6;">
+      💡 <b>使用小提示：</b><br>
+      點選【一鍵複製精美圖文信】後，打開 Gmail 點擊「撰寫」，直接按 <b>Ctrl + V (貼上)</b>，即可完整保留 Neo-brutalist 高質感排版與清晰技術解答！
+    </div>
+
+    <div class="btn-group">
+      <button class="action-btn btn-copy" onclick="copyRichHtml()">
+        📋 一鍵複製精美圖文信（推薦貼到 Gmail）
+      </button>
+      <a class="action-btn btn-gmail" id="gmailBtn" target="_blank" href="https://mail.google.com/mail/?view=cm&fs=1&to=yixianl254@gmail.com&su=%E9%97%9C%E6%96%BC%20Daily%20Diet%20%E9%9B%B2%E7%AB%AF%E5%90%8C%E6%AD%A5%E8%88%87%20GitHub%20Gist%20%E9%85%8D%E7%BD%AE%E8%AA%AA%E6%98%8E%20%F0%9F%90%BC%E2%9C%A8">
+        📮 開啟 Gmail 撰寫新信件 (帶收件人與主旨)
+      </a>
+    </div>
+    <div id="toast" class="toast">🎉 信件內容已成功複製到剪貼簿！在 Gmail 內文處按 Ctrl + V (貼上) 即可！</div>
+  </div>
+
+  <!-- 精美信件 HTML 容器 -->
+  <div class="email-wrapper" id="emailContent">
+    <font face="Microsoft JhengHei, 微軟正黑體, PingFang TC, sans-serif">
+    <table width="100%" cellpadding="0" cellspacing="0" border="0" lang="zh-Hant" style="background-color: #FFFFFF; font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; color: #18181B; line-height: 1.6;">
+      <tr>
+        <td style="background-color: #000000; padding: 24px 30px; text-align: left;">
+          <span style="display: inline-block; background-color: #FDE047; color: #000000; font-weight: 900; font-size: 13px; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px;">
+            🐼 DAILY DIET
+          </span>
+          <div style="color: #FFFFFF; font-size: 20px; font-weight: bold; margin-top: 8px;">
+            關於 Daily Diet 雲端同步與 GitHub Gist 配置說明 ✨
+          </div>
+        </td>
+      </tr>
+      <tr>
+        <td style="padding: 30px 30px 20px 30px;">
+          <p style="font-size: 16px; color: #18181B; margin: 0 0 16px 0;">
+            <b>您好！</b>
+          </p>
+          <p style="font-size: 15px; color: #3F3F46; margin: 0 0 20px 0; line-height: 1.7;">
+            非常感謝您使用 Daily Diet 並送出反饋！非常高興看到您這麼敏銳且專業的提問，針對您提到的「Missing GitHub PAT」、配置入口以及預期檔名，開發團隊已在最新版本（<b>v3.3.104</b>）中完成全面優化與解答：
+          </p>
+
+          <!-- 區塊 1: 問題解答 -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F0FDF4; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
+            <tr>
+              <td style="padding: 20px;">
+                <div style="font-size: 16px; font-weight: bold; color: #166534; margin-bottom: 12px;">
+                  🚀 1. 您現在完全「無需」手動配置 GitHub PAT 囉！
+                </div>
+                <p style="font-size: 14px; color: #15803D; margin: 0 0 8px 0; line-height: 1.7;">
+                  先前點擊「手動同步」會跳出 <code>Missing GitHub PAT</code> 是因為舊版程式碼直接向 GitHub API 發出寫入請求，而瀏覽器本地沒有 Token。
+                </p>
+                <p style="font-size: 14px; color: #15803D; margin: 0; line-height: 1.7;">
+                  <b>最新版本已升級「雲端智慧代理」模式</b>：現在只要重新整理網頁，點擊「<b>手動同步</b>」，伺服器後端會自動幫您建立並安全維護專屬的 Gist 備份，您無需產生或貼上任何 GitHub 密鑰即可實現完整的雲端雙向同步！
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <!-- 區塊 2: 進階直連選項 -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FEF9C3; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
+            <tr>
+              <td style="padding: 20px;">
+                <div style="font-size: 16px; font-weight: bold; color: #854D0E; margin-bottom: 12px;">
+                  ⚙️ 2. 如果您希望 100% 直連個人 GitHub 帳號？
+                </div>
+                <p style="font-size: 14px; color: #713F12; margin: 0 0 10px 0; line-height: 1.7;">
+                  針對像您這樣不使用 LINE、希望資料完全存放於自己個人 GitHub 的用戶，我們在【<b>設定 ➔ 備份同步</b>】分頁底部新增了：<br>
+                  👉 「<b>⚙️ 進階設定：自訂個人 GitHub PAT（選填）</b>」展開選單！
+                </p>
+                <div style="background-color: #FFFFFF; border: 1.5px solid #EAB308; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #000000; line-height: 1.6;">
+                  <b>配置步驟：</b><br>
+                  1. 前往 GitHub 產生一個具備 <code>gist</code> 權限的 Personal Access Token (PAT)。<br>
+                  2. 在該展開欄位貼上您的 <code>ghp_...</code> 並點擊儲存。<br>
+                  3. 之後您所有的飲食日誌、體重與目標皆會由瀏覽器端直接同步至您的個人 GitHub 帳號！
+                </div>
+              </td>
+            </tr>
+          </table>
+
+          <!-- 區塊 3: 檔名確認 -->
+          <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F8FAFC; border: 2px solid #000000; border-radius: 14px; margin-bottom: 24px;">
+            <tr>
+              <td style="padding: 20px;">
+                <div style="font-size: 16px; font-weight: bold; color: #0F172A; margin-bottom: 10px;">
+                  📄 3. 系統預期檔名確認
+                </div>
+                <p style="font-size: 14px; color: #334155; margin: 0; line-height: 1.7;">
+                  沒錯！您的觀察非常敏銳，系統在 Gist 中讀取與備份的預設檔名正是：<br>
+                  <span style="display: inline-block; background-color: #E2E8F0; color: #0F172A; font-family: monospace; font-weight: bold; padding: 3px 8px; border-radius: 6px; margin-top: 6px;">daily-diet-backup.json</span><br><br>
+                  若您已有現成的 Gist，可直接在【手動填入既有 Gist ID】中貼上 ID，系統便會自動對接讀取與還原。
+                </p>
+              </td>
+            </tr>
+          </table>
+
+          <p style="font-size: 15px; color: #3F3F46; line-height: 1.7; margin: 0 0 20px 0;">
+            再次感謝您的專業回報，幫助我們把跨平台與獨立用戶的同步體驗打磨得更完善！若後續使用上有任何疑問，歡迎隨時回信與我們交流。<br>
+            <b>祝您健康生活、飲食紀錄愉快！🔥🐼</b>
+          </p>
+        </td>
+      </tr>
+      <tr>
+        <td style="background-color: #F8FAFC; border-top: 1.5px solid #E2E8F0; padding: 24px 30px;">
+          <div style="font-size: 15px; font-weight: bold; color: #0F172A;">
+            Winnie Lin
+          </div>
+          <div style="font-size: 13px; color: #64748B; margin-top: 2px;">
+            Daily Diet 獨立開發者
+          </div>
+          <div style="font-size: 12px; color: #94A3B8; margin-top: 8px;">
+            🌐 官方網站：<a href="https://winnie-lin.space/daily-diet/" target="_blank" style="color: #2563EB; text-decoration: none;">https://winnie-lin.space/daily-diet/</a>
+          </div>
+        </td>
+      </tr>
+    </table>
+    </font>
+  </div>
+
+  <script>
+    function copyRichHtml() {
+      const emailEl = document.getElementById('emailContent');
+      const htmlContent = emailEl.innerHTML;
+      const textContent = emailEl.innerText;
+
+      if (navigator.clipboard && window.ClipboardItem) {
+        const typeHtml = 'text/html';
+        const typeText = 'text/plain';
+        const blobHtml = new Blob([htmlContent], { type: typeHtml });
+        const blobText = new Blob([textContent], { type: typeText });
+        const data = [new ClipboardItem({ [typeHtml]: blobHtml, [typeText]: blobText })];
+
+        navigator.clipboard.write(data).then(() => {
+          showToast();
+        }).catch(err => {
+          fallbackCopy(htmlContent);
+        });
+      } else {
+        fallbackCopy(htmlContent);
+      }
+    }
+
+    function fallbackCopy(html) {
+      const tempDiv = document.createElement('div');
+      tempDiv.contentEditable = 'true';
+      tempDiv.innerHTML = html;
+      document.body.appendChild(tempDiv);
+      tempDiv.focus();
+      window.getSelection().selectAllChildren(tempDiv);
+      document.execCommand('copy');
+      document.body.removeChild(tempDiv);
+      showToast();
+    }
+
+    function showToast() {
+      const toast = document.getElementById('toast');
+      toast.style.display = 'block';
+      setTimeout(() => {
+        toast.style.display = 'none';
+      }, 4000);
+    }
+  </script>
+</body>
+</html>

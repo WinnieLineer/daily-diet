@@ -1,7 +1,7 @@
 export const ANALYSIS_DURATION_SECONDS = 15; // 🕒 Adjusted to 15s based on actual generation time
 export const IMAGE_MAX_DIMENSION = 1024;    // 📸 Back to 1024px to read labels clearly
 export const IMAGE_QUALITY = 0.8;           // 💎 Higher quality
-export const APP_VERSION = '3.3.103';         // 🏷️ Application Version (from package.json)
+export const APP_VERSION = '3.3.104';         // 🏷️ Application Version (from package.json)
 export const ENABLE_520_THEME = false;      // 💖 520 Festive decorations toggle
 export const CURRENT_WHATSNEW_ID = 'whatsnew_v3.3.86'; // 📢 Current update card ID (change to show to all users once)
 export const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
