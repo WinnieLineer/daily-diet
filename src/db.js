@@ -30,6 +30,40 @@ db.version(9).stores({
   poopLogs: '++id, timestamp'
 });
 
+// 🛡️ WebKit / iOS Safari 暫態 IndexedDB 連線異常自動自癒機制 (WebKit Bug 197050)
+if (typeof window !== 'undefined') {
+  db.on('versionchange', () => {
+    console.warn('[IndexedDB] Database version change detected, closing old connection');
+    try { db.close(); } catch (e) {}
+  });
+
+  db.on('blocked', () => {
+    console.warn('[IndexedDB] Database connection blocked by another tab or background process');
+  });
+}
+
+/**
+ * 🛡️ 當 WebKit 背景喚醒時若遭遇 IndexedDB 內部連線中斷，重置連線以便後續操作重新連接
+ */
+export function handleIndexedDbServerError(err) {
+  const msg = String(err?.message || err || '');
+  if (
+    msg.includes('Indexed Database server') ||
+    msg.includes('internal error was encountered in the Indexed Database server') ||
+    msg.includes('UnknownError') ||
+    msg.includes('DatabaseClosedError')
+  ) {
+    console.warn('[IndexedDB] WebKit transient database connection error detected, resetting connection...', err);
+    try {
+      if (db.isOpen()) {
+        db.close();
+      }
+    } catch (e) {}
+    return true;
+  }
+  return false;
+}
+
 export async function getDailySummary(date) {
   try {
     const logs = await db.dietLogs.where('date').equals(date).toArray();

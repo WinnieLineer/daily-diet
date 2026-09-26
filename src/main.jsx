@@ -3,6 +3,7 @@ import ReactDOM from 'react-dom/client'
 import App from './App.jsx'
 import './index.css'
 import { getOrCreateClientId } from './lib/syncService'
+import { handleIndexedDbServerError } from './db'
 
 // 🛡️ Defense against Google Translate & browser extension DOM mutations breaking React
 // Fixes: "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node."
@@ -49,6 +50,8 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
       combinedMsg.includes('safari-web-extension') ||
       combinedMsg.includes('moz-extension') ||
       combinedMsg.includes('webkit.messageHandlers') ||
+      combinedMsg.includes('Indexed Database server') ||
+      combinedMsg.includes('internal error was encountered in the Indexed Database server') ||
       /global code@.*:1:\d+/.test(combinedMsg) ||
       (combinedMsg.includes("Can't find variable: __") && /iphone|ipad|ipod/i.test(navigator.userAgent || ''))
     ) {
@@ -169,6 +172,22 @@ class ErrorBoundary extends React.Component {
         if (domReloadCount < 2) {
           sessionStorage.setItem('dom_reload_count', String(domReloadCount + 1));
           console.warn('🔄 Detected DOM mutation crash (browser translation/extension), auto-recovering...');
+          window.location.reload();
+          return;
+        }
+      } catch (e) {}
+    }
+
+    if (
+      errMsg.includes('Indexed Database server') ||
+      errMsg.includes('internal error was encountered in the Indexed Database server')
+    ) {
+      let idbReloadCount = 0;
+      try {
+        idbReloadCount = Number(sessionStorage.getItem('idb_reload_count') || 0);
+        if (idbReloadCount < 2) {
+          sessionStorage.setItem('idb_reload_count', String(idbReloadCount + 1));
+          console.warn('🔄 Detected WebKit IndexedDB internal crash, auto-recovering connection...');
           window.location.reload();
           return;
         }
@@ -377,12 +396,20 @@ window.addEventListener('unhandledrejection', (event) => {
     reasonStr.includes('Unable to open cursor') ||
     combined.includes('open cursor') ||
     reasonStr.includes('DatabaseClosedError') ||
+    reasonStr.includes('Indexed Database server') ||
+    combined.includes('Indexed Database server') ||
+    reasonStr.includes('internal error was encountered in the Indexed Database server') ||
     reasonStr.includes('dynamically imported module') ||
     reasonStr.includes('Importing a module script failed') ||
     stack.includes('registerSW') ||
     stack.includes('ServiceWorker') ||
     stack.includes('gistService')
   ) {
+    if (combined.includes('Indexed Database server') || combined.includes('DatabaseClosedError')) {
+      try {
+        if (typeof handleIndexedDbServerError === 'function') handleIndexedDbServerError(reason);
+      } catch (e) {}
+    }
     console.debug('Suppressed benign unhandled promise rejection:', reason);
     return;
   }
