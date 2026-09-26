@@ -6,7 +6,7 @@ import { Camera, Loader2, Check, Lightbulb, Flame, MessageSquareQuote, AlertCirc
 import { analyzeFoodImage, analyzeFoodText, recalculateFoodNutritionWithName } from '../lib/groq';
 import { db } from '../db';
 import { getCurrentGistId, uploadToGist } from '../lib/gistService';
-import { syncMealToCloud, syncDeleteFavorite, syncReorderFavorites, uploadWebPhoto } from '../lib/syncService';
+import { syncMealToCloud, syncAddFavorite, syncDeleteFavorite, syncReorderFavorites, uploadWebPhoto } from '../lib/syncService';
 import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
