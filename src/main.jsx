@@ -52,6 +52,8 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
       combinedMsg.includes('webkit.messageHandlers') ||
       combinedMsg.includes('Indexed Database server') ||
       combinedMsg.includes('internal error was encountered in the Indexed Database server') ||
+      combinedMsg.includes('without an in-progress transaction') ||
+      combinedMsg.includes('Connection to Indexed Database server lost') ||
       /global code@.*:1:\d+/.test(combinedMsg) ||
       (combinedMsg.includes("Can't find variable: __") && /iphone|ipad|ipod/i.test(navigator.userAgent || ''))
     ) {
@@ -180,14 +182,16 @@ class ErrorBoundary extends React.Component {
 
     if (
       errMsg.includes('Indexed Database server') ||
-      errMsg.includes('internal error was encountered in the Indexed Database server')
+      errMsg.includes('internal error was encountered in the Indexed Database server') ||
+      errMsg.includes('without an in-progress transaction') ||
+      errMsg.includes('Connection to Indexed Database server lost')
     ) {
       let idbReloadCount = 0;
       try {
         idbReloadCount = Number(sessionStorage.getItem('idb_reload_count') || 0);
         if (idbReloadCount < 2) {
           sessionStorage.setItem('idb_reload_count', String(idbReloadCount + 1));
-          console.warn('🔄 Detected WebKit IndexedDB internal crash, auto-recovering connection...');
+          console.warn('🔄 Detected WebKit IndexedDB internal crash/transaction loss, auto-recovering connection...');
           window.location.reload();
           return;
         }
@@ -399,13 +403,22 @@ window.addEventListener('unhandledrejection', (event) => {
     reasonStr.includes('Indexed Database server') ||
     combined.includes('Indexed Database server') ||
     reasonStr.includes('internal error was encountered in the Indexed Database server') ||
+    reasonStr.includes('without an in-progress transaction') ||
+    combined.includes('without an in-progress transaction') ||
+    reasonStr.includes('Connection to Indexed Database server lost') ||
+    combined.includes('Connection to Indexed Database server lost') ||
     reasonStr.includes('dynamically imported module') ||
     reasonStr.includes('Importing a module script failed') ||
     stack.includes('registerSW') ||
     stack.includes('ServiceWorker') ||
     stack.includes('gistService')
   ) {
-    if (combined.includes('Indexed Database server') || combined.includes('DatabaseClosedError')) {
+    if (
+      combined.includes('Indexed Database server') ||
+      combined.includes('without an in-progress transaction') ||
+      combined.includes('Connection to Indexed Database server lost') ||
+      combined.includes('DatabaseClosedError')
+    ) {
       try {
         if (typeof handleIndexedDbServerError === 'function') handleIndexedDbServerError(reason);
       } catch (e) {}

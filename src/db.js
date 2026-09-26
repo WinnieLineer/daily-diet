@@ -50,6 +50,8 @@ export function handleIndexedDbServerError(err) {
   if (
     msg.includes('Indexed Database server') ||
     msg.includes('internal error was encountered in the Indexed Database server') ||
+    msg.includes('without an in-progress transaction') ||
+    msg.includes('Connection to Indexed Database server lost') ||
     msg.includes('UnknownError') ||
     msg.includes('DatabaseClosedError')
   ) {
