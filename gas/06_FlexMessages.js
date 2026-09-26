@@ -6364,14 +6364,14 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
 function generateSponsorFlex(persona, userLang) {
   const isEn = (userLang === 'en');
   
-  let coachQuote = '「哼... 你以為隨便掏錢我就會感動嗎？🎋 既然你這麼有誠意想支援開發者跟伺服器燃料，本教練就勉為其難收下你的心意吧！」';
+  let coachQuote = '「哼... 本教練才不是因為你請喝咖啡才開心的呢！🎋 不過... 既然你這麼有心想幫伺服器添燃料，本教練就勉為其難把你的名字記在【終身榮譽飼養員】名冊上吧！以後所有新功能，一律讓你終身免單隨意用啦！」';
   let coachTitle = '傲嬌熊貓教練 🐼😤';
   
   if (persona === 'gentle') {
-    coachQuote = '「哇～非常感謝你的溫暖鼓勵！🥰 每一份微薄的愛心支持，都是讓 Daily Diet 持續為大家服務的最大動力！」';
+    coachQuote = '「哇～真的非常感謝你的溫暖支持！🥰 每一份微薄心意，都是讓 Daily Diet 維持無廣告與持續進化的最大燃料。我們已為你登記為【終身榮譽飼養員】，未來所有進階功能皆享有終身免費隨意用喔！」';
     coachTitle = '治癒天使熊貓 🐼🥰';
   } else if (persona === 'hardcore') {
-    coachQuote = '「收到隊員的補給支援！🔥 感謝你力挺我們的伺服器燃料！紀律與熱血永不熄滅，繼續戰鬥！」';
+    coachQuote = '「收到戰友的燃料補給！🔥 感謝你力挺我們的伺服器與 AI 算力！你已經被正式列入【終身榮譽飼養員】特種部隊，未來所有戰鬥模組終身全免！繼續燃燒脂肪！」';
     coachTitle = '魔鬼士官長熊貓 🐼🔥';
   }
   
@@ -6620,8 +6620,8 @@ function generateSponsorFlex(persona, userLang) {
               {
                 type: 'text',
                 text: isEn
-                  ? '🎁 Lifetime Founding Supporter: Reply with your account last 5 digits + Email. You will be registered as a Founding Supporter—enjoying lifetime full access to all future Pro & AI features completely free, forever!'
-                  : '🎁 終身榮譽飼養員禮遇：轉帳完成後，請直接在此對話傳送「轉帳末 5 碼與 Email」，我們將為您登記為【創始支持者】。未來 Daily Diet 無論推出何種進階收費模組或 AI 增強功能，您皆享有終身免費隨意使用，永不收費！感謝您在草創期的力挺與陪伴！🎋✨',
+                  ? '🎁 Lifetime Founding Supporter: Reply with your account last 5 digits + Email. You will be registered as an Honorary Supporter—enjoying lifetime full access to all future Pro & AI features completely free, forever!'
+                  : '🎁 滴水之恩，熊貓終身免單：轉帳完成後，請在此對話傳送「轉帳末 5 碼與 Email」，我們立刻為您登記為【終身榮譽飼養員】。未來 Daily Diet 無論推出何種進階收費模組或 AI 增強功能，您皆享有【終身免費隨意使用，永不收費】！感謝您在草創期拉我們一把！🎋✨',
                 size: 'xxs',
                 color: '#52525B',
                 wrap: true

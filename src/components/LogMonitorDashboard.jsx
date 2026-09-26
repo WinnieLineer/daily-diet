@@ -51,6 +51,7 @@ import {
   Camera
 } from 'lucide-react';
 import NeoButton from './NeoButton';
+import ReplyHelperModal from './ReplyHelperModal';
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 const DEFAULT_MAINTAINER_USER = 'Winnie';
@@ -381,6 +382,43 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [broadcastResult, setBroadcastResult] = useState(null); // { status, message, details }
   const [lineQuota, setLineQuota] = useState(null); // { totalQuota, usedMessages, remainingMessages }
   const [isLoadingQuota, setIsLoadingQuota] = useState(false);
+
+  // 💌 VIP Reply Assistant States
+  const [showReplyModal, setShowReplyModal] = useState(false);
+  const [replyModalData, setReplyModalData] = useState({
+    email: '',
+    name: '',
+    type: 'sponsor',
+    feedback: ''
+  });
+
+  const handleOpenReplyForLog = (log) => {
+    if (!log) return;
+    const fullText = `${log.input || ''} ${log.userName || ''} ${log.output || ''} ${log.userId || ''}`;
+    const emailMatch = fullText.match(/[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}/);
+    const email = emailMatch ? emailMatch[0] : '';
+    
+    let type = 'feedback_general';
+    const lowerText = fullText.toLowerCase();
+    if (lowerText.includes('贊助') || lowerText.includes('轉帳') || lowerText.includes('支持') || lowerText.includes('vip') || lowerText.includes('sponsor')) {
+      type = 'sponsor';
+    } else if (lowerText.includes('gist') || lowerText.includes('pat') || lowerText.includes('backup') || lowerText.includes('同步') || lowerText.includes('token')) {
+      type = 'gist_tech';
+    }
+    
+    let feedbackText = log.input || '';
+    if (feedbackText.includes('【用戶意見反饋】：')) {
+      feedbackText = feedbackText.split('【用戶意見反饋】：')[1].split('【')[0].trim();
+    }
+
+    setReplyModalData({
+      email,
+      name: log.userName && !log.userName.includes('@') ? log.userName : (email ? email.split('@')[0] : '朋友'),
+      type,
+      feedback: feedbackText
+    });
+    setShowReplyModal(true);
+  };
 
   // ⏱️ OTP Expiration Countdown (5 minutes)
   useEffect(() => {
@@ -1911,6 +1949,19 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               <Megaphone size={14} className="text-white shrink-0" />
               <span>{isEn ? 'LINE Broadcast' : 'LINE 廣播推播'}</span>
             </button>
+
+            {/* 💌 VIP Reply Assistant Generator */}
+            <button
+              onClick={() => {
+                setReplyModalData({ email: '', name: '', type: 'sponsor', feedback: '' });
+                setShowReplyModal(true);
+              }}
+              className="h-10 px-3.5 bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-2xl flex items-center gap-1.5 text-xs font-black text-black transition-all shadow-neo-xs hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5"
+              title="開啟精美回信模板生成小助手（支援一鍵複製圖文與 Gmail 撰寫）"
+            >
+              <Sparkles size={14} className="text-black shrink-0" />
+              <span>{isEn ? 'Reply Helper' : '💌 生成精美回信'}</span>
+            </button>
           </div>
         </div>
       </header>
@@ -2757,6 +2808,17 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                         {/* Pinned Action Controls: Copy JSON & Expand */}
                         <div className="flex items-center gap-1 shrink-0" onClick={(e) => e.stopPropagation()}>
+                          {/* Quick Reply Button for Feedback/Email Logs */}
+                          {(type.includes('反饋') || type.includes('意見') || input.includes('@') || userName.includes('@')) && (
+                            <button
+                              onClick={() => handleOpenReplyForLog(log)}
+                              className="p-1.5 bg-amber-300 hover:bg-amber-400 text-black rounded-lg border border-black transition-colors text-xs font-black inline-flex items-center gap-1 active:scale-95 shadow-neo-xs"
+                              title="生成精美回信"
+                            >
+                              <Sparkles size={12} className="text-black" />
+                              <span className="text-[10px]">回信</span>
+                            </button>
+                          )}
                           <button
                             onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `mob-${index}`)}
                             className="p-1.5 bg-zinc-100 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-700 transition-colors text-xs font-mono inline-flex items-center gap-1 active:scale-95 shadow-neo-xs"
@@ -3124,13 +3186,25 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                             {/* Actions */}
                             <td className={`py-3 px-3 text-center whitespace-nowrap sticky right-0 z-10 border-l border-zinc-200/80 shadow-[-4px_0_8px_rgba(0,0,0,0.06)] ${stickyActionBg}`} onClick={(e) => e.stopPropagation()}>
-                              <button
-                                onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `row-${index}`)}
-                                className="p-1.5 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-600 transition-colors text-xs font-mono inline-flex items-center bg-white shadow-sm"
-                                title="複製 JSON 格式"
-                              >
-                                {copiedId === `row-${index}` ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
-                              </button>
+                              <div className="flex items-center justify-center gap-1.5">
+                                {(type.includes('反饋') || type.includes('意見') || input.includes('@') || userName.includes('@')) && (
+                                  <button
+                                    onClick={() => handleOpenReplyForLog(log)}
+                                    className="px-2 py-1 bg-amber-300 hover:bg-amber-400 text-black rounded-lg border border-black transition-colors text-[10px] font-black inline-flex items-center gap-1 shadow-sm active:scale-95"
+                                    title="生成精美回信"
+                                  >
+                                    <Sparkles size={11} className="text-black" />
+                                    <span>回信</span>
+                                  </button>
+                                )}
+                                <button
+                                  onClick={() => copyToClipboard(JSON.stringify(docJson, null, 2), `row-${index}`)}
+                                  className="p-1.5 hover:bg-black hover:text-white rounded-lg border border-black/20 text-zinc-600 transition-colors text-xs font-mono inline-flex items-center bg-white shadow-sm"
+                                  title="複製 JSON 格式"
+                                >
+                                  {copiedId === `row-${index}` ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                                </button>
+                              </div>
                             </td>
                           </tr>
 
@@ -3898,6 +3972,16 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           </div>
         )}
       </AnimatePresence>
+
+      {/* 💌 VIP Reply Assistant Modal */}
+      <ReplyHelperModal
+        isOpen={showReplyModal}
+        onClose={() => setShowReplyModal(false)}
+        initialEmail={replyModalData.email}
+        initialName={replyModalData.name}
+        initialType={replyModalData.type}
+        initialFeedback={replyModalData.feedback}
+      />
 
       {/* Footer Spacer */}
       <div className="h-12" />

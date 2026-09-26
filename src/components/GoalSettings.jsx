@@ -1805,8 +1805,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   </div>
                                   <p className="text-[10px] text-zinc-600 font-bold leading-relaxed">
                                     {isEn
-                                      ? 'Daily Diet is independently built and maintained without intrusive ads. If you love this app and would like to support server & API fuel costs, every bit of encouragement means the world to us! ❤️'
-                                      : 'Daily Diet 由獨立開發者用心維護，堅持無干擾廣告體驗。若您覺得好用並想給予微薄支持，這份心意將成為支撐真實 API 與伺服器燃料的最大動力！❤️'}
+                                      ? 'Daily Diet is independently crafted with love, zero ads, and no tracking paywalls. If this companion brings ease to your healthy journey and you wish to fuel the servers, every little drop of kindness means the world to us! ❤️'
+                                      : 'Daily Diet 是由獨立開發者自掏腰包打造的無廣告健康生活工具。若這個小熊貓確實陪伴到了您的減脂增肌日常，哪怕只是一杯超商咖啡的微薄心意，都是支撐真實 AI 運算燃料的最大動力！❤️'}
                                   </p>
                                   {/* CTBC QR Code & Details Card */}
                                   <div className="bg-white border-2 border-black p-3.5 rounded-2xl space-y-3 shadow-sm text-center">
@@ -1864,9 +1864,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                     </div>
                                   </div>
 
-                                  <div className="p-3 bg-yellow-100/90 border-2 border-amber-400 rounded-2xl text-[10px] font-bold text-amber-950 leading-relaxed text-left">
-                                    🎁 <b>老朋友專屬【終身榮譽飼養員】禮遇</b>：<br />
-                                    轉帳後歡迎在上方表單留下「轉帳末 5 碼與 Email」，我們將直接為您登記為【創始支持者】。未來 Daily Diet 無論推出何種進階收費模組或 AI 增強功能，您皆享有<b>終身全功能免費隨意使用，永不收費</b>！感謝您在草創期的力挺與陪伴！🎋✨
+                                  <div className="p-3.5 bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-400 rounded-2xl text-[10.5px] font-bold text-amber-950 leading-relaxed text-left shadow-sm">
+                                    🎁 <b>滴水之恩，熊貓終身免單 🎋✨</b><br />
+                                    轉帳後歡迎在上方表單留個「轉帳末 5 碼與 Email」，我們立刻為您登記為【終身榮譽飼養員】——這份心意我們用一輩子記住！未來 Daily Diet 無論新增任何更酷炫的進階 AI 或付費模組，您一律<b>終身全免隨意用，永不收費</b>！感謝您在草創期拉我們一把！❤️
                                   </div>
                                 </div>
                               </motion.div>
