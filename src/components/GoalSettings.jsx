@@ -134,6 +134,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [hasStickers, setHasStickers] = useState(safeGetStorage('panda_stickers_unlocked') === 'true');
   const [activeSticker, setActiveSticker] = useState(() => safeGetStorage('panda_active_sticker') || '');
   const [selectedQr, setSelectedQr] = useState(null);
+  const [showSponsorInfo, setShowSponsorInfo] = useState(false);
 
   // 飲控里程碑與頭銜貼紙狀態
   const [currentStreak, setCurrentStreak] = useState(0);
@@ -1692,6 +1693,73 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           )}
                           {syncStatus === 'syncing' ? t('contact_sending') : t('contact_send')}
                         </button>
+
+                        {/* ☕ 低調展開支持資訊 (不主動顯示，想支持的人點開查看) */}
+                        <div className="pt-2 text-center">
+                          <button
+                            type="button"
+                            onClick={() => setShowSponsorInfo(!showSponsorInfo)}
+                            className="text-[11px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors inline-flex items-center gap-1 cursor-pointer select-none py-1"
+                          >
+                            <span>☕</span>
+                            <span className="underline decoration-dashed underline-offset-4">
+                              {showSponsorInfo ? (isEn ? 'Collapse Support Details' : '收起支持與贊助資訊') : (isEn ? 'Want to support this project & fuel the AI? Click here' : '想為這隻熊貓與獨立開發者補給燃料？點此查看')}
+                            </span>
+                          </button>
+
+                          <AnimatePresence>
+                            {showSponsorInfo && (
+                              <motion.div
+                                initial={{ opacity: 0, height: 0 }}
+                                animate={{ opacity: 1, height: 'auto' }}
+                                exit={{ opacity: 0, height: 0 }}
+                                transition={{ duration: 0.2 }}
+                                className="overflow-hidden mt-3 text-left"
+                              >
+                                <div className="p-4 border-2 border-black rounded-2xl bg-amber-50/90 space-y-3 shadow-neo-xs">
+                                  <div className="flex items-center gap-2">
+                                    <span className="text-xl">🎋</span>
+                                    <div>
+                                      <h5 className="font-black italic text-xs text-black">
+                                        {isEn ? 'Thank you for supporting Daily Diet!' : '感謝您對 Daily Diet 的溫暖鼓勵！'}
+                                      </h5>
+                                      <span className="text-[8px] font-black tracking-wider text-amber-900 bg-amber-200/80 px-2 py-0.5 rounded-full inline-block mt-0.5 uppercase">
+                                        EARLY SUPPORTER
+                                      </span>
+                                    </div>
+                                  </div>
+                                  <p className="text-[10px] text-zinc-600 font-bold leading-relaxed">
+                                    {isEn
+                                      ? 'Daily Diet is independently built and maintained without intrusive ads. If you love this app and would like to support server & API fuel costs, every bit of encouragement means the world to us! ❤️'
+                                      : 'Daily Diet 由獨立開發者用心維護，堅持無干擾廣告體驗。若您覺得好用並想給予微薄支持，這份心意將成為支撐真實 API 與伺服器燃料的最大動力！❤️'}
+                                  </p>
+                                  <div className="bg-white border-2 border-black p-3 rounded-xl space-y-1.5 shadow-sm">
+                                    <div className="flex justify-between items-center text-[11px] font-black">
+                                      <span className="text-zinc-500">中國信託 CTBC (822)</span>
+                                      <span className="font-mono text-teal-800 text-xs font-black select-all">174533815287</span>
+                                    </div>
+                                    <div className="text-[9px] font-bold text-zinc-400">
+                                      戶名：林詩婷 (專案支持帳戶)
+                                    </div>
+                                    <button
+                                      type="button"
+                                      onClick={() => {
+                                        navigator.clipboard.writeText('174533815287');
+                                        alert('📋 中信帳號 174533815287 已成功複製到剪貼簿！');
+                                      }}
+                                      className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-[10px] py-2 rounded-lg border border-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer mt-1"
+                                    >
+                                      📋 一鍵複製中信帳號
+                                    </button>
+                                  </div>
+                                  <div className="p-2.5 bg-yellow-100/80 border border-amber-300 rounded-xl text-[9.5px] font-bold text-amber-900 leading-relaxed">
+                                    🎁 <b>老朋友專屬禮遇</b>：轉帳後歡迎在上方表單留下「轉帳末 5 碼與 Email」，我們將為您登記為【創始支持者】，未來正式推出進階收費方案時，直接贈送您 1 年免費 VIP 完整權限！
+                                  </div>
+                                </div>
+                              </motion.div>
+                            )}
+                          </AnimatePresence>
+                        </div>
                       </div>
                       <div className="absolute -bottom-6 -right-6 opacity-10 rotate-12 pointer-events-none">
                         <MessageSquare size={120} className="text-black" />

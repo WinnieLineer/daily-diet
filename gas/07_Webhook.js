@@ -3041,6 +3041,16 @@ function doPost(e) {
             }
           }
 
+          // ☕ 被動關鍵字觸發：支持 / 贊助 / 轉帳 / 請喝咖啡 (不主動顯示，問了才回傳)
+          if (/^(贊助|支持|轉帳|轉帳資訊|贊助資訊|請喝咖啡|支持作者|donate|sponsor|打賞|餵食熊貓|贊助教練)$/i.test(userText.trim())) {
+            const sponsorFlex = generateSponsorFlex(persona, userLang);
+            replyFlexMessage(replyToken, sponsorFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            if (typeof recordSystemLog === 'function') {
+              recordSystemLog('查詢贊助', userId, userText, '', '已回傳支持與贊助資訊卡片');
+            }
+            continue;
+          }
+
           // 🚨 徹底銷毀所有個人資料
           if (userText === '刪除所有資料' || userText === '清除所有資料' || userText === '銷毀所有資料' || userText === '刪除帳號' || userText === '重設資料' || userText === '清空全部') {
             const destroyFlex = generateClearConfirmFlex(LIFF_ID, userGistId, userLang);

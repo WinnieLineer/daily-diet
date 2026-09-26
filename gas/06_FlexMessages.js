@@ -6358,5 +6358,218 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
   };
 }
 
+/**
+ * ☕ 生成支持與贊助專案 Flex 卡片 (Neo-Brutalist 風格)
+ */
+function generateSponsorFlex(persona, userLang) {
+  const isEn = (userLang === 'en');
+  
+  let coachQuote = '「哼... 你以為隨便掏錢我就會感動嗎？🎋 既然你這麼有誠意想支援開發者跟伺服器燃料，本教練就勉為其難收下你的心意吧！」';
+  let coachTitle = '傲嬌熊貓教練 🐼😤';
+  
+  if (persona === 'gentle') {
+    coachQuote = '「哇～非常感謝你的溫暖鼓勵！🥰 每一份微薄的愛心支持，都是讓 Daily Diet 持續為大家服務的最大動力！」';
+    coachTitle = '治癒天使熊貓 🐼🥰';
+  } else if (persona === 'hardcore') {
+    coachQuote = '「收到隊員的補給支援！🔥 感謝你力挺我們的伺服器燃料！紀律與熱血永不熄滅，繼續戰鬥！」';
+    coachTitle = '魔鬼士官長熊貓 🐼🔥';
+  }
+  
+  if (isEn) {
+    coachQuote = 'Every contribution fuels our AI & servers to keep Daily Diet completely ad-free. Thank you so much for being an early supporter! 🎋❤️';
+    coachTitle = 'Panda Coach 🐼';
+  }
 
-
+  return {
+    type: 'flex',
+    altText: isEn ? '🎋 Daily Diet Support & Early Supporter Pass' : '🎋 Daily Diet 早期支持者與贊助資訊',
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#000000',
+        paddingAll: '16px',
+        contents: [
+          {
+            type: 'box',
+            layout: 'horizontal',
+            alignItems: 'center',
+            contents: [
+              {
+                type: 'text',
+                text: 'DAILY DIET · SUPPORT',
+                color: '#FDE047',
+                size: 'xxs',
+                weight: 'bold',
+                flex: 1
+              },
+              {
+                type: 'text',
+                text: 'EARLY VIP',
+                color: '#FFFFFF',
+                size: 'xxs',
+                weight: 'bold',
+                align: 'center'
+              }
+            ]
+          },
+          {
+            type: 'text',
+            text: isEn ? '☕ Support Project & Fuel AI' : '☕ 支持專案與 AI 燃料補給',
+            color: '#FFFFFF',
+            size: 'md',
+            weight: 'bold',
+            margin: 'xs'
+          }
+        ]
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        paddingAll: '16px',
+        spacing: 'md',
+        contents: [
+          {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#FEFCE8',
+            borderColor: '#000000',
+            borderWidth: '2px',
+            cornerRadius: '14px',
+            paddingAll: '12px',
+            contents: [
+              {
+                type: 'text',
+                text: coachTitle,
+                size: 'xs',
+                weight: 'bold',
+                color: '#854D0E'
+              },
+              {
+                type: 'text',
+                text: coachQuote,
+                size: 'xxs',
+                color: '#713F12',
+                wrap: true,
+                margin: 'xs'
+              }
+            ]
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#FFFFFF',
+            borderColor: '#000000',
+            borderWidth: '2px',
+            cornerRadius: '14px',
+            paddingAll: '12px',
+            spacing: 'xs',
+            contents: [
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  {
+                    type: 'text',
+                    text: isEn ? 'Bank' : '銀行代碼',
+                    size: 'xxs',
+                    color: '#71717A',
+                    flex: 2
+                  },
+                  {
+                    type: 'text',
+                    text: '822 (中國信託 CTBC)',
+                    size: 'xxs',
+                    weight: 'bold',
+                    color: '#18181B',
+                    flex: 4
+                  }
+                ]
+              },
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  {
+                    type: 'text',
+                    text: isEn ? 'Account' : '銀行帳號',
+                    size: 'xxs',
+                    color: '#71717A',
+                    flex: 2
+                  },
+                  {
+                    type: 'text',
+                    text: '174533815287',
+                    size: 'xs',
+                    weight: 'bold',
+                    color: '#0F766E',
+                    flex: 4
+                  }
+                ]
+              },
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  {
+                    type: 'text',
+                    text: isEn ? 'Beneficiary' : '戶名資訊',
+                    size: 'xxs',
+                    color: '#71717A',
+                    flex: 2
+                  },
+                  {
+                    type: 'text',
+                    text: isEn ? 'Shih-Ting Lin (Verified)' : '林詩婷 (專案支持帳戶)',
+                    size: 'xxs',
+                    color: '#71717A',
+                    flex: 4
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            contents: [
+              {
+                type: 'button',
+                action: {
+                  type: 'clipboard',
+                  label: isEn ? '📋 Copy CTBC Account' : '📋 一鍵複製中信帳號',
+                  clipboardText: '174533815287'
+                },
+                style: 'primary',
+                color: '#008687',
+                height: 'sm'
+              }
+            ]
+          },
+          {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#F4F4F5',
+            borderColor: '#E4E4E7',
+            borderWidth: '1px',
+            cornerRadius: '10px',
+            paddingAll: '10px',
+            contents: [
+              {
+                type: 'text',
+                text: isEn
+                  ? '🎁 Early Supporter Perk: After transferring, reply with your account last 5 digits + Email here. You will be registered as a Founding Supporter for 1 Year Free VIP once Pro launches!'
+                  : '🎁 老朋友專屬禮遇：轉帳完成後，請直接在此對話傳送「轉帳末 5 碼與 Email」，我們將為您登記入庫。未來正式推出進階收費服務時，直接贈送您 1 年免費 VIP 完整權限！',
+                size: 'xxs',
+                color: '#52525B',
+                wrap: true
+              }
+            ]
+          }
+        ]
+      }
+    }
+  };
+}
