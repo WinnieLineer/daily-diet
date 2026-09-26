@@ -6,7 +6,7 @@ import { db, calculateStreak } from '../db';
 import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
-import { APP_VERSION } from '../lib/constants';
+import { APP_VERSION, GAS_API_URL } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
 import { liffService } from '../lib/liffService';
@@ -1609,40 +1609,28 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                             try {
                               setSyncStatus('syncing');
+
+                              // 識別使用者資訊
+                              const lineUserId = safeGetStorage('line_user_id');
+                              const userId = (lineUserId && lineUserId.startsWith('U')) ? lineUserId : getOrCreateClientId();
+                              const userName = safeGetStorage('line_user_name') || safeGetStorage('user_name') || 'Web 訪客';
+                              const userGistId = safeGetStorage('gist_backup_id') || safeGetStorage('github_gist_id') || safeGetStorage('gist_id') || getCurrentGistId() || '';
+
                               let isSuccess = false;
 
-                              // 🚀 1. 優先透過 Web3Forms 發送
+                              // 🚀 1. 一律向 GAS 後端送出 sendFeedback：觸發 recordSystemLog 寫入 Google Sheet 系統日誌並由 MailApp 直送通知
                               try {
-                                const response = await fetch('https://api.web3forms.com/submit', {
-                                  method: 'POST',
-                                  headers: { 'Content-Type': 'application/json' },
-                                  body: JSON.stringify({
-                                    access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
-                                    subject: `[Daily-Diet v${APP_VERSION}] ${contactForm.subject}`,
-                                    message: `【聯絡方式】：${contactForm.contact || '未提供'}\n\n【用戶意見反饋】：\n${contactForm.message}`,
-                                    from_name: contactForm.contact ? `Daily Diet User (${contactForm.contact})` : 'Daily Diet App User',
-                                    device: navigator.userAgent
-                                  })
-                                });
-                                const data = await response.json();
-                                if (data && data.success) {
-                                  isSuccess = true;
-                                }
-                              } catch (web3Err) {
-                                console.warn("Web3Forms submit failed, attempting GAS backend failover:", web3Err);
-                              }
-
-                              // 🚀 2. 若 Web3Forms 失敗或被擋，切換至 GAS 後端 (MailApp/GmailApp) 直送
-                              if (!isSuccess) {
                                 const gasPayload = {
                                   action: 'sendFeedback',
-                                  subject: `[Daily-Diet Web v${APP_VERSION}] ${contactForm.subject}`,
-                                  message: contactForm.message,
-                                  contact: contactForm.contact || '',
+                                  subject: `[Daily-Diet Web v${APP_VERSION}] ${contactForm.subject || t('feedback_subject')}`,
+                                  message: contactForm.message.trim(),
+                                  contact: contactForm.contact ? contactForm.contact.trim() : '',
                                   device: navigator.userAgent,
-                                  userName: safeGetStorage('user_name') || safeGetStorage('line_user_name') || 'Web 用戶',
-                                  userId: safeGetStorage('line_user_id') || getOrCreateClientId(),
-                                  client: 'daily-diet-web'
+                                  userName: userName,
+                                  userId: userId,
+                                  userGistId: userGistId,
+                                  client: 'daily-diet-web',
+                                  source: 'Web'
                                 };
 
                                 const gasRes = await fetch(GAS_API_URL, {
@@ -1653,6 +1641,31 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 const gasData = await gasRes.json();
                                 if (gasData && (gasData.status === 'ok' || gasData.success)) {
                                   isSuccess = true;
+                                }
+                              } catch (gasErr) {
+                                console.warn("GAS sendFeedback failed, attempting Web3Forms failover:", gasErr);
+                              }
+
+                              // 🚀 2. 若 GAS 失敗或被擋，切換至 Web3Forms 備援發送（附帶完整用戶標識）
+                              if (!isSuccess) {
+                                try {
+                                  const response = await fetch('https://api.web3forms.com/submit', {
+                                    method: 'POST',
+                                    headers: { 'Content-Type': 'application/json' },
+                                    body: JSON.stringify({
+                                      access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+                                      subject: `[Daily-Diet Web Failover v${APP_VERSION}] ${contactForm.subject}`,
+                                      message: `【用戶身分】：${userName} (${userId})\n【雲端備份 Gist】：${userGistId || '未設定'}\n【聯絡方式】：${contactForm.contact || '未提供'}\n\n【用戶意見反饋】：\n${contactForm.message}`,
+                                      from_name: `Daily Diet (${userName})`,
+                                      device: navigator.userAgent
+                                    })
+                                  });
+                                  const data = await response.json();
+                                  if (data && data.success) {
+                                    isSuccess = true;
+                                  }
+                                } catch (web3Err) {
+                                  console.error("Web3Forms failover also failed:", web3Err);
                                 }
                               }
 
@@ -2080,7 +2093,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <span>免責聲明</span>
                         </div>
                         <p className="text-[10px] font-bold text-amber-900/90 leading-relaxed">
-                          「Daily Diet 與熊貓教練所提供之營養素、卡路里估算及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。若您有慢性疾病、孕期、哺乳期或特殊體質，進行任何飲食調整前請務必諮詢合格醫師或註冊營養師。」
+                          「Daily Diet 與熊貓教練所提供之營養素、卡路里估算、間歇斷食提醒及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。AI 辨識無法確認隱藏食材過敏原，若您有特殊疾病、過敏體質、孕期或特殊需求，進行任何飲食或斷食調整前請務必諮詢合格醫師或註冊營養師。」
                         </p>
                       </div>
                     </div>

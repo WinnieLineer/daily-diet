@@ -630,6 +630,7 @@ function doGet(e) {
       const clientDevice = e?.parameter?.device || '';
       const caller = e?.parameter?.userName || e?.parameter?.caller || 'Web 訪客';
       const uid = e?.parameter?.userId || 'web_user';
+      const userGistId = e?.parameter?.userGistId || e?.parameter?.gistId || '';
 
       if (!message.trim()) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '訊息內容不可為空' }))
@@ -671,8 +672,9 @@ function doGet(e) {
         cleanMessage,
         '',
         `📱 裝置與環境：${cleanDevice || '未知'}`,
-        `📫 聯絡方式：${cleanContact || '未提供'}`
-      ].join('\n');
+        `📫 聯絡方式：${cleanContact || '未提供'}`,
+        userGistId ? `📂 雲端備份 Gist ID：${userGistId}` : ''
+      ].filter(Boolean).join('\n');
 
       const mailResult = sendBugReportNotification({
         userId: uid,
@@ -680,12 +682,14 @@ function doGet(e) {
         issueDetails: issueDetails,
         userLang: 'zh',
         persona: 'tsundere',
-        userGistId: '',
+        userGistId: userGistId,
+        source: 'Web',
         props: props
       });
 
       if (typeof recordSystemLog === 'function') {
-        recordSystemLog('用戶意見反饋', uid, String(subject).slice(0, 50), `聯絡方式: ${cleanContact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, cleanCaller);
+        const gistNote = userGistId ? ` [Gist: ${userGistId.slice(0, 8)}...]` : '';
+        recordSystemLog('用戶意見反饋', uid, String(subject).slice(0, 50), `聯絡: ${cleanContact}${gistNote}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'} | 內容: ${cleanMessage.slice(0, 60)}`, cleanCaller);
       }
 
       return ContentService.createTextOutput(JSON.stringify({
@@ -1393,6 +1397,7 @@ function doPost(e) {
       const clientDevice = data?.device || e?.parameter?.device || '';
       const caller = data?.userName || e?.parameter?.userName || data?.caller || 'Web 訪客';
       const uid = data?.userId || e?.parameter?.userId || 'web_user';
+      const userGistId = data?.userGistId || data?.gistId || e?.parameter?.userGistId || e?.parameter?.gistId || '';
 
       if (!message.trim()) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '訊息內容不可為空' }))
@@ -1434,8 +1439,9 @@ function doPost(e) {
         cleanMessage,
         '',
         `📱 裝置與環境：${cleanDevice || '未知'}`,
-        `📫 聯絡方式：${cleanContact || '未提供'}`
-      ].join('\n');
+        `📫 聯絡方式：${cleanContact || '未提供'}`,
+        userGistId ? `📂 雲端備份 Gist ID：${userGistId}` : ''
+      ].filter(Boolean).join('\n');
 
       const mailResult = sendBugReportNotification({
         userId: uid,
@@ -1443,12 +1449,14 @@ function doPost(e) {
         issueDetails: issueDetails,
         userLang: 'zh',
         persona: 'tsundere',
-        userGistId: '',
+        userGistId: userGistId,
+        source: 'Web',
         props: props
       });
 
       if (typeof recordSystemLog === 'function') {
-        recordSystemLog('用戶意見反饋', uid, String(subject).slice(0, 50), `聯絡方式: ${cleanContact}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'}`, cleanCaller);
+        const gistNote = userGistId ? ` [Gist: ${userGistId.slice(0, 8)}...]` : '';
+        recordSystemLog('用戶意見反饋', uid, String(subject).slice(0, 50), `聯絡: ${cleanContact}${gistNote}`, `狀態: ${mailResult.success ? '已成功送出信件' : '信件發送失敗'} | 內容: ${cleanMessage.slice(0, 60)}`, cleanCaller);
       }
 
       return ContentService.createTextOutput(JSON.stringify({
@@ -3449,7 +3457,7 @@ function doPost(e) {
  * 📧 發送用戶問題回報通知 (優先使用 Google Apps Script 原生 MailApp 直送信箱，突破 Web3Forms 免費版伺服端限制)
  */
 function sendBugReportNotification(params) {
-  const { userId, userName, issueDetails, userLang, persona, userGistId, props } = params;
+  const { userId, userName, issueDetails, userLang, persona, userGistId, source, props } = params;
   const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
   const isEn = (userLang === 'en');
   const isGeneric = (typeof isGenericUserId === 'function') ? isGenericUserId(userName) : (!userName || ['web_user', 'default_user', 'web_client'].includes(userName));
@@ -3458,17 +3466,19 @@ function sendBugReportNotification(params) {
     ? '未登入/Web訪客'
     : (userId.startsWith('U') ? `LINE 用戶 (${userId.slice(-6)})` : userId.slice(-8));
 
-  const subject = `[Daily-Diet LINE] ${isEn ? 'Bug Report' : '問題回報'} - ${displayUserName}`;
+  const sourceTag = source || (userId && userId.startsWith('U') ? 'LINE' : 'Web');
+  const subject = `[Daily-Diet ${sourceTag}] ${isEn ? 'Bug Report / Feedback' : '用戶反饋與問題回報'} - ${displayUserName}`;
 
   const textBody = [
     `【Daily-Diet 熊貓教練 用戶問題與反饋回報】`,
     `========================================`,
     `⏰ 回報時間：${timeStr} (台灣時間 UTC+8)`,
+    `來源管道：${sourceTag}`,
     `👤 用戶暱稱：${displayUserName}`,
-    `🆔 用戶標識：${displayUserId}`,
+    `🆔 用戶標識：${displayUserId} (${userId || '無'})`,
     `🌐 語言環境：${userLang || 'zh'}`,
     `🎭 教練性格：${persona || 'tsundere'}`,
-    `📂 雲端備份：${userGistId ? '已建立專屬備份' : '未建立'}`,
+    `📂 雲端備份 Gist：${userGistId ? userGistId : '未建立'}`,
     `========================================`,
     `📝 問題與建議內容：`,
     `${issueDetails}`,
