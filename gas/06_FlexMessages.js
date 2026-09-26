@@ -6532,6 +6532,26 @@ function generateSponsorFlex(persona, userLang) {
             ]
           },
           {
+            type: 'image',
+            url: 'https://winnie-lin.space/daily-diet/ctbc_qr.png',
+            size: 'sm',
+            aspectRatio: '1:1',
+            aspectMode: 'fit',
+            margin: 'xs',
+            action: {
+              type: 'uri',
+              uri: 'https://winnie-lin.space/daily-diet/ctbc_qr.png'
+            }
+          },
+          {
+            type: 'text',
+            text: isEn ? '📲 Tap QR to open / Scan with CTBC App' : '📲 點擊放大 QR 碼 · 支援中信APP / 網銀掃碼',
+            size: 'xxs',
+            color: '#71717A',
+            align: 'center',
+            margin: 'none'
+          },
+          {
             type: 'box',
             layout: 'vertical',
             contents: [
@@ -6550,6 +6570,46 @@ function generateSponsorFlex(persona, userLang) {
           },
           {
             type: 'box',
+            layout: 'horizontal',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'box',
+                layout: 'vertical',
+                backgroundColor: '#FEF9C3',
+                cornerRadius: '8px',
+                paddingAll: '6px',
+                contents: [
+                  { type: 'text', text: '☕ 拿鐵', size: 'xxs', weight: 'bold', color: '#854D0E', align: 'center' },
+                  { type: 'text', text: '$50', size: 'xxs', color: '#713F12', align: 'center' }
+                ]
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                backgroundColor: '#CCFBF1',
+                cornerRadius: '8px',
+                paddingAll: '6px',
+                contents: [
+                  { type: 'text', text: '🍱 便當', size: 'xxs', weight: 'bold', color: '#0F766E', align: 'center' },
+                  { type: 'text', text: '$150', size: 'xxs', color: '#115E59', align: 'center' }
+                ]
+              },
+              {
+                type: 'box',
+                layout: 'vertical',
+                backgroundColor: '#FFE4E6',
+                cornerRadius: '8px',
+                paddingAll: '6px',
+                contents: [
+                  { type: 'text', text: '🎋 飼養員', size: 'xxs', weight: 'bold', color: '#9F1239', align: 'center' },
+                  { type: 'text', text: '$500', size: 'xxs', color: '#881337', align: 'center' }
+                ]
+              }
+            ]
+          },
+          {
+            type: 'box',
             layout: 'vertical',
             backgroundColor: '#F4F4F5',
             borderColor: '#E4E4E7',
@@ -6560,8 +6620,8 @@ function generateSponsorFlex(persona, userLang) {
               {
                 type: 'text',
                 text: isEn
-                  ? '🎁 Early Supporter Perk: After transferring, reply with your account last 5 digits + Email here. You will be registered as a Founding Supporter for 1 Year Free VIP once Pro launches!'
-                  : '🎁 老朋友專屬禮遇：轉帳完成後，請直接在此對話傳送「轉帳末 5 碼與 Email」，我們將為您登記入庫。未來正式推出進階收費服務時，直接贈送您 1 年免費 VIP 完整權限！',
+                  ? '🎁 Lifetime Founding Supporter: Reply with your account last 5 digits + Email. You will be registered as a Founding Supporter—enjoying lifetime full access to all future Pro & AI features completely free, forever!'
+                  : '🎁 終身榮譽飼養員禮遇：轉帳完成後，請直接在此對話傳送「轉帳末 5 碼與 Email」，我們將為您登記為【創始支持者】。未來 Daily Diet 無論推出何種進階收費模組或 AI 增強功能，您皆享有終身免費隨意使用，永不收費！感謝您在草創期的力挺與陪伴！🎋✨',
                 size: 'xxs',
                 color: '#52525B',
                 wrap: true

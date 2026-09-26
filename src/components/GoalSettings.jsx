@@ -560,12 +560,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
         }
       };
       await uploadToGist(data);
+      if (typeof syncGoalsToCloud === 'function') {
+        syncGoalsToCloud(goals, true);
+      }
       setGistIdInput(getCurrentGistId() || '');
       setSyncStatus('success');
       refreshStats();
+      alert("🎉 雲端備份同步完成！您的飲食、目標與常用餐點已安全保存至 Gist 雲端。");
       setTimeout(() => setSyncStatus('idle'), 3000);
     } catch (err) {
-      alert(err.message);
+      alert("同步失敗：" + (err.message || '請確認網路連線或稍後再試'));
       setSyncStatus('error');
       setTimeout(() => setSyncStatus('idle'), 3000);
     }
@@ -1475,10 +1479,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <button
                           onClick={handleCloudBackup}
                           disabled={syncStatus === 'syncing'}
-                          className="bg-black text-white px-3 py-1.5 rounded-xl text-xs font-black italic active:scale-95 flex items-center gap-1.5"
+                          className={`px-3 py-1.5 rounded-xl text-xs font-black italic active:scale-95 flex items-center gap-1.5 transition-colors ${
+                            syncStatus === 'success'
+                              ? 'bg-emerald-600 text-white'
+                              : syncStatus === 'error'
+                              ? 'bg-red-600 text-white'
+                              : 'bg-black text-white hover:bg-zinc-800'
+                          }`}
                         >
                           <RotateCcw size={12} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
-                          {syncStatus === 'syncing' ? '同步中...' : '手動同步'}
+                          {syncStatus === 'syncing' ? '同步中...' : syncStatus === 'success' ? '✅ 已同步' : '手動同步'}
                         </button>
                       </div>
                     </div>
@@ -1733,27 +1743,65 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                       ? 'Daily Diet is independently built and maintained without intrusive ads. If you love this app and would like to support server & API fuel costs, every bit of encouragement means the world to us! ❤️'
                                       : 'Daily Diet 由獨立開發者用心維護，堅持無干擾廣告體驗。若您覺得好用並想給予微薄支持，這份心意將成為支撐真實 API 與伺服器燃料的最大動力！❤️'}
                                   </p>
-                                  <div className="bg-white border-2 border-black p-3 rounded-xl space-y-1.5 shadow-sm">
-                                    <div className="flex justify-between items-center text-[11px] font-black">
-                                      <span className="text-zinc-500">中國信託 CTBC (822)</span>
-                                      <span className="font-mono text-teal-800 text-xs font-black select-all">174533815287</span>
+                                  {/* CTBC QR Code & Details Card */}
+                                  <div className="bg-white border-2 border-black p-3.5 rounded-2xl space-y-3 shadow-sm text-center">
+                                    <div className="flex justify-between items-center text-[11px] font-black border-b border-zinc-100 pb-2">
+                                      <span className="text-zinc-600 flex items-center gap-1">🏦 中國信託 CTBC (822)</span>
+                                      <span className="font-mono text-teal-800 text-xs font-black select-all bg-teal-50 px-2 py-0.5 rounded border border-teal-200">174533815287</span>
                                     </div>
-                                    <div className="text-[9px] font-bold text-zinc-400">
-                                      戶名：林詩婷 (專案支持帳戶)
+
+                                    {/* QR Code with Tap to Enlarge */}
+                                    <div 
+                                      onClick={() => setSelectedQr({ title: '中國信託 CTBC 贊助帳號', src: import.meta.env.BASE_URL + 'ctbc_qr.png' })}
+                                      className="inline-block p-2 bg-zinc-50 border-2 border-black rounded-2xl cursor-pointer hover:scale-105 active:scale-95 transition-transform shadow-neo-xs-black"
+                                      title="點擊放大 QR Code 掃描"
+                                    >
+                                      <img
+                                        src={import.meta.env.BASE_URL + 'ctbc_qr.png'}
+                                        alt="CTBC QR Code"
+                                        className="w-28 h-28 object-contain filter contrast-125 mx-auto"
+                                      />
+                                      <div className="text-[9px] font-black text-zinc-500 mt-1 flex items-center justify-center gap-1">
+                                        <span>🔍</span>
+                                        <span>點擊放大掃描</span>
+                                      </div>
                                     </div>
+
+                                    <div className="text-[10px] font-bold text-zinc-400">
+                                      戶名：林詩婷 (專案支持帳戶 · 支援中信 APP / 網銀掃碼)
+                                    </div>
+
                                     <button
                                       type="button"
                                       onClick={() => {
                                         navigator.clipboard.writeText('174533815287');
                                         alert('📋 中信帳號 174533815287 已成功複製到剪貼簿！');
                                       }}
-                                      className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-[10px] py-2 rounded-lg border border-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer mt-1"
+                                      className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-[11px] py-2.5 rounded-xl border-2 border-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
                                     >
                                       📋 一鍵複製中信帳號
                                     </button>
+
+                                    {/* Sincere Anchor Suggestions */}
+                                    <div className="pt-2 border-t border-dashed border-zinc-200 grid grid-cols-3 gap-1.5 text-center">
+                                      <div className="p-1.5 bg-yellow-50 rounded-lg border border-amber-200">
+                                        <div className="text-[10px] font-black text-amber-900">☕ 隨喜咖啡</div>
+                                        <div className="text-[9px] font-bold text-amber-700">$50</div>
+                                      </div>
+                                      <div className="p-1.5 bg-teal-50 rounded-lg border border-teal-200">
+                                        <div className="text-[10px] font-black text-teal-900">🍱 伺服器補給</div>
+                                        <div className="text-[9px] font-bold text-teal-700">$150</div>
+                                      </div>
+                                      <div className="p-1.5 bg-rose-50 rounded-lg border border-rose-200">
+                                        <div className="text-[10px] font-black text-rose-900">🎋 終身飼養員</div>
+                                        <div className="text-[9px] font-bold text-rose-700">$500</div>
+                                      </div>
+                                    </div>
                                   </div>
-                                  <div className="p-2.5 bg-yellow-100/80 border border-amber-300 rounded-xl text-[9.5px] font-bold text-amber-900 leading-relaxed">
-                                    🎁 <b>老朋友專屬禮遇</b>：轉帳後歡迎在上方表單留下「轉帳末 5 碼與 Email」，我們將為您登記為【創始支持者】，未來正式推出進階收費方案時，直接贈送您 1 年免費 VIP 完整權限！
+
+                                  <div className="p-3 bg-yellow-100/90 border-2 border-amber-400 rounded-2xl text-[10px] font-bold text-amber-950 leading-relaxed text-left">
+                                    🎁 <b>老朋友專屬【終身榮譽飼養員】禮遇</b>：<br />
+                                    轉帳後歡迎在上方表單留下「轉帳末 5 碼與 Email」，我們將直接為您登記為【創始支持者】。未來 Daily Diet 無論推出何種進階收費模組或 AI 增強功能，您皆享有<b>終身全功能免費隨意使用，永不收費</b>！感謝您在草創期的力挺與陪伴！🎋✨
                                   </div>
                                 </div>
                               </motion.div>

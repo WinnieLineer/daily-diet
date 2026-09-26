@@ -823,6 +823,44 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 1.1 Web App 雲端備份還原端點 (GET 支援)
+    if (action === 'restoreFromGist' || action === 'getGistBackup') {
+      const pat = props.getProperty('GITHUB_PAT');
+      const targetGistId = incomingGist || e?.parameter?.gistId || (userId && !isGenericUserId(userId) ? props.getProperty(`USER_GIST_${userId}`) : '');
+      if (!targetGistId) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '缺少 Gist ID' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      try {
+        const headers = { 'Accept': 'application/vnd.github+json' };
+        if (pat) headers['Authorization'] = `Bearer ${pat}`;
+        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${targetGistId}`, {
+          method: 'get',
+          headers: headers,
+          muteHttpExceptions: true
+        });
+        if (gistRes.getResponseCode() === 200) {
+          const gistData = JSON.parse(gistRes.getContentText());
+          const file = gistData.files?.['daily-diet-backup.json'];
+          if (file) {
+            let content = file.content;
+            if (file.truncated && file.raw_url) {
+              const rawRes = UrlFetchApp.fetch(file.raw_url, { muteHttpExceptions: true });
+              content = rawRes.getContentText();
+            }
+            const backupData = JSON.parse(content);
+            return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: backupData }))
+              .setMimeType(ContentService.MimeType.JSON);
+          }
+        }
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: `找不到備份檔案 (${gistRes.getResponseCode()})` }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
     if (action === 'getLogs' && userId) {
       if (incomingGist && !isGenericUserId(userId)) {
@@ -1584,6 +1622,142 @@ function doPost(e) {
         : { status: 'error', message: 'saveWebPhoto not implemented' };
       return ContentService.createTextOutput(JSON.stringify(saveRes))
         .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // ☁️ 0.8 Web App 雲端備份代理端點 (支援免 PAT 備份至 Gist，由後端代行 GITHUB_PAT)
+    if (action === 'backupToGist' || action === 'uploadToGist') {
+      const pat = props.getProperty('GITHUB_PAT');
+      if (!pat) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '後端尚未設定 GITHUB_PAT' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const userId = data?.userId || e?.parameter?.userId || 'web_user';
+      const userName = data?.userName || e?.parameter?.userName || data?.caller || '';
+      let targetGistId = data?.gistId || e?.parameter?.gistId || '';
+      const backupPayload = data?.data || data?.backupData;
+
+      if (!backupPayload) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '缺少備份資料' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const isGeneric = !userId || (typeof isGenericUserId === 'function' ? isGenericUserId(userId) : false);
+      if (!targetGistId && !isGeneric) {
+        targetGistId = props.getProperty(`USER_GIST_${userId}`) || '';
+      }
+
+      let finalGistId = targetGistId;
+      const todayStr = (typeof getTodayDateString === 'function') ? getTodayDateString() : Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd");
+
+      const gistPayload = {
+        description: `Daily Diet Backup - ${todayStr}`,
+        public: false,
+        files: {
+          'daily-diet-backup.json': {
+            content: JSON.stringify(backupPayload, null, 2)
+          }
+        }
+      };
+
+      try {
+        let gistRes = null;
+        if (targetGistId) {
+          gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${targetGistId}`, {
+            method: 'patch',
+            headers: {
+              'Authorization': `Bearer ${pat}`,
+              'Accept': 'application/vnd.github+json',
+              'Content-Type': 'application/json'
+            },
+            payload: JSON.stringify(gistPayload),
+            muteHttpExceptions: true
+          });
+        }
+
+        if (!targetGistId || (gistRes && (gistRes.getResponseCode() === 404 || gistRes.getResponseCode() === 422 || gistRes.getResponseCode() === 403))) {
+          // 若無 Gist 或舊 Gist 失效，自動建立全新備份 Gist
+          const createRes = UrlFetchApp.fetch('https://api.github.com/gists', {
+            method: 'post',
+            headers: {
+              'Authorization': `Bearer ${pat}`,
+              'Accept': 'application/vnd.github+json',
+              'Content-Type': 'application/json'
+            },
+            payload: JSON.stringify(gistPayload),
+            muteHttpExceptions: true
+          });
+
+          if (createRes.getResponseCode() === 201) {
+            const created = JSON.parse(createRes.getContentText());
+            finalGistId = created.id;
+            if (!isGeneric && userId) {
+              props.setProperty(`USER_GIST_${userId}`, finalGistId);
+            }
+          } else {
+            throw new Error(`建立 Gist 失敗 (${createRes.getResponseCode()}): ${createRes.getContentText().slice(0, 120)}`);
+          }
+        } else if (gistRes && gistRes.getResponseCode() !== 200) {
+          throw new Error(`更新 Gist 失敗 (${gistRes.getResponseCode()}): ${gistRes.getContentText().slice(0, 120)}`);
+        }
+
+        if (typeof recordSystemLog === 'function') {
+          const countMeals = Array.isArray(backupPayload.dietLogs) ? backupPayload.dietLogs.length : 0;
+          const countWeights = Array.isArray(backupPayload.weightLogs) ? backupPayload.weightLogs.length : 0;
+          recordSystemLog('Web雲端備份', userId, '完整備份至 Gist', finalGistId, `已成功備份：${countMeals}筆飲食紀錄 · ${countWeights}筆體重趨勢`, userName || userId);
+        }
+
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'ok',
+          gistId: finalGistId,
+          message: '雲端備份成功！'
+        })).setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        console.error("backupToGist 異常:", err);
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'error',
+          message: err.message
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
+    // ☁️ 0.9 Web App 雲端備份還原端點 (POST 支援)
+    if (action === 'restoreFromGist' || action === 'getGistBackup') {
+      const pat = props.getProperty('GITHUB_PAT');
+      const userId = data?.userId || e?.parameter?.userId || '';
+      const isGeneric = !userId || (typeof isGenericUserId === 'function' ? isGenericUserId(userId) : false);
+      const targetGistId = data?.gistId || e?.parameter?.gistId || (!isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
+      if (!targetGistId) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '缺少 Gist ID' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      try {
+        const headers = { 'Accept': 'application/vnd.github+json' };
+        if (pat) headers['Authorization'] = `Bearer ${pat}`;
+        const gistRes = UrlFetchApp.fetch(`https://api.github.com/gists/${targetGistId}`, {
+          method: 'get',
+          headers: headers,
+          muteHttpExceptions: true
+        });
+        if (gistRes.getResponseCode() === 200) {
+          const gistData = JSON.parse(gistRes.getContentText());
+          const file = gistData.files?.['daily-diet-backup.json'];
+          if (file) {
+            let content = file.content;
+            if (file.truncated && file.raw_url) {
+              const rawRes = UrlFetchApp.fetch(file.raw_url, { muteHttpExceptions: true });
+              content = rawRes.getContentText();
+            }
+            const backupData = JSON.parse(content);
+            return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: backupData }))
+              .setMimeType(ContentService.MimeType.JSON);
+          }
+        }
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: `找不到備份檔案 (${gistRes.getResponseCode()})` }))
+          .setMimeType(ContentService.MimeType.JSON);
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
     }
 
     // 🌟 1. Web App 專屬安全通道：Gemini AI 辨識 API (含防盜刷、時戳驗證與頻率防護)
