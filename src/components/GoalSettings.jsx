@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db, calculateStreak } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3 } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, ChevronDown, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION, GAS_API_URL } from '../lib/constants';
