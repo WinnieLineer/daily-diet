@@ -87,18 +87,25 @@
     </div>
 
     <div class="btn-group">
+      <button class="action-btn" style="background: #FFFFFF; color: #18181B;" onclick="copyPlainText()">
+        📄 複製純文字
+      </button>
       <button class="action-btn btn-copy" onclick="copyRichHtml()">
         📋 一鍵複製精美圖文信（推薦貼到 Gmail）
       </button>
       <a class="action-btn btn-gmail" id="gmailBtn" target="_blank" href="https://mail.google.com/mail/?view=cm&fs=1&to=yixianl254@gmail.com&su=%E9%97%9C%E6%96%BC%20Daily%20Diet%20%E9%9B%B2%E7%AB%AF%E5%90%8C%E6%AD%A5%E8%88%87%20GitHub%20Gist%20%E9%85%8D%E7%BD%AE%E8%AA%AA%E6%98%8E%20%F0%9F%90%BC%E2%9C%A8">
         📮 開啟 Gmail 撰寫新信件 (帶收件人與主旨)
       </a>
+      <a class="action-btn" style="background: #FFFFFF; color: #000000;" href="./public/reply_helper.html?email=yixianl254@gmail.com&name=yixian&template=gist_tech">
+        💌 開啟多模板生成器
+      </a>
     </div>
     <div id="toast" class="toast">🎉 信件內容已成功複製到剪貼簿！在 Gmail 內文處按 Ctrl + V (貼上) 即可！</div>
   </div>
 
   <!-- 精美信件 HTML 容器 -->
-  <div class="email-wrapper" id="emailContent">
+  <div style="max-width: 640px; width: 100%; margin: 0 auto;" id="emailContent">
+    <div style="background-color: #FFFFFF; border: 2px solid #000000; border-radius: 16px; overflow: hidden; box-shadow: 6px 6px 0px #000000; font-family: 'Microsoft JhengHei', '微軟正黑體', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
     <font face="Microsoft JhengHei, 微軟正黑體, PingFang TC, sans-serif">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" lang="zh-Hant" style="background-color: #FFFFFF; font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; color: #18181B; line-height: 1.6;">
       <tr>
@@ -114,10 +121,11 @@
       <tr>
         <td style="padding: 30px 30px 20px 30px;">
           <p style="font-size: 16px; color: #18181B; margin: 0 0 16px 0;">
-            <b>您好！</b>
+            <b>yixian 您好！</b>
           </p>
           <p style="font-size: 15px; color: #3F3F46; margin: 0 0 20px 0; line-height: 1.7;">
-            非常感謝您使用 Daily Diet 並送出反饋！非常高興看到您這麼敏銳且專業的提問，針對您提到的「Missing GitHub PAT」、配置入口以及預期檔名，開發團隊已在最新版本（<b>v3.3.104</b>）中完成全面優化與解答：
+            非常抱歉這陣子專注在版本優化與新功能開發，晚了些回覆您的反饋信件！<br><br>
+            當初看到您提到 <code>Missing GitHub PAT</code> 以及精準問出 <code>daily-diet-backup.json</code> 檔名時，我就猜想您一定是對程式或前端非常有敏銳度的工程師 / 極客朋友！針對您詢問的 Gist 同步與配置問題，我在最新版本中已經為您完成了專屬支援與優化：
           </p>
 
           <!-- 區塊 1: 問題解答 -->
@@ -175,7 +183,7 @@
           </table>
 
           <p style="font-size: 15px; color: #3F3F46; line-height: 1.7; margin: 0 0 20px 0;">
-            再次感謝您的專業回報，幫助我們把跨平台與獨立用戶的同步體驗打磨得更完善！若後續使用上有任何疑問，歡迎隨時回信與我們交流。<br>
+            再次感謝您的專業回報，幫助我把跨平台與獨立用戶的同步體驗打磨得更完善！若後續使用上有任何疑問，歡迎隨時回信與我交流。<br>
             <b>祝您健康生活、飲食紀錄愉快！🔥🐼</b>
           </p>
         </td>
@@ -195,9 +203,55 @@
       </tr>
     </table>
     </font>
+    </div>
   </div>
 
   <script>
+    function copyPlainText() {
+      const plain = `yixian 你好！\n\n` +
+        `【您之前的留言】：\n` +
+        `「你好有遇到一些云端同步问题，由于登不上line所以在尝试gist同步，手动同步提示 “Missing GitHub PAT. Please configure in settings or environment.”。目前备份同步页面只有填写 Gist ID 的入口，没有 GitHub PAT 输入框。请问 PAT 应该在哪里配置？另外系统预期的文件名是否为 daily-diet-backup.json？」\n\n` +
+        `非常感謝您詳細的回饋！看到您提到手動同步與 daily-diet-backup.json，直覺您一定是對技術非常有敏銳度的資深用戶或開發者朋友，非常開心能有您的使用與測試！\n\n` +
+        `⚙️ 針對您詢問的 Gist 與 PAT 同步問題說明：\n\n` +
+        `1. 為什麼會提示需要 GitHub PAT？\n` +
+        `系統原本設計為免 PAT 智慧雲端同步。若手動觸發了前端直接寫入 GitHub 官方 REST API，才會觸發此安全提示。\n\n` +
+        `2. PAT 在哪裡配置？\n` +
+        `我們已經在最新版本的「設定 ⚙️ ➜ 備份同步」分頁中，新增了【⚙️ 進階設定：自訂個人 GitHub PAT】折疊面板。只要貼上具備 gist 權限的 Personal Access Token 即可直接同步！\n\n` +
+        `3. 系統預期的備份檔名：\n` +
+        `確實是 daily-diet-backup.json！包含餐點、分類、自訂目標與體重數據。\n\n` +
+        `若您在配置或資料同步上有任何疑問，非常歡迎隨時回信與我交流！\n` +
+        `祝您備份順暢、健康生活每一天！🛠️🐼\n\n` +
+        `---\n` +
+        `Daily Diet 獨立開發者 Winnie Lin 敬上\n` +
+        `🌐 官方網站：https://winnie-lin.space/daily-diet/`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(plain).then(() => {
+          showToast('📄 純文字版本已複製到剪貼簿！');
+        }).catch(() => {
+          fallbackCopyText(plain);
+        });
+      } else {
+        fallbackCopyText(plain);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('📄 純文字版本已複製到剪貼簿！');
+      } catch (e) {
+        alert('請手動選取複製！');
+      }
+      document.body.removeChild(ta);
+    }
+
     function copyRichHtml() {
       const emailEl = document.getElementById('emailContent');
       const htmlContent = emailEl.innerHTML;
@@ -211,7 +265,7 @@
         const data = [new ClipboardItem({ [typeHtml]: blobHtml, [typeText]: blobText })];
 
         navigator.clipboard.write(data).then(() => {
-          showToast();
+          showToast('🎉 信件內容已成功複製到剪貼簿！在 Gmail 內文處按 Ctrl + V (貼上) 即可！');
         }).catch(err => {
           fallbackCopy(htmlContent);
         });
@@ -229,11 +283,12 @@
       window.getSelection().selectAllChildren(tempDiv);
       document.execCommand('copy');
       document.body.removeChild(tempDiv);
-      showToast();
+      showToast('🎉 信件內容已成功複製到剪貼簿！在 Gmail 內文處按 Ctrl + V (貼上) 即可！');
     }
 
-    function showToast() {
+    function showToast(msg) {
       const toast = document.getElementById('toast');
+      if (msg) toast.innerText = msg;
       toast.style.display = 'block';
       setTimeout(() => {
         toast.style.display = 'none';
