@@ -699,6 +699,22 @@ function doGet(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 📝 0.25 前端審計日誌收集端點 (GET 支援：贊助框點閱、帳號複製、操作追蹤等)
+    if (action === 'trackAuditLog' || action === 'trackEvent' || action === 'logEvent') {
+      const logType = String(e?.parameter?.type || 'Web行為').slice(0, 30);
+      const uid = e?.parameter?.userId || 'web_user';
+      const caller = e?.parameter?.userName || e?.parameter?.caller || 'Web 訪客';
+      const input = String(e?.parameter?.input || logType).slice(0, 100);
+      const details = String(e?.parameter?.details || e?.parameter?.device || '').slice(0, 100);
+      const output = String(e?.parameter?.output || '前端使用者行為登記').slice(0, 150);
+
+      if (typeof recordSystemLog === 'function') {
+        recordSystemLog(logType, uid, input, details, output, caller);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 🛡️ 0.3 Gist 所有權安全校驗：防範跨用戶資料串聯與越權存取 (IDOR)
     if (incomingGist && !verifyGistOwnership(incomingGist, userId, props)) {
       console.warn(`🚨 [Gist 越權存取拒絕 (GET)] 用戶 ${userId || '匿名/Web'} 企圖存取非授權 Gist: ${incomingGist}`);
@@ -1502,6 +1518,22 @@ function doPost(e) {
         success: true,
         message: '反饋已送達開發團隊！'
       })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 📝 0.25 前端審計日誌收集端點 (POST 支援：贊助框點閱、帳號複製、操作追蹤等)
+    if (action === 'trackAuditLog' || action === 'trackEvent' || action === 'logEvent') {
+      const logType = String(data?.type || e?.parameter?.type || 'Web行為').slice(0, 30);
+      const uid = data?.userId || e?.parameter?.userId || 'web_user';
+      const caller = data?.userName || e?.parameter?.userName || data?.caller || 'Web 訪客';
+      const input = String(data?.input || e?.parameter?.input || logType).slice(0, 100);
+      const details = String(data?.details || e?.parameter?.details || data?.device || e?.parameter?.device || '').slice(0, 100);
+      const output = String(data?.output || e?.parameter?.output || '前端使用者行為登記').slice(0, 150);
+
+      if (typeof recordSystemLog === 'function') {
+        recordSystemLog(logType, uid, input, details, output, caller);
+      }
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // 🛡️ 0.3 維護者登入安全遙測與裝置資訊登記 (POST 支援)

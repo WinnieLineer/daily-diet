@@ -137,6 +137,34 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [selectedQr, setSelectedQr] = useState(null);
   const [showSponsorInfo, setShowSponsorInfo] = useState(false);
 
+  // 📝 審計追蹤：記錄前端贊助與支持行為 (無感背景日誌)
+  const trackSponsorAudit = (actionType, input, output) => {
+    try {
+      const lineUserId = safeGetStorage('line_user_id');
+      const effectiveUserId = (lineUserId && lineUserId.startsWith('U')) ? lineUserId : (typeof getOrCreateClientId === 'function' ? getOrCreateClientId() : (safeGetStorage('client_device_id') || 'web_user'));
+      const effectiveUserName = safeGetStorage('line_user_name') || safeGetStorage('user_name') || userName || 'Web 訪客';
+      
+      const payload = {
+        action: 'trackAuditLog',
+        type: actionType,
+        userId: effectiveUserId,
+        userName: effectiveUserName,
+        input: input || actionType,
+        output: output || '',
+        device: (navigator.userAgent || '').slice(0, 120)
+      };
+
+      fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload),
+        mode: 'no-cors'
+      }).catch(() => {});
+    } catch (err) {
+      console.debug('Failed to send audit log beacon:', err);
+    }
+  };
+
   // 飲控里程碑與頭銜貼紙狀態
   const [currentStreak, setCurrentStreak] = useState(0);
   const [activeTitle, setActiveTitle] = useState(() => safeGetStorage('panda_active_title') || '');
@@ -1773,7 +1801,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="pt-2 text-center">
                           <button
                             type="button"
-                            onClick={() => setShowSponsorInfo(!showSponsorInfo)}
+                            onClick={() => {
+                              const next = !showSponsorInfo;
+                              setShowSponsorInfo(next);
+                              if (next) {
+                                trackSponsorAudit('Web查看贊助', '展開贊助框', '用戶在設定頁面點開查看支持與贊助資訊');
+                              }
+                            }}
                             className="text-[11px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors inline-flex items-center gap-1 cursor-pointer select-none py-1"
                           >
                             <span>☕</span>
@@ -1817,7 +1851,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                                     {/* QR Code with Tap to Enlarge */}
                                     <div 
-                                      onClick={() => setSelectedQr({ title: '中國信託 CTBC 贊助帳號', src: import.meta.env.BASE_URL + 'ctbc_qr.png' })}
+                                      onClick={() => {
+                                        setSelectedQr({ title: '中國信託 CTBC 贊助帳號', src: import.meta.env.BASE_URL + 'ctbc_qr.png' });
+                                        trackSponsorAudit('Web點開贊助QR', '點擊放大CTBC QR', '開啟中信 QR Code 彈窗放大檢視');
+                                      }}
                                       className="inline-block p-2 bg-zinc-50 border-2 border-black rounded-2xl cursor-pointer hover:scale-105 active:scale-95 transition-transform shadow-neo-xs-black"
                                       title="點擊放大 QR Code 掃描"
                                     >
@@ -1841,6 +1878,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                       onClick={() => {
                                         navigator.clipboard.writeText('174533815287');
                                         alert('📋 中信帳號 174533815287 已成功複製到剪貼簿！');
+                                        trackSponsorAudit('Web複製贊助帳號', '一鍵複製中信帳號', '已成功複製中信帳號 174533815287');
                                       }}
                                       className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-[11px] py-2.5 rounded-xl border-2 border-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
                                     >
