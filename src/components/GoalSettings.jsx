@@ -1908,7 +1908,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                     </div>
 
                                     <div className="text-[10px] font-bold text-zinc-400">
-                                      戶名：Daily Diet 專案支持帳戶（核對姓氏：林 · 支援中信 APP / 網銀掃碼）
+                                      戶名：Daily Diet 專案支持帳戶（核對姓氏：林）<br />
+                                      📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）
                                     </div>
 
                                     <button
@@ -2395,7 +2396,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
               <div className="w-full space-y-2 mb-4">
                 <div className="text-[10px] font-bold text-zinc-500 text-left bg-zinc-100 p-2.5 rounded-xl border border-zinc-200 leading-normal">
                   💡 中信帳號：<span className="font-mono font-black text-teal-700 select-all">174533815287</span> (銀行代碼: 822)<br />
-                  已驗證專案支持帳戶。點選下方按鈕即可一鍵複製帳號，並自動為您啟動中國信託網銀 APP！
+                  戶名：Daily Diet 專案支持帳戶（核對姓氏：林）<br />
+                  📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）
                 </div>
                 <button
                   onClick={() => {

@@ -6548,7 +6548,7 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
           },
           {
             type: 'text',
-            text: isEn ? '📲 Tap QR to open / Scan with CTBC App' : '📲 點擊放大 QR 碼 · 支援中信APP / 網銀掃碼',
+            text: isEn ? '📲 Supports TWQR (All TWQR Apps supported)' : '📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）',
             size: 'xxs',
             color: '#71717A',
             align: 'center',
