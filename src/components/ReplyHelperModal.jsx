@@ -109,24 +109,18 @@ export default function ReplyHelperModal({
       content = `🎋 為什麼之前把轉帳資料藏起來？\n` +
         `先跟您坦白：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。\n` +
         `不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的雲端伺服器與 AI 算力 Token 成本。因此非常感謝您主動詢問，這份微薄心意對我們來說就是最及時、最珍貴的「AI 算力補給燃料」！\n\n` +
-        `🎁 老朋友專屬【創始支持者】特權禮遇 🎋✨：\n` +
+        `🎁 老朋友專屬【創始支持者】禮遇 🎋✨：\n` +
         `為了感謝像您這樣在草創階段就真心認同理念的朋友，只要您後續完成轉帳並回信告知末 5 碼，我們這邊就會正式將您的信箱（${recipientEmail || '您的信箱'}）登記在系統後台的【創始支持者 (Founder Supporter)】名冊中：\n` +
         `• 🎖️ 永久享有個人專屬「創始支持者金色徽章」\n` +
-        `• 🚀 未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇\n\n` +
-        `💳 如何查看最新轉帳資訊並進行贊助支持？\n` +
-        `為確保資訊安全與最新即時驗證，信件中不直接附上帳號數字。您可以透過以下兩種官方安全途徑查看轉帳資訊：\n\n` +
-        `【途徑一：Daily Diet 網頁版（點開贊助框）】\n` +
-        `1. 開啟 Daily Diet 網頁版（https://winnie-lin.space/daily-diet/）\n` +
-        `2. 點擊右上角【⚙️ 設定】➜ 下滑至最底部的【📬 意見回饋 / 聯絡開發者】\n` +
-        `3. 點擊送出按鈕下方的「☕ 想為這隻熊貓與獨立開發者補給燃料？點此查看」折疊贊助框\n` +
-        `4. 展開後即可看到最新的中國信託轉帳帳號、一鍵複製按鈕，以及 QR Code（支援 TWQR 跨機構掃碼，所有支援 TWQR APP 皆可）！\n\n` +
-        `【途徑二：LINE 官方帳號（輸入指定字）】\n` +
-        `1. 打開 Daily Diet 官方 LINE 聊天室（熊貓教練）\n` +
-        `2. 在聊天室中直接輸入「贊助」或「支持」\n` +
-        `3. 熊貓教練會自動秒回專屬的【算力燃料補給卡片】與轉帳資訊！\n\n` +
+        `• 🚀 未來任何全新進階功能推出時，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期願意拉我們一把！❤️\n\n` +
+        `💳 專案支持轉帳帳戶資訊：\n` +
+        `• 銀行代碼：822 (中國信託商業銀行 CTBC)\n` +
+        `• 銀行帳號：174533815287\n` +
+        `• 戶名資訊：Daily Diet 專案支持帳戶（核對姓氏：林）\n` +
+        `• 線上 QR Code 掃碼（支援 TWQR 跨機構掃碼）：https://winnie-lin.space/daily-diet/ctbc_qr.png\n\n` +
         `☕ 隨喜支持建議：隨喜咖啡 $50 / 🍱 算力補給 $100 / 🎋 核心支持 $150 (完全自由隨喜，零負擔)\n\n` +
         `🔔【打款完成與登記提醒】：\n` +
-        `因為系統目前未接第三方金流自動對帳，若您後續順利完成轉帳，請務必直接回信告知您的【轉帳末 5 碼】（或在 LINE 對話輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！再次由衷感謝您的這份心意與支持！❤️`;
+        `因為系統目前未接第三方金流自動對帳，若您後續順利完成轉帳，請務必直接回信告知您的「轉帳末 5 碼」（或在 LINE 輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！再次由衷感謝您的心意與鼓勵！❤️`;
     } else if (selectedTemplateId === 'gist_tech') {
       content = `⚙️ 針對您詢問的 Gist 與 PAT 同步問題說明：\n\n` +
         `1. 為什麼提示需要 GitHub PAT？\n` +
@@ -165,7 +159,7 @@ export default function ReplyHelperModal({
 
     if (selectedTemplateId === 'sponsor') {
       bodyHtml = `
-        <!-- 核心心意卡片 -->
+        <!-- 區塊 1: 核心心意卡片 -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FEF9C3; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
           <tr>
             <td style="padding: 18px;">
@@ -174,111 +168,93 @@ export default function ReplyHelperModal({
               </div>
               <p style="font-size: 14px; color: #854D0E; margin: 0 0 12px 0; line-height: 1.6;">
                 先跟您坦白：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。<br>
-                不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的<b>雲端伺服器與 AI 算力 Token 成本</b>。因此非常感謝您主動詢問，這份微薄心意對我們來說就是最及時、最珍貴的<b>「AI 算力補給燃料」</b>！
+                不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的<b>雲端伺服器與 AI 算力 Token 成本</b>。因此您的這份微薄心意，對我們來說就是最及時、最珍貴的<b>「AI 算力補給燃料」</b>！
               </p>
               <div style="background-color: #FFFFFF; border: 1.5px solid #EAB308; border-radius: 10px; padding: 14px; font-size: 14px; color: #000000; line-height: 1.6;">
-                🎁 <b>老朋友專屬【創始支持者】特權禮遇 🎋✨：</b><br>
-                為了感謝像您這樣在草創階段就真心認同理念的朋友，只要您後續完成轉帳並回信告知末 5 碼，我們這邊就會正式將您的信箱（<b>${recipientEmail || '您的信箱'}</b>）登記在系統後台的【創始支持者 (Founder Supporter)】名冊中：<br>
+                🎁 <b>老朋友專屬【創始支持者】禮遇 🎋✨：</b><br>
+                因為有像您這樣一路相伴、真心認同理念的老朋友，我會直接將您的信箱（<b>${recipientEmail || '您的信箱'}</b>）登記在系統核心的【創始支持者 (Founder Supporter)】名冊中：<br>
                 • 🎖️ <b>永久享有個人專屬「創始支持者金色徽章」</b><br>
                 • 🚀 <b>未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇</b><br>
-                感謝您在草創期願意拉我們一把，成為 Daily Diet 的堅實後盾！❤️
+                感謝您在草創期拉我們一把，成為 Daily Diet 的堅實後盾！❤️
               </div>
             </td>
           </tr>
         </table>
 
-        <!-- 雙管道查看轉帳資訊指引卡片 -->
+        <!-- 區塊 2: 完整轉帳帳戶資訊卡片 -->
         <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F0FDFA; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
           <tr>
             <td style="padding: 18px;">
-              <div style="font-size: 16px; font-weight: bold; color: #0F766E; margin-bottom: 6px;">
-                💳 如何查看最新轉帳資訊並進行贊助支持？
+              <div style="font-size: 16px; font-weight: bold; color: #0F766E; margin-bottom: 12px;">
+                💳 專案支持轉帳帳戶資訊
               </div>
-              <p style="font-size: 13px; color: #134E4A; margin: 0 0 14px 0; line-height: 1.6;">
-                為維護資訊安全與確保即時驗證，信件中未直接暴露帳戶數字，請透過以下任一<b>官方安全途徑</b>點開或呼叫轉帳卡片：
-              </p>
-
-              <!-- 途徑 1: 網頁版贊助框 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border: 1.5px solid #5EEAD4; border-radius: 12px; margin-bottom: 12px;">
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border: 1.5px solid #5EEAD4; border-radius: 10px; margin-bottom: 14px;">
                 <tr>
-                  <td style="padding: 14px 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                      <span style="font-size: 14px; font-weight: bold; color: #0F766E;">
-                        🌐 途徑一：Daily Diet 網頁版（點開贊助框）
-                      </span>
-                      <span style="font-size: 11px; background: #CCFBF1; color: #115E59; padding: 2px 8px; border-radius: 6px; font-weight: bold;">
-                        一鍵複製 & 掃碼
-                      </span>
-                    </div>
-                    <div style="font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 10px;">
-                      進入網頁版 ➔ 點右上角【<b>⚙️ 設定</b>】➔ 下滑至【<b>📬 意見回饋 / 聯絡開發者</b>】表單底部 ➔ 點開「<b>☕ 想為這隻熊貓與獨立開發者補給燃料？點此查看</b>」折疊贊助框。<br>
-                      點開後即可查看完整中信帳號、一鍵複製號碼，或點擊放大 QR Code 供手機網銀掃碼！
-                    </div>
-                    <div style="text-align: center;">
-                      <a href="https://winnie-lin.space/daily-diet/?tab=profile" target="_blank" style="display: inline-block; background-color: #FDE047; color: #000000; font-weight: 900; font-size: 13px; padding: 8px 18px; border-radius: 8px; text-decoration: none; border: 1.5px solid #000000; box-shadow: 2px 2px 0px #000000;">
-                        🔗 前往網頁版設定頁點開贊助框 ➔
-                      </a>
-                    </div>
+                  <td style="padding: 12px 16px; border-bottom: 1px dashed #E2E8F0; font-size: 14px;">
+                    <span style="color: #64748B;">銀行代碼：</span>
+                    <b style="color: #0F172A;">822 (中國信託商業銀行 CTBC)</b>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; border-bottom: 1px dashed #E2E8F0; font-size: 14px;">
+                    <span style="color: #64748B;">銀行帳號：</span>
+                    <b style="color: #0F766E; font-size: 16px; font-family: monospace;">174533815287</b>
+                  </td>
+                </tr>
+                <tr>
+                  <td style="padding: 12px 16px; font-size: 14px;">
+                    <span style="color: #64748B;">戶名資訊：</span>
+                    <b style="color: #0F172A;">Daily Diet 專案支持帳戶（核對姓氏：林）</b>
                   </td>
                 </tr>
               </table>
 
-              <!-- 途徑 2: LINE 輸入指定字 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; border: 1.5px solid #5EEAD4; border-radius: 12px; margin-bottom: 14px;">
-                <tr>
-                  <td style="padding: 14px 16px;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px;">
-                      <span style="font-size: 14px; font-weight: bold; color: #065F46;">
-                        💬 途徑二：LINE 官方帳號（輸入指定字）
-                      </span>
-                      <span style="font-size: 11px; background: #D1FAE5; color: #065F46; padding: 2px 8px; border-radius: 6px; font-weight: bold;">
-                        LINE Bot 秒回卡片
-                      </span>
-                    </div>
-                    <div style="font-size: 13px; color: #334155; line-height: 1.6; margin-bottom: 10px;">
-                      在 Daily Diet 官方 LINE 聊天室中，直接發送文字「<b>贊助</b>」或「<b>支持</b>」（如：輸入「贊助教練」），熊貓教練會自動秒回專屬的【算力燃料補給卡片】與轉帳資訊！
-                    </div>
-                    <div style="text-align: center;">
-                      <a href="https://line.me/R/oaMessage/@618iipof/?%E8%B4%87%E5%8A%A9" target="_blank" style="display: inline-block; background-color: #06C755; color: #FFFFFF; font-weight: 900; font-size: 13px; padding: 8px 18px; border-radius: 8px; text-decoration: none; border: 1.5px solid #000000; box-shadow: 2px 2px 0px #000000;">
-                        💬 打開 LINE 聊天室發送「贊助」 ➔
-                      </a>
-                    </div>
-                  </td>
-                </tr>
-              </table>
+              <!-- 中信 QR Code 掃碼區 -->
+              <div style="text-align: center; margin: 16px 0 14px 0;">
+                <a href="https://winnie-lin.space/daily-diet/ctbc_qr.png" target="_blank" style="text-decoration: none;">
+                  <img src="https://winnie-lin.space/daily-diet/ctbc_qr.png" alt="CTBC QR Code" width="130" height="130" style="border: 2px solid #000000; border-radius: 12px; padding: 4px; background-color: #FFFFFF; display: inline-block;" />
+                </a>
+                <div style="font-size: 11px; color: #0D9488; margin-top: 6px; font-weight: bold;">
+                  📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）
+                </div>
+              </div>
 
-              <!-- 隨喜錨定 -->
-              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 6px 0 10px 0;">
+              <!-- 隨喜金額錨定建議 (50 / 100 / 150) -->
+              <table width="100%" cellpadding="0" cellspacing="0" border="0" style="margin: 10px 0 12px 0;">
                 <tr>
                   <td width="33%" align="center" style="padding: 4px;">
-                    <div style="background-color: #FEF9C3; border: 1px solid #FDE047; border-radius: 8px; padding: 6px;">
+                    <div style="background-color: #FEF9C3; border: 1.5px solid #FDE047; border-radius: 8px; padding: 8px 4px; text-align: center;">
                       <span style="font-size: 11px; font-weight: bold; color: #854D0E;">☕ 隨喜咖啡</span><br>
-                      <span style="font-size: 11px; color: #713F12;">$50</span>
+                      <span style="font-size: 12px; font-weight: 900; color: #713F12;">$50</span>
                     </div>
                   </td>
                   <td width="33%" align="center" style="padding: 4px;">
-                    <div style="background-color: #CCFBF1; border: 1px solid #5EEAD4; border-radius: 8px; padding: 6px;">
+                    <div style="background-color: #CCFBF1; border: 1.5px solid #5EEAD4; border-radius: 8px; padding: 8px 4px; text-align: center;">
                       <span style="font-size: 11px; font-weight: bold; color: #0F766E;">🍱 算力補給</span><br>
-                      <span style="font-size: 11px; color: #115E59;">$100</span>
+                      <span style="font-size: 12px; font-weight: 900; color: #115E59;">$100</span>
                     </div>
                   </td>
                   <td width="33%" align="center" style="padding: 4px;">
-                    <div style="background-color: #FFE4E6; border: 1px solid #FDA4AF; border-radius: 8px; padding: 6px;">
+                    <div style="background-color: #FFE4E6; border: 1.5px solid #FECDD3; border-radius: 8px; padding: 8px 4px; text-align: center;">
                       <span style="font-size: 11px; font-weight: bold; color: #9F1239;">🎋 核心支持</span><br>
-                      <span style="font-size: 11px; color: #881337;">$150</span>
+                      <span style="font-size: 12px; font-weight: 900; color: #881337;">$150</span>
                     </div>
                   </td>
                 </tr>
               </table>
 
-              <!-- 打款回報提醒 -->
-              <div style="background-color: #FEF3C7; border: 1.5px solid #F59E0B; border-radius: 10px; padding: 12px 14px; font-size: 13px; color: #78350F; line-height: 1.6; margin-top: 14px; text-align: left;">
-                🔔 <b>打款完成與登記提醒：</b><br>
-                因為系統尚未做自動金流對帳，若您後續順利完成轉帳，<b>請務必直接「回信告知您的轉帳末 5 碼」</b>（或在 LINE 對話輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！再次感謝您的溫暖相挺！🎋✨
-              </div>
+              <p style="font-size: 13px; color: #0D9488; margin: 6px 0 0 0; line-height: 1.6; font-weight: bold; text-align: center;">
+                💡 <b>打款完成登記提醒</b>：完全隨喜無壓力！若您後續順利完成轉帳，<b>請直接回覆此封信件告知您的「轉帳末 5 碼」</b>（或在 LINE 對話輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！❤️
+              </p>
             </td>
           </tr>
         </table>
+
+        <!-- 區塊 3: 額外小進展 -->
+        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 13px; color: #475569; line-height: 1.6;">
+          💡 <b>順帶分享給您的小進展：</b><br>
+          收到您的回饋後，我已經在 Web 版【設定 ➔ 意見回饋】表單底下，新增了一個低調收合的小連結；同時在 LINE 官方帳號上，輸入「<b>贊助</b>」或「<b>支持</b>」，熊貓教練也會彈出專屬支持小卡囉！
+        </div>
       `;
     } else if (selectedTemplateId === 'gist_tech') {
       bodyHtml = `
