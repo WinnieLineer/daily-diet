@@ -261,7 +261,7 @@
         👁️ 即時外觀預覽（貼到 Gmail 後的真實樣式）：
       </span>
       <span style="font-size: 11px; font-weight: bold; color: #0F766E; background: #CCFBF1; padding: 2px 8px; border-radius: 999px;">
-        ✨ 安全引導至 Web 贊助框 & LINE 專屬卡片
+        ✨ 經典高質感卡片排版 & 獨立開發者署名
       </span>
     </div>
 
@@ -364,17 +364,23 @@
       `;
     }
 
+    let headerTitle = data.subject || '感謝您對 Daily Diet 的關注與支持 ✨';
+    let closingWish = '再次由衷感謝您的這份心意與鼓勵！有了您的支持，這隻熊貓教練一定會更有活力地繼續陪伴大家！<br><b>祝您飲食紀錄順心、健康生活每一天！🔥🐼</b>';
     let bodyHtml = '';
+
     if (currentTemplate === 'sponsor') {
+      headerTitle = '感謝您對 Daily Diet 的溫暖鼓勵與支持 ✨';
+      closingWish = '再次由衷感謝您的這份心意與鼓勵！有了您的支持，這隻熊貓教練一定會更有活力地繼續陪伴大家！<br><b>祝您飲食紀錄順心、健康生活每一天！🔥🐼</b>';
       bodyHtml = `
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FEF9C3; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
+        <!-- 區塊 1: 為什麼之前把轉帳資料藏起來？ -->
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FEF9C3; border: 2px solid #000000; border-radius: 14px; margin-bottom: 24px;">
           <tr>
-            <td style="padding: 18px;">
+            <td style="padding: 20px;">
               <div style="font-size: 16px; font-weight: bold; color: #713F12; margin-bottom: 8px;">
                 🎋 為什麼之前把轉帳資料藏起來？
               </div>
               <p style="font-size: 14px; color: #854D0E; margin: 0 0 12px 0; line-height: 1.6;">
-                先跟您坦白：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。<br>
+                先跟您坦白之前隱藏的原因：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。<br>
                 不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的<b>雲端伺服器與 AI 算力 Token 成本</b>。因此您的這份微薄心意，對我們來說就是最及時、最珍貴的<b>「AI 算力補給燃料」</b>！
               </p>
               <div style="background-color: #FFFFFF; border: 1.5px solid #EAB308; border-radius: 10px; padding: 14px; font-size: 14px; color: #000000; line-height: 1.6;">
@@ -389,9 +395,9 @@
         </table>
 
         <!-- 區塊 2: 完整轉帳帳戶資訊卡片 -->
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F0FDFA; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #F0FDFA; border: 2px solid #000000; border-radius: 14px; margin-bottom: 24px;">
           <tr>
-            <td style="padding: 18px;">
+            <td style="padding: 20px;">
               <div style="font-size: 16px; font-weight: bold; color: #0F766E; margin-bottom: 12px;">
                 💳 專案支持轉帳帳戶資訊
               </div>
@@ -458,25 +464,27 @@
         </table>
 
         <!-- 區塊 3: 額外小進展 -->
-        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 20px; font-size: 13px; color: #475569; line-height: 1.6;">
+        <div style="background-color: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 10px; padding: 14px; margin-bottom: 24px; font-size: 13px; color: #475569; line-height: 1.6;">
           💡 <b>順帶分享給您的小進展：</b><br>
           收到您的回饋後，我已經在 Web 版【設定 ➔ 意見回饋】表單底下，新增了一個低調收合的小連結；同時在 LINE 官方帳號上，輸入「<b>贊助</b>」或「<b>支持</b>」，熊貓教練也會彈出專屬支持小卡囉！
         </div>
       `;
     } else if (currentTemplate === 'gist_tech') {
+      headerTitle = 'Daily Diet 雲端同步與 GitHub Gist / PAT 設定說明 🛠️';
+      closingWish = '若您在配置或資料同步上有任何疑問，非常歡迎隨時回信與我交流！<br><b>祝您備份順暢、健康生活每一天！🛠️🐼</b>';
       bodyHtml = `
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #EFF6FF; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #EFF6FF; border: 2px solid #000000; border-radius: 14px; margin-bottom: 24px;">
           <tr>
-            <td style="padding: 18px;">
+            <td style="padding: 20px;">
               <div style="font-size: 16px; font-weight: bold; color: #1E40AF; margin-bottom: 12px;">
                 🛠️ 針對 Gist 與 PAT 同步的解答說明
               </div>
               <div style="font-size: 14px; color: #1E3A8A; line-height: 1.6;">
-                <p><b>1. 為什麼會提示需要 PAT？</b><br>
+                <p style="margin: 0 0 10px 0;"><b>1. 為什麼會提示需要 PAT？</b><br>
                 系統原生設計為免 PAT 智慧雲端同步。若前端直連 GitHub 官方 REST API，才會觸發此安全提示。</p>
-                <p><b>2. PAT 在哪裡配置？</b><br>
+                <p style="margin: 0 0 10px 0;"><b>2. PAT 在哪裡配置？</b><br>
                 最新版本已在「設定 ⚙️ ➜ 備份同步」分頁最下方新增【⚙️ 進階設定：自訂個人 GitHub PAT】折疊面板。貼上 token 即可直連個人的 GitHub！</p>
-                <p><b>3. 系統預期檔名：</b><br>
+                <p style="margin: 0;"><b>3. 系統預期檔名：</b><br>
                 正是 <code style="background-color: #DBEAFE; padding: 2px 6px; border-radius: 4px; font-family: monospace;">daily-diet-backup.json</code>！包含餐點、分類、自訂目標與體重數據。</p>
               </div>
             </td>
@@ -484,10 +492,12 @@
         </table>
       `;
     } else {
+      headerTitle = '非常感謝您對 Daily Diet 的寶貴建議與支持 ✨';
+      closingWish = '再次感謝您撥冗給予寶貴建議，我們會持續努力將體驗打磨得更順手！<br><b>祝您飲食紀錄順心、健康生活每一天！✨🐼</b>';
       bodyHtml = `
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ECFDF5; border: 2px solid #000000; border-radius: 14px; margin-bottom: 20px;">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #ECFDF5; border: 2px solid #000000; border-radius: 14px; margin-bottom: 24px;">
           <tr>
-            <td style="padding: 18px;">
+            <td style="padding: 20px;">
               <div style="font-size: 16px; font-weight: bold; color: #065F46; margin-bottom: 8px;">
                 🌱 持續迭代與進化
               </div>
@@ -501,53 +511,107 @@
     }
 
     return `
-      <div style="max-width: 640px; margin: 0 auto; background-color: #FFFFFF; border: 2px solid #000000; border-radius: 16px; overflow: hidden; font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif;">
-        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #000000; padding: 20px 24px;">
+      <div style="max-width: 640px; margin: 0 auto; background-color: #FFFFFF; border: 2px solid #000000; border-radius: 16px; overflow: hidden; box-shadow: 6px 6px 0px #000000; font-family: 'Microsoft JhengHei', '微軟正黑體', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
+        <font face="Microsoft JhengHei, 微軟正黑體, PingFang TC, sans-serif">
+        <table width="100%" cellpadding="0" cellspacing="0" border="0" style="background-color: #FFFFFF; color: #18181B; line-height: 1.6;">
           <tr>
-            <td>
-              <span style="display: inline-block; background-color: #FDE047; color: #000000; font-weight: 900; font-size: 12px; padding: 3px 8px; border-radius: 5px; letter-spacing: 0.5px;">
+            <td style="background-color: #000000; padding: 24px 30px; text-align: left;">
+              <span style="display: inline-block; background-color: #FDE047; color: #000000; font-weight: 900; font-size: 13px; padding: 4px 10px; border-radius: 6px; letter-spacing: 0.5px;">
                 🐼 DAILY DIET
               </span>
-              <div style="color: #FFFFFF; font-size: 18px; font-weight: bold; margin-top: 6px;">
-                ${data.subject}
+              <div style="color: #FFFFFF; font-size: 20px; font-weight: bold; margin-top: 8px;">
+                ${headerTitle}
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td style="padding: 30px 30px 20px 30px;">
+              <p style="font-size: 16px; color: #18181B; margin: 0 0 16px 0;">
+                <b>${data.name} 你好！</b>
+              </p>
+              ${quoteHtml}
+              <p style="font-size: 15px; color: #3F3F46; line-height: 1.7; margin: 0 0 20px 0;">
+                ${data.intro.replace(/\n/g, '<br>')}
+              </p>
+              ${bodyHtml}
+              <p style="font-size: 15px; color: #3F3F46; line-height: 1.7; margin: 24px 0 20px 0;">
+                ${closingWish}
+              </p>
+            </td>
+          </tr>
+          <tr>
+            <td style="background-color: #F8FAFC; border-top: 1.5px solid #E2E8F0; padding: 24px 30px; text-align: left;">
+              <div style="font-size: 15px; font-weight: bold; color: #0F172A;">
+                Winnie Lin
+              </div>
+              <div style="font-size: 13px; color: #64748B; margin-top: 2px;">
+                Daily Diet 獨立開發者
+              </div>
+              <div style="font-size: 12px; color: #94A3B8; margin-top: 8px;">
+                🌐 官方網站：<a href="https://winnie-lin.space/daily-diet/" target="_blank" style="color: #2563EB; text-decoration: none; font-weight: 500;">https://winnie-lin.space/daily-diet/</a>
               </div>
             </td>
           </tr>
         </table>
-        <div style="padding: 24px 24px 20px 24px;">
-          <p style="font-size: 16px; color: #18181B; margin: 0 0 14px 0;"><b>${data.name} 你好！</b></p>
-          ${quoteHtml}
-          <p style="font-size: 15px; color: #3F3F46; line-height: 1.7; margin: 0 0 16px 0;">${data.intro.replace(/\n/g, '<br>')}</p>
-          ${bodyHtml}
-          <div style="margin-top: 24px; padding-top: 16px; border-top: 1px dashed #E4E4E7; font-size: 13px; color: #71717A; line-height: 1.6;">
-            Daily Diet 開發團隊 敬上 🐼<br>
-            官網體驗：<a href="https://winnie-lin.space/daily-diet/" style="color: #0F766E; text-decoration: none; font-weight: bold;">https://winnie-lin.space/daily-diet/</a>
-          </div>
-        </div>
+        </font>
       </div>
     `;
   }
 
   function generatePlain() {
     const data = getFormData();
+    let closingWish = '再次由衷感謝您的這份心意與鼓勵！有了您的支持，這隻熊貓教練一定會更有活力地繼續陪伴大家！\n祝您飲食紀錄順心、健康生活每一天！🔥🐼';
+    if (currentTemplate === 'gist_tech') {
+      closingWish = '若您在配置或資料同步上有任何疑問，非常歡迎隨時回信與我交流！\n祝您備份順暢、健康生活每一天！🛠️🐼';
+    } else if (currentTemplate === 'feedback_general') {
+      closingWish = '再次感謝您撥冗給予寶貴建議，我們會持續努力將體驗打磨得更順手！\n祝您飲食紀錄順心、健康生活每一天！✨🐼';
+    } else if (currentTemplate === 'custom') {
+      closingWish = '若有任何問題或想法，非常歡迎隨時回信！\n祝您飲食紀錄順心、健康生活每一天！✨🐼';
+    }
+
+    let content = '';
+    if (currentTemplate === 'sponsor') {
+      content = `🎋 為什麼之前把轉帳資料藏起來？\n` +
+        `先跟您坦白之前隱藏的原因：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。\n` +
+        `不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的雲端伺服器與 AI 算力 Token 成本。因此您的這份微薄心意，對我們來說就是最及時、最珍貴的「AI 算力補給燃料」！\n\n` +
+        `🎁 老朋友專屬【創始支持者】禮遇 🎋✨：\n` +
+        `為了感謝像您這樣在草創階段就真心認同理念的朋友，只要您後續完成轉帳並回信告知末 5 碼，我會直接將您的信箱（${data.email || '您的信箱'}）登記在系統核心的【創始支持者 (Founder Supporter)】名冊中：\n` +
+        `• 🎖️ 永久享有個人專屬「創始支持者金色徽章」\n` +
+        `• 🚀 未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇\n` +
+        `感謝您在草創期拉我們一把，成為 Daily Diet 的堅實後盾！❤️\n\n` +
+        `💳 專案支持轉帳帳戶資訊：\n` +
+        `• 銀行代碼：822 (中國信託商業銀行 CTBC)\n` +
+        `• 銀行帳號：174533815287\n` +
+        `• 戶名資訊：Daily Diet 專案支持帳戶（核對姓氏：林）\n` +
+        `• 線上 QR Code 掃碼（支援 TWQR 跨機構掃碼）：https://winnie-lin.space/daily-diet/ctbc_qr.png\n\n` +
+        `☕ 隨喜支持建議：隨喜咖啡 $50 / 🍱 算力補給 $100 / 🎋 核心支持 $150 (完全自由隨喜，零負擔)\n\n` +
+        `🔔【打款完成與登記提醒】：\n` +
+        `因為系統目前未接第三方金流自動對帳，若您後續順利完成轉帳，請務必直接回信告知您的「轉帳末 5 碼」（或在 LINE 對話輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！❤️\n\n` +
+        `💡 順帶分享給您的小進展：\n` +
+        `收到您的回饋後，我已經在 Web 版【設定 ➔ 意見回饋】表單底下，新增了一個低調收合的小連結；同時在 LINE 官方帳號上，輸入「贊助」或「支持」，熊貓教練也會彈出專屬支持小卡囉！`;
+    } else if (currentTemplate === 'gist_tech') {
+      content = `⚙️ 針對您詢問的 Gist 與 PAT 同步問題說明：\n\n` +
+        `1. 為什麼提示需要 GitHub PAT？\n` +
+        `系統原本設計為免 PAT 智慧雲端同步。若手動觸發了前端直接寫入 GitHub 官方 REST API，才會觸發此安全提示。\n\n` +
+        `2. PAT 在哪裡配置？\n` +
+        `我們已經在最新版本的「設定 ⚙️ ➜ 備份同步」分頁中，新增了【⚙️ 進階設定：自訂個人 GitHub PAT】折疊面板。只要貼上具備 gist 權限的 Personal Access Token 即可直接同步！\n\n` +
+        `3. 系統預期的備份檔名：\n` +
+        `確實是 daily-diet-backup.json！包含餐點、分類、自訂目標與體重數據。`;
+    } else if (currentTemplate === 'feedback_general') {
+      content = `💡 關於您的反饋與建議：\n\n` +
+        `您的回饋我們已經詳細記錄在開發迭代清單中。我們非常重視每一位真實使用者的操作體驗，您的寶貴建議將直接影響未來的版本規劃！\n\n` +
+        `若有後續優化更新發布，我們會持續努力讓 Daily Diet 變得更加順手好用。再次感謝您的支持！`;
+    } else {
+      content = `若有任何使用問題或想聊聊的想法，歡迎隨時回信！祝您度過美好的一天！✨`;
+    }
+
+    const signoff = `\n\n---\nDaily Diet 獨立開發者 Winnie Lin 敬上\n🌐 官方網站：https://winnie-lin.space/daily-diet/`;
     return `${data.name} 你好！\n\n` +
       (data.quote ? `【您之前的留言】：\n「${data.quote}」\n\n` : '') +
       data.intro + '\n\n' +
-      (currentTemplate === 'sponsor' 
-        ? `🎁 老朋友專屬【創始支持者】禮遇 🎋✨：\n` +
-          `為了感謝像您這樣在草創階段就真心認同理念的朋友，只要您後續完成轉帳並回信告知末 5 碼，我們這邊就會正式將您的信箱（${data.email || '您的信箱'}）登記在系統後台的【創始支持者 (Founder Supporter)】名冊中：\n` +
-          `• 🎖️ 永久享有個人專屬「創始支持者金色徽章」\n` +
-          `• 🚀 未來任何全新進階功能推出時，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期願意拉我們一把！❤️\n\n` +
-          `💳 專案支持轉帳帳戶資訊：\n` +
-          `• 銀行代碼：822 (中國信託商業銀行 CTBC)\n` +
-          `• 銀行帳號：174533815287\n` +
-          `• 戶名資訊：Daily Diet 專案支持帳戶（核對姓氏：林）\n` +
-          `• 線上 QR Code 掃碼（支援 TWQR 跨機構掃碼）：https://winnie-lin.space/daily-diet/ctbc_qr.png\n\n` +
-          `☕ 隨喜支持建議：隨喜咖啡 $50 / 🍱 算力補給 $100 / 🎋 核心支持 $150 (完全自由隨喜，零負擔)\n\n` +
-          `🔔【打款完成與登記提醒】：\n` +
-          `因為系統目前未接第三方金流自動對帳，若您後續順利完成轉帳，請務必直接回信告知您的「轉帳末 5 碼」（或在 LINE 輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！再次由衷感謝您的心意與鼓勵！❤️`
-        : `若有任何問題或想法，非常歡迎隨時回信！祝您度過美好的一天！✨`) +
-      `\n\n---\nDaily Diet 開發團隊 敬上 🐼\nhttps://winnie-lin.space/daily-diet/`;
+      content + '\n\n' +
+      closingWish +
+      signoff;
   }
 
   function renderPreview() {

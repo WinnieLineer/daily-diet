@@ -99,6 +99,9 @@
     </div>
 
     <div class="btn-group">
+      <button class="action-btn" style="background: #FFFFFF; color: #18181B;" onclick="copyPlainText()">
+        📄 複製純文字
+      </button>
       <button class="action-btn btn-copy" onclick="copyRichHtml()">
         📋 一鍵複製精美圖文信（推薦貼到 Gmail）
       </button>
@@ -113,7 +116,8 @@
   </div>
 
   <!-- 精美信件 HTML 容器 -->
-  <div class="email-wrapper" id="emailContent">
+  <div style="max-width: 640px; width: 100%; margin: 0 auto;" id="emailContent">
+    <div style="background-color: #FFFFFF; border: 2px solid #000000; border-radius: 16px; overflow: hidden; box-shadow: 6px 6px 0px #000000; font-family: 'Microsoft JhengHei', '微軟正黑體', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;">
     <font face="Microsoft JhengHei, 微軟正黑體, PingFang TC, sans-serif">
     <table width="100%" cellpadding="0" cellspacing="0" border="0" lang="zh-Hant" style="background-color: #FFFFFF; font-family: 'Microsoft JhengHei', '微軟正黑體', sans-serif; color: #18181B; line-height: 1.6;">
       <tr>
@@ -257,9 +261,66 @@
       </tr>
     </table>
     </font>
+    </div>
   </div>
 
   <script>
+    function copyPlainText() {
+      const plain = `Jon 你好！\n\n` +
+        `【您之前的留言】：\n` +
+        `「怎麼連贊助的轉帳資料都不見了，好用想要做點微薄的支持」\n\n` +
+        `今天在後台收到您送出的意見反饋，看到這則訊息時，我真的又驚又喜，內心滿滿的感動！身為獨立開發者，能收到使用者主動說好用、甚至還專程找轉帳資訊想給予支持，這絕對是開發旅程中最珍貴、最強大的強心針與肯定！❤️\n\n` +
+        `🎋 為什麼之前把轉帳資料藏起來？\n` +
+        `先跟您坦白之前隱藏的原因：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。\n` +
+        `不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的雲端伺服器與 AI 算力 Token 成本。因此您的這份微薄心意，對我們來說就是最及時、最珍貴的「AI 算力補給燃料」！\n\n` +
+        `🎁 老朋友專屬【創始支持者】禮遇 🎋✨：\n` +
+        `因為有像您這樣一路相伴、真心認同理念的老朋友，我會直接將您的信箱（jonwu0907@gmail.com）登記在系統核心的【創始支持者 (Founder Supporter)】名冊中：\n` +
+        `• 🎖️ 永久享有個人專屬「創始支持者金色徽章」\n` +
+        `• 🚀 未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇\n` +
+        `感謝您在草創期拉我們一把，成為 Daily Diet 的堅實後盾！❤️\n\n` +
+        `💳 專案支持轉帳帳戶資訊：\n` +
+        `• 銀行代碼：822 (中國信託商業銀行 CTBC)\n` +
+        `• 銀行帳號：174533815287\n` +
+        `• 戶名資訊：Daily Diet 專案支持帳戶（核對姓氏：林）\n` +
+        `• 線上 QR Code 掃碼（支援 TWQR 跨機構掃碼）：https://winnie-lin.space/daily-diet/ctbc_qr.png\n\n` +
+        `☕ 隨喜支持建議：隨喜咖啡 $50 / 🍱 算力補給 $100 / 🎋 核心支持 $150 (完全自由隨喜，零負擔)\n\n` +
+        `🔔【打款完成與登記提醒】：\n` +
+        `因為系統目前未接第三方金流自動對帳，若您後續順利完成轉帳，請務必直接回信告知您的「轉帳末 5 碼」（或在 LINE 對話輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！❤️\n\n` +
+        `💡 順帶分享給您的小進展：\n` +
+        `收到您的回饋後，我已經在 Web 版【設定 ➔ 意見回饋】表單底下，新增了一個低調收合的小連結；同時在 LINE 官方帳號上，輸入「贊助」或「支持」，熊貓教練也會彈出專屬支持小卡囉！\n\n` +
+        `再次由衷感謝您的這份心意與鼓勵！有了您的支持，這隻熊貓教練一定會更有活力地繼續陪伴大家！\n` +
+        `祝您飲食紀錄順心、健康生活每一天！🔥🐼\n\n` +
+        `---\n` +
+        `Daily Diet 獨立開發者 Winnie Lin 敬上\n` +
+        `🌐 官方網站：https://winnie-lin.space/daily-diet/`;
+
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(plain).then(() => {
+          showToast('📄 純文字版本已複製到剪貼簿！');
+        }).catch(() => {
+          fallbackCopyText(plain);
+        });
+      } else {
+        fallbackCopyText(plain);
+      }
+    }
+
+    function fallbackCopyText(text) {
+      const ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try {
+        document.execCommand('copy');
+        showToast('📄 純文字版本已複製到剪貼簿！');
+      } catch (e) {
+        alert('請手動選取複製！');
+      }
+      document.body.removeChild(ta);
+    }
+
     function copyRichHtml() {
       const emailEl = document.getElementById('emailContent');
       const htmlContent = emailEl.innerHTML;
@@ -273,7 +334,7 @@
         const data = [new ClipboardItem({ [typeHtml]: blobHtml, [typeText]: blobText })];
 
         navigator.clipboard.write(data).then(() => {
-          showToast();
+          showToast('🎉 精美排版信件已複製到剪貼簿！在 Gmail 內文處按 Ctrl + V (貼上) 即可！');
         }).catch(err => {
           fallbackCopy(htmlContent);
         });
@@ -291,15 +352,16 @@
       sel.addRange(range);
       try {
         document.execCommand('copy');
-        showToast();
+        showToast('🎉 精美排版信件已複製到剪貼簿！在 Gmail 內文處按 Ctrl + V (貼上) 即可！');
       } catch (e) {
         alert('請手動選取預覽信件並按 Ctrl + C 複製！');
       }
       sel.removeAllRanges();
     }
 
-    function showToast() {
+    function showToast(msg) {
       const toast = document.getElementById('toast');
+      if (msg) toast.innerText = msg;
       toast.style.display = 'block';
       setTimeout(() => {
         toast.style.display = 'none';
