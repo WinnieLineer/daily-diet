@@ -2870,3 +2870,111 @@ function getAiQuotaStats(props) {
     };
   }
 }
+
+// ========================================================
+// 🎖️ 創始支持者 (Founder Supporters) 資料持久化管理模組
+// ========================================================
+
+/**
+ * 取得所有已登記的創始支持者字典
+ * @param {Properties} props 
+ * @returns {Object} { [supporterKey]: { id, name, email, note, badge, tier, addedAt } }
+ */
+function getFounderSupportersData(props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  try {
+    const raw = props.getProperty('FOUNDER_SUPPORTERS_MAP');
+    if (!raw) return {};
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('Failed to parse FOUNDER_SUPPORTERS_MAP:', e);
+    return {};
+  }
+}
+
+/**
+ * 儲存或更新創始支持者資料
+ * @param {Properties} props 
+ * @param {Object} data { id, name, email, note, isFounder: boolean }
+ * @param {string} operatorName 
+ * @returns {Object} { success: boolean, isFounder: boolean, count: number, supporters: Object }
+ */
+function saveFounderSupporterData(props, data, operatorName) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  if (!data) return { success: false, message: '無資料' };
+
+  const rawKey = String(data.id || data.email || data.userId || data.name || '').trim();
+  if (!rawKey) return { success: false, message: '用戶識別碼不可為空' };
+
+  const key = rawKey;
+  const currentMap = getFounderSupportersData(props);
+
+  const isFounder = data.isFounder !== false; // 預設為 true
+
+  if (!isFounder) {
+    // 移除創始支持者
+    delete currentMap[key];
+    if (data.email) delete currentMap[String(data.email).trim()];
+    if (data.userId) delete currentMap[String(data.userId).trim()];
+    if (data.name) delete currentMap[String(data.name).trim()];
+  } else {
+    const existing = currentMap[key] || {};
+    const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+    const item = {
+      id: String(data.id || data.userId || existing.id || key).trim(),
+      name: String(data.name || data.userName || existing.name || '').trim(),
+      email: String(data.email || existing.email || '').trim(),
+      note: String(data.note || existing.note || '').trim(),
+      tier: 'FOUNDER',
+      badge: '🎖️ 創始支持者',
+      addedAt: existing.addedAt || timeNow,
+      updatedAt: timeNow
+    };
+    currentMap[key] = item;
+    // 如果有 email 或 userId，一併記錄映射以利雙向搜尋
+    if (item.email && item.email !== key) {
+      currentMap[item.email] = { ...item, _refKey: key };
+    }
+    if (item.userId && item.userId !== key) {
+      currentMap[item.userId] = { ...item, _refKey: key };
+    }
+  }
+
+  props.setProperty('FOUNDER_SUPPORTERS_MAP', JSON.stringify(currentMap));
+
+  if (typeof recordSystemLog === 'function') {
+    const op = isFounder ? '標記創始支持者' : '取消創始支持者';
+    const desc = `${isFounder ? '新增標記' : '移除標記'}：${data.name || ''} (${key}) | 備註: ${data.note || ''}`;
+    recordSystemLog(op, 'Maintainer', key, '', desc, operatorName || '管理員');
+  }
+
+  return {
+    success: true,
+    isFounder: isFounder,
+    count: Object.keys(currentMap).filter(k => !currentMap[k]._refKey).length,
+    supporters: currentMap
+  };
+}
+
+/**
+ * 檢查指定用戶是否為創始支持者
+ * @param {string} userId 
+ * @param {string} userName 
+ * @param {string} email 
+ * @param {Properties} props 
+ * @returns {Object|null} 創始支持者資料物件，或 null
+ */
+function checkUserIsFounderSupporter(userId, userName, email, props) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const map = getFounderSupportersData(props);
+  if (!map || Object.keys(map).length === 0) return null;
+
+  const candidates = [userId, userName, email].filter(Boolean).map(s => String(s).trim());
+  for (const c of candidates) {
+    if (map[c]) {
+      const match = map[c];
+      return match._refKey && map[match._refKey] ? map[match._refKey] : match;
+    }
+  }
+  return null;
+}

@@ -1223,10 +1223,43 @@ function doGet(e) {
         sheetUrl, 
         aiQuota, 
         lastMaintainerLogin,
+        founderSupporters: (typeof getFounderSupportersData === 'function' ? getFounderSupportersData(props) : {}),
         retentionPolicy: 'Google Apps Script 伺服端 Multi-Slot 快取 (100% 內部私有，無任何公開外洩)',
         daysRequested: days,
         totalLogsReturned: logs.length 
       })).setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 11.05 取得創始支持者名冊 (限維護者授權存取)
+    if (action === 'getFounderSupporters') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const data = typeof getFounderSupportersData === 'function' ? getFounderSupportersData(props) : {};
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 11.06 儲存/切換創始支持者標記 (限維護者授權存取)
+    if (action === 'saveFounderSupporter' || action === 'toggleFounderSupporter') {
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const payload = {
+        id: e?.parameter?.id || e?.parameter?.userId,
+        name: e?.parameter?.name || e?.parameter?.userName,
+        email: e?.parameter?.email,
+        note: e?.parameter?.note,
+        isFounder: e?.parameter?.isFounder !== undefined ? (e?.parameter?.isFounder === 'true' || e?.parameter?.isFounder === true) : true
+      };
+      const opName = e?.parameter?.user || '管理員';
+      const result = typeof saveFounderSupporterData === 'function' 
+        ? saveFounderSupporterData(props, payload, opName)
+        : { success: false, message: '後端函式未就緒' };
+      return ContentService.createTextOutput(JSON.stringify(result))
+        .setMimeType(ContentService.MimeType.JSON);
     }
 
     // 11.1 綁定/設定系統日誌 Google 試算表 ID (限維護者授權存取)
@@ -1584,6 +1617,33 @@ function doPost(e) {
       );
 
       return ContentService.createTextOutput(JSON.stringify({ status: 'ok', success: true }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 🎖️ 0.38 創始支持者資料管理端點 (POST 支援)
+    if (action === 'saveFounderSupporter' || action === 'toggleFounderSupporter' || action === 'getFounderSupporters') {
+      const isAdmin = verifyAdminAccess(e, props, data);
+      if (!isAdmin) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized maintainer access' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      if (action === 'getFounderSupporters') {
+        const supporters = typeof getFounderSupportersData === 'function' ? getFounderSupportersData(props) : {};
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: supporters }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const payload = {
+        id: data?.id || data?.userId || e?.parameter?.id || e?.parameter?.userId,
+        name: data?.name || data?.userName || e?.parameter?.name || e?.parameter?.userName,
+        email: data?.email || e?.parameter?.email,
+        note: data?.note || e?.parameter?.note,
+        isFounder: data?.isFounder !== undefined ? (data?.isFounder !== false && data?.isFounder !== 'false') : (e?.parameter?.isFounder !== 'false')
+      };
+      const opName = data?.user || data?.userName || e?.parameter?.user || '管理員';
+      const result = typeof saveFounderSupporterData === 'function' 
+        ? saveFounderSupporterData(props, payload, opName)
+        : { success: false, message: '後端函式未就緒' };
+      return ContentService.createTextOutput(JSON.stringify(result))
         .setMimeType(ContentService.MimeType.JSON);
     }
 

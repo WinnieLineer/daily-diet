@@ -464,9 +464,133 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [copiedId, setCopiedId] = useState(null);
 
   // 👥 Active & Heavy Users Analytics States
-  const [userTierFilter, setUserTierFilter] = useState('ALL'); // 'ALL' | 'HEAVY' | 'ACTIVE' | 'TODAY'
+  const [userTierFilter, setUserTierFilter] = useState('ALL'); // 'ALL' | 'HEAVY' | 'ACTIVE' | 'TODAY' | 'FOUNDER'
   const [isUserHubExpanded, setIsUserHubExpanded] = useState(true);
   const [showAllPowerUsers, setShowAllPowerUsers] = useState(false);
+
+  // 🎖️ 創始支持者 (Founder Supporters) 狀態與管理
+  const [founderSupporters, setFounderSupporters] = useState({});
+  const [isFounderModalOpen, setIsFounderModalOpen] = useState(false);
+  const [editingFounder, setEditingFounder] = useState({ id: '', name: '', email: '', note: '', isFounder: true });
+  const [isSavingFounder, setIsSavingFounder] = useState(false);
+  const [founderActionSuccess, setFounderActionSuccess] = useState('');
+
+  // 檢查是否為創始支持者
+  const checkIsFounder = (uId, uName, email) => {
+    if (!founderSupporters || Object.keys(founderSupporters).length === 0) return null;
+    const candidates = [uId, uName, email].filter(Boolean).map(s => String(s).trim());
+    for (const c of candidates) {
+      if (founderSupporters[c]) {
+        const item = founderSupporters[c];
+        return item._refKey && founderSupporters[item._refKey] ? founderSupporters[item._refKey] : item;
+      }
+    }
+    return null;
+  };
+
+  // 已登記之創始支持者總數
+  const founderCount = useMemo(() => {
+    if (!founderSupporters) return 0;
+    return Object.keys(founderSupporters).filter(k => !founderSupporters[k]._refKey).length;
+  }, [founderSupporters]);
+
+  // 開啟創始支持者登記/編輯彈窗
+  const handleOpenFounderModal = (user = {}) => {
+    const existing = checkIsFounder(user.userId, user.name, user.email);
+    setEditingFounder({
+      id: existing?.id || user.userId || user.name || '',
+      name: existing?.name || user.name || '',
+      email: existing?.email || user.email || '',
+      note: existing?.note || '',
+      isFounder: Boolean(existing)
+    });
+    setFounderActionSuccess('');
+    setIsFounderModalOpen(true);
+  };
+
+  // 儲存或取消創始支持者標記
+  const handleSaveFounder = async (isFounderValue = true) => {
+    if (!editingFounder.id && !editingFounder.name && !editingFounder.email) {
+      alert(isEn ? 'Please provide at least Name, ID, or Email' : '請至少填寫一項用戶識別資訊（姓名、ID 或 Email）');
+      return;
+    }
+    setIsSavingFounder(true);
+    setFounderActionSuccess('');
+    try {
+      const activeToken = permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
+      const payload = {
+        action: 'saveFounderSupporter',
+        token: activeToken,
+        id: editingFounder.id || editingFounder.email || editingFounder.name,
+        name: editingFounder.name,
+        email: editingFounder.email,
+        note: editingFounder.note,
+        isFounder: isFounderValue,
+        user: maintainerName || DEFAULT_MAINTAINER_USER
+      };
+
+      const effectiveKey = payload.id;
+      setFounderSupporters(prev => {
+        const next = { ...prev };
+        if (isFounderValue) {
+          next[effectiveKey] = {
+            id: effectiveKey,
+            name: payload.name,
+            email: payload.email,
+            note: payload.note,
+            tier: 'FOUNDER',
+            badge: '🎖️ 創始支持者',
+            addedAt: new Date().toLocaleString()
+          };
+          if (payload.email) next[payload.email] = { ...next[effectiveKey], _refKey: effectiveKey };
+          if (payload.id && payload.id !== effectiveKey) next[payload.id] = { ...next[effectiveKey], _refKey: effectiveKey };
+        } else {
+          delete next[effectiveKey];
+          if (payload.email) delete next[payload.email];
+          if (payload.id) delete next[payload.id];
+          if (payload.name) delete next[payload.name];
+        }
+        return next;
+      });
+
+      const res = await fetch(GAS_API_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify(payload)
+      });
+      const data = await res.json();
+      if (data && data.supporters) {
+        setFounderSupporters(data.supporters);
+      }
+      setFounderActionSuccess(isFounderValue ? '✅ 成功登記為【創始支持者】！' : 'ℹ️ 已取消創始支持者標記');
+      setTimeout(() => {
+        setIsFounderModalOpen(false);
+        setFounderActionSuccess('');
+      }, 900);
+    } catch (err) {
+      console.error('Failed to save founder supporter:', err);
+      alert('儲存失敗：' + (err.message || String(err)));
+    } finally {
+      setIsSavingFounder(false);
+    }
+  };
+
+  // 匯出創始支持者名冊 JSON
+  const handleExportFounders = () => {
+    const list = Object.values(founderSupporters).filter(item => !item._refKey);
+    if (list.length === 0) {
+      alert(isEn ? 'No founder supporters registered yet' : '目前尚無已登記的創始支持者');
+      return;
+    }
+    const jsonStr = JSON.stringify(list, null, 2);
+    const blob = new Blob([jsonStr], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `daily-diet-founder-supporters-${new Date().toISOString().slice(0, 10)}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   // 🎯 操作類型切換與聯動
   const handleSelectActionType = (actType) => {
@@ -1003,6 +1127,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         });
 
         setAiQuota(data.aiQuota || null);
+        if (data.founderSupporters && typeof data.founderSupporters === 'object') {
+          setFounderSupporters(data.founderSupporters);
+        }
         if (data.sheetUrl) setSheetUrl(data.sheetUrl);
         setLastFetchedAt(new Date());
       } else {
@@ -1418,11 +1545,36 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
   const filteredPowerUsers = useMemo(() => {
     const list = userAnalytics.usersList || [];
+    if (userTierFilter === 'FOUNDER') {
+      const activeFounders = list.filter(u => checkIsFounder(u.userId, u.name, u.email));
+      const registeredFounders = Object.values(founderSupporters).filter(f => !f._refKey);
+      const activeIds = new Set(activeFounders.map(u => u.userId || u.name));
+      const extraFounders = registeredFounders
+        .filter(f => !activeIds.has(f.id) && !activeIds.has(f.name) && (!f.email || !activeIds.has(f.email)))
+        .map(f => ({
+          key: f.id || f.email || f.name,
+          name: f.name || f.email || f.id,
+          userId: f.id || 'web_user',
+          email: f.email || '',
+          note: f.note || '',
+          isMaintainer: false,
+          isLine: Boolean(f.id && f.id.startsWith('U')),
+          isWeb: true,
+          totalActions: 0,
+          mealsCount: 0,
+          waterCount: 0,
+          summaryCount: 0,
+          latestTime: f.addedAt || '',
+          activeDaysCount: 0,
+          tier: 'FOUNDER'
+        }));
+      return [...activeFounders, ...extraFounders];
+    }
     if (userTierFilter === 'HEAVY') return list.filter(u => u.tier === 'HEAVY');
     if (userTierFilter === 'ACTIVE') return list.filter(u => u.tier === 'ACTIVE');
     if (userTierFilter === 'TODAY') return list.filter(u => u.isTodayActive);
     return list;
-  }, [userAnalytics, userTierFilter]);
+  }, [userAnalytics, userTierFilter, founderSupporters]);
 
   const displayedPowerUsers = useMemo(() => {
     if (showAllPowerUsers) return filteredPowerUsers;
@@ -2355,6 +2507,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 <span className="text-[11px] font-black text-zinc-500 mr-1">{isEn ? 'Filter Tier:' : '用戶分層：'}</span>
                 {[
                   { id: 'ALL', label: isEn ? `All (${userAnalytics.usersList.length})` : `全部 (${userAnalytics.usersList.length})` },
+                  { id: 'FOUNDER', label: isEn ? `🎖️ Founders (${founderCount})` : `🎖️ 創始支持者 (${founderCount})` },
                   { id: 'HEAVY', label: isEn ? `🔥 Power (${userAnalytics.heavyUserCount})` : `🔥 重度核心 (${userAnalytics.heavyUserCount})` },
                   { id: 'ACTIVE', label: isEn ? `⚡ Active (${userAnalytics.activeUserCount})` : `⚡ 常態活躍 (${userAnalytics.activeUserCount})` },
                   { id: 'TODAY', label: isEn ? `🟢 Today Active (${userAnalytics.todayActiveCount})` : `🟢 今日在線 (${userAnalytics.todayActiveCount})` }
@@ -2365,6 +2518,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     className={`px-3 py-1 rounded-xl text-xs font-black transition-all border-2 cursor-pointer ${
                       userTierFilter === tier.id
                         ? 'bg-black text-white border-black shadow-neo-xs'
+                        : tier.id === 'FOUNDER' && founderCount > 0
+                        ? 'bg-amber-100 text-amber-900 border-amber-300 hover:border-black'
                         : 'bg-zinc-50 text-zinc-600 border-zinc-200 hover:border-black'
                     }`}
                   >
@@ -2373,9 +2528,33 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 ))}
               </div>
 
+              {/* Founder Management Quick Actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => handleOpenFounderModal()}
+                  className="px-2.5 py-1 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-500 hover:to-yellow-400 text-black border-2 border-black rounded-xl text-xs font-black flex items-center gap-1 shadow-neo-xs active:scale-95 transition-all cursor-pointer"
+                  title="手動登記新的創始支持者"
+                >
+                  <span>➕</span>
+                  <span>{isEn ? 'Add Supporter' : '手動登記支持者'}</span>
+                </button>
+                {founderCount > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleExportFounders}
+                    className="px-2 py-1 bg-white hover:bg-zinc-100 text-zinc-700 border-2 border-black rounded-xl text-xs font-black flex items-center gap-1 shadow-neo-xs active:scale-95 transition-all cursor-pointer"
+                    title="匯出創始支持者名冊 (JSON)"
+                  >
+                    <Download size={13} />
+                    <span>{isEn ? 'Export' : '匯出名冊'}</span>
+                  </button>
+                )}
+              </div>
+
               {/* Selected User Notice */}
               {selectedUser !== 'ALL' && (
-                <div className="flex items-center gap-1.5 text-xs font-bold bg-blue-50 border border-blue-300 text-blue-900 px-2.5 py-1 rounded-xl">
+                <div className="w-full flex items-center gap-1.5 text-xs font-bold bg-blue-50 border border-blue-300 text-blue-900 px-2.5 py-1 rounded-xl">
                   <span>🎯 目前日誌僅聚焦用戶：<strong>{selectedUser}</strong></span>
                   <button
                     onClick={() => setSelectedUser('ALL')}
@@ -2401,6 +2580,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                   const isTop3 = idx === 2 && userTierFilter === 'ALL';
                   const topCount = userAnalytics.usersList[0]?.totalActions || 1;
                   const percentOfTop = Math.min(Math.round((u.totalActions / topCount) * 100), 100);
+                  const isFounderUser = checkIsFounder(u.userId, u.name, u.email);
 
                   return (
                     <div
@@ -2409,6 +2589,8 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                       className={`border-3 border-black rounded-2xl p-3.5 space-y-2.5 transition-all cursor-pointer relative ${
                         isSelected 
                           ? 'bg-amber-100 ring-4 ring-black shadow-neo' 
+                          : isFounderUser
+                          ? 'bg-gradient-to-br from-amber-50 to-yellow-50/80 border-amber-900/60 hover:bg-amber-100/60 shadow-neo-xs hover:shadow-neo'
                           : u.tier === 'HEAVY'
                           ? 'bg-white hover:bg-rose-50/50 shadow-neo-xs hover:shadow-neo'
                           : 'bg-white hover:bg-zinc-50 shadow-neo-xs'
@@ -2418,29 +2600,38 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                       <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2 truncate">
                           <span className={`w-6 h-6 rounded-lg flex items-center justify-center font-mono font-black text-xs shrink-0 border-2 border-black ${
-                            isTop1 ? 'bg-amber-400 text-black' : isTop2 ? 'bg-zinc-200 text-black' : isTop3 ? 'bg-amber-700 text-white' : 'bg-zinc-100 text-zinc-700'
+                            isFounderUser ? 'bg-amber-400 text-black' : isTop1 ? 'bg-amber-400 text-black' : isTop2 ? 'bg-zinc-200 text-black' : isTop3 ? 'bg-amber-700 text-white' : 'bg-zinc-100 text-zinc-700'
                           }`}>
-                            {isTop1 ? '🥇' : isTop2 ? '🥈' : isTop3 ? '🥉' : idx + 1}
+                            {isFounderUser ? '🎖️' : isTop1 ? '🥇' : isTop2 ? '🥈' : isTop3 ? '🥉' : idx + 1}
                           </span>
                           <div className="truncate">
-                            <h4 className="font-black text-sm text-black truncate flex items-center gap-1" title={u.name}>
-                              {u.name}
+                            <h4 className="font-black text-sm text-black truncate flex items-center gap-1.5" title={u.name}>
+                              <span>{u.name}</span>
+                              {isFounderUser && (
+                                <span className="text-[10px] bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black px-1.5 py-0.2 rounded-md border border-amber-500 shadow-xs shrink-0 flex items-center gap-0.5">
+                                  <span>🎖️</span>
+                                  <span className="text-[9px]">創始者</span>
+                                </span>
+                              )}
                             </h4>
                             <span className="font-mono text-[10px] text-zinc-400 truncate block">
                               {u.isLine ? (u.userId.startsWith('U') ? `LINE #${u.userId.slice(-6)}` : '🟢 LINE 用戶') : '🌐 Web 飲食管家'}
+                              {isFounderUser?.note && <span className="text-amber-800 ml-1 font-bold">· {isFounderUser.note}</span>}
                             </span>
                           </div>
                         </div>
 
                         <div className="flex flex-col items-end shrink-0 gap-1">
                           <span className={`text-[10px] font-black px-2 py-0.5 rounded-full border border-black ${
-                            u.tier === 'HEAVY' 
+                            isFounderUser
+                              ? 'bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 shadow-neo-xs'
+                              : u.tier === 'HEAVY' 
                               ? 'bg-gradient-to-r from-rose-500 to-amber-500 text-white shadow-neo-xs' 
                               : u.tier === 'ACTIVE' 
                               ? 'bg-blue-100 text-blue-900 border-blue-400' 
                               : 'bg-zinc-100 text-zinc-700'
                           }`}>
-                            {u.tier === 'HEAVY' ? '🔥 重度核心' : u.tier === 'ACTIVE' ? '⚡ 活躍' : '🌱 輕度'}
+                            {isFounderUser ? '🎖️ 創始支持者' : u.tier === 'HEAVY' ? '🔥 重度核心' : u.tier === 'ACTIVE' ? '⚡ 活躍' : '🌱 輕度'}
                           </span>
                           {u.isTodayActive && (
                             <span className="text-[9px] font-bold text-emerald-700 bg-emerald-50 px-1.5 py-0.2 rounded border border-emerald-300 flex items-center gap-1">
@@ -2458,7 +2649,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                         </div>
                         <div className="w-full h-2 bg-zinc-100 border border-black rounded-full overflow-hidden">
                           <div 
-                            className={`h-full ${u.tier === 'HEAVY' ? 'bg-gradient-to-r from-rose-500 to-amber-400' : 'bg-blue-500'}`}
+                            className={`h-full ${isFounderUser ? 'bg-gradient-to-r from-amber-500 to-yellow-400' : u.tier === 'HEAVY' ? 'bg-gradient-to-r from-rose-500 to-amber-400' : 'bg-blue-500'}`}
                             style={{ width: `${percentOfTop}%` }}
                           />
                         </div>
@@ -2482,9 +2673,27 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                       {/* Card Bottom: Last active & 1-click filter button */}
                       <div className="flex items-center justify-between text-[10px] pt-1 border-t border-dashed border-zinc-200 text-zinc-500">
-                        <span className="font-mono truncate max-w-[140px]" title={`最後互動：${u.latestTime}`}>
-                          🕒 {u.latestTime ? u.latestTime.slice(5, 16) : '—'}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-mono truncate max-w-[90px]" title={`最後互動：${u.latestTime}`}>
+                            🕒 {u.latestTime ? u.latestTime.slice(5, 16) : '—'}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenFounderModal(u);
+                            }}
+                            className={`px-1.5 py-0.5 rounded-md border text-[9px] font-black transition-all flex items-center gap-0.5 shadow-xs cursor-pointer ${
+                              isFounderUser
+                                ? 'bg-amber-300 hover:bg-amber-400 text-amber-950 border-amber-600'
+                                : 'bg-zinc-100 hover:bg-zinc-200 text-zinc-600 border-zinc-300'
+                            }`}
+                            title={isFounderUser ? '已標記為創始支持者（點擊編輯/移除）' : '標記此用戶為創始支持者'}
+                          >
+                            <span>🎖️</span>
+                            <span>{isFounderUser ? '支持者' : '設為支持者'}</span>
+                          </button>
+                        </div>
                         <span className="font-black text-black underline hover:text-rose-600">
                           {isSelected ? '✕ 解除篩選' : '🔍 篩選日誌 ➔'}
                         </span>
@@ -3110,11 +3319,23 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                             {/* User Name / Caller */}
                             <td className="py-3 px-3 font-bold text-black whitespace-nowrap">
-                              <div className="flex items-center gap-1">
+                              <div className="flex items-center gap-1.5">
                                 {isLogin && <ShieldAlert size={14} className="text-purple-600 shrink-0" />}
                                 <span className="truncate max-w-[110px]" title={userName}>
                                   {userName || '—'}
                                 </span>
+                                {checkIsFounder(userId, userName) && (
+                                  <span 
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleOpenFounderModal({ userId, name: userName });
+                                    }}
+                                    className="text-[10px] bg-gradient-to-r from-amber-400 to-yellow-300 text-amber-950 font-black px-1.5 py-0.2 rounded-md border border-amber-500 shadow-xs shrink-0 cursor-pointer hover:scale-105 transition-transform" 
+                                    title="🎖️ 創始支持者（點擊查看詳情）"
+                                  >
+                                    🎖️
+                                  </span>
+                                )}
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
@@ -3421,6 +3642,18 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                         <User size={12} />
                         {userName}
                       </span>
+                      {checkIsFounder(userId, userName) && (
+                        <span 
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleOpenFounderModal({ userId, name: userName });
+                          }}
+                          className="text-[10px] font-black text-amber-900 bg-gradient-to-r from-amber-300 via-yellow-200 to-amber-300 border border-amber-600 px-1.5 py-0.5 rounded-md shadow-xs flex items-center gap-0.5 cursor-pointer hover:scale-105 transition-transform"
+                          title="🎖️ 創始支持者 (點擊管理)"
+                        >
+                          🎖️ 創始
+                        </span>
+                      )}
                       {location && (
                         <span className="text-[10px] font-bold text-rose-800 bg-rose-50 border border-rose-200 px-1.5 py-0.5 rounded flex items-center gap-1">
                           <MapPin size={10} /> {location}
@@ -3982,6 +4215,174 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         initialType={replyModalData.type}
         initialFeedback={replyModalData.feedback}
       />
+
+      {/* 🎖️ Founder Supporter Management Modal */}
+      <AnimatePresence>
+        {isFounderModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 15 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 15 }}
+              className="bg-white border-4 border-black rounded-[2.5rem] shadow-neo-lg w-full max-w-lg overflow-hidden flex flex-col max-h-[90vh]"
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 p-4 border-b-4 border-black flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="p-1.5 bg-black text-white rounded-xl text-base shadow-neo-xs">
+                    🎖️
+                  </span>
+                  <div>
+                    <h3 className="font-black text-base text-black italic">
+                      {editingFounder.isFounder 
+                        ? (isEn ? 'Edit Founder Supporter' : '管理創始支持者特權') 
+                        : (isEn ? 'Register Founder Supporter' : '登記為創始支持者')}
+                    </h3>
+                    <p className="text-[10px] font-bold text-amber-950">
+                      {isEn ? 'Exclusive perks & founder gold badge management' : '核定金色勳章、特權名冊與專屬贊助記錄'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFounderModalOpen(false)}
+                  className="p-1.5 bg-white hover:bg-black hover:text-white border-2 border-black rounded-xl text-black transition-all cursor-pointer shadow-neo-xs"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-5 overflow-y-auto space-y-4 text-xs font-bold">
+                {/* Introduction Banner */}
+                <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3 text-amber-950 space-y-1">
+                  <div className="flex items-center gap-1.5 font-black text-amber-900">
+                    <Sparkles size={14} className="text-amber-600" />
+                    <span>創始支持者專屬特權說明</span>
+                  </div>
+                  <p className="text-[11px] leading-relaxed text-amber-800">
+                    標記後將在後台用戶畫像與日誌列醒目掛上金色【🎖️ 創始支持者】勳章。後端即時同步持久化，後續可用於內測優先權、特別功能授權與專屬致謝！
+                  </p>
+                </div>
+
+                {/* Form Fields */}
+                <div className="space-y-3">
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-700 mb-1">
+                      {isEn ? 'Supporter Name / Nickname' : '用戶稱呼 / 姓名 *'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editingFounder.name}
+                      onChange={(e) => setEditingFounder({ ...editingFounder, name: e.target.value })}
+                      placeholder={isEn ? 'e.g. Winnie Lin, Yi-Xian' : '例如：Winnie Lin、Yi-Xian'}
+                      className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-700 mb-1">
+                      {isEn ? 'User ID / LINE UID / Web Identifier' : '用戶識別碼 / LINE UID / Web 標識 *'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editingFounder.id}
+                      onChange={(e) => setEditingFounder({ ...editingFounder, id: e.target.value })}
+                      placeholder={isEn ? 'e.g. U1234567890abcdef... or User Name' : '例如：LINE 用戶 UID (U497c66...) 或用戶名'}
+                      className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-mono font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                    <span className="text-[10px] text-zinc-400 font-normal mt-0.5 block">
+                      識別碼為系統自動對應創始身分的關鍵字（可填 LINE UID 或姓名）。
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-700 mb-1">
+                      {isEn ? 'Email (Optional, for auto-matching feedback)' : '電子信箱 (選填，自動與意見反饋聯動)'}
+                    </label>
+                    <input
+                      type="email"
+                      value={editingFounder.email}
+                      onChange={(e) => setEditingFounder({ ...editingFounder, email: e.target.value })}
+                      placeholder="e.g. user@example.com"
+                      className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-mono font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-700 mb-1">
+                      {isEn ? 'Sponsorship Note / Transfer Last 5 Digits' : '贊助備註 / 轉帳末 5 碼 / 支持留言'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editingFounder.note}
+                      onChange={(e) => setEditingFounder({ ...editingFounder, note: e.target.value })}
+                      placeholder={isEn ? 'e.g. $500 sponsor / account tail 12345 / early supporter' : '例如：贊助 $500 / 帳號末五碼 12345 / 感謝熊貓教練陪伴'}
+                      className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                  </div>
+                </div>
+
+                {/* Feedback Message */}
+                {founderActionSuccess && (
+                  <div className="bg-emerald-50 border-2 border-emerald-500 rounded-xl p-2.5 text-emerald-900 font-black text-xs text-center">
+                    {founderActionSuccess}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="p-4 bg-zinc-50 border-t-2 border-black flex flex-wrap items-center justify-between gap-2">
+                <div>
+                  {editingFounder.isFounder && (
+                    <button
+                      type="button"
+                      disabled={isSavingFounder}
+                      onClick={() => {
+                        if (window.confirm(isEn ? 'Are you sure you want to revoke Founder Supporter status for this user?' : '確定要取消此用戶的創始支持者標記嗎？')) {
+                          handleSaveFounder(false);
+                        }
+                      }}
+                      className="px-3 py-2 bg-rose-50 hover:bg-rose-100 text-rose-700 border-2 border-rose-300 hover:border-rose-600 rounded-xl text-xs font-black flex items-center gap-1 transition-all cursor-pointer"
+                    >
+                      <Trash2 size={13} />
+                      <span>{isEn ? 'Revoke Status' : '取消創始支持者標記'}</span>
+                    </button>
+                  )}
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsFounderModalOpen(false)}
+                    className="px-3 py-2 bg-white hover:bg-zinc-100 border-2 border-black rounded-xl text-xs font-black cursor-pointer shadow-neo-xs"
+                  >
+                    {isEn ? 'Cancel' : '取消'}
+                  </button>
+                  <button
+                    type="button"
+                    disabled={isSavingFounder}
+                    onClick={() => handleSaveFounder(true)}
+                    className="px-4 py-2 bg-gradient-to-r from-amber-400 to-yellow-300 hover:from-amber-500 hover:to-yellow-400 text-black border-2 border-black rounded-xl text-xs font-black flex items-center gap-1.5 shadow-neo active:scale-95 transition-all cursor-pointer disabled:opacity-50"
+                  >
+                    {isSavingFounder ? (
+                      <>
+                        <RefreshCw size={13} className="animate-spin" />
+                        <span>{isEn ? 'Saving...' : '儲存中...'}</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>🎖️</span>
+                        <span>{editingFounder.isFounder ? (isEn ? 'Update Perks' : '更新支持者特權') : (isEn ? 'Confirm & Mark Supporter' : '登記並標記支持者')}</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Footer Spacer */}
       <div className="h-12" />
