@@ -6512,6 +6512,7 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
               {
                 type: 'box',
                 layout: 'horizontal',
+                alignItems: 'flex-start',
                 contents: [
                   {
                     type: 'text',
@@ -6522,10 +6523,12 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                   },
                   {
                     type: 'text',
-                    text: isEn ? 'Daily Diet Project (Lin)' : 'Daily Diet 專案支持帳戶（核對姓氏：林）',
+                    text: isEn ? 'Daily Diet Project (Surname: Lin)' : 'Daily Diet 專案支持帳戶\n（轉帳核對姓氏：林）',
                     size: 'xxs',
-                    color: '#71717A',
-                    flex: 4
+                    weight: 'bold',
+                    color: '#18181B',
+                    wrap: true,
+                    flex: 5
                   }
                 ]
               }
@@ -6554,6 +6557,7 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
           {
             type: 'box',
             layout: 'vertical',
+            spacing: 'xs',
             contents: [
               {
                 type: 'button',
@@ -6564,6 +6568,17 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 },
                 style: 'primary',
                 color: '#008687',
+                height: 'sm'
+              },
+              {
+                type: 'button',
+                action: {
+                  type: 'message',
+                  label: isEn ? '💬 Report Last 5 Digits' : '💬 已完成轉帳 (回報帳號末5碼)',
+                  text: isEn ? 'I have transferred! Last 5 digits: ' : '我已完成轉帳，後五碼是：'
+                },
+                style: 'secondary',
+                color: '#D97706',
                 height: 'sm'
               }
             ]
@@ -6611,19 +6626,27 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
           {
             type: 'box',
             layout: 'vertical',
-            backgroundColor: '#F4F4F5',
-            borderColor: '#E4E4E7',
-            borderWidth: '1px',
-            cornerRadius: '10px',
-            paddingAll: '10px',
+            backgroundColor: '#FEF3C7',
+            borderColor: '#F59E0B',
+            borderWidth: '1.5px',
+            cornerRadius: '12px',
+            paddingAll: '12px',
+            spacing: 'xs',
             contents: [
               {
                 type: 'text',
+                text: isEn ? '🎁 Founding Supporter Notice' : '🎁 打款後請回覆末 5 碼登記【創始支持者】',
+                size: 'xs',
+                weight: 'bold',
+                color: '#92400E'
+              },
+              {
+                type: 'text',
                 text: isEn
-                  ? '🎁 Founding Supporter: Reply with your account last 5 digits + Email. You will be registered as a Founding Supporter—enjoying an exclusive badge, priority beta access to all upcoming AI features, and lifetime supporter perks!'
-                  : '🎁 老朋友專屬【創始支持者】禮遇：轉帳完成後，請在此對話傳送「轉帳末 5 碼與 Email」，我們立刻為您登記為【創始支持者】。永久享有專屬金色創始者徽章，未來若推出全新 AI 增強功能，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期成為我們的堅實後盾！🎋✨',
+                  ? 'After transferring, please reply directly in this chat with your account\'s last 5 digits (e.g. "Last 5: 12345"). We will immediately verify and record you as a 🎖️ Founding Supporter with lifetime perks!'
+                  : '轉帳完成後，請直接在此對話傳送「帳號末 5 碼」（例如傳送：後五碼 12345）。我們將在後台第一時間為您核對，並為您的帳號掛上專屬【🎖️ 創始支持者】金色徽章與新模組內測優先特權！🎋✨',
                 size: 'xxs',
-                color: '#52525B',
+                color: '#78350F',
                 wrap: true
               }
             ]

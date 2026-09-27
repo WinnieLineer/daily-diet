@@ -340,11 +340,14 @@ function attachQuickReply(message, userId, props) {
 function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
   if (!flexMessage) return;
   try {
-    if (flexMessage.altText && flexMessage.altText.length > 400) {
-      flexMessage.altText = flexMessage.altText.slice(0, 397) + '...';
+    const messages = Array.isArray(flexMessage) ? flexMessage : [flexMessage];
+    for (const m of messages) {
+      if (m && m.type === 'flex' && m.altText && m.altText.length > 400) {
+        m.altText = m.altText.slice(0, 397) + '...';
+      }
     }
-    if (userId && props) {
-      attachQuickReply(flexMessage, userId, props);
+    if (userId && props && messages.length > 0) {
+      attachQuickReply(messages[messages.length - 1], userId, props);
     }
     const res = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/reply", {
       method: "post",
@@ -354,7 +357,7 @@ function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
       },
       payload: JSON.stringify({
         replyToken: replyToken,
-        messages: [flexMessage]
+        messages: messages
       }),
       muteHttpExceptions: true
     });

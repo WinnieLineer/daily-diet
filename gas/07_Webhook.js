@@ -3311,10 +3311,45 @@ function doPost(e) {
           if (/^(贊助|支持|轉帳|轉帳資訊|贊助資訊|請喝咖啡|支持作者|donate|sponsor|打賞|餵食熊貓|贊助教練)$/i.test(userText.trim())) {
             const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT) || 'tsundere';
             const sponsorFlex = generateSponsorFlex(persona, userLang);
-            replyFlexMessage(replyToken, sponsorFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            const promptText = {
+              type: 'text',
+              text: isEn
+                ? "💡 Gentle Reminder: After completing the transfer, please reply directly in this chat with your account's last 5 digits (e.g. \"Last 5 digits: 12345\"). We will verify it and record you as a 🎖️ Founding Supporter! 🎋✨"
+                : "💡【打款完成貼心叮嚀】\n轉帳完成後，請直接在此對話回覆您的【帳號末 5 碼】（例如傳送：「後五碼 12345」）🐼✨\n\n維護者收到後會為您在後台登記並掛上【🎖️ 創始支持者】金色榮譽勳章與特權名錄！非常感謝您的溫暖支持與肯定！❤️🎋"
+            };
+            replyFlexMessage(replyToken, [sponsorFlex, promptText], CHANNEL_ACCESS_TOKEN, userId, props);
             if (typeof recordSystemLog === 'function') {
-              recordSystemLog('查詢贊助', userId, userText, '', '已回傳支持與贊助資訊卡片');
+              recordSystemLog('查詢贊助', userId, userText, '', '已回傳支持與贊助資訊卡片及回報末五碼叮嚀');
             }
+            continue;
+          }
+
+          // 🎁 創始支持者轉帳回報 (例如: "後五碼 12345", "末5碼 67890", "我已完成轉帳，後五碼是：12345", "已轉帳 12345")
+          if (/(?:後|末)\s*[4-5四五]\s*碼|已轉帳|已匯款|完成轉帳|完成匯款|贊助回報|回報轉帳/i.test(userText.trim())) {
+            const matchDigits = userText.match(/\d{4,6}/);
+            const lastDigits = matchDigits ? matchDigits[0] : '';
+            const userDisplayName = (typeof getUserDisplayName === 'function') 
+              ? (getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || `LINE用戶 (#${userId.slice(-6)})`)
+              : `LINE用戶 (#${userId.slice(-6)})`;
+
+            if (typeof recordSystemLog === 'function') {
+              recordSystemLog('贊助回報', userId, userText, `末碼: ${lastDigits || '手動記錄'}`, `用戶 ${userDisplayName} 回報轉帳：${userText}`);
+            }
+
+            if (typeof saveFounderSupporterData === 'function') {
+              saveFounderSupporterData(props, {
+                userId: userId,
+                name: userDisplayName,
+                note: `用戶回報末碼: ${lastDigits || userText.slice(0, 30)} (${Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm")})`,
+                isFounder: true
+              }, '系統自動登記 (LINE用戶回報)');
+            }
+
+            const confirmReply = isEn
+              ? `🐼 Transfer Report Received!\n\nThank you so much, ${userDisplayName}! We have recorded your account details${lastDigits ? ` (Last digits: ${lastDigits})` : ''}.\n\nOur maintainer will verify it shortly and your profile has been noted for the 🎖️ Founding Supporter badge & perks! Thank you for supporting Daily Diet! 🎋✨`
+              : `🐼 收到您的轉帳回報囉！\n\n非常感謝您，${userDisplayName}！熊貓教練已記錄下您的轉帳資訊${lastDigits ? `（末 5 碼：${lastDigits}）` : ''}，並已將您預先登記至系統後台的【🎖️ 創始支持者】名冊中！\n\n維護者核對帳目後，將正式為您點亮後台金色徽章與永久特權！感謝您在草創期成為 Daily Diet 最堅實的溫暖後盾！🎋❤️`;
+
+            replyTextMessage(replyToken, confirmReply, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 
