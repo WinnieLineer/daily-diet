@@ -2317,18 +2317,6 @@ function App() {
                 )}
               </button>
 
-              {/* 創始支持者專屬特權通行證按鈕 */}
-              {isFounder && (
-                <button 
-                  type="button"
-                  className="h-7 sm:h-8 px-2 sm:px-2.5 flex items-center justify-center gap-1 shrink-0 rounded-lg sm:rounded-xl border-2 border-black bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-black font-black text-[10px] sm:text-xs shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:scale-95 cursor-pointer transition-all"
-                  onClick={() => setShowFounderPassModal(true)}
-                  title="創始支持者尊榮特權通行證"
-                >
-                  <span className="animate-bounce">🎖️</span>
-                  <span className="hidden sm:inline">特權</span>
-                </button>
-              )}
 
               {/* 目標與設定 */}
               <Suspense fallback={<div className="w-7 sm:w-8 h-7 sm:h-8 bg-zinc-100 rounded-lg sm:rounded-xl border-2 border-black/80 animate-pulse" />}>

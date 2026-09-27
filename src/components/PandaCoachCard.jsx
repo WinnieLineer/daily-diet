@@ -802,20 +802,20 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
               “
             </span>
 
-            {/* Header Row: Persona / Name + Speaking Status + Streak */}
-            <div className="flex flex-wrap items-center justify-between gap-1.5 mb-1.5 relative z-10">
-              <div className="flex items-center gap-1.5 flex-wrap">
+            {/* Header Row: Persona / Name + Speaking Status + Streak (Single line, strictly no wrap) */}
+            <div className="flex items-center justify-between gap-1.5 mb-1.5 relative z-10 min-w-0">
+              <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink">
                 {activeTitle ? (
-                  <span className="text-[9px] sm:text-[9.5px] font-black bg-accent border-1.5 sm:border-2 border-black text-black px-2 py-0.5 rounded-lg rotate-[-1deg] shadow-[1px_1px_0px_rgba(0,0,0,1)]">
+                  <span className="text-[9px] sm:text-[9.5px] font-black bg-accent border-1.5 sm:border-2 border-black text-black px-2 py-0.5 rounded-lg rotate-[-1deg] shadow-[1px_1px_0px_rgba(0,0,0,1)] truncate max-w-[100px] sm:max-w-none">
                     {activeTitle}
                   </span>
                 ) : (
-                  <span className="text-[9px] sm:text-[10px] font-black tracking-tight text-zinc-900 bg-white px-2 py-0.5 rounded-full border-1.5 sm:border-2 border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center">
+                  <span className="text-[9px] sm:text-[10px] font-black tracking-tight text-zinc-900 bg-white px-2 py-0.5 rounded-full border-1.5 sm:border-2 border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center shrink-0">
                     <span>{t('panda_coach_name')}</span>
                   </span>
                 )}
 
-                {/* 🎖️ 創始支持者尊榮標籤 */}
+                {/* 🎖️ 創始支持者精緻微型標章（不佔空間、防破版） */}
                 {isFounder && (
                   <motion.button
                     type="button"
@@ -823,13 +823,13 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                       e.stopPropagation();
                       window.dispatchEvent(new CustomEvent('open-founder-pass'));
                     }}
-                    whileHover={{ scale: 1.05 }}
-                    whileTap={{ scale: 0.95 }}
-                    className="text-[8.5px] sm:text-[9.5px] font-black bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 border-1.5 sm:border-2 border-black text-black px-1.5 sm:px-2 py-0.5 rounded-lg shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-1 cursor-pointer"
-                    title="創始支持者專屬通行證"
+                    whileHover={{ scale: 1.08 }}
+                    whileTap={{ scale: 0.92 }}
+                    className="text-[8.5px] sm:text-[9px] font-black bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 border border-black text-black px-1.5 py-0.2 rounded-full shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-0.5 cursor-pointer shrink-0"
+                    title="創始支持者尊榮金卡（點擊檢視）"
                   >
                     <span>👑</span>
-                    <span>創始支持者</span>
+                    <span className="hidden sm:inline">創始</span>
                   </motion.button>
                 )}
 
@@ -842,7 +842,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.85 }}
                       transition={{ duration: 0.15 }}
-                      className="text-[8.5px] font-black bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-1"
+                      className="text-[8.5px] font-black bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-1 shrink-0"
                     >
                       <MessageCircle size={10} className="text-amber-900 fill-amber-300" />
                       <span>{currentLang === 'en' ? 'Coach Banter' : '教練吐槽'}</span>
@@ -850,7 +850,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                   ) : (
                     <span
                       key="bubble-idle"
-                      className="text-[8px] font-bold text-amber-800/80 bg-amber-100/70 px-1.5 py-0.5 rounded-md border border-amber-200/80 hidden sm:inline-flex items-center gap-0.5"
+                      className="text-[8px] font-bold text-amber-800/80 bg-amber-100/70 px-1.5 py-0.5 rounded-md border border-amber-200/80 hidden sm:inline-flex items-center gap-0.5 shrink-0"
                     >
                       <Sparkles size={9} className="text-amber-600" />
                       <span>{currentLang === 'en' ? 'Daily Wisdom' : '日常碎碎念'}</span>

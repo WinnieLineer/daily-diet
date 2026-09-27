@@ -715,7 +715,7 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
-    // 🎖️ 0.26 查詢用戶創始支持者特權狀態 (供 Web 前端 / LIFF 即時驗證)
+    // 🎖️ 0.26 查詢用戶創始支持者特權狀態 (供 Web 前端 / LIFF 即時驗證，隱藏內部對帳資料)
     if (action === 'checkFounderStatus' || action === 'getFounderStatus') {
       const qUser = e?.parameter?.userId || userId;
       const qName = e?.parameter?.userName || incomingCaller;
@@ -723,10 +723,31 @@ function doGet(e) {
       const founderData = typeof checkUserIsFounderSupporter === 'function'
         ? checkUserIsFounderSupporter(qUser, qName, qEmail, props)
         : null;
+
+      let clientSafeData = null;
+      if (founderData) {
+        // 若有明確填寫公開寄語則優先採用；若無，檢查舊版 note 是否為對帳字眼（若是則過濾）
+        let safeGreeting = founderData.greeting || '';
+        if (!safeGreeting && founderData.note) {
+          const isRecon = /(?:末|碼|轉|帳號|\$|NT|元|\d{4,})/i.test(founderData.note);
+          if (!isRecon) safeGreeting = founderData.note;
+        }
+
+        clientSafeData = {
+          id: founderData.id || '',
+          name: founderData.name || '',
+          number: founderData.number || 'NO. 001',
+          greeting: safeGreeting,
+          addedAt: founderData.addedAt || '',
+          tier: founderData.tier || 'FOUNDER',
+          badge: founderData.badge || '🎖️ 創始支持者'
+        };
+      }
+
       return ContentService.createTextOutput(JSON.stringify({
         status: 'ok',
         isFounder: Boolean(founderData),
-        data: founderData || null
+        data: clientSafeData
       })).setMimeType(ContentService.MimeType.JSON);
     }
 

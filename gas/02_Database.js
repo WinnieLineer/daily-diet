@@ -2920,11 +2920,25 @@ function saveFounderSupporterData(props, data, operatorName) {
   } else {
     const existing = currentMap[key] || {};
     const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+
+    // 計算預設創始編號 (如 NO. 001)
+    const validFounders = Object.values(currentMap).filter(item => !item._refKey);
+    const existingSeq = existing.number || '';
+    const nextSeq = existingSeq || ('NO. ' + String(validFounders.length + 1).padStart(3, '0'));
+
+    // 分離內部對帳備註與公開寄語
+    const rawNote = String(data.note || existing.note || '').trim();
+    const internalNote = String(data.internalNote !== undefined ? data.internalNote : (existing.internalNote || rawNote)).trim();
+    const greeting = String(data.greeting !== undefined ? data.greeting : (existing.greeting || '')).trim();
+
     const item = {
       id: String(data.id || data.userId || existing.id || key).trim(),
       name: String(data.name || data.userName || existing.name || '').trim(),
       email: String(data.email || existing.email || '').trim(),
-      note: String(data.note || existing.note || '').trim(),
+      internalNote: internalNote,
+      greeting: greeting,
+      note: internalNote, // 向下相容
+      number: String(data.number || nextSeq).trim(),
       tier: 'FOUNDER',
       badge: '🎖️ 創始支持者',
       addedAt: existing.addedAt || timeNow,
@@ -2944,7 +2958,7 @@ function saveFounderSupporterData(props, data, operatorName) {
 
   if (typeof recordSystemLog === 'function') {
     const op = isFounder ? '標記創始支持者' : '取消創始支持者';
-    const desc = `${isFounder ? '新增標記' : '移除標記'}：${data.name || ''} (${key}) | 備註: ${data.note || ''}`;
+    const desc = `${isFounder ? '新增標記' : '移除標記'}：${data.name || ''} (${key}) | 內部備註: ${data.internalNote || data.note || ''} | 寄語: ${data.greeting || ''}`;
     recordSystemLog(op, 'Maintainer', key, '', desc, operatorName || '管理員');
   }
 

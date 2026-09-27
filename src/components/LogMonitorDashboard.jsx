@@ -471,7 +471,15 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // 🎖️ 創始支持者 (Founder Supporters) 狀態與管理
   const [founderSupporters, setFounderSupporters] = useState({});
   const [isFounderModalOpen, setIsFounderModalOpen] = useState(false);
-  const [editingFounder, setEditingFounder] = useState({ id: '', name: '', email: '', note: '', isFounder: true });
+  const [editingFounder, setEditingFounder] = useState({ 
+    id: '', 
+    name: '', 
+    email: '', 
+    internalNote: '', 
+    greeting: '', 
+    number: '', 
+    isFounder: true 
+  });
   const [isSavingFounder, setIsSavingFounder] = useState(false);
   const [founderActionSuccess, setFounderActionSuccess] = useState('');
 
@@ -501,7 +509,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       id: existing?.id || user.userId || user.name || '',
       name: existing?.name || user.name || '',
       email: existing?.email || user.email || '',
-      note: existing?.note || '',
+      internalNote: existing?.internalNote || existing?.note || '',
+      greeting: existing?.greeting || '',
+      number: existing?.number || '',
       isFounder: Boolean(existing)
     });
     setFounderActionSuccess('');
@@ -524,7 +534,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         id: editingFounder.id || editingFounder.email || editingFounder.name,
         name: editingFounder.name,
         email: editingFounder.email,
-        note: editingFounder.note,
+        internalNote: editingFounder.internalNote,
+        greeting: editingFounder.greeting,
+        number: editingFounder.number,
+        note: editingFounder.internalNote,
         isFounder: isFounderValue,
         user: maintainerName || DEFAULT_MAINTAINER_USER
       };
@@ -537,7 +550,10 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             id: effectiveKey,
             name: payload.name,
             email: payload.email,
-            note: payload.note,
+            internalNote: payload.internalNote,
+            greeting: payload.greeting,
+            number: payload.number,
+            note: payload.internalNote,
             tier: 'FOUNDER',
             badge: '🎖️ 創始支持者',
             addedAt: new Date().toLocaleString()
@@ -4311,15 +4327,50 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
                   <div>
                     <label className="block text-[11px] font-black text-zinc-700 mb-1">
-                      {isEn ? 'Sponsorship Note / Transfer Last 5 Digits' : '贊助備註 / 轉帳末 5 碼 / 支持留言'}
+                      {isEn ? '📝 Internal Note / Reconciliation (Admin Only, 100% Private)' : '📝 內部對帳備忘 (僅後台可見，安全不外露)'}
                     </label>
                     <input
                       type="text"
-                      value={editingFounder.note}
-                      onChange={(e) => setEditingFounder({ ...editingFounder, note: e.target.value })}
-                      placeholder={isEn ? 'e.g. $500 sponsor / account tail 12345 / early supporter' : '例如：贊助 $500 / 帳號末五碼 12345 / 感謝熊貓教練陪伴'}
+                      value={editingFounder.internalNote}
+                      onChange={(e) => setEditingFounder({ ...editingFounder, internalNote: e.target.value })}
+                      placeholder={isEn ? 'e.g. Last 5 digits 12345 / $150 sponsored / LINE replied' : '例如：轉帳末 5 碼 12345 / 贊助 $150 / LINE 已回信確認'}
                       className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
                     />
+                    <span className="text-[10px] text-zinc-400 font-normal mt-0.5 block">
+                      {isEn ? 'Saved for your internal records. Never displayed on user cards.' : '供管理員內部記帳核實，絕不會出現在用戶端的創始者金卡上。'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-700 mb-1">
+                      {isEn ? "💌 Supporter's Greeting / Pass Note (Visible on User Card)" : '💌 給支持者的專屬寄語 (前台金卡證書公開顯示)'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editingFounder.greeting}
+                      onChange={(e) => setEditingFounder({ ...editingFounder, greeting: e.target.value })}
+                      placeholder={isEn ? 'e.g. Thank you for believing in Daily Diet from day one!' : '例如：感謝相挺！有想要的新功能隨時告訴我～🎋✨'}
+                      className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                    <span className="text-[10px] text-zinc-400 font-normal mt-0.5 block">
+                      {isEn ? 'Leave empty to display default sincere official thank-you note.' : '將展示於用戶的創始通行證金卡中。若留空將自動顯示系統預設溫馨致謝詞。'}
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block text-[11px] font-black text-zinc-700 mb-1">
+                      {isEn ? '👑 Founder Number (Optional)' : '👑 創始紀念序號 (選填)'}
+                    </label>
+                    <input
+                      type="text"
+                      value={editingFounder.number}
+                      onChange={(e) => setEditingFounder({ ...editingFounder, number: e.target.value })}
+                      placeholder="e.g. NO. 001, NO. 008"
+                      className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-mono font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
+                    />
+                    <span className="text-[10px] text-zinc-400 font-normal mt-0.5 block">
+                      {isEn ? 'Leave empty to assign automatically based on registration order.' : '留空將自動依登記先後順序排定序號。'}
+                    </span>
                   </div>
                 </div>
 
