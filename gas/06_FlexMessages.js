@@ -6609,7 +6609,7 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 paddingAll: '6px',
                 contents: [
                   { type: 'text', text: '🍱 補給', size: 'xxs', weight: 'bold', color: '#0F766E', align: 'center' },
-                  { type: 'text', text: '$150', size: 'xxs', color: '#115E59', align: 'center' }
+                  { type: 'text', text: '$100', size: 'xxs', color: '#115E59', align: 'center' }
                 ]
               },
               {
@@ -6620,7 +6620,7 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 paddingAll: '6px',
                 contents: [
                   { type: 'text', text: '🎋 核心', size: 'xxs', weight: 'bold', color: '#9F1239', align: 'center' },
-                  { type: 'text', text: '$500', size: 'xxs', color: '#881337', align: 'center' }
+                  { type: 'text', text: '$150', size: 'xxs', color: '#881337', align: 'center' }
                 ]
               }
             ]

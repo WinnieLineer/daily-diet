@@ -124,7 +124,7 @@ export default function ReplyHelperModal({
         `1. 打開 Daily Diet 官方 LINE 聊天室（熊貓教練）\n` +
         `2. 在聊天室中直接輸入「贊助」或「支持」\n` +
         `3. 熊貓教練會自動秒回專屬的【算力燃料補給卡片】與轉帳資訊！\n\n` +
-        `☕ 隨喜支持建議：隨喜咖啡 $50 / 🍱 算力補給 $150 / 🎋 核心支持 $500 (完全自由隨喜，零負擔)\n\n` +
+        `☕ 隨喜支持建議：隨喜咖啡 $50 / 🍱 算力補給 $100 / 🎋 核心支持 $150 (完全自由隨喜，零負擔)\n\n` +
         `🔔【打款完成與登記提醒】：\n` +
         `因為系統目前未接第三方金流自動對帳，若您後續順利完成轉帳，請務必直接回信告知您的【轉帳末 5 碼】（或在 LINE 對話輸入「後五碼 12345」）。收到您的末碼後，我們這邊才會正式幫您登記為【創始支持者】並點亮金色特權徽章喔！再次由衷感謝您的這份心意與支持！❤️`;
     } else if (selectedTemplateId === 'gist_tech') {
@@ -259,13 +259,13 @@ export default function ReplyHelperModal({
                   <td width="33%" align="center" style="padding: 4px;">
                     <div style="background-color: #CCFBF1; border: 1px solid #5EEAD4; border-radius: 8px; padding: 6px;">
                       <span style="font-size: 11px; font-weight: bold; color: #0F766E;">🍱 算力補給</span><br>
-                      <span style="font-size: 11px; color: #115E59;">$150</span>
+                      <span style="font-size: 11px; color: #115E59;">$100</span>
                     </div>
                   </td>
                   <td width="33%" align="center" style="padding: 4px;">
                     <div style="background-color: #FFE4E6; border: 1px solid #FDA4AF; border-radius: 8px; padding: 6px;">
                       <span style="font-size: 11px; font-weight: bold; color: #9F1239;">🎋 核心支持</span><br>
-                      <span style="font-size: 11px; color: #881337;">$500</span>
+                      <span style="font-size: 11px; color: #881337;">$150</span>
                     </div>
                   </td>
                 </tr>

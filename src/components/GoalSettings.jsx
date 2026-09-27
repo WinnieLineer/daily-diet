@@ -1931,11 +1931,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                       </div>
                                       <div className="p-1.5 bg-teal-50 rounded-lg border border-teal-200">
                                         <div className="text-[10px] font-black text-teal-900">🍱 算力補給</div>
-                                        <div className="text-[9px] font-bold text-teal-700">$150</div>
+                                        <div className="text-[9px] font-bold text-teal-700">$100</div>
                                       </div>
                                       <div className="p-1.5 bg-rose-50 rounded-lg border border-rose-200">
                                         <div className="text-[10px] font-black text-rose-900">🎋 核心支持</div>
-                                        <div className="text-[9px] font-bold text-rose-700">$500</div>
+                                        <div className="text-[9px] font-bold text-rose-700">$150</div>
                                       </div>
                                     </div>
                                   </div>
