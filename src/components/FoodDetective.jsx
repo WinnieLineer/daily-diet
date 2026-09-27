@@ -11,6 +11,7 @@ import { t, getLanguage } from '../lib/translations';
 import { twMerge } from 'tailwind-merge';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ANALYSIS_DURATION_SECONDS, IMAGE_MAX_DIMENSION, IMAGE_QUALITY, isValidLocation } from '../lib/constants';
+import { isFounderUser } from '../lib/founderService';
 
 /**
  * 📸 產生適用於雲端私有照片庫之後台即時預覽高壓縮縮圖 (max 400px, 0.55 quality, ~15-25KB)
@@ -178,6 +179,16 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
   const [recalculating, setRecalculating] = useState(false);
   const [waterToast, setWaterToast] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+
+  // 🎖️ 創始支持者 AI 極速通道特權
+  const [isFounder, setIsFounder] = useState(() => isFounderUser());
+  useEffect(() => {
+    const handleFounderStatus = (e) => {
+      setIsFounder(e.detail?.isFounder ?? isFounderUser());
+    };
+    window.addEventListener('founder-status-updated', handleFounderStatus);
+    return () => window.removeEventListener('founder-status-updated', handleFounderStatus);
+  }, []);
   const [searchResults, setSearchResults] = useState([]);
   const [selectedCategory, setSelectedCategory] = useState(() => {
     const hour = new Date().getHours();
@@ -984,7 +995,18 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
               )}
             </AnimatePresence>
           </div>
-          <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0 overflow-x-auto no-scrollbar">
+          <div className="flex gap-1 bg-gray-100 p-1 rounded-2xl border-2 border-black shrink-0 overflow-x-auto no-scrollbar items-center">
+            {isFounder && (
+              <button
+                type="button"
+                onClick={() => window.dispatchEvent(new CustomEvent('open-founder-pass'))}
+                className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-black px-1.5 py-1 rounded-xl border border-black text-[9px] font-black shadow-neo-xs flex items-center gap-0.5 shrink-0 cursor-pointer active:scale-95 transition-transform"
+                title="創始支持者 AI 極速通道已開通"
+              >
+                <span>⚡</span>
+                <span className="hidden sm:inline">創始通道</span>
+              </button>
+            )}
             {[{ id: 'ai', label: t('ai_mode') }, { id: 'manual', label: t('manual_mode') }, { id: 'favorites', label: t('favorites_mode') }, { id: 'search', label: t('search_mode') }].map(tab => (
               <button key={tab.id} className={twMerge("px-2 py-1 text-[10px] sm:text-xs font-bold rounded-xl transition-all whitespace-nowrap border-2 border-transparent", mode === tab.id ? "bg-black text-white border-black" : "hover:bg-white text-gray-600")} onClick={() => setMode(tab.id)}>
                 <span className="relative">{tab.label}{tab.id === 'ai' && aiLoading && mode !== 'ai' && <motion.div layoutId="ai-bg-status" className="absolute -top-1.5 -right-1.5 w-2 h-2 bg-accent rounded-full border border-white animate-pulse" />}</span>
@@ -1005,7 +1027,9 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 <Loader2 size={42} className="text-accent animate-spin overflow-visible shrink-0" strokeWidth={4} />
                 <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-xs">{loadTime}s</span></div>
               </div>
-              <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none mt-1">{t('analyzing')}</span>
+              <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none mt-1">
+                {isFounder ? '⚡ 創始支持者 AI 極速通道分析中' : t('analyzing')}
+              </span>
             </div>
 
             <AnimatePresence mode="wait">

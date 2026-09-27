@@ -20,6 +20,13 @@ import { APP_VERSION, ENABLE_520_THEME, isValidLocation, CURRENT_WHATSNEW_ID } f
 import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
 import LanguageToggle from './components/LanguageToggle';
+import { 
+  isFounderUser, 
+  getFounderData, 
+  setFounderStatus, 
+  isFounderGlowEnabled, 
+  checkFounderStatusFromCloud 
+} from './lib/founderService';
 
 // 🛡️ Safe Lazy Loader with Automatic Cache Busting on Deployment Update
 function lazyWithRetry(componentImport) {
@@ -64,6 +71,7 @@ const WeeklyReportCard = lazyWithRetry(() => import('./components/WeeklyReportCa
 const Theme520 = lazyWithRetry(() => import('./components/Theme520'));
 const LogMonitorDashboard = lazyWithRetry(() => import('./components/LogMonitorDashboard'));
 const PandaLiveCallModal = lazyWithRetry(() => import('./components/PandaLiveCallModal'));
+const FounderPassModal = lazyWithRetry(() => import('./components/FounderPassModal'));
 
 export const isNewer = (newVer, oldVer) => {
   if (!oldVer) return true;
@@ -905,6 +913,32 @@ function App() {
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState(88);
 
+  // 🎖️ 創始支持者特權身分狀態
+  const [isFounder, setIsFounder] = useState(() => isFounderUser());
+  const [founderData, setFounderData] = useState(() => getFounderData());
+  const [founderGlow, setFounderGlow] = useState(() => isFounderGlowEnabled());
+  const [showFounderPassModal, setShowFounderPassModal] = useState(false);
+
+  useEffect(() => {
+    const handleFounderStatus = (e) => {
+      setIsFounder(e.detail?.isFounder ?? isFounderUser());
+      setFounderData(e.detail?.data ?? getFounderData());
+    };
+    const handleFounderGlow = (e) => {
+      setFounderGlow(e.detail?.enabled ?? isFounderGlowEnabled());
+    };
+    const handleOpenFounderPass = () => setShowFounderPassModal(true);
+
+    window.addEventListener('founder-status-updated', handleFounderStatus);
+    window.addEventListener('founder-glow-updated', handleFounderGlow);
+    window.addEventListener('open-founder-pass', handleOpenFounderPass);
+    return () => {
+      window.removeEventListener('founder-status-updated', handleFounderStatus);
+      window.removeEventListener('founder-glow-updated', handleFounderGlow);
+      window.removeEventListener('open-founder-pass', handleOpenFounderPass);
+    };
+  }, []);
+
   useEffect(() => {
     if (!headerRef.current) return;
     const updateHeight = () => {
@@ -1402,6 +1436,11 @@ function App() {
               } catch (pErr) {
                 console.warn("[Poop Sync] 同步排便失敗:", pErr);
               }
+            }
+
+            // 🎖️ 創始支持者特權身分同步 (GAS ➔ Web)
+            if (typeof gasData.isFounder !== 'undefined') {
+              setFounderStatus(Boolean(gasData.isFounder), gasData.founderData || null);
             }
 
             window.dispatchEvent(new CustomEvent('diet-sync-complete'));
@@ -2171,6 +2210,15 @@ function App() {
           )}
         </AnimatePresence>
 
+        {/* 🎖️ 創始支持者尊榮金色流光飾條 (Gold Aura Bar) */}
+        {isFounder && founderGlow && (
+          <div 
+            onClick={() => setShowFounderPassModal(true)}
+            className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 shadow-[0_0_10px_rgba(251,191,36,0.8)] cursor-pointer animate-pulse" 
+            title="創始支持者尊榮流光光環（點擊檢視專屬證書）"
+          />
+        )}
+
         <div className="max-w-lg mx-auto px-3 sm:px-4 py-2 sm:py-2.5">
           <div className="flex justify-between items-center gap-2">
             {/* 左側：品牌、用戶與版本 */}
@@ -2185,6 +2233,17 @@ function App() {
                   )}
                   <span>{t('app_title')}</span>
                 </span>
+                {isFounder && (
+                  <button
+                    type="button"
+                    onClick={() => setShowFounderPassModal(true)}
+                    className="bg-gradient-to-r from-amber-400 to-yellow-300 text-black px-1.5 py-0.5 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[9px] font-black tracking-tight shrink-0 flex items-center gap-0.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
+                    title="創始支持者尊榮身份（點擊檢視特權通行證）"
+                  >
+                    <span>🎖️</span>
+                    <span className="hidden sm:inline">創始者</span>
+                  </button>
+                )}
                 {ENABLE_520_THEME && (
                   <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-xs shrink-0">
                     520
@@ -2257,6 +2316,19 @@ function App() {
                   </span>
                 )}
               </button>
+
+              {/* 創始支持者專屬特權通行證按鈕 */}
+              {isFounder && (
+                <button 
+                  type="button"
+                  className="h-7 sm:h-8 px-2 sm:px-2.5 flex items-center justify-center gap-1 shrink-0 rounded-lg sm:rounded-xl border-2 border-black bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-black font-black text-[10px] sm:text-xs shadow-[1.5px_1.5px_0px_0px_rgba(0,0,0,1)] hover:shadow-none hover:translate-x-0.5 hover:translate-y-0.5 active:scale-95 cursor-pointer transition-all"
+                  onClick={() => setShowFounderPassModal(true)}
+                  title="創始支持者尊榮特權通行證"
+                >
+                  <span className="animate-bounce">🎖️</span>
+                  <span className="hidden sm:inline">特權</span>
+                </button>
+              )}
 
               {/* 目標與設定 */}
               <Suspense fallback={<div className="w-7 sm:w-8 h-7 sm:h-8 bg-zinc-100 rounded-lg sm:rounded-xl border-2 border-black/80 animate-pulse" />}>
@@ -2592,6 +2664,14 @@ function App() {
           goals={goals}
           streak={streak}
           userName={userName}
+        />
+      </Suspense>
+
+      {/* 🎖️ 創始支持者尊榮通行證彈窗 */}
+      <Suspense fallback={null}>
+        <FounderPassModal 
+          isOpen={showFounderPassModal}
+          onClose={() => setShowFounderPassModal(false)}
         />
       </Suspense>
 

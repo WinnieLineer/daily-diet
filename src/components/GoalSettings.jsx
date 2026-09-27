@@ -11,6 +11,7 @@ import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGis
 import { PandaSticker } from './PandaStickers';
 import { liffService } from '../lib/liffService';
 import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateClientId } from '../lib/syncService';
+import { isFounderUser, getFounderData } from '../lib/founderService';
 
 
 const VERSION_HISTORY = [
@@ -165,11 +166,23 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     }
   };
 
-  // 飲控里程碑與頭銜貼紙狀態
   const [currentStreak, setCurrentStreak] = useState(0);
   const [activeTitle, setActiveTitle] = useState(() => safeGetStorage('panda_active_title') || '');
   const [hasPersonas, setHasPersonas] = useState(safeGetStorage('panda_persona_unlocked') === 'true');
   const [activePersona, setActivePersona] = useState(() => safeGetStorage('panda_active_persona') || 'tsundere');
+
+  // 🎖️ 創始支持者身分狀態
+  const [isFounder, setIsFounder] = useState(() => isFounderUser());
+  const [founderData, setFounderData] = useState(() => getFounderData());
+
+  useEffect(() => {
+    const handleFounderStatus = (e) => {
+      setIsFounder(e.detail?.isFounder ?? isFounderUser());
+      setFounderData(e.detail?.data ?? getFounderData());
+    };
+    window.addEventListener('founder-status-updated', handleFounderStatus);
+    return () => window.removeEventListener('founder-status-updated', handleFounderStatus);
+  }, []);
 
   useEffect(() => {
     if (typeof window !== 'undefined' && syncStatus !== 'idle') {
@@ -1005,17 +1018,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </p>
                       <div className="space-y-2.5 mt-2">
                         {[
+                          ...(isFounder ? [{ days: 0, title: "🎖️ 創始支持者", desc: "Daily Diet 創始支持會員尊榮特權", isFounderExclusive: true }] : []),
                           { days: 3, title: "自律小萌新 🥗", desc: "連續打卡 3 天" },
                           { days: 7, title: "爆卡剋星 ⚔️", desc: "連續打卡 7 天" },
                           { days: 30, title: "飲控得道仙人 👑", desc: "連續打卡 30 天" }
                         ].map(item => {
-                          const isUnlocked = currentStreak >= item.days;
+                          const isUnlocked = item.isFounderExclusive ? true : currentStreak >= item.days;
                           const isWorn = activeTitle === item.title;
                           return (
                             <div 
-                              key={item.days} 
+                              key={item.title} 
                               className={`flex items-center justify-between p-3 border-2 border-black rounded-2xl transition-all ${
-                                isWorn ? 'bg-accent/15 border-2 border-black' : isUnlocked ? 'bg-white' : 'bg-zinc-100/50 opacity-60'
+                                isWorn 
+                                  ? 'bg-accent/20 border-2 border-black shadow-neo-xs' 
+                                  : item.isFounderExclusive
+                                    ? 'bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-400'
+                                    : isUnlocked ? 'bg-white' : 'bg-zinc-100/50 opacity-60'
                               }`}
                             >
                               <div className="flex flex-col text-left">
@@ -1023,7 +1041,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   {item.title}
                                 </span>
                                 <span className="text-[9px] font-bold text-zinc-400 mt-0.5">
-                                  {item.desc} {isUnlocked ? '🔓 已解鎖' : `🔒 差 ${item.days - currentStreak} 天`}
+                                  {item.isFounderExclusive ? '🌟 創始會員尊榮佩戴' : `${item.desc} ${isUnlocked ? '🔓 已解鎖' : `🔒 差 ${item.days - currentStreak} 天`}`}
                                 </span>
                               </div>
                               {isUnlocked ? (
@@ -1826,6 +1844,26 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 className="overflow-hidden mt-3 text-left"
                               >
                                 <div className="p-4 border-2 border-black rounded-2xl bg-amber-50/90 space-y-3 shadow-neo-xs">
+                                  {isFounder && (
+                                    <div className="p-3 bg-gradient-to-r from-amber-200 via-yellow-200 to-amber-300 border-2 border-black rounded-2xl shadow-neo-xs flex items-center justify-between gap-2">
+                                      <div className="flex items-center gap-2">
+                                        <span className="text-xl">🎖️</span>
+                                        <div className="text-left">
+                                          <div className="font-black text-xs text-black">您已是 Daily Diet 最高榮譽【創始支持者】</div>
+                                          <div className="text-[9px] font-bold text-amber-950 mt-0.5">感謝您的核心贊助！全套特權與專屬徽章已為您終身開通 🎋</div>
+                                        </div>
+                                      </div>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          window.dispatchEvent(new CustomEvent('open-founder-pass'));
+                                        }}
+                                        className="px-2.5 py-1 bg-black text-amber-300 rounded-lg text-[9px] font-black shrink-0 active:scale-95 shadow-neo-xs-black cursor-pointer"
+                                      >
+                                        查看證書
+                                      </button>
+                                    </div>
+                                  )}
                                   <div className="flex items-center gap-2">
                                     <span className="text-xl">🎋</span>
                                     <div>

@@ -715,6 +715,21 @@ function doGet(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 🎖️ 0.26 查詢用戶創始支持者特權狀態 (供 Web 前端 / LIFF 即時驗證)
+    if (action === 'checkFounderStatus' || action === 'getFounderStatus') {
+      const qUser = e?.parameter?.userId || userId;
+      const qName = e?.parameter?.userName || incomingCaller;
+      const qEmail = e?.parameter?.email;
+      const founderData = typeof checkUserIsFounderSupporter === 'function'
+        ? checkUserIsFounderSupporter(qUser, qName, qEmail, props)
+        : null;
+      return ContentService.createTextOutput(JSON.stringify({
+        status: 'ok',
+        isFounder: Boolean(founderData),
+        data: founderData || null
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 🛡️ 0.3 Gist 所有權安全校驗：防範跨用戶資料串聯與越權存取 (IDOR)
     if (incomingGist && !verifyGistOwnership(incomingGist, userId, props)) {
       console.warn(`🚨 [Gist 越權存取拒絕 (GET)] 用戶 ${userId || '匿名/Web'} 企圖存取非授權 Gist: ${incomingGist}`);
@@ -929,6 +944,10 @@ function doGet(e) {
         }
       }
 
+      const founderSupporter = (typeof checkUserIsFounderSupporter === 'function')
+        ? checkUserIsFounderSupporter(userId, lineDisplayName || webCallerName || '', e?.parameter?.email, props)
+        : null;
+
       return ContentService.createTextOutput(JSON.stringify({
         status: 'ok',
         userId,
@@ -941,7 +960,9 @@ function doGet(e) {
         goals,
         persona,
         language: userLanguage,
-        favorites: getUserFavorites(userId, props, incomingGist)
+        favorites: getUserFavorites(userId, props, incomingGist),
+        isFounder: Boolean(founderSupporter),
+        founderData: founderSupporter || null
       })).setMimeType(ContentService.MimeType.JSON);
     }
 

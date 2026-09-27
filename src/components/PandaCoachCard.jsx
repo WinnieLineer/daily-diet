@@ -5,6 +5,7 @@ import { Flame, Sparkles, MessageCircle } from 'lucide-react';
 import { twMerge } from 'tailwind-merge';
 import { t, getLanguage } from '../lib/translations';
 import { PandaSticker } from './PandaStickers';
+import { isFounderUser } from '../lib/founderService';
 
 const EMOJI_TO_STICKER_ID = {
   '🐼👑': 'crown',
@@ -156,6 +157,35 @@ const DIALOGUES = {
       'Thanks for "caring" about me... not!',
       'I\'ll bite next time!',
     ],
+  }
+};
+
+const FOUNDER_DIALOGUES = {
+  zh: {
+    idle: [
+      '👑 尊敬的創始支持者！感謝您點亮 Daily Diet，今天熱量目標熊貓一定幫您盯緊緊！🎋',
+      '🌟 報告大金主！伺服器和 AI 額度因為有您全力支援，教練每天吃竹子都笑瞇瞇～',
+      '🎖️ 創始特權會員專屬：今天多吃一口優質蛋白質，教練保證肌肉啪啪長！💪',
+      '✨ 創始支持者光環閃耀！您的每一次紀錄，都在書寫 Daily Diet 的傳奇！',
+      '🎋 創始老闆好！熊貓教練 24 小時為您待命，想吃什麼快快記上來！',
+    ],
+    click: [
+      '哎呀！是大金主創始者點我！教練立刻立正站好！🫡',
+      '老闆好！有什麼需要熊貓為您效勞的嗎？👑',
+      '創始支持者按我一下，熊貓今天動力直接加滿 200%！✨',
+      '隨便按、盡情按！創始支持者擁有本熊貓最高調戲特權！😆',
+    ]
+  },
+  en: {
+    idle: [
+      '👑 Welcome, Founder Supporter! Your kindness powers Daily Diet forever! 🎋',
+      '🌟 Coach Panda reports: Thanks to your founding support, the servers are happy!',
+      '🎖️ Founder VIP: Keep hitting those protein goals today! You rock! 💪',
+    ],
+    click: [
+      'Salute to our Founder! How can Coach Panda serve you today? 👑',
+      'Founder VIP click! You have unlimited privileges to poke this panda! 😆',
+    ]
   }
 };
 
@@ -400,6 +430,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
   const [hasCrown, setHasCrown]     = useState(() => {
     try { return localStorage.getItem('panda_sponsor_crown') === 'true'; } catch(e) { return false; }
   });
+  const [isFounder, setIsFounder]   = useState(() => isFounderUser());
   const [activeSticker, setActiveSticker] = useState(() => {
     try { return localStorage.getItem('panda_active_sticker') || ''; } catch(e) { return ''; }
   });
@@ -416,10 +447,13 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     }
   });
 
-  // Listen for crown, sticker & title updates
+  // Listen for crown, founder, sticker & title updates
   useEffect(() => {
     const handleCrownChange = () => {
       try { setHasCrown(localStorage.getItem('panda_sponsor_crown') === 'true'); } catch(e) {}
+    };
+    const handleFounderChange = (e) => {
+      setIsFounder(e.detail?.isFounder ?? isFounderUser());
     };
     const handleStickersChange = () => {
       try { setActiveSticker(localStorage.getItem('panda_active_sticker') || ''); } catch(e) {}
@@ -428,10 +462,12 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
       try { setActiveTitle(localStorage.getItem('panda_active_title') || ''); } catch(e) {}
     };
     window.addEventListener('panda-crown-updated', handleCrownChange);
+    window.addEventListener('founder-status-updated', handleFounderChange);
     window.addEventListener('panda-stickers-updated', handleStickersChange);
     window.addEventListener('panda-title-updated', handleTitleChange);
     return () => {
       window.removeEventListener('panda-crown-updated', handleCrownChange);
+      window.removeEventListener('founder-status-updated', handleFounderChange);
       window.removeEventListener('panda-stickers-updated', handleStickersChange);
       window.removeEventListener('panda-title-updated', handleTitleChange);
     };
@@ -473,7 +509,10 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     if (isDragging) return;
     setExpression('scared');
     setIsSquished(true);
-    showBubble(getRandom(DIALOGUES[getLanguage()].click));
+    const lang = getLanguage();
+    const baseClick = DIALOGUES[lang]?.click || [];
+    const founderClick = isFounder ? (FOUNDER_DIALOGUES[lang]?.click || []) : [];
+    showBubble(getRandom([...baseClick, ...founderClick, ...founderClick]));
     addParticle('💥');
     await controls.start({
       scale: [1, 1.15, 0.9, 1.05, 1],
@@ -481,7 +520,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
       transition: { duration: 0.4, ease: 'easeOut' },
     });
     resetExpression(1200);
-  }, [isDragging, controls, showBubble, addParticle, resetExpression]);
+  }, [isDragging, controls, showBubble, addParticle, resetExpression, isFounder]);
 
   // ── CLICK ON SPEECH BUBBLE ────────────────────
   const handleBubbleClick = useCallback((e) => {
@@ -491,9 +530,13 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
     addParticle('✨');
     const lang = getLanguage();
     const list = [...(DIALOGUES[lang]?.idle || []), ...(DIALOGUES[lang]?.click || [])];
+    if (isFounder) {
+      const fList = [...(FOUNDER_DIALOGUES[lang]?.idle || []), ...(FOUNDER_DIALOGUES[lang]?.click || [])];
+      list.push(...fList, ...fList); // 增加創始專屬台詞命中機率
+    }
     showBubble(getRandom(list), 3500);
     resetExpression(1500);
-  }, [isDragging, showBubble, addParticle, resetExpression]);
+  }, [isDragging, showBubble, addParticle, resetExpression, isFounder]);
 
   // ── TICKLE (hover) ───────────────────────────
   const handleTickleStart = useCallback(() => {
@@ -770,6 +813,24 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                   <span className="text-[9px] sm:text-[10px] font-black tracking-tight text-zinc-900 bg-white px-2 py-0.5 rounded-full border-1.5 sm:border-2 border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center">
                     <span>{t('panda_coach_name')}</span>
                   </span>
+                )}
+
+                {/* 🎖️ 創始支持者尊榮標籤 */}
+                {isFounder && (
+                  <motion.button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      window.dispatchEvent(new CustomEvent('open-founder-pass'));
+                    }}
+                    whileHover={{ scale: 1.05 }}
+                    whileTap={{ scale: 0.95 }}
+                    className="text-[8.5px] sm:text-[9.5px] font-black bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 border-1.5 sm:border-2 border-black text-black px-1.5 sm:px-2 py-0.5 rounded-lg shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-1 cursor-pointer"
+                    title="創始支持者專屬通行證"
+                  >
+                    <span>👑</span>
+                    <span>創始支持者</span>
+                  </motion.button>
                 )}
 
                 {/* Comic Dialogue / Banter indicator when interacting */}
