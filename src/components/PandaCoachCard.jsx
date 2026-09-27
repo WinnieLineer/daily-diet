@@ -734,7 +734,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                 transition={{ duration: 3.2, repeat: Infinity, ease: "easeInOut" }}
                 className="w-full h-full"
               >
-                <PandaFace expression={expression} isSquished={isSquished} hasCrown={hasCrown} />
+                <PandaFace expression={expression} isSquished={isSquished} hasCrown={hasCrown || isFounder} />
               </motion.div>
               
               {/* Exquisite Mascot Sticker Overlay */}
@@ -802,36 +802,30 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
               “
             </span>
 
-            {/* Header Row: Persona / Name + Speaking Status + Streak (Single line, strictly no wrap) */}
-            <div className="flex items-center justify-between gap-1.5 mb-1.5 relative z-10 min-w-0">
-              <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink">
-                {activeTitle ? (
-                  <span className="text-[9px] sm:text-[9.5px] font-black bg-accent border-1.5 sm:border-2 border-black text-black px-2 py-0.5 rounded-lg rotate-[-1deg] shadow-[1px_1px_0px_rgba(0,0,0,1)] truncate max-w-[85px] xs:max-w-[110px] sm:max-w-none">
-                    {activeTitle}
-                  </span>
-                ) : (
-                  <span className="text-[9px] sm:text-[10px] font-black tracking-tight text-zinc-900 bg-white px-2 py-0.5 rounded-full border-1.5 sm:border-2 border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center shrink-0">
-                    <span>{t('panda_coach_name')}</span>
-                  </span>
-                )}
-
-                {/* 🎖️ 創始支持者精緻微型標章（不佔空間、防破版） */}
-                {isFounder && activeTitle !== '🎖️ 創始支持者' && (
-                  <motion.button
-                    type="button"
-                    onClick={(e) => {
+            {/* Header Row: Persona / Name + Speaking Status + Streak (Strictly no-wrap, anti-collision layout) */}
+            <div className="flex items-center justify-between gap-1 sm:gap-1.5 mb-1.5 relative z-10 min-w-0 flex-nowrap overflow-hidden">
+              <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink flex-nowrap overflow-hidden">
+                {/* 熊貓稱號 / 名字標籤 (若為創始者，皇冠直接內嵌於標籤內，不額外佔位且防擠壓) */}
+                <span 
+                  onClick={(e) => {
+                    if (isFounder) {
                       e.stopPropagation();
                       window.dispatchEvent(new CustomEvent('open-founder-pass'));
-                    }}
-                    whileHover={{ scale: 1.08 }}
-                    whileTap={{ scale: 0.92 }}
-                    className="text-[8.5px] sm:text-[9px] font-black bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 border border-black text-black px-1.5 py-0.2 rounded-full shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-0.5 cursor-pointer shrink-0"
-                    title="創始支持者尊榮金卡（點擊檢視）"
-                  >
-                    <span>👑</span>
-                    <span className="hidden sm:inline">創始</span>
-                  </motion.button>
-                )}
+                    }
+                  }}
+                  className={twMerge(
+                    "text-[8.5px] sm:text-[9.5px] font-black px-2 py-0.5 rounded-full border-1.5 sm:border-2 border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-0.5 sm:gap-1 shrink-0 truncate max-w-[110px] xs:max-w-[130px] sm:max-w-none select-none",
+                    isFounder 
+                      ? "bg-gradient-to-r from-amber-200 via-yellow-200 to-amber-300 text-amber-950 cursor-pointer hover:brightness-105 active:scale-95 transition-transform" 
+                      : activeTitle 
+                        ? "bg-accent text-black rotate-[-1deg] rounded-lg" 
+                        : "text-zinc-900 bg-white"
+                  )}
+                  title={isFounder ? "創始支持者尊榮金卡（點擊檢視）" : undefined}
+                >
+                  {isFounder && <span className="text-[10px] leading-none shrink-0">👑</span>}
+                  <span className="truncate">{activeTitle || t('panda_coach_name')}</span>
+                </span>
 
                 {/* Comic Dialogue / Banter indicator when interacting */}
                 <AnimatePresence mode="wait">
@@ -842,17 +836,18 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.85 }}
                       transition={{ duration: 0.15 }}
-                      className="text-[8.5px] font-black bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-1 shrink-0"
+                      className="text-[8px] sm:text-[8.5px] font-black bg-amber-200/90 text-amber-950 px-1.5 sm:px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] flex items-center gap-0.5 sm:gap-1 shrink-0"
                     >
-                      <MessageCircle size={10} className="text-amber-900 fill-amber-300" />
-                      <span>{currentLang === 'en' ? 'Coach Banter' : '教練吐槽'}</span>
+                      <MessageCircle size={9} className="text-amber-900 fill-amber-300 shrink-0" />
+                      <span>{currentLang === 'en' ? 'Banter' : '吐槽'}</span>
+                      <span className="hidden xs:inline">{currentLang === 'zh' ? '模式' : ''}</span>
                     </motion.span>
                   ) : (
                     <span
                       key="bubble-idle"
                       className="text-[8px] font-bold text-amber-800/80 bg-amber-100/70 px-1.5 py-0.5 rounded-md border border-amber-200/80 hidden sm:inline-flex items-center gap-0.5 shrink-0"
                     >
-                      <Sparkles size={9} className="text-amber-600" />
+                      <Sparkles size={9} className="text-amber-600 shrink-0" />
                       <span>{currentLang === 'en' ? 'Daily Wisdom' : '日常碎碎念'}</span>
                     </span>
                   )}
@@ -860,15 +855,15 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
               </div>
 
               {streak > 0 && (
-                <div className="flex items-center gap-1 bg-amber-200/90 text-amber-950 px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] shrink-0">
-                  <Flame size={10} className="fill-amber-500 text-amber-600" />
-                  <span className="text-[8.5px] sm:text-[9px] font-black italic">{streak} {t('streak_text')}</span>
+                <div className="flex items-center gap-0.5 sm:gap-1 bg-amber-200/90 text-amber-950 px-1.5 sm:px-2 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_rgba(0,0,0,1)] shrink-0">
+                  <Flame size={9} className="fill-amber-500 text-amber-600 shrink-0" />
+                  <span className="text-[8px] sm:text-[9px] font-black italic whitespace-nowrap">{streak} {t('streak_text')}</span>
                 </div>
               )}
             </div>
 
             {/* Dynamic Dialogue Text with AnimatePresence */}
-            <div className="relative min-h-[38px] sm:min-h-[42px] flex items-center z-10 px-0.5">
+            <div className="relative min-h-[38px] sm:min-h-[42px] flex items-center z-10 px-0.5 overflow-hidden">
               <AnimatePresence mode="wait">
                 {bubbleVisible && bubble ? (
                   <motion.div
@@ -879,7 +874,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                     transition={{ duration: 0.1 }}
                     className="w-full"
                   >
-                    <p className="text-xs sm:text-[13.5px] font-black text-zinc-950 leading-snug tracking-tight">
+                    <p className="text-xs sm:text-[13.5px] font-black text-zinc-950 leading-snug tracking-tight break-words">
                       {bubble}
                     </p>
                   </motion.div>
@@ -913,7 +908,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                     transition={{ duration: 0.1 }}
                     className="w-full"
                   >
-                    <p className="text-xs sm:text-[13.5px] font-black text-zinc-900 leading-snug tracking-tight">
+                    <p className="text-xs sm:text-[13.5px] font-black text-zinc-900 leading-snug tracking-tight break-words">
                       {advice || t('default_panda_advice')}
                     </p>
                   </motion.div>
@@ -922,12 +917,22 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
             </div>
 
             {/* Interactive Footer Pill */}
-            <div className="flex justify-between items-center mt-1.5 pt-1 border-t border-amber-900/10 z-10">
-              <span className="text-[7.5px] sm:text-[8px] font-bold text-amber-900/50 tracking-wider font-mono">
-                {currentLang === 'en' ? 'PANDA DIARY' : 'PANDA DIARY'}
+            <div className="flex justify-between items-center mt-1.5 pt-1 border-t border-amber-900/10 z-10 gap-1 flex-nowrap">
+              <span className="text-[7.5px] sm:text-[8px] font-bold text-amber-900/60 tracking-wider font-mono shrink-0 flex items-center gap-1">
+                {isFounder ? (
+                  <span className="text-amber-700 font-extrabold flex items-center gap-0.5">
+                    <span>👑</span>
+                    <span className="hidden xs:inline">FOUNDER</span>
+                    <span>VIP</span>
+                  </span>
+                ) : (
+                  <span>PANDA DIARY</span>
+                )}
               </span>
-              <span className="inline-flex items-center gap-0.5 text-[7.5px] sm:text-[8px] font-black text-zinc-600 bg-white/80 group-hover/bubble:bg-white px-1.5 py-0.5 rounded-md border border-black/20 shadow-xs transition-colors">
-                <span>🐾 {currentLang === 'en' ? 'Tap to switch quote' : '點我換一句 / 戳戳熊貓'}</span>
+              <span className="inline-flex items-center gap-0.5 text-[7.5px] sm:text-[8px] font-black text-zinc-600 bg-white/80 group-hover/bubble:bg-white px-1.5 py-0.5 rounded-md border border-black/20 shadow-xs transition-colors shrink-0">
+                <span>🐾</span>
+                <span className="hidden xs:inline">{currentLang === 'en' ? 'Tap quote / ' : '點我換一句 / '}</span>
+                <span>{currentLang === 'en' ? 'Poke Panda' : '戳戳熊貓'}</span>
               </span>
             </div>
           </motion.div>
