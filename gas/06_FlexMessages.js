@@ -6573,9 +6573,11 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
               {
                 type: 'button',
                 action: {
-                  type: 'message',
+                  type: 'postback',
                   label: isEn ? '💬 Report Last 5 Digits' : '💬 已完成轉帳 (回報帳號末5碼)',
-                  text: isEn ? 'I have transferred! Last 5 digits: ' : '我已完成轉帳，後五碼是：'
+                  data: JSON.stringify({ action: 'fillTransferDigits' }),
+                  inputOption: 'openKeyboard',
+                  fillInText: isEn ? 'I have transferred! Last 5 digits: ' : '我已完成轉帳，後五碼是：'
                 },
                 style: 'secondary',
                 color: '#D97706',

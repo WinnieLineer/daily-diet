@@ -2098,6 +2098,12 @@ function doPost(e) {
 
         console.log(`🔘 [按鈕點擊] 動作: ${payload.action} | 內容:`, JSON.stringify(payload));
 
+        // 💬 回報轉帳後五碼引導 (LINE 自動開啟鍵盤並填入輸入框，無需額外回傳訊息打擾)
+        if (payload.action === 'fillTransferDigits') {
+          console.log(`💬 [轉帳回報引導] 用戶 ${userId} 點擊開啟鍵盤填寫末五碼`);
+          continue;
+        }
+
         // 🐣 / 🌐 新舊用戶分流引導
         if (payload.action === 'onboarding') {
           if (payload.type === 'new') {
@@ -3353,22 +3359,31 @@ function doPost(e) {
               ? (getUserDisplayName(userId, CHANNEL_ACCESS_TOKEN, props) || `LINE用戶 (#${userId.slice(-6)})`)
               : `LINE用戶 (#${userId.slice(-6)})`;
 
+            // 🛡️ 防呆防護：如果用戶誤將未填寫末五碼的文字直接送出
+            if (!lastDigits) {
+              const emptyDigitsPrompt = isEn
+                ? `🐼 Coach Panda received your message, but the last 5 digits seem to be missing!\n\nPlease reply directly with your account's last 5 digits (e.g. "Last 5: 12345") so we can verify and record your 🎖️ Founding Supporter perks! 🎋✨`
+                : `🐼 熊貓教練收到您的訊息囉，但似乎還沒有看到您的【帳號末 5 碼】喔！\n\n請直接在此對話回覆您的帳號末 5 碼（例如傳送：「後五碼 12345」或直接輸入 5 位數字），維護者收到後才能為您核對並正式開通【🎖️ 創始支持者】金色徽章與特權喔！🎋❤️`;
+              replyTextMessage(replyToken, emptyDigitsPrompt, CHANNEL_ACCESS_TOKEN, userId, props);
+              continue;
+            }
+
             if (typeof recordSystemLog === 'function') {
-              recordSystemLog('贊助回報', userId, userText, `末碼: ${lastDigits || '手動記錄'}`, `用戶 ${userDisplayName} 回報轉帳：${userText}`);
+              recordSystemLog('贊助回報', userId, userText, `末碼: ${lastDigits}`, `用戶 ${userDisplayName} 回報轉帳：${userText}`);
             }
 
             if (typeof saveFounderSupporterData === 'function') {
               saveFounderSupporterData(props, {
                 userId: userId,
                 name: userDisplayName,
-                note: `用戶回報末碼: ${lastDigits || userText.slice(0, 30)} (${Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm")})`,
+                note: `用戶回報末碼: ${lastDigits} (${Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm")})`,
                 isFounder: true
               }, '系統自動登記 (LINE用戶回報)');
             }
 
             const confirmReply = isEn
-              ? `🐼 Transfer Report Received!\n\nThank you so much, ${userDisplayName}! We have recorded your account details${lastDigits ? ` (Last digits: ${lastDigits})` : ''}.\n\nOur maintainer will verify it shortly and your profile has been noted for the 🎖️ Founding Supporter badge & perks! Thank you for supporting Daily Diet! 🎋✨`
-              : `🐼 收到您的轉帳回報囉！\n\n非常感謝您，${userDisplayName}！熊貓教練已記錄下您的轉帳資訊${lastDigits ? `（末 5 碼：${lastDigits}）` : ''}，並已將您預先登記至系統後台的【🎖️ 創始支持者】名冊中！\n\n維護者核對帳目後，將正式為您點亮後台金色徽章與永久特權！感謝您在草創期成為 Daily Diet 最堅實的溫暖後盾！🎋❤️`;
+              ? `🐼 Transfer Report Received!\n\nThank you so much, ${userDisplayName}! We have recorded your account details (Last digits: ${lastDigits}).\n\nOur maintainer will verify it shortly and your profile has been noted for the 🎖️ Founding Supporter badge & perks! Thank you for supporting Daily Diet! 🎋✨`
+              : `🐼 收到您的轉帳回報囉！\n\n非常感謝您，${userDisplayName}！熊貓教練已記錄下您的轉帳末 5 碼：【${lastDigits}】，並已將您預先登記至系統後台的【🎖️ 創始支持者】名冊中！\n\n維護者核對帳目後，將正式為您點亮後台金色徽章與永久特權！感謝您在草創期成為 Daily Diet 最堅實的溫暖後盾！🎋❤️`;
 
             replyTextMessage(replyToken, confirmReply, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
