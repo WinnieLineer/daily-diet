@@ -1833,7 +1833,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                     </div>
 
                                     <div className="text-[10px] font-bold text-zinc-400">
-                                      戶名：林詩婷 (專案支持帳戶 · 支援中信 APP / 網銀掃碼)
+                                      戶名：Daily Diet 專案支持帳戶（核對姓氏：林 · 支援中信 APP / 網銀掃碼）
                                     </div>
 
                                     <button
@@ -1854,19 +1854,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                         <div className="text-[9px] font-bold text-amber-700">$50</div>
                                       </div>
                                       <div className="p-1.5 bg-teal-50 rounded-lg border border-teal-200">
-                                        <div className="text-[10px] font-black text-teal-900">🍱 伺服器補給</div>
+                                        <div className="text-[10px] font-black text-teal-900">🍱 算力補給</div>
                                         <div className="text-[9px] font-bold text-teal-700">$150</div>
                                       </div>
                                       <div className="p-1.5 bg-rose-50 rounded-lg border border-rose-200">
-                                        <div className="text-[10px] font-black text-rose-900">🎋 終身飼養員</div>
+                                        <div className="text-[10px] font-black text-rose-900">🎋 核心支持</div>
                                         <div className="text-[9px] font-bold text-rose-700">$500</div>
                                       </div>
                                     </div>
                                   </div>
 
                                   <div className="p-3.5 bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-400 rounded-2xl text-[10.5px] font-bold text-amber-950 leading-relaxed text-left shadow-sm">
-                                    🎁 <b>滴水之恩，熊貓終身免單 🎋✨</b><br />
-                                    轉帳後歡迎在上方表單留個「轉帳末 5 碼與 Email」，我們立刻為您登記為【終身榮譽飼養員】——這份心意我們用一輩子記住！未來 Daily Diet 無論新增任何更酷炫的進階 AI 或付費模組，您一律<b>終身全免隨意用，永不收費</b>！感謝您在草創期拉我們一把！❤️
+                                    🎁 <b>老朋友專屬【創始支持者】禮遇 🎋✨</b><br />
+                                    轉帳後歡迎在上方表單留個「轉帳末 5 碼與 Email」，我們直接為您登記為【創始支持者】——永久享有專屬金色創始者徽章，未來若推出全新 AI 增強功能，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期成為我們的堅實後盾！❤️
                                   </div>
                                 </div>
                               </motion.div>

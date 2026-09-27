@@ -215,7 +215,7 @@
     <div class="grid-tmpl">
       <button class="tmpl-btn active" onclick="switchTemplate('sponsor')">
         <span>🎁 贊助感謝</span>
-        <span class="sub">終身榮譽飼養員免單</span>
+        <span class="sub">創始支持者尊榮禮遇</span>
       </button>
       <button class="tmpl-btn" onclick="switchTemplate('gist_tech')">
         <span>⚙️ Gist / PAT 技術說明</span>
@@ -293,7 +293,7 @@
 
   const TEMPLATES = {
     sponsor: {
-      subject: '感謝您對 Daily Diet 的溫暖鼓勵與支持！🐼🎋（終身榮譽飼養員登記確認）',
+      subject: '感謝您對 Daily Diet 的溫暖鼓勵與支持！🐼🎋（創始支持者登記確認）',
       intro: '今天在後台收到您送出的贊助與支持留言，看到這則訊息時，我真的又驚又喜，內心滿滿的感動！身為獨立開發者，能收到使用者主動說好用、甚至還專程找轉帳資訊想給予支持，這絕對是開發旅程中最珍貴、最強大的強心針與肯定！❤️'
     },
     gist_tech: {
@@ -374,12 +374,15 @@
                 🎋 為什麼之前把轉帳資料藏起來？
               </div>
               <p style="font-size: 14px; color: #854D0E; margin: 0 0 12px 0; line-height: 1.6;">
-                先跟您坦白：我不希望這個工具給人一種「在隨意勸募」的感覺。我想先專注把核心功能（如語音記餐、雙向即時同步、16:8 斷食窗口與食物微調）做到最極致順手與穩定，等未來規劃出更完善的進階服務再來正式收費。
+                先跟您坦白：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。<br>
+                不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的<b>雲端伺服器與 AI 算力 Token 成本</b>。因此您的這份微薄心意，對我們來說就是最及時、最珍貴的<b>「AI 算力補給燃料」</b>！
               </p>
               <div style="background-color: #FFFFFF; border: 1.5px solid #EAB308; border-radius: 10px; padding: 14px; font-size: 14px; color: #000000; line-height: 1.6;">
-                🎁 <b>滴水之恩，熊貓終身免單 🎋✨</b><br>
-                因為有像您這樣一路陪伴、真心認同理念的老朋友，若您願意給予這份微薄心意，我十分感激並感動地收下！<br>
-                <b>我會直接將您的 Email（${data.email || '您的信箱'}）登記在系統核心的【終身榮譽飼養員】名冊中。未來 Daily Diet 無論何時推出任何進階收費方案或全新 AI 增強功能，您皆享有「終身完整權限免費隨意使用，永不收費」！感謝您在草創期拉我們一把！❤️</b>
+                🎁 <b>老朋友專屬【創始支持者】禮遇 🎋✨：</b><br>
+                因為有像您這樣一路相伴、真心認同理念的老朋友，我會直接將您的信箱（<b>${data.email || '您的信箱'}</b>）登記在系統核心的【創始支持者 (Founder Supporter)】名冊中：<br>
+                • 🎖️ <b>永久享有個人專屬「創始支持者金色徽章」</b><br>
+                • 🚀 <b>未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇</b><br>
+                感謝您在草創期拉我們一把，成為 Daily Diet 的堅實後盾！❤️
               </div>
             </td>
           </tr>
@@ -407,7 +410,7 @@
                 <tr>
                   <td style="padding: 10px 14px; font-size: 14px;">
                     <span style="color: #64748B;">戶名資訊：</span>
-                    <b style="color: #0F172A;">林詩婷 (專案支持帳戶)</b>
+                    <b style="color: #0F172A;">Daily Diet 專案支持帳戶（核對姓氏：林）</b>
                   </td>
                 </tr>
               </table>
@@ -429,20 +432,20 @@
                   </td>
                   <td width="33%" align="center" style="padding: 4px;">
                     <div style="background-color: #CCFBF1; border: 1px solid #5EEAD4; border-radius: 8px; padding: 6px;">
-                      <span style="font-size: 11px; font-weight: bold; color: #0F766E;">🍱 伺服器補給</span><br>
+                      <span style="font-size: 11px; font-weight: bold; color: #0F766E;">🍱 算力補給</span><br>
                       <span style="font-size: 11px; color: #115E59;">$150</span>
                     </div>
                   </td>
                   <td width="33%" align="center" style="padding: 4px;">
                     <div style="background-color: #FFE4E6; border: 1px solid #FDA4AF; border-radius: 8px; padding: 6px;">
-                      <span style="font-size: 11px; font-weight: bold; color: #9F1239;">🎋 終身飼養員</span><br>
+                      <span style="font-size: 11px; font-weight: bold; color: #9F1239;">🎋 核心支持</span><br>
                       <span style="font-size: 11px; color: #881337;">$500</span>
                     </div>
                   </td>
                 </tr>
               </table>
               <div style="font-size: 11px; color: #0F766E; text-align: center; margin-top: 6px;">
-                💡 轉帳後請回信告知「帳號末 5 碼」，我們將在後台立刻為您標記【終身榮譽飼養員】！
+                💡 轉帳後請回信告知「帳號末 5 碼」，我們將在後台立刻為您登記為【創始支持者】！
               </div>
             </td>
           </tr>
@@ -519,14 +522,16 @@
       (data.quote ? `【您之前的留言】：\n「${data.quote}」\n\n` : '') +
       data.intro + '\n\n' +
       (currentTemplate === 'sponsor' 
-        ? `🎁 滴水之恩，熊貓終身免單 🎋✨：\n` +
-          `我們已將您的 Email（${data.email || '您的信箱'}）登記為【終身榮譽飼養員】！未來任何進階付費方案與 AI 增強功能，您一律終身全免隨意用，永不收費！感謝您在草創期拉我們一把！❤️\n\n` +
+        ? `🎁 老朋友專屬【創始支持者】禮遇 🎋✨：\n` +
+          `我們已將您的 Email（${data.email || '您的信箱'}）登記為【創始支持者】！\n` +
+          `• 永久享有個人專屬「創始支持者金色徽章」🎖️\n` +
+          `• 未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期拉我們一把！❤️\n\n` +
           `💳 專案支持轉帳資訊：\n` +
           `• 銀行：822 中國信託商業銀行 (CTBC)\n` +
           `• 帳號：174533815287\n` +
-          `• 戶名：林詩婷 (專案支持帳戶)\n` +
-          `• 隨喜支持：☕ $50 咖啡 / 🍱 $150 補給 / 🎋 $500 終身飼養員 (自由隨喜，零負擔)\n` +
-          `• 轉帳後請告知「帳號末 5 碼」，我們將立即為您完成終身標記！`
+          `• 戶名：Daily Diet 專案支持帳戶（核對姓氏：林）\n` +
+          `• 隨喜支持：☕ $50 咖啡 / 🍱 $150 算力補給 / 🎋 $500 核心支持 (自由隨喜，零負擔)\n` +
+          `• 轉帳後請告知「帳號末 5 碼」，我們將立即為您完成創始登記！`
         : `若有任何問題或想法，非常歡迎隨時回信！祝您度過美好的一天！✨`) +
       `\n\n---\nDaily Diet 開發團隊 敬上 🐼\nhttps://winnie-lin.space/daily-diet/`;
   }

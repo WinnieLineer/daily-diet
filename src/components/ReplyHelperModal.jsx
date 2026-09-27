@@ -20,11 +20,11 @@ import NeoButton from './NeoButton';
 const TEMPLATES = [
   {
     id: 'sponsor',
-    title: '🎁 贊助感謝 · 終身免單飼養員',
+    title: '🎁 贊助感謝 · 創始支持者',
     badge: '贊助支持',
     color: 'from-amber-400 to-yellow-300',
     icon: '🎋',
-    subject: '感謝您對 Daily Diet 的溫暖鼓勵與支持！🐼🎋（終身榮譽飼養員登記確認）',
+    subject: '感謝您對 Daily Diet 的溫暖鼓勵與支持！🐼🎋（創始支持者登記確認）',
     defaultIntro: '今天在後台收到您送出的贊助與支持留言，看到這則訊息時，我真的又驚又喜，內心滿滿的感動！身為獨立開發者，能收到使用者主動說好用、甚至還專程找轉帳資訊想給予支持，這絕對是開發旅程中最珍貴、最強大的強心針與肯定！❤️',
     type: 'sponsor'
   },
@@ -107,16 +107,18 @@ export default function ReplyHelperModal({
     let content = '';
     if (selectedTemplateId === 'sponsor') {
       content = `🎋 為什麼之前把轉帳資料藏起來？\n` +
-        `先跟您坦白：我不希望這個工具給人一種「在隨意勸募」的感覺。我想先專注把核心功能（如語音記餐、雙向即時同步、16:8 斷食窗口與食物微調）做到最極致順手與穩定。\n\n` +
-        `🎁 滴水之恩，熊貓終身免單 🎋✨：\n` +
-        `因為有像您這樣一路陪伴、真心認同理念的老朋友，若您願意給予這份微薄心意，我十分感激並感動地收下！\n` +
-        `我會直接將您的 Email（${recipientEmail || '您的信箱'}）登記在系統核心的【終身榮譽飼養員】名冊中。未來 Daily Diet 無論何時推出任何進階收費方案或全新 AI 增強功能，您皆享有「終身完整權限免費隨意使用，永不收費」！感謝您在草創期拉我們一把！❤️\n\n` +
+        `先跟您坦白：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。\n` +
+        `不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的雲端伺服器與 AI 算力 Token 成本。因此您的這份微薄心意，對我們來說就是最及時、最珍貴的「AI 算力補給燃料」！\n\n` +
+        `🎁 老朋友專屬【創始支持者】禮遇 🎋✨：\n` +
+        `因為有像您這樣一路相伴、真心認同理念的老朋友，我會直接將您的信箱（${recipientEmail || '您的信箱'}）登記在系統核心的【創始支持者 (Founder Supporter)】名冊中：\n` +
+        `• 永久享有個人專屬「創始支持者金色徽章」🎖️\n` +
+        `• 未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期拉我們一把！❤️\n\n` +
         `💳 專案支持轉帳帳戶資訊：\n` +
         `• 銀行代碼：822 (中國信託商業銀行 CTBC)\n` +
         `• 銀行帳號：174533815287\n` +
-        `• 戶名：林詩婷 (專案支持帳戶)\n` +
-        `• 隨喜支持：☕ 隨喜咖啡 $50 / 🍱 伺服器補給 $150 / 🎋 終身飼養員 $500 (完全自由隨喜，零負擔)\n` +
-        `• 轉帳後請告知「帳號末 5 碼」，我們將立即為您完成終身標記！`;
+        `• 戶名：Daily Diet 專案支持帳戶（核對姓氏：林）\n` +
+        `• 隨喜支持：☕ 隨喜咖啡 $50 / 🍱 算力補給 $150 / 🎋 核心支持 $500 (完全自由隨喜，零負擔)\n` +
+        `• 轉帳後請告知「帳號末 5 碼」，我們將立即為您完成創始登記！`;
     } else if (selectedTemplateId === 'gist_tech') {
       content = `⚙️ 針對您詢問的 Gist 與 PAT 同步問題說明：\n\n` +
         `1. 為什麼提示需要 GitHub PAT？\n` +
@@ -163,12 +165,15 @@ export default function ReplyHelperModal({
                 🎋 為什麼之前把轉帳資料藏起來？
               </div>
               <p style="font-size: 14px; color: #854D0E; margin: 0 0 12px 0; line-height: 1.6;">
-                先跟您坦白：我不希望這個工具給人一種「在隨意勸募」的感覺。我想先專注把核心功能（如語音記餐、雙向即時同步、16:8 斷食窗口與食物微調）做到最極致順手與穩定，等未來規劃出更完善的進階服務再來正式收費。
+                先跟您坦白：我不希望這個工具給人一種「在急著商業變現」的感覺。Daily Diet 的初衷是打造一個乾淨無廣告、無干擾的健康陪伴工具。<br>
+                不過，每位用戶每次拍照記餐、呼叫 Gemini AI 進行視覺營養分析，背後確實都有真實的<b>雲端伺服器與 AI 算力 Token 成本</b>。因此您的這份微薄心意，對我們來說就是最及時、最珍貴的<b>「AI 算力補給燃料」</b>！
               </p>
               <div style="background-color: #FFFFFF; border: 1.5px solid #EAB308; border-radius: 10px; padding: 14px; font-size: 14px; color: #000000; line-height: 1.6;">
-                🎁 <b>滴水之恩，熊貓終身免單 🎋✨</b><br>
-                因為有像您這樣一路陪伴、真心認同理念的老朋友，若您願意給予這份微薄心意，我十分感激並感動地收下！<br>
-                <b>我會直接將您的 Email（${recipientEmail || '您的信箱'}）登記在系統核心的【終身榮譽飼養員】名冊中。未來 Daily Diet 無論何時推出任何進階收費方案或全新 AI 增強功能，您皆享有「終身完整權限免費隨意使用，永不收費」！感謝您在草創期拉我們一把！❤️</b>
+                🎁 <b>老朋友專屬【創始支持者】禮遇 🎋✨：</b><br>
+                因為有像您這樣一路相伴、真心認同理念的老朋友，我會直接將您的信箱（<b>${recipientEmail || '您的信箱'}</b>）登記在系統核心的【創始支持者 (Founder Supporter)】名冊中：<br>
+                • 🎖️ <b>永久享有個人專屬「創始支持者金色徽章」</b><br>
+                • 🚀 <b>未來任何全新 AI 增強功能推出時，享有第一優先免費內測權與老友專屬禮遇</b><br>
+                感謝您在草創期拉我們一把，成為 Daily Diet 的堅實後盾！❤️
               </div>
             </td>
           </tr>
@@ -197,7 +202,7 @@ export default function ReplyHelperModal({
                 <tr>
                   <td style="padding: 10px 14px; font-size: 14px;">
                     <span style="color: #64748B;">戶名資訊：</span>
-                    <b style="color: #0F172A;">林詩婷 (專案支持帳戶)</b>
+                    <b style="color: #0F172A;">Daily Diet 專案支持帳戶（核對姓氏：林）</b>
                   </td>
                 </tr>
               </table>
@@ -221,20 +226,20 @@ export default function ReplyHelperModal({
                   </td>
                   <td width="33%" align="center" style="padding: 4px;">
                     <div style="background-color: #CCFBF1; border: 1px solid #5EEAD4; border-radius: 8px; padding: 6px;">
-                      <span style="font-size: 11px; font-weight: bold; color: #0F766E;">🍱 伺服器補給</span><br>
+                      <span style="font-size: 11px; font-weight: bold; color: #0F766E;">🍱 算力補給</span><br>
                       <span style="font-size: 11px; color: #115E59;">$150</span>
                     </div>
                   </td>
                   <td width="33%" align="center" style="padding: 4px;">
                     <div style="background-color: #FFE4E6; border: 1px solid #FDA4AF; border-radius: 8px; padding: 6px;">
-                      <span style="font-size: 11px; font-weight: bold; color: #9F1239;">🎋 終身飼養員</span><br>
+                      <span style="font-size: 11px; font-weight: bold; color: #9F1239;">🎋 核心支持</span><br>
                       <span style="font-size: 11px; color: #881337;">$500</span>
                     </div>
                   </td>
                 </tr>
               </table>
               <div style="font-size: 11px; color: #0F766E; text-align: center; margin-top: 6px;">
-                💡 轉帳後請回信告知「帳號末 5 碼」，我們將在後台立刻為您標記【終身榮譽飼養員】！
+                💡 轉帳後請回信告知「帳號末 5 碼」，我們將在後台立刻為您登記為【創始支持者】！
               </div>
             </td>
           </tr>

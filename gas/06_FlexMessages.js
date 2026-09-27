@@ -6364,14 +6364,14 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
 function generateSponsorFlex(persona, userLang) {
   const isEn = (userLang === 'en');
   
-  let coachQuote = '「哼... 本教練才不是因為你請喝咖啡才開心的呢！🎋 不過... 既然你這麼有心想幫伺服器添燃料，本教練就勉為其難把你的名字記在【終身榮譽飼養員】名冊上吧！以後所有新功能，一律讓你終身免單隨意用啦！」';
+  let coachQuote = '「哼... 本教練才不是因為你請喝咖啡才開心的呢！🎋 不過... 既然你這麼有心想幫伺服器與 AI 算力添燃料，本教練就勉為其難把你的名字記在【創始支持者】特權名冊上吧！未來任何新模組內測與老友禮遇都有你的份啦！」';
   let coachTitle = '傲嬌熊貓教練 🐼😤';
   
   if (persona === 'gentle') {
-    coachQuote = '「哇～真的非常感謝你的溫暖支持！🥰 每一份微薄心意，都是讓 Daily Diet 維持無廣告與持續進化的最大燃料。我們已為你登記為【終身榮譽飼養員】，未來所有進階功能皆享有終身免費隨意用喔！」';
+    coachQuote = '「哇～真的非常感謝你的溫暖支持！🥰 每一份微薄心意，都是讓 Daily Diet 維持無廣告與 AI 運算的最大燃料。我們已為你登記為【創始支持者】，未來享有金色專屬徽章與新功能優先搶先體驗喔！」';
     coachTitle = '治癒天使熊貓 🐼🥰';
   } else if (persona === 'hardcore') {
-    coachQuote = '「收到戰友的燃料補給！🔥 感謝你力挺我們的伺服器與 AI 算力！你已經被正式列入【終身榮譽飼養員】特種部隊，未來所有戰鬥模組終身全免！繼續燃燒脂肪！」';
+    coachQuote = '「收到戰友的 AI 算力補給！🔥 感謝你力挺我們的伺服器運算！你已經被正式列入【創始支持者】特種部隊，未來所有戰鬥新模組優先調用！繼續燃燒脂肪！」';
     coachTitle = '魔鬼士官長熊貓 🐼🔥';
   }
   
@@ -6522,7 +6522,7 @@ function generateSponsorFlex(persona, userLang) {
                   },
                   {
                     type: 'text',
-                    text: isEn ? 'Shih-Ting Lin (Verified)' : '林詩婷 (專案支持帳戶)',
+                    text: isEn ? 'Daily Diet Project (Lin)' : 'Daily Diet 專案支持帳戶（核對姓氏：林）',
                     size: 'xxs',
                     color: '#71717A',
                     flex: 4
@@ -6591,7 +6591,7 @@ function generateSponsorFlex(persona, userLang) {
                 cornerRadius: '8px',
                 paddingAll: '6px',
                 contents: [
-                  { type: 'text', text: '🍱 便當', size: 'xxs', weight: 'bold', color: '#0F766E', align: 'center' },
+                  { type: 'text', text: '🍱 補給', size: 'xxs', weight: 'bold', color: '#0F766E', align: 'center' },
                   { type: 'text', text: '$150', size: 'xxs', color: '#115E59', align: 'center' }
                 ]
               },
@@ -6602,7 +6602,7 @@ function generateSponsorFlex(persona, userLang) {
                 cornerRadius: '8px',
                 paddingAll: '6px',
                 contents: [
-                  { type: 'text', text: '🎋 飼養員', size: 'xxs', weight: 'bold', color: '#9F1239', align: 'center' },
+                  { type: 'text', text: '🎋 核心', size: 'xxs', weight: 'bold', color: '#9F1239', align: 'center' },
                   { type: 'text', text: '$500', size: 'xxs', color: '#881337', align: 'center' }
                 ]
               }
@@ -6620,8 +6620,8 @@ function generateSponsorFlex(persona, userLang) {
               {
                 type: 'text',
                 text: isEn
-                  ? '🎁 Lifetime Founding Supporter: Reply with your account last 5 digits + Email. You will be registered as an Honorary Supporter—enjoying lifetime full access to all future Pro & AI features completely free, forever!'
-                  : '🎁 滴水之恩，熊貓終身免單：轉帳完成後，請在此對話傳送「轉帳末 5 碼與 Email」，我們立刻為您登記為【終身榮譽飼養員】。未來 Daily Diet 無論推出何種進階收費模組或 AI 增強功能，您皆享有【終身免費隨意使用，永不收費】！感謝您在草創期拉我們一把！🎋✨',
+                  ? '🎁 Founding Supporter: Reply with your account last 5 digits + Email. You will be registered as a Founding Supporter—enjoying an exclusive badge, priority beta access to all upcoming AI features, and lifetime supporter perks!'
+                  : '🎁 老朋友專屬【創始支持者】禮遇：轉帳完成後，請在此對話傳送「轉帳末 5 碼與 Email」，我們立刻為您登記為【創始支持者】。永久享有專屬金色創始者徽章，未來若推出全新 AI 增強功能，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期成為我們的堅實後盾！🎋✨',
                 size: 'xxs',
                 color: '#52525B',
                 wrap: true
