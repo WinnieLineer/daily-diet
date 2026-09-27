@@ -806,7 +806,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
             <div className="flex items-center justify-between gap-1.5 mb-1.5 relative z-10 min-w-0">
               <div className="flex items-center gap-1 sm:gap-1.5 min-w-0 shrink">
                 {activeTitle ? (
-                  <span className="text-[9px] sm:text-[9.5px] font-black bg-accent border-1.5 sm:border-2 border-black text-black px-2 py-0.5 rounded-lg rotate-[-1deg] shadow-[1px_1px_0px_rgba(0,0,0,1)] truncate max-w-[100px] sm:max-w-none">
+                  <span className="text-[9px] sm:text-[9.5px] font-black bg-accent border-1.5 sm:border-2 border-black text-black px-2 py-0.5 rounded-lg rotate-[-1deg] shadow-[1px_1px_0px_rgba(0,0,0,1)] truncate max-w-[85px] xs:max-w-[110px] sm:max-w-none">
                     {activeTitle}
                   </span>
                 ) : (
@@ -816,7 +816,7 @@ const PandaCoachCard = ({ advice, streak = 0, onRetryAdvice, userName }) => {
                 )}
 
                 {/* 🎖️ 創始支持者精緻微型標章（不佔空間、防破版） */}
-                {isFounder && (
+                {isFounder && activeTitle !== '🎖️ 創始支持者' && (
                   <motion.button
                     type="button"
                     onClick={(e) => {

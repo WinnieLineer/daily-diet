@@ -14,6 +14,10 @@ const FOUNDER_GLOW_KEY = 'daily_diet_founder_glow';
  */
 export function isFounderUser() {
   try {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('founder') === '1' || params.get('founder') === 'true') return true;
+    }
     return localStorage.getItem(IS_FOUNDER_KEY) === 'true';
   } catch (e) {
     return false;
@@ -65,6 +69,12 @@ export function toggleFounderGlow(enabled) {
  */
 export function setFounderStatus(isFounder, data = null) {
   try {
+    if (typeof window !== 'undefined') {
+      const params = new URLSearchParams(window.location.search);
+      if (params.get('founder') === '1' || params.get('founder') === 'true') {
+        isFounder = true;
+      }
+    }
     if (isFounder) {
       localStorage.setItem(IS_FOUNDER_KEY, 'true');
       if (data) localStorage.setItem(FOUNDER_DATA_KEY, JSON.stringify(data));

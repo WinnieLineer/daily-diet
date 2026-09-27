@@ -131,6 +131,7 @@ function getAppQueryParams() {
     tab: getParam('tab'),
     view: getParam('view'),
     page: getParam('page'),
+    founder: getParam('founder'),
   };
 }
 
@@ -863,7 +864,7 @@ const HeaderClock = React.memo(function HeaderClock({ lastLocation }) {
         <span>{timeStr}</span>
       </div>
       {isValidLocation(lastLocation) && (
-        <div className="text-[6.5px] sm:text-[7.5px] text-zinc-500 font-bold truncate max-w-[55px] sm:max-w-[95px] whitespace-nowrap leading-none mt-0.5">
+        <div className="hidden sm:block text-[7.5px] text-zinc-500 font-bold truncate max-w-[95px] whitespace-nowrap leading-none mt-0.5">
           📍 {lastLocation}
         </div>
       )}
@@ -914,14 +915,20 @@ function App() {
   const [headerHeight, setHeaderHeight] = useState(88);
 
   // 🎖️ 創始支持者特權身分狀態
-  const [isFounder, setIsFounder] = useState(() => isFounderUser());
+  const [isFounder, setIsFounder] = useState(() => {
+    try {
+      const q = getAppQueryParams();
+      if (q.founder === 'true' || q.founder === '1') return true;
+    } catch (e) {}
+    return isFounderUser();
+  });
   const [founderData, setFounderData] = useState(() => getFounderData());
   const [founderGlow, setFounderGlow] = useState(() => isFounderGlowEnabled());
   const [showFounderPassModal, setShowFounderPassModal] = useState(false);
 
   useEffect(() => {
     const handleFounderStatus = (e) => {
-      setIsFounder(e.detail?.isFounder ?? isFounderUser());
+      setIsFounder(isFounderUser() || Boolean(e.detail?.isFounder));
       setFounderData(e.detail?.data ?? getFounderData());
     };
     const handleFounderGlow = (e) => {
@@ -953,7 +960,7 @@ function App() {
       observer.observe(headerRef.current);
       return () => observer.disconnect();
     }
-  }, [syncState, newVersionAvailable]);
+  }, [syncState, newVersionAvailable, isFounder, founderGlow]);
 
   useEffect(() => {
     const handleSyncStatus = (e) => {
@@ -1048,8 +1055,12 @@ function App() {
 
   useEffect(() => {
     const initLiffAndQueryParams = async () => {
-      const query = getAppQueryParams();
-      
+      // 🎖️ Handle query founder param (for testing and direct VIP link)
+      if (query.founder === '1' || query.founder === 'true') {
+        setFounderStatus(true);
+        setIsFounder(true);
+      }
+
       // 1. Handle incoming meal edit from LINE Bot
       if (query.action === 'editMeal' || query.cal || query.pro || query.wat) {
         setIncomingMeal({
@@ -2223,39 +2234,31 @@ function App() {
           <div className="flex justify-between items-center gap-2">
             {/* 左側：品牌、用戶與版本 */}
             <div className="flex flex-col shrink min-w-0 justify-center">
-              <div className="flex items-center gap-1.5 sm:gap-2 min-w-0">
-                <span className="truncate bg-accent text-black px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight shrink-0 inline-flex items-center gap-1">
+              <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
+                <span className="truncate bg-accent text-black px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight min-w-0 max-w-[170px] xs:max-w-[210px] sm:max-w-none inline-flex items-center gap-1">
+                  {isFounder && (
+                    <span className="text-[11px] sm:text-xs select-none shrink-0" title="創始支持者特權身分">👑</span>
+                  )}
                   {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' && (
-                    <span className="font-bold text-black/85 truncate max-w-[95px] sm:max-w-[140px] notranslate shrink" translate="no">
+                    <span className="font-bold text-black/85 truncate max-w-[70px] xs:max-w-[95px] sm:max-w-[140px] notranslate shrink" translate="no">
                       <span>{userName}</span>
                       <span>{t('title_possessive')}</span>
                     </span>
                   )}
-                  <span>{t('app_title')}</span>
+                  <span className="truncate">{t('app_title')}</span>
                 </span>
-                {isFounder && (
-                  <button
-                    type="button"
-                    onClick={() => setShowFounderPassModal(true)}
-                    className="bg-gradient-to-r from-amber-400 to-yellow-300 text-black px-1.5 py-0.5 rounded-md border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[9px] font-black tracking-tight shrink-0 flex items-center gap-0.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer"
-                    title="創始支持者尊榮身份（點擊檢視特權通行證）"
-                  >
-                    <span>🎖️</span>
-                    <span className="hidden sm:inline">創始者</span>
-                  </button>
-                )}
                 {ENABLE_520_THEME && (
                   <span className="text-[8px] font-black italic bg-black text-accent px-1.5 py-0.5 rounded-md border border-black shadow-xs shrink-0">
                     520
                   </span>
                 )}
               </div>
-              <div className="flex items-center gap-2 mt-1.5">
-                <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 notranslate font-mono leading-none tracking-wide" translate="no">v{APP_VERSION}</span>
-                <span className="text-zinc-300 text-[8px] leading-none select-none">•</span>
+              <div className="flex items-center gap-1.5 mt-1 sm:mt-1.5 flex-nowrap min-w-0">
+                <span className="text-[9px] sm:text-[10px] font-bold text-zinc-400 notranslate font-mono leading-none tracking-wide shrink-0" translate="no">v{APP_VERSION}</span>
+                <span className="text-zinc-300 text-[8px] leading-none select-none shrink-0">•</span>
                 {/* 雲端 / LINE 同步狀態短字提示 */}
                 <div 
-                  className="flex items-center gap-1.5 cursor-pointer group leading-none"
+                  className="flex items-center gap-1 cursor-pointer group leading-none shrink-0"
                   onClick={triggerManualSync}
                   title={
                     syncState === 'syncing' 
@@ -2285,6 +2288,21 @@ function App() {
                      (currentLang === 'en' ? 'cloud' : '雲端同步')}
                   </span>
                 </div>
+                {/* 🎖️ 創始支持者尊榮身分膠囊（置於第二列極度寬鬆空間，完全防遮蓋防衝突） */}
+                {isFounder && (
+                  <>
+                    <span className="text-zinc-300 text-[8px] leading-none select-none shrink-0">•</span>
+                    <button
+                      type="button"
+                      onClick={() => setShowFounderPassModal(true)}
+                      className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-black px-1.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[8.5px] sm:text-[9px] font-black tracking-tight shrink-0 inline-flex items-center gap-0.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer leading-none"
+                      title="創始支持者尊榮身份（點擊檢視特權通行證）"
+                    >
+                      <span>🎖️</span>
+                      <span>{currentLang === 'en' ? 'Founder' : '創始者'}</span>
+                    </button>
+                  </>
+                )}
               </div>
             </div>
 
