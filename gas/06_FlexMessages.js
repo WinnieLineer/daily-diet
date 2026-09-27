@@ -6361,7 +6361,7 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
 /**
  * ☕ 生成支持與贊助專案 Flex 卡片 (Neo-Brutalist 風格)
  */
-function generateSponsorFlex(persona, userLang) {
+function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
   const isEn = (userLang === 'en');
   
   let coachQuote = '「哼... 本教練才不是因為你請喝咖啡才開心的呢！🎋 不過... 既然你這麼有心想幫伺服器與 AI 算力添燃料，本教練就勉為其難把你的名字記在【創始支持者】特權名冊上吧！未來任何新模組內測與老友禮遇都有你的份啦！」';
