@@ -3355,8 +3355,8 @@ function doPost(e) {
             }
           }
 
-          // ☕ 被動關鍵字觸發：支持 / 贊助 / 轉帳 / 請喝咖啡 (不主動顯示，問了才回傳)
-          if (/^(贊助|支持|轉帳|轉帳資訊|贊助資訊|請喝咖啡|支持作者|donate|sponsor|打賞|餵食熊貓|贊助教練)$/i.test(userText.trim())) {
+          // ☕ 被動關鍵字觸發：支持 / 贊助 / 轉帳 / 請喝咖啡 (不主動顯示，問了才回傳，支援「我贊助」「我要贊助」「我想支持」等句型)
+          if (/^(?:我想要?|我想?|我要?)?(?:贊助|支持|轉帳|轉帳資訊|贊助資訊|請喝咖啡|支持作者|donate|sponsor|打賞|餵食熊貓|贊助教練|支持專案|贊助專案)$/i.test(userText.trim())) {
             const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT) || 'tsundere';
             const sponsorFlex = generateSponsorFlex(persona, userLang);
             const promptText = {
