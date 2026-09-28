@@ -52,6 +52,7 @@ import {
 } from 'lucide-react';
 import NeoButton from './NeoButton';
 import ReplyHelperModal from './ReplyHelperModal';
+import { setFounderStatus, isFounderUser } from '../lib/founderService';
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 const DEFAULT_MAINTAINER_USER = 'Winnie';
@@ -482,6 +483,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   });
   const [isSavingFounder, setIsSavingFounder] = useState(false);
   const [founderActionSuccess, setFounderActionSuccess] = useState('');
+  const [applyToCurrentBrowser, setApplyToCurrentBrowser] = useState(true);
 
   // 檢查是否為創始支持者
   const checkIsFounder = (uId, uName, email) => {
@@ -578,6 +580,19 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       if (data && data.supporters) {
         setFounderSupporters(data.supporters);
       }
+
+      // 🎖️ 若勾選同步套用至本機，立即寫入本機 localStorage 並發送事件通知前端更新 UI
+      if (applyToCurrentBrowser) {
+        setFounderStatus(isFounderValue, isFounderValue ? {
+          id: payload.id,
+          name: payload.name || '創始支持者',
+          email: payload.email,
+          number: payload.number || 'NO. 001',
+          greeting: payload.greeting,
+          addedAt: new Date().toLocaleString()
+        } : null);
+      }
+
       setFounderActionSuccess(isFounderValue ? '✅ 成功登記為【創始支持者】！' : 'ℹ️ 已取消創始支持者標記');
       setTimeout(() => {
         setIsFounderModalOpen(false);
@@ -1973,8 +1988,25 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           )}
         </div>
         <button
+          type="button"
+          onClick={() => {
+            const next = !isFounderUser();
+            setFounderStatus(next, next ? {
+              name: maintainerName || '維護者',
+              number: 'NO. 000 (維護者)',
+              greeting: '維護者特權測試模式',
+              addedAt: new Date().toLocaleString()
+            } : null);
+            alert(next ? (isEn ? '🎖️ Founder Supporter Perks Activated for this browser! Return to tracker to see the golden badge!' : '🎖️ 已立即為本機開通【創始支持者】特權！返回前台即可看到金色流光與徽章！') : (isEn ? 'Founder status removed for this browser' : 'ℹ️ 已關閉本機創始支持者特權'));
+          }}
+          className="bg-amber-400 hover:bg-amber-300 text-black px-2.5 py-1 rounded-xl border-2 border-black font-black text-[10px] shadow-neo-xs active:scale-95 cursor-pointer flex items-center gap-1 ml-auto"
+          title="點擊切換本機前台是否顯示創始支持者特權"
+        >
+          <span>🎖️ 前台創始特權：{isFounderUser() ? '已開通' : '未開通 (點擊開通)'}</span>
+        </button>
+        <button
           onClick={handleRevokePermanentPass}
-          className="text-[11px] font-black text-rose-600 hover:text-rose-800 underline decoration-2 underline-offset-2 ml-auto"
+          className="text-[11px] font-black text-rose-600 hover:text-rose-800 underline decoration-2 underline-offset-2 ml-2"
         >
           {isEn ? 'Revoke Pass & Lock' : '註銷永久通行證並鎖定'}
         </button>
@@ -4371,6 +4403,24 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                     <span className="text-[10px] text-zinc-400 font-normal mt-0.5 block">
                       {isEn ? 'Leave empty to assign automatically based on registration order.' : '留空將自動依登記先後順序排定序號。'}
                     </span>
+                  </div>
+
+                  {/* ⭐ 本機瀏覽器特權即時開通勾選 */}
+                  <div className="p-3 bg-amber-50 border-2 border-black rounded-xl flex items-center justify-between gap-3">
+                    <div>
+                      <div className="font-black text-xs text-black">
+                        {isEn ? '⭐ Apply Founder Perks to this Browser' : '⭐ 同步開通目前瀏覽器的創始支持者特權'}
+                      </div>
+                      <div className="text-[10px] text-zinc-600 font-bold mt-0.5">
+                        {isEn ? 'Immediately unlocks the golden aura bar, crown, and founder certificate on this device' : '儲存後立即在此瀏覽器前台啟用金色流光、皇冠徽章與創始通行證'}
+                      </div>
+                    </div>
+                    <input
+                      type="checkbox"
+                      checked={applyToCurrentBrowser}
+                      onChange={(e) => setApplyToCurrentBrowser(e.target.checked)}
+                      className="w-5 h-5 accent-amber-500 rounded cursor-pointer"
+                    />
                   </div>
                 </div>
 

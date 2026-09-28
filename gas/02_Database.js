@@ -2952,6 +2952,9 @@ function saveFounderSupporterData(props, data, operatorName) {
     if (item.userId && item.userId !== key) {
       currentMap[item.userId] = { ...item, _refKey: key };
     }
+    if (item.name && item.name !== key) {
+      currentMap[item.name] = { ...item, _refKey: key };
+    }
   }
 
   props.setProperty('FOUNDER_SUPPORTERS_MAP', JSON.stringify(currentMap));
@@ -2985,9 +2988,17 @@ function checkUserIsFounderSupporter(userId, userName, email, props) {
 
   const candidates = [userId, userName, email].filter(Boolean).map(s => String(s).trim());
   for (const c of candidates) {
+    if (!c) continue;
     if (map[c]) {
       const match = map[c];
       return match._refKey && map[match._refKey] ? map[match._refKey] : match;
+    }
+    const cLower = c.toLowerCase();
+    for (const k in map) {
+      if (k.toLowerCase() === cLower) {
+        const match = map[k];
+        return match._refKey && map[match._refKey] ? map[match._refKey] : match;
+      }
     }
   }
   return null;

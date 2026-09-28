@@ -966,7 +966,7 @@ function doGet(e) {
       }
 
       const founderSupporter = (typeof checkUserIsFounderSupporter === 'function')
-        ? checkUserIsFounderSupporter(userId, lineDisplayName || webCallerName || '', e?.parameter?.email, props)
+        ? checkUserIsFounderSupporter(userId, lineDisplayName || webCallerName || incomingCaller || e?.parameter?.userName || '', e?.parameter?.email, props)
         : null;
 
       return ContentService.createTextOutput(JSON.stringify({

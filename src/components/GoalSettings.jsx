@@ -9,9 +9,8 @@ import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION, GAS_API_URL } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
-import { liffService } from '../lib/liffService';
 import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateClientId } from '../lib/syncService';
-import { isFounderUser, getFounderData } from '../lib/founderService';
+import { isFounderUser, getFounderData, checkFounderStatusFromCloud } from '../lib/founderService';
 
 
 const VERSION_HISTORY = [
@@ -1945,6 +1944,32 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                     🎁 <b>老朋友專屬【創始支持者】禮遇 🎋✨</b><br />
                                     轉帳後歡迎在上方表單留個「轉帳末 5 碼與 Email」，我們直接為您登記為【創始支持者】——永久享有專屬金色創始者徽章，未來若推出全新 AI 增強功能，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期成為我們的堅實後盾！❤️
                                   </div>
+
+                                  {!isFounder && (
+                                    <button
+                                      type="button"
+                                      onClick={async () => {
+                                        const checkName = userName || safeGetStorage('user_name') || safeGetStorage('line_user_name') || '';
+                                        const checkId = safeGetStorage('line_user_id') || safeGetStorage('client_id') || '';
+                                        const emailPrompt = prompt(isEn ? 'Please enter your registered supporter Email or Name to verify:' : '請輸入您登記的贊助者 Email 或稱呼以進行驗證：', checkName);
+                                        if (!emailPrompt) return;
+                                        try {
+                                          const isF = await checkFounderStatusFromCloud(checkId, checkName, emailPrompt.trim());
+                                          if (isF) {
+                                            alert(isEn ? '🎉 Congratulations! Supporter status verified! Gold Crown & Aura unlocked!' : '🎉 恭喜！已成功驗證【創始支持者】特權身分！金色流光與專屬證書已開通！');
+                                          } else {
+                                            alert(isEn ? 'No matching supporter record found yet. Please allow a little time for manual verification.' : '目前在名冊中尚未比對到此紀錄。若您剛完成轉帳，請稍候管理員核對，或於反饋表單留言！');
+                                          }
+                                        } catch (e) {
+                                          alert('驗證連線失敗，請稍後再試');
+                                        }
+                                      }}
+                                      className="w-full mt-2.5 py-2 bg-amber-400 hover:bg-amber-300 text-black border-2 border-black rounded-xl text-xs font-black shadow-neo-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
+                                    >
+                                      <span>🔍</span>
+                                      <span>{isEn ? 'Check My Founder Supporter Status' : '查詢 / 驗證我的創始支持者身分'}</span>
+                                    </button>
+                                  )}
                                 </div>
                               </motion.div>
                             )}

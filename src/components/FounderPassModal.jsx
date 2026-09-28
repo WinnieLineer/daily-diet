@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, ShieldCheck } from 'lucide-react';
 import { getFounderData, isFounderGlowEnabled, toggleFounderGlow } from '../lib/founderService';
@@ -31,9 +32,14 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
     ? founderData.greeting.trim()
     : '感謝您在 Daily Diet 萌芽之初給予最溫暖的肯定與力量，這份心意是 Daily Diet 持續進化的永恆基石！🎋✨';
 
-  return (
+  const modalNode = (
     <AnimatePresence>
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/80 backdrop-blur-md">
+      <div 
+        onClick={(e) => {
+          if (e.target === e.currentTarget) onClose();
+        }}
+        className="fixed inset-0 z-[650] w-screen h-screen min-h-[100dvh] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.93, y: 15 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
@@ -236,4 +242,9 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
       </div>
     </AnimatePresence>
   );
+
+  if (typeof document !== 'undefined') {
+    return createPortal(modalNode, document.body);
+  }
+  return modalNode;
 }

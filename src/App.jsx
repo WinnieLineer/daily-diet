@@ -1062,6 +1062,16 @@ function App() {
         if (query.founder === '1' || query.founder === 'true') {
           setFounderStatus(true);
           setIsFounder(true);
+        } else if (query.founder === '0' || query.founder === 'false') {
+          setFounderStatus(false);
+          setIsFounder(false);
+        }
+
+        // 🎖️ 即時校驗雲端創始支持者特權身分 (防止本地快取遺失或跨裝置未同步)
+        const curUser = safeGetStorage('user_name') || safeGetStorage('line_user_name') || query.name || query.user || '';
+        const curId = safeGetStorage('line_user_id') || safeGetStorage('client_id') || '';
+        if (curUser || curId) {
+          checkFounderStatusFromCloud(curId, curUser).catch(() => {});
         }
 
       // 1. Handle incoming meal edit from LINE Bot
@@ -1191,10 +1201,15 @@ function App() {
           const localPro = (await db.settings.get('protein_goal'))?.value;
           const localWat = (await db.settings.get('water_goal'))?.value;
 
+          const currentUserName = userName || safeGetStorage('user_name') || safeGetStorage('line_user_name') || '';
           const queryParams = new URLSearchParams({
             action: 'getLogs',
             userId: effectiveUserId
           });
+          if (currentUserName) {
+            queryParams.append('userName', currentUserName);
+            queryParams.append('caller', currentUserName);
+          }
           if (localGist) queryParams.append('gistId', localGist);
           if (localCal) queryParams.append('cal', localCal);
           if (localPro) queryParams.append('pro', localPro);
@@ -2260,12 +2275,12 @@ function App() {
             {/* 左側：品牌、用戶與版本 */}
             <div className="flex flex-col shrink min-w-0 justify-center">
               <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
-                <span className="truncate bg-accent text-black px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight min-w-0 max-w-[170px] xs:max-w-[210px] sm:max-w-none inline-flex items-center gap-1">
+                <span className="bg-accent text-black px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight inline-flex items-center gap-1 max-w-[calc(100vw-170px)] sm:max-w-none whitespace-nowrap overflow-hidden">
                   {isFounder && (
                     <span className="text-[11px] sm:text-xs select-none shrink-0" title="創始支持者特權身分">👑</span>
                   )}
                   {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' && (
-                    <span className="font-bold text-black/85 truncate max-w-[70px] xs:max-w-[95px] sm:max-w-[140px] notranslate shrink" translate="no">
+                    <span className="font-bold text-black/90 shrink-0 notranslate" translate="no">
                       <span>{userName}</span>
                       <span>{t('title_possessive')}</span>
                     </span>
@@ -2307,8 +2322,8 @@ function App() {
                     syncState === 'synced' ? "text-emerald-700 font-bold" :
                     syncState === 'error' ? "text-rose-600 font-bold" : "text-zinc-500 group-hover:text-black"
                   )}>
-                    {syncState === 'syncing' ? (currentLang === 'en' ? 'LINE syncing...' : 'LINE 同步中...') :
-                     syncState === 'synced' ? (currentLang === 'en' ? 'LINE synced' : 'LINE 已同步') :
+                    {syncState === 'syncing' ? (currentLang === 'en' ? 'syncing...' : '同步中...') :
+                     syncState === 'synced' ? (currentLang === 'en' ? 'synced' : '已同步') :
                      syncState === 'error' ? (currentLang === 'en' ? 'offline' : '離線保存') :
                      (currentLang === 'en' ? 'cloud' : '雲端同步')}
                   </span>
@@ -2703,6 +2718,7 @@ function App() {
         <FounderPassModal 
           isOpen={showFounderPassModal}
           onClose={() => setShowFounderPassModal(false)}
+          userName={userName}
         />
       </Suspense>
 
