@@ -103,7 +103,7 @@ export function setFounderStatus(isFounder, data = null) {
  * @param {string} email 
  * @returns {Promise<boolean>}
  */
-export async function checkFounderStatusFromCloud(userId, userName, email = '') {
+export async function checkFounderStatusFromCloud(userId, userName, email = '', forceOverwrite = false) {
   const queryParams = new URLSearchParams({
     action: 'checkFounderStatus',
     userId: userId || '',
@@ -118,8 +118,15 @@ export async function checkFounderStatusFromCloud(userId, userName, email = '') 
     const data = await res.json();
     if (data && data.status === 'ok') {
       const isF = Boolean(data.isFounder);
-      setFounderStatus(isF, data.data);
-      return isF;
+      if (isF) {
+        setFounderStatus(true, data.data);
+        return true;
+      }
+      if (forceOverwrite) {
+        setFounderStatus(false, null);
+        return false;
+      }
+      return isFounderUser();
     }
   } catch (err) {
     console.warn('Failed to query founder status from cloud:', err);

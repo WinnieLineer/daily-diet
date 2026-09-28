@@ -12,16 +12,28 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
     if (isOpen) {
       setFounderData(getFounderData());
       setGlowEnabled(isFounderGlowEnabled());
+      const prevOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = prevOverflow;
+      };
     }
   }, [isOpen]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   const handleToggleGlow = () => {
     const next = !glowEnabled;
     setGlowEnabled(next);
     toggleFounderGlow(next);
   };
-
-  if (!isOpen) return null;
 
   const holderName = founderData?.name || userName || '尊貴的支持者';
   const founderSeq = founderData?.number || 'NO. 001';
@@ -34,16 +46,17 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
 
   const modalNode = (
     <AnimatePresence>
-      <div 
-        onClick={(e) => {
-          if (e.target === e.currentTarget) onClose();
-        }}
-        className="fixed inset-0 z-[650] w-screen h-screen min-h-[100dvh] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.93, y: 15 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.93, y: 15 }}
+      {isOpen && (
+        <div 
+          onClick={(e) => {
+            if (e.target === e.currentTarget) onClose();
+          }}
+          className="fixed inset-0 z-[650] w-screen h-screen min-h-[100dvh] flex items-center justify-center p-3 sm:p-4 bg-black/85 backdrop-blur-md overflow-y-auto"
+        >
+          <motion.div
+            initial={{ opacity: 0, scale: 0.93, y: 15 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            exit={{ opacity: 0, scale: 0.93, y: 15 }}
           transition={{ type: 'spring', damping: 25, stiffness: 300 }}
           className="bg-white border-4 border-black rounded-[2.2rem] sm:rounded-[2.5rem] shadow-neo-lg w-full max-w-md overflow-hidden flex flex-col max-h-[92vh] relative"
         >
@@ -240,6 +253,7 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
           </div>
         </motion.div>
       </div>
+      )}
     </AnimatePresence>
   );
 

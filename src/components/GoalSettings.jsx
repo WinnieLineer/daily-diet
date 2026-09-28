@@ -1954,8 +1954,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                         const emailPrompt = prompt(isEn ? 'Please enter your registered supporter Email or Name to verify:' : '請輸入您登記的贊助者 Email 或稱呼以進行驗證：', checkName);
                                         if (!emailPrompt) return;
                                         try {
-                                          const isF = await checkFounderStatusFromCloud(checkId, checkName, emailPrompt.trim());
+                                          const isF = await checkFounderStatusFromCloud(checkId, checkName, emailPrompt.trim(), true);
                                           if (isF) {
+                                            setIsFounder(true);
                                             alert(isEn ? '🎉 Congratulations! Supporter status verified! Gold Crown & Aura unlocked!' : '🎉 恭喜！已成功驗證【創始支持者】特權身分！金色流光與專屬證書已開通！');
                                           } else {
                                             alert(isEn ? 'No matching supporter record found yet. Please allow a little time for manual verification.' : '目前在名冊中尚未比對到此紀錄。若您剛完成轉帳，請稍候管理員核對，或於反饋表單留言！');

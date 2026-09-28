@@ -2277,7 +2277,16 @@ function App() {
               <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
                 <span className="bg-accent text-black px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight inline-flex items-center gap-1 max-w-[calc(100vw-170px)] sm:max-w-none whitespace-nowrap overflow-hidden">
                   {isFounder && (
-                    <span className="text-[11px] sm:text-xs select-none shrink-0" title="創始支持者特權身分">👑</span>
+                    <span 
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setShowFounderPassModal(true);
+                      }}
+                      className="text-[11px] sm:text-xs select-none shrink-0 cursor-pointer hover:scale-125 active:scale-95 transition-transform" 
+                      title="創始支持者特權身分（點擊檢視專屬證書）"
+                    >
+                      👑
+                    </span>
                   )}
                   {userName && userName.trim() && userName.trim() !== '?' && userName.trim() !== 'undefined' && (
                     <span className="font-bold text-black/90 shrink-0 notranslate" translate="no">
