@@ -1055,13 +1055,14 @@ function App() {
 
   useEffect(() => {
     const initLiffAndQueryParams = async () => {
-      const query = getAppQueryParams();
+      try {
+        const query = getAppQueryParams() || {};
 
-      // 🎖️ Handle query founder param (for testing and direct VIP link)
-      if (query.founder === '1' || query.founder === 'true') {
-        setFounderStatus(true);
-        setIsFounder(true);
-      }
+        // 🎖️ Handle query founder param (for testing and direct VIP link)
+        if (query.founder === '1' || query.founder === 'true') {
+          setFounderStatus(true);
+          setIsFounder(true);
+        }
 
       // 1. Handle incoming meal edit from LINE Bot
       if (query.action === 'editMeal' || query.cal || query.pro || query.wat) {
@@ -1608,9 +1609,14 @@ function App() {
         const cleanUrl = window.location.origin + window.location.pathname + targetHash;
         window.history.replaceState({}, document.title, cleanUrl);
       }
+    } catch (err) {
+      console.warn("⚠️ [initLiffAndQueryParams] Non-fatal error during startup query parsing:", err);
+    }
     };
 
-    initLiffAndQueryParams();
+    initLiffAndQueryParams().catch(err => {
+      console.warn("⚠️ [initLiffAndQueryParams] Uncaught rejection handled:", err);
+    });
   }, []);
 
   const handleSaveIncomingMeal = async (mealData) => {
