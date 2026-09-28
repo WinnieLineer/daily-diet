@@ -113,3 +113,7 @@ export const liffService = {
     return false;
   }
 };
+
+if (typeof window !== 'undefined') {
+  window.liffService = liffService;
+}
