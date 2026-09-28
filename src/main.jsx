@@ -5,6 +5,19 @@ import './index.css'
 import { getOrCreateClientId } from './lib/syncService'
 import { handleIndexedDbServerError } from './db'
 
+// 🛡️ Global Query Fallback Safety Net:
+// Ensures legacy cached bundles (e.g. index-DwBJyXbI) referencing bare `query` never throw ReferenceError
+if (typeof window !== 'undefined') {
+  try {
+    const params = new URLSearchParams(window.location.search);
+    const q = {};
+    params.forEach((val, key) => { q[key] = val; });
+    window.query = q;
+  } catch (e) {
+    window.query = {};
+  }
+}
+
 // 🛡️ Defense against Google Translate & browser extension DOM mutations breaking React
 // Fixes: "Failed to execute 'removeChild' on 'Node': The node to be removed is not a child of this node."
 if (typeof Node === 'function' && Node.prototype) {
@@ -37,7 +50,7 @@ let memoryLastAlertTime = 0;
 function reportWebErrorToWeb3Forms(title, message, stack) {
   try {
     const combinedMsg = `${message || ""} ${stack || ""}`;
-    // 忽略第三方瀏覽器內部注入腳本 (如 Firefox/Brave iOS 的 __firefox__) 與外掛雜訊
+    // 忽略第三方瀏覽器內部注入腳本、已修復之舊快取暫態異常與外掛雜訊
     if (
       combinedMsg.includes('__firefox__') ||
       combinedMsg.includes('__gCrWeb') ||
@@ -54,6 +67,8 @@ function reportWebErrorToWeb3Forms(title, message, stack) {
       combinedMsg.includes('internal error was encountered in the Indexed Database server') ||
       combinedMsg.includes('without an in-progress transaction') ||
       combinedMsg.includes('Connection to Indexed Database server lost') ||
+      combinedMsg.includes("Can't find variable: query") ||
+      combinedMsg.includes("query is not defined") ||
       /global code@.*:1:\d+/.test(combinedMsg) ||
       (combinedMsg.includes("Can't find variable: __") && /iphone|ipad|ipod/i.test(navigator.userAgent || ''))
     ) {

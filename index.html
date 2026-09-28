@@ -32,6 +32,20 @@
 
 <body class="bg-[#F8FAFC] selection:bg-accent selection:text-black">
   <div id="root"></div>
+  <script>
+    // 🛡️ Global Query Fallback Safety Net:
+    // Ensures legacy cached bundles referencing bare `query` never throw ReferenceError
+    (function() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var q = {};
+        params.forEach(function(val, key) { q[key] = val; });
+        window.query = q;
+      } catch(e) {
+        window.query = {};
+      }
+    })();
+  </script>
   <script type="module" src="/src/main.jsx"></script>
   <script>
     window.addEventListener('beforeinstallprompt', (e) => {
