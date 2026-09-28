@@ -1055,6 +1055,8 @@ function App() {
 
   useEffect(() => {
     const initLiffAndQueryParams = async () => {
+      const query = getAppQueryParams();
+
       // 🎖️ Handle query founder param (for testing and direct VIP link)
       if (query.founder === '1' || query.founder === 'true') {
         setFounderStatus(true);
