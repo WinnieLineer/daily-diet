@@ -2275,15 +2275,19 @@ function App() {
             {/* 左側：品牌、用戶與版本 */}
             <div className="flex flex-col shrink min-w-0 justify-center">
               <div className="flex items-center gap-1 sm:gap-1.5 min-w-0">
-                <span className="bg-accent text-black px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight inline-flex items-center gap-1 max-w-[calc(100vw-170px)] sm:max-w-none whitespace-nowrap overflow-hidden">
+                <span 
+                  onClick={() => {
+                    if (isFounder) setShowFounderPassModal(true);
+                  }}
+                  className={twMerge(
+                    "bg-accent text-black px-2 sm:px-2.5 py-0.5 rounded-md sm:rounded-lg border-2 border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] font-black text-xs sm:text-[13px] tracking-tight inline-flex items-center gap-1 max-w-[calc(100vw-170px)] sm:max-w-none whitespace-nowrap overflow-hidden select-none",
+                    isFounder && "cursor-pointer hover:scale-[1.02] active:scale-95 transition-transform"
+                  )}
+                  title={isFounder ? (currentLang === 'en' ? '👑 Founder Supporter (Click to view certificate)' : '👑 創始支持者尊榮身分（點擊檢視專屬證書）') : undefined}
+                >
                   {isFounder && (
                     <span 
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setShowFounderPassModal(true);
-                      }}
-                      className="text-[11px] sm:text-xs select-none shrink-0 cursor-pointer hover:scale-125 active:scale-95 transition-transform" 
-                      title="創始支持者特權身分（點擊檢視專屬證書）"
+                      className="text-[11px] sm:text-xs select-none shrink-0" 
                     >
                       👑
                     </span>

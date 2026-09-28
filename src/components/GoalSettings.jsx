@@ -9,6 +9,7 @@ import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION, GAS_API_URL } from '../lib/constants';
 import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
+import { liffService } from '../lib/liffService';
 import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateClientId } from '../lib/syncService';
 import { isFounderUser, getFounderData, checkFounderStatusFromCloud } from '../lib/founderService';
 
