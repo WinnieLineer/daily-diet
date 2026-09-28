@@ -17,7 +17,6 @@ import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 import { t, getLanguage, setLanguage } from './lib/translations';
 import { APP_VERSION, ENABLE_520_THEME, isValidLocation, CURRENT_WHATSNEW_ID } from './lib/constants';
-import versionData from '../public/version.json';
 import { liffService } from './lib/liffService';
 import LanguageToggle from './components/LanguageToggle';
 import { 
