@@ -3,6 +3,20 @@
 
 <head>
   <meta charset="UTF-8" />
+  <script>
+    // 🛡️ Global Query Fallback Safety Net:
+    // Ensures legacy cached bundles referencing bare `query` never throw ReferenceError
+    (function() {
+      try {
+        var params = new URLSearchParams(window.location.search);
+        var q = {};
+        params.forEach(function(val, key) { q[key] = val; });
+        window.query = q;
+      } catch(e) {
+        window.query = {};
+      }
+    })();
+  </script>
   <link rel="icon" type="image/png" href="favicon.png" />
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <link rel="mask-icon" href="favicon.svg" color="#000000" />

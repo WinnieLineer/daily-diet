@@ -1719,24 +1719,34 @@ function App() {
         if (remoteVersion && remoteVersion !== APP_VERSION) {
           console.log(`[VersionCheck] Mismatch! Remote: ${remoteVersion}, Local: ${APP_VERSION}`);
 
-          const lastReloadAttempt = safeGetStorage('last_reload_version');
-          if (lastReloadAttempt === remoteVersion) {
-            console.log('Already attempted reload for this version, skipping.');
+          const reloadKey = `reload_count_${remoteVersion}`;
+          const currentAttempts = Number(safeGetStorage(reloadKey) || 0);
+
+          if (currentAttempts >= 2) {
+            console.log(`Already attempted reload twice for version ${remoteVersion}, skipping to avoid loop.`);
           } else {
-            console.log('Attempting reload...');
-            safeSetStorage('last_reload_version', remoteVersion);
+            console.log(`Attempting reload for version ${remoteVersion} (attempt ${currentAttempts + 1}/2)...`);
+            safeSetStorage(reloadKey, String(currentAttempts + 1));
             
             // 1. Clear Service Worker caches if possible
             if ('caches' in window) {
-              const cacheNames = await caches.keys();
-              await Promise.all(cacheNames.map(name => caches.delete(name)));
+              try {
+                const cacheNames = await caches.keys();
+                await Promise.all(cacheNames.map(name => caches.delete(name)));
+              } catch (e) {
+                console.warn('Failed clearing caches in checkVersion:', e);
+              }
             }
 
             // 2. Unregister Service Workers completely
             if ('serviceWorker' in navigator) {
-              const registrations = await navigator.serviceWorker.getRegistrations();
-              for (let registration of registrations) {
-                await registration.unregister();
+              try {
+                const registrations = await navigator.serviceWorker.getRegistrations();
+                for (let registration of registrations) {
+                  await registration.unregister();
+                }
+              } catch (e) {
+                console.warn('Failed unregistering service workers in checkVersion:', e);
               }
             }
 
@@ -1744,14 +1754,21 @@ function App() {
             safeRemoveStorage('ai_fallback_date');
             safeRemoveStorage('ai_fallback_model');
              
-            // 4. Final Hard Reload (preserving current hash and query parameters e.g. #/admin)
+            // 4. Final Hard Reload with timestamp cache-buster and location.replace to break out of iOS bfcache/disk cache
             const isLogView = checkIsLogRoute();
             const currentHash = window.location.hash || (isLogView ? '#/admin' : '');
             const searchParams = new URLSearchParams(window.location.search);
             searchParams.set('v', remoteVersion);
+            searchParams.set('_t', Date.now().toString());
             const targetUrl = `${window.location.origin}${window.location.pathname}?${searchParams.toString()}${currentHash}`;
-            window.location.href = targetUrl;
+            window.location.replace(targetUrl);
           }
+        } else if (remoteVersion && remoteVersion === APP_VERSION) {
+          // Version is up to date: clean up any reload attempt keys
+          try {
+            safeRemoveStorage(`reload_count_${remoteVersion}`);
+            safeRemoveStorage('last_reload_version');
+          } catch (e) {}
         }
       } catch (err) {
         console.error("Version check failed:", err);

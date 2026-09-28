@@ -372,6 +372,8 @@ window.addEventListener('error', (event) => {
     combined.includes('webkit.messageHandlers') ||
     combined.includes('dynamically imported module') ||
     combined.includes('Importing a module script failed') ||
+    combined.includes("Can't find variable: query") ||
+    combined.includes("query is not defined") ||
     /global code@.*:1:\d+/.test(combined) ||
     (combined.includes("Can't find variable: __") && /iphone|ipad|ipod/i.test(navigator.userAgent || ''))
   ) {
@@ -395,6 +397,7 @@ window.addEventListener('unhandledrejection', (event) => {
   // 3. Network or ad-blocker blocked tracking
   // 4. Stale dynamic import chunks after new deployment
   // 5. Browser injected scripts (Firefox iOS, Chrome iOS, WebKit extensions)
+  // 6. Legacy query ReferenceError during cached transition
   if (
     combined.includes('__firefox__') ||
     combined.includes('__gCrWeb') ||
@@ -405,6 +408,8 @@ window.addEventListener('unhandledrejection', (event) => {
     combined.includes('safari-web-extension') ||
     combined.includes('moz-extension') ||
     combined.includes('ResizeObserver') ||
+    combined.includes("Can't find variable: query") ||
+    combined.includes("query is not defined") ||
     reasonStr.includes('Rejected') ||
     reasonStr.includes('ServiceWorker') ||
     reasonStr.includes('AbortError') ||
@@ -446,12 +451,30 @@ window.addEventListener('unhandledrejection', (event) => {
   reportWebErrorToWeb3Forms('Unhandled Promise Rejection', reasonStr, stack);
 });
 
-// Safe Service Worker Registration with Graceful Rejection Catch
+// Safe Service Worker Registration with Graceful Rejection Catch & Active Foreground Update
 if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+  let swRegistration = null;
+
+  const triggerSwUpdate = () => {
+    try {
+      if (swRegistration) {
+        swRegistration.update().catch(() => {});
+      } else {
+        navigator.serviceWorker.getRegistration().then((reg) => {
+          if (reg) {
+            swRegistration = reg;
+            reg.update().catch(() => {});
+          }
+        }).catch(() => {});
+      }
+    } catch (e) {}
+  };
+
   window.addEventListener('load', () => {
     const swUrl = `${import.meta.env.BASE_URL}sw.js`;
     navigator.serviceWorker.register(swUrl, { scope: import.meta.env.BASE_URL })
       .then((reg) => {
+        swRegistration = reg;
         // Auto-check for Service Worker updates periodically
         if (reg) {
           reg.addEventListener('updatefound', () => {
@@ -471,6 +494,23 @@ if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
         // Gracefully ignore service worker registration rejection in private/incognito/restricted browsing
         console.warn('PWA ServiceWorker registration skipped/rejected (normal in Incognito/restricted modes):', err?.message || err);
       });
+  });
+
+  // Re-check service worker updates whenever iOS PWA or Safari tab returns to foreground
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') {
+      triggerSwUpdate();
+    }
+  });
+  window.addEventListener('pageshow', (e) => {
+    if (e.persisted) {
+      triggerSwUpdate();
+    }
+  });
+
+  // Handle immediate controller takeover
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    console.log('🔄 Service Worker controller updated');
   });
 }
 
