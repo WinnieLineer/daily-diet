@@ -1342,85 +1342,189 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     </div>
 
-                    {/* 🎮 實用指令密技庫 (點擊一鍵複製) */}
-                    <div className="space-y-3 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-zinc-50 shadow-neo-sm">
+                    {/* 🚀 熊貓教練 4 大進階隱藏神技（選單找不到的超能力） */}
+                    <div className="space-y-3.5 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-zinc-50 shadow-neo-sm">
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span className="text-xl">🎮</span>
+                          <span className="text-xl">✨</span>
                           <h4 className="font-black italic text-sm text-black">
-                            {getLanguage() === 'en' ? 'Useful Commands (Tap to Copy)' : '聊天室常用指令密技（點擊複製）'}
+                            {getLanguage() === 'en' ? 'Panda Coach 4 Hidden Superpowers' : '熊貓教練 4 大進階隱藏神技（選單找不到的超能力）'}
                           </h4>
                         </div>
-                        <span className="text-[10px] font-bold text-zinc-400">
-                          {getLanguage() === 'en' ? 'Tap to copy' : '點指令即可複製'}
+                        <span className="text-[10px] font-black bg-yellow-300 text-black px-2.5 py-0.5 rounded-full border border-black shadow-neo-xs">
+                          {getLanguage() === 'en' ? 'Pro Tips' : '進階密技'}
                         </span>
                       </div>
 
-                      <div className="space-y-3">
-                        {[
-                          {
-                            category: "🍱 飲食記錄與修改",
-                            commands: [
-                              { cmd: "排骨便當 750卡 25蛋", desc: "文字快速記錄餐點" },
-                              { cmd: "改 400卡 35蛋", desc: "修正上一筆紀錄的數值" },
-                              { cmd: "刪除 雞胸肉沙拉", desc: "移除指定餐點" }
-                            ]
-                          },
-                          {
-                            category: "💧 喝水與日常打卡",
-                            commands: [
-                              { cmd: "喝水 500", desc: "快速增加 500ml 水分" },
-                              { cmd: "體重 65.5", desc: "記錄今日體重數據" },
-                              { cmd: "便便", desc: "腸道健康與排便打卡" }
-                            ]
-                          },
-                          {
-                            category: "📊 數據查詢與管理",
-                            commands: [
-                              { cmd: "今日", desc: "查看今日熱量總結與圓餅圖" },
-                              { cmd: "管理", desc: "檢視今日清單與各筆明細" },
-                              { cmd: "常用", desc: "開啟常用餐點輪播卡片" },
-                              { cmd: "體重走勢", desc: "查看體重變化折線圖" }
-                            ]
-                          },
-                          {
-                            category: "🎯 目標與 AI 設定",
-                            commands: [
-                              { cmd: "改目標 1800卡 120蛋 2500水", desc: "手動設定每日目標" },
-                              { cmd: "改目標 165cm 55kg 女 減脂", desc: "AI 自動計算 BMR/TDEE 目標" }
-                            ]
-                          }
-                        ].map((group) => (
-                          <div key={group.category} className="space-y-1.5">
-                            <span className="text-[11px] font-black text-zinc-600 block">{group.category}</span>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
-                              {group.commands.map((c) => (
-                                <button
-                                  key={c.cmd}
-                                  type="button"
-                                  onClick={() => handleCopyCmd(c.cmd)}
-                                  className={`p-2.5 rounded-xl border-2 border-black flex items-center justify-between text-left transition-all active:scale-95 shadow-neo-xs ${
-                                    copiedCmd === c.cmd ? 'bg-emerald-100 border-emerald-600' : 'bg-white hover:bg-yellow-50'
-                                  }`}
-                                >
-                                  <div className="space-y-0.5">
-                                    <div className="font-mono font-black text-xs text-black flex items-center gap-1.5">
-                                      <span>{c.cmd}</span>
-                                    </div>
-                                    <p className="text-[10px] font-bold text-zinc-500">{c.desc}</p>
-                                  </div>
-                                  <div className="shrink-0 pl-2">
-                                    {copiedCmd === c.cmd ? (
-                                      <Check size={14} className="text-emerald-600" />
-                                    ) : (
-                                      <Copy size={13} className="text-zinc-400" />
-                                    )}
-                                  </div>
-                                </button>
-                              ))}
+                      <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
+                        {getLanguage() === 'en'
+                          ? 'LINE Rich Menu has all basic buttons. But these conversational AI superpowers take your experience to the next level!'
+                          : 'LINE 圖文選單已有日常打卡按鈕，但這些「非選單」的對話式 AI 隱藏功能，才是真正讓記餐快 10 倍的神器！'}
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {/* 神技 1: 對話式自然語言改單 */}
+                        <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">💬</span>
+                              <span className="font-black text-xs text-black">
+                                {getLanguage() === 'en' ? 'Natural Language Tweaks' : '說人話直接微調改單'}
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-300">
+                              免刪除重打
+                            </span>
+                          </div>
+                          <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1 text-[11px]">
+                            <div className="text-zinc-600 font-bold">
+                              🗣️ 您說：<span className="text-black font-black">「這份只吃一半」</span>、<span className="text-black font-black">「飯換成地瓜」</span>
+                            </div>
+                            <div className="text-emerald-700 font-bold text-[10px]">
+                              🐼 熊貓：即時延續上下文記憶，等比例重算卡路里與蛋白質！
                             </div>
                           </div>
-                        ))}
+                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                            外食吃不完或臨時替換菜色，不用刪掉紀錄，像跟朋友傳訊息一樣講一句就修正完成。
+                          </p>
+                        </div>
+
+                        {/* 神技 2: 3 種教練性格自由切換 */}
+                        <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">🎭</span>
+                              <span className="font-black text-xs text-black">
+                                {getLanguage() === 'en' ? 'Switch Coach Persona' : '3 種教練性格任選'}
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-black bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-300">
+                              輸入「切換性格」
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between gap-1 text-[10px] font-black">
+                            <span className="bg-red-50 text-red-800 px-1.5 py-1 rounded border border-red-200">🐼 傲嬌毒舌</span>
+                            <span className="bg-pink-50 text-pink-800 px-1.5 py-1 rounded border border-pink-200">🐼 治癒天使</span>
+                            <span className="bg-amber-50 text-amber-800 px-1.5 py-1 rounded border border-amber-200">🐼 魔鬼士官</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                            在聊天室傳送「切換性格」隨時召喚專屬性格！想被毒舌吐槽還是被溫柔鼓勵，自由選擇。
+                          </p>
+                        </div>
+
+                        {/* 神技 3: 外食量身推薦顧問 */}
+                        <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">🥗</span>
+                              <span className="font-black text-xs text-black">
+                                {getLanguage() === 'en' ? 'AI Meal Advisor' : '隨身外食挑選顧問'}
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300">
+                              直接提問
+                            </span>
+                          </div>
+                          <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1 text-[11px]">
+                            <div className="text-zinc-600 font-bold">
+                              🗣️ 您問：<span className="text-black font-black">「蛋白質還差 25g，超商買啥？」</span>
+                            </div>
+                            <div className="text-amber-800 font-bold text-[10px]">
+                              🐼 熊貓：調閱今日已攝取額度，精準推薦熱量與蛋白質達標組合！
+                            </div>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                            不知道下一餐吃什麼？直接問熊貓，它會調出你的今日剩餘預算給出具體採買建議。
+                          </p>
+                        </div>
+
+                        {/* 神技 4: 卡片一鍵份量縮放 */}
+                        <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-base">🔢</span>
+                              <span className="font-black text-xs text-black">
+                                {getLanguage() === 'en' ? 'Portion Multiplier' : 'Flex 卡片一秒縮放'}
+                              </span>
+                            </div>
+                            <span className="text-[9px] font-black bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded border border-blue-300">
+                              按鈕即點即改
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-center gap-2 py-1 text-[10px] font-mono font-black">
+                            <span className="px-2 py-0.5 bg-zinc-100 rounded border border-black shadow-neo-xs">0.5x</span>
+                            <span className="px-2 py-0.5 bg-yellow-200 rounded border border-black shadow-neo-xs">1.0x</span>
+                            <span className="px-2 py-0.5 bg-zinc-100 rounded border border-black shadow-neo-xs">1.5x</span>
+                            <span className="px-2 py-0.5 bg-zinc-100 rounded border border-black shadow-neo-xs">2.0x</span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                            每筆餐點分析卡片底部都有倍數按鈕，聚餐分食或大胃王加量，點一下立即更新所有數據。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 🔄「手機 LINE ✕ 電腦 Web」雙效極致協同指南 */}
+                    <div className="space-y-3.5 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-white shadow-neo-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">🔄</span>
+                        <h4 className="font-black italic text-sm text-black">
+                          {getLanguage() === 'en' ? 'LINE + Web: The Ultimate Workflow' : '「手機 LINE ✕ 電腦 Web」雙效極致工作流'}
+                        </h4>
+                      </div>
+
+                      <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
+                        {getLanguage() === 'en'
+                          ? 'Sync once, use everywhere! How to combine LINE and Web for the best diet tracking experience:'
+                          : '綁定一次即可雙向同步！推薦這樣搭配使用，打造最輕鬆零負擔的飲食自律習慣：'}
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <div className="p-3.5 rounded-2xl bg-emerald-50/70 border-2 border-emerald-950/30 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📱</span>
+                            <strong className="font-black text-xs text-emerald-950">
+                              {getLanguage() === 'en' ? 'Mobile LINE: Fast Ingest' : '出門在外用 LINE（秒速輸入神器）'}
+                            </strong>
+                          </div>
+                          <ul className="text-[10px] font-bold text-emerald-900/90 space-y-1.5 pl-1">
+                            <li className="flex items-start gap-1.5">
+                              <span>📸</span>
+                              <span><strong>外食開動前隨手拍</strong>：5 秒完成熱量拆解，不耽誤用餐。</span>
+                            </li>
+                            <li className="flex items-start gap-1.5">
+                              <span>🎙️</span>
+                              <span><strong>通勤手忙用語音</strong>：長按說一句，免打字輕鬆登記。</span>
+                            </li>
+                            <li className="flex items-start gap-1.5">
+                              <span>⚡</span>
+                              <span><strong>圖文選單單手打卡</strong>：喝水 500、體重、常用餐點一鍵完成。</span>
+                            </li>
+                          </ul>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-amber-50/70 border-2 border-amber-950/30 space-y-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">💻</span>
+                            <strong className="font-black text-xs text-amber-950">
+                              {getLanguage() === 'en' ? 'Desktop Web: Deep Insights' : '晚上覆盤用 Web（深度分析中心）'}
+                            </strong>
+                          </div>
+                          <ul className="text-[10px] font-bold text-amber-900/90 space-y-1.5 pl-1">
+                            <li className="flex items-start gap-1.5">
+                              <span>📊</span>
+                              <span><strong>大螢幕全方位圖表</strong>：查看全週熱量赤字走勢與三大營養素。</span>
+                            </li>
+                            <li className="flex items-start gap-1.5">
+                              <span>🎯</span>
+                              <span><strong>AI 自動目標推算</strong>：依據體態變化動態調整 BMR/TDEE。</span>
+                            </li>
+                            <li className="flex items-start gap-1.5">
+                              <span>📂</span>
+                              <span><strong>資料私有備份匯出</strong>：無廣告、無後門，資料永久完整掌控。</span>
+                            </li>
+                          </ul>
+                        </div>
                       </div>
                     </div>
 
