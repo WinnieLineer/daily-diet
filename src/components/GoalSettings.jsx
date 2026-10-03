@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db, calculateStreak } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, ChevronDown, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3 } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, ChevronDown, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3, MessageCircle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION, GAS_API_URL } from '../lib/constants';
@@ -130,6 +130,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [showApiKey, setShowApiKey] = useState(false);
   const [showGithubPat, setShowGithubPat] = useState(false);
   const [showAdvancedGist, setShowAdvancedGist] = useState(false);
+  const [copiedCmd, setCopiedCmd] = useState(null);
+
+  const handleCopyCmd = (cmd) => {
+    try {
+      navigator.clipboard.writeText(cmd);
+      setCopiedCmd(cmd);
+      setTimeout(() => setCopiedCmd(null), 2000);
+    } catch (e) {}
+  };
 
   // 誠實支持商店擴展狀態
   const [hasCrown, setHasCrown] = useState(safeGetStorage('panda_sponsor_crown') === 'true');
@@ -355,7 +364,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   }, [initialTab]);
 
   useEffect(() => {
-    const validTabs = ['profile', 'goals', 'fasting', 'data', 'feedback', 'appinfo'];
+    const validTabs = ['profile', 'line', 'goals', 'fasting', 'data', 'feedback', 'appinfo'];
     const handleOpenSettings = (e) => {
       setIsOpen(true);
       if (e.detail && e.detail.tab && validTabs.includes(e.detail.tab)) {
@@ -777,17 +786,33 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
               <div className="flex p-2 gap-1 bg-zinc-100 overflow-x-auto no-scrollbar border-b-4 border-black shrink-0">
                 {[
                   { id: 'profile', icon: User, label: t('settings_profile') },
+                  { id: 'line', icon: MessageCircle, label: t('settings_line') || 'LINE 管家' },
                   { id: 'goals', icon: Target, label: t('settings_goals') },
                   { id: 'fasting', icon: Clock, label: t('fasting_mode') },
                   { id: 'data', icon: Database, label: t('settings_data') },
                   { id: 'feedback', icon: MessageSquare, label: t('settings_contact') },
                   { id: 'appinfo', icon: Info, label: t('settings_about') }
-                ].map(tab => (
-                  <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`flex flex-col items-center justify-center min-w-[65px] flex-1 p-2 rounded-xl border-2 transition-all ${activeTab === tab.id ? 'bg-black text-white border-black scale-105' : 'bg-transparent text-zinc-400 border-transparent hover:text-black'}`}>
-                    <tab.icon size={18} />
-                    <span className="text-[8px] font-black mt-1 uppercase tracking-tight">{tab.label}</span>
-                  </button>
-                ))}
+                ].map(tab => {
+                  const isActive = activeTab === tab.id;
+                  const isLine = tab.id === 'line';
+                  return (
+                    <button 
+                      key={tab.id} 
+                      onClick={() => setActiveTab(tab.id)} 
+                      className={`flex flex-col items-center justify-center min-w-[66px] flex-1 p-2 rounded-xl border-2 transition-all relative ${
+                        isActive 
+                          ? (isLine ? 'bg-[#06C755] text-white border-black scale-105 shadow-neo-xs' : 'bg-black text-white border-black scale-105 shadow-neo-xs') 
+                          : (isLine ? 'bg-[#E8F8EE] text-[#059639] border-[#06C755]/40 hover:border-black font-black' : 'bg-transparent text-zinc-400 border-transparent hover:text-black')
+                      }`}
+                    >
+                      <tab.icon size={18} />
+                      <span className="text-[8px] font-black mt-1 uppercase tracking-tight flex items-center gap-0.5">
+                        {tab.label}
+                        {isLine && !isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#06C755] animate-pulse" />}
+                      </span>
+                    </button>
+                  );
+                })}
               </div>
 
               {/* Content Area */}
@@ -822,6 +847,43 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             </button>
                           );
                         })}
+                      </div>
+                    </div>
+
+                    {/* 💬 LINE 官方帳號版探索橫幅 */}
+                    <div className="p-4 sm:p-5 border-4 border-black rounded-[2.2rem] bg-gradient-to-br from-[#E8F8EE] via-white to-[#F0FDF4] shadow-neo relative overflow-hidden text-left animate-fade-in space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-2xl">💬</span>
+                          <div>
+                            <h4 className="font-black italic text-sm text-black">原來還有 LINE 官方帳號版？！</h4>
+                            <span className="text-[9px] font-black text-[#059639] bg-[#D1F2DD] px-2 py-0.5 rounded-full inline-block mt-0.5">
+                              @618iipof · 聊天室拍照語音秒記餐
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                      <p className="text-xs font-bold text-zinc-600 leading-relaxed">
+                        免開瀏覽器！吃飯時直接在 LINE 聊天室拍食物照或用語音說話，Gemini AI 就會幫你估算熱量，並與本網頁 100% 雙向即時同步！
+                      </p>
+                      <div className="flex gap-2 pt-1">
+                        <button
+                          type="button"
+                          onClick={() => setActiveTab('line')}
+                          className="flex-1 bg-black text-white py-2.5 px-3 rounded-xl font-black text-xs shadow-neo-xs hover:bg-zinc-800 active:scale-95 transition-all text-center flex items-center justify-center gap-1.5"
+                        >
+                          <span>📖 查看 LINE 用法與指令</span>
+                          <ChevronRight size={14} />
+                        </button>
+                        <a
+                          href="https://line.me/R/ti/p/@618iipof"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="bg-[#06C755] text-white py-2.5 px-4 rounded-xl border-2 border-black font-black text-xs shadow-neo-xs hover:bg-[#05b34c] active:scale-95 transition-all text-center flex items-center justify-center gap-1 shrink-0"
+                        >
+                          <MessageCircle size={14} />
+                          <span>加好友</span>
+                        </a>
                       </div>
                     </div>
 
@@ -1079,6 +1141,314 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <RotateCcw size={20} className="text-rose-500" />
                       <span className="font-black italic text-sm">{t('reset_panda')}</span>
                     </button>
+                  </div>
+                )}
+
+                {activeTab === 'line' && (
+                  <div className="space-y-6 animate-fade-in text-left">
+                    {/* 💚 LINE 官方帳號 Hero 旗艦卡片 */}
+                    <div className="p-5 border-4 border-black rounded-[2.2rem] bg-gradient-to-br from-[#E8F8EE] via-white to-[#F0FDF4] shadow-neo relative overflow-hidden">
+                      <div className="relative z-10 space-y-4">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="space-y-1.5">
+                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#06C755] text-white text-[11px] font-black shadow-neo-xs">
+                              <MessageCircle size={14} />
+                              <span>{getLanguage() === 'en' ? 'Official LINE Bot' : 'LINE 官方帳號'}</span>
+                              <span className="w-1.5 h-1.5 rounded-full bg-white animate-ping ml-0.5" />
+                            </div>
+                            <h3 className="font-black italic text-lg sm:text-xl text-black tracking-tight">
+                              {getLanguage() === 'en' ? 'Panda Diet Bot · Snap & Log Food' : 'LINE 飲食管家 · 拍照語音秒記餐'}
+                            </h3>
+                            <div className="flex items-center gap-2 pt-0.5">
+                              <span className="text-xs font-bold text-zinc-500 font-mono">
+                                LINE ID: <strong className="text-black bg-white px-2 py-0.5 rounded-md border border-black/20 text-xs">@618iipof</strong>
+                              </span>
+                            </div>
+                          </div>
+
+                          <div className="hidden sm:flex flex-col items-center bg-white p-2 rounded-2xl border-2 border-black shadow-neo-xs shrink-0">
+                            <img 
+                              src="https://api.qrserver.com/v1/create-qr-code/?size=160x160&data=https%3A%2F%2Fline.me%2FR%2Fti%2Fp%2F%40618iipof&color=000000&bgcolor=ffffff" 
+                              alt="LINE QR Code" 
+                              className="w-16 h-16 rounded-lg"
+                            />
+                            <span className="text-[8px] font-black text-zinc-500 mt-1">掃碼立即加好友</span>
+                          </div>
+                        </div>
+
+                        <p className="text-xs font-bold text-zinc-700 leading-relaxed">
+                          {getLanguage() === 'en' 
+                            ? 'Too busy to open a web browser? In LINE, simply snap food photos or send voice messages to log meals. Gemini AI calculates calories & macros with 100% two-way web sync!'
+                            : '出門吃飯懶得開網頁？直接在 LINE 聊天室傳送食物照片或按住語音說話，Gemini AI 就會幫你即時估算熱量、蛋白質與水分，並與本網頁 100% 雙向即時同步！'}
+                        </p>
+
+                        {/* 一鍵動作按鈕區 */}
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                          <a
+                            href="https://line.me/R/ti/p/@618iipof"
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="bg-[#06C755] text-white py-3 px-4 rounded-2xl border-3 border-black font-black text-xs flex items-center justify-center gap-2 hover:bg-[#05b34c] active:scale-95 transition-all shadow-neo-sm text-center"
+                          >
+                            <MessageCircle size={16} />
+                            <span>{getLanguage() === 'en' ? '💚 Add LINE Bot' : '💚 一鍵加入 LINE 好友'}</span>
+                          </a>
+
+                          {currentGistId ? (
+                            <a
+                              href={`https://line.me/R/oaMessage/@618iipof/?%E7%B6%81%E5%AE%9A%20${currentGistId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="bg-black text-white py-3 px-4 rounded-2xl border-3 border-black font-black text-xs flex items-center justify-center gap-2 hover:bg-zinc-800 active:scale-95 transition-all shadow-neo-sm text-center"
+                            >
+                              <Zap size={15} className="text-yellow-400" />
+                              <span>{getLanguage() === 'en' ? '💬 Send Sync Command in LINE' : '💬 一鍵發送「綁定」指令'}</span>
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => setActiveTab('data')}
+                              className="bg-amber-100 text-amber-950 py-3 px-4 rounded-2xl border-3 border-black font-black text-xs flex items-center justify-center gap-2 hover:bg-amber-200 active:scale-95 transition-all shadow-neo-sm text-center"
+                            >
+                              <Database size={15} />
+                              <span>{getLanguage() === 'en' ? 'Generate Sync ID in Data Tab' : '前往生成雲端同步 ID'}</span>
+                            </button>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 🚀 3 步驟極速連動教學 */}
+                    <div className="space-y-3 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-white shadow-neo-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">⚡</span>
+                        <h4 className="font-black italic text-sm text-black">
+                          {getLanguage() === 'en' ? '3 Simple Steps to Start with LINE' : '超簡單 3 步驟！開始使用 LINE 記餐'}
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 gap-2.5 pt-1">
+                        <div className="p-3 bg-zinc-50 border-2 border-black rounded-xl space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-black text-white text-[10px] font-black flex items-center justify-center">1</span>
+                            <span className="font-black text-xs text-black">
+                              {getLanguage() === 'en' ? 'Add Bot as Friend' : '加為 LINE 好友'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-bold text-zinc-600 pl-7 leading-relaxed">
+                            {getLanguage() === 'en'
+                              ? 'Click "Add LINE Bot" above or search LINE ID @618iipof to add our official coach.'
+                              : '點擊上方「一鍵加好友」或在 LINE 搜尋官方 ID `@618iipof` 加入。'}
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-amber-50 border-2 border-black rounded-xl space-y-2">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                              <span className="w-5 h-5 rounded-full bg-black text-white text-[10px] font-black flex items-center justify-center">2</span>
+                              <span className="font-black text-xs text-amber-950">
+                                {getLanguage() === 'en' ? 'Send Sync Binding ID' : '傳送綁定碼（讓網頁與 LINE 雙向互通）'}
+                              </span>
+                            </div>
+                            {currentGistId && (
+                              <button
+                                type="button"
+                                onClick={() => handleCopyCmd(`綁定 ${currentGistId}`)}
+                                className="px-2 py-1 bg-white border border-black rounded-lg text-[10px] font-black text-black hover:bg-zinc-100 flex items-center gap-1 active:scale-95"
+                              >
+                                {copiedCmd === `綁定 ${currentGistId}` ? <Check size={12} className="text-emerald-500" /> : <Copy size={12} />}
+                                <span>{copiedCmd === `綁定 ${currentGistId}` ? (getLanguage() === 'en' ? 'Copied' : '已複製指令') : (getLanguage() === 'en' ? 'Copy Command' : '複製指令')}</span>
+                              </button>
+                            )}
+                          </div>
+                          <p className="text-[11px] font-bold text-amber-900 pl-7 leading-relaxed">
+                            在聊天室傳送「<code className="bg-white px-1.5 py-0.5 rounded border border-amber-300 font-mono text-black font-black">綁定 {currentGistId ? currentGistId.slice(0, 10) + '...' : '您的同步碼'}</code>」即完成綁定！在 LINE 記錄的每一餐都會秒速同步到此網頁。
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-emerald-50 border-2 border-black rounded-xl space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="w-5 h-5 rounded-full bg-emerald-600 text-white text-[10px] font-black flex items-center justify-center">3</span>
+                            <span className="font-black text-xs text-emerald-950">
+                              {getLanguage() === 'en' ? 'Start Snapping or Texting Meals!' : '隨時拍照、語音或打字記餐！'}
+                            </span>
+                          </div>
+                          <p className="text-[11px] font-bold text-emerald-900 pl-7 leading-relaxed">
+                            {getLanguage() === 'en'
+                              ? 'Take a photo of your meal and send it in chat. Gemini AI analyzes calories and macros within 5 seconds!'
+                              : '開動前拍一張照片丟進聊天室，熊貓教練 5 秒內幫你拆解熱量與營養素，還會貼心提醒你今天還能吃多少！'}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* ✨ LINE 版 4 大核心特色 */}
+                    <div className="space-y-3 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-white shadow-neo-sm">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">🌟</span>
+                        <h4 className="font-black italic text-sm text-black">
+                          {getLanguage() === 'en' ? 'Why Use the LINE Version?' : '為什麼推薦在 LINE 上使用？'}
+                        </h4>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        <div className="p-3.5 rounded-2xl bg-zinc-50 border-2 border-black space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📸</span>
+                            <span className="font-black text-xs text-black">
+                              {getLanguage() === 'en' ? 'Snap & Log in 5 Seconds' : '拍張照片就搞定'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-500 leading-relaxed">
+                            外食便當、聚餐餐盤隨手拍傳送，AI 自動辨識品名份量與卡路里，免手動搜尋打字。
+                          </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-zinc-50 border-2 border-black space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">🎙️</span>
+                            <span className="font-black text-xs text-black">
+                              {getLanguage() === 'en' ? 'Voice Logging' : '支援 LINE 語音記餐'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-500 leading-relaxed">
+                            走路通勤時按住麥克風說「我吃了一份雞胸肉便當加一顆茶葉蛋」，AI 自動聽懂並精確拆算。
+                          </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-zinc-50 border-2 border-black space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">📊</span>
+                            <span className="font-black text-xs text-black">
+                              {getLanguage() === 'en' ? 'In-Chat Interactive Charts' : '聊天室原生圖表卡片'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-500 leading-relaxed">
+                            輸入「今日」或「統計」，熊貓教練立刻回傳今日熱量進度條與營養比例圓餅圖！
+                          </p>
+                        </div>
+
+                        <div className="p-3.5 rounded-2xl bg-zinc-50 border-2 border-black space-y-1">
+                          <div className="flex items-center gap-2">
+                            <span className="text-lg">⏰</span>
+                            <span className="font-black text-xs text-black">
+                              {getLanguage() === 'en' ? 'Weight & Habit Tracking' : '體重打卡與喝水關懷'}
+                            </span>
+                          </div>
+                          <p className="text-[10px] font-bold text-zinc-500 leading-relaxed">
+                            早起輸入「體重 62.5」、順手輸入「喝水 500」或「便便」，輕鬆維持健康習慣。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 🎮 實用指令密技庫 (點擊一鍵複製) */}
+                    <div className="space-y-3 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-zinc-50 shadow-neo-sm">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <span className="text-xl">🎮</span>
+                          <h4 className="font-black italic text-sm text-black">
+                            {getLanguage() === 'en' ? 'Useful Commands (Tap to Copy)' : '聊天室常用指令密技（點擊複製）'}
+                          </h4>
+                        </div>
+                        <span className="text-[10px] font-bold text-zinc-400">
+                          {getLanguage() === 'en' ? 'Tap to copy' : '點指令即可複製'}
+                        </span>
+                      </div>
+
+                      <div className="space-y-3">
+                        {[
+                          {
+                            category: "🍱 飲食記錄與修改",
+                            commands: [
+                              { cmd: "排骨便當 750卡 25蛋", desc: "文字快速記錄餐點" },
+                              { cmd: "改 400卡 35蛋", desc: "修正上一筆紀錄的數值" },
+                              { cmd: "刪除 雞胸肉沙拉", desc: "移除指定餐點" }
+                            ]
+                          },
+                          {
+                            category: "💧 喝水與日常打卡",
+                            commands: [
+                              { cmd: "喝水 500", desc: "快速增加 500ml 水分" },
+                              { cmd: "體重 65.5", desc: "記錄今日體重數據" },
+                              { cmd: "便便", desc: "腸道健康與排便打卡" }
+                            ]
+                          },
+                          {
+                            category: "📊 數據查詢與管理",
+                            commands: [
+                              { cmd: "今日", desc: "查看今日熱量總結與圓餅圖" },
+                              { cmd: "管理", desc: "檢視今日清單與各筆明細" },
+                              { cmd: "常用", desc: "開啟常用餐點輪播卡片" },
+                              { cmd: "體重走勢", desc: "查看體重變化折線圖" }
+                            ]
+                          },
+                          {
+                            category: "🎯 目標與 AI 設定",
+                            commands: [
+                              { cmd: "改目標 1800卡 120蛋 2500水", desc: "手動設定每日目標" },
+                              { cmd: "改目標 165cm 55kg 女 減脂", desc: "AI 自動計算 BMR/TDEE 目標" }
+                            ]
+                          }
+                        ].map((group) => (
+                          <div key={group.category} className="space-y-1.5">
+                            <span className="text-[11px] font-black text-zinc-600 block">{group.category}</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5">
+                              {group.commands.map((c) => (
+                                <button
+                                  key={c.cmd}
+                                  type="button"
+                                  onClick={() => handleCopyCmd(c.cmd)}
+                                  className={`p-2.5 rounded-xl border-2 border-black flex items-center justify-between text-left transition-all active:scale-95 shadow-neo-xs ${
+                                    copiedCmd === c.cmd ? 'bg-emerald-100 border-emerald-600' : 'bg-white hover:bg-yellow-50'
+                                  }`}
+                                >
+                                  <div className="space-y-0.5">
+                                    <div className="font-mono font-black text-xs text-black flex items-center gap-1.5">
+                                      <span>{c.cmd}</span>
+                                    </div>
+                                    <p className="text-[10px] font-bold text-zinc-500">{c.desc}</p>
+                                  </div>
+                                  <div className="shrink-0 pl-2">
+                                    {copiedCmd === c.cmd ? (
+                                      <Check size={14} className="text-emerald-600" />
+                                    ) : (
+                                      <Copy size={13} className="text-zinc-400" />
+                                    )}
+                                  </div>
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+
+                    {/* 💡 常見疑問 FAQ */}
+                    <div className="p-4 sm:p-5 border-4 border-black rounded-[2rem] bg-white shadow-neo-sm space-y-3">
+                      <div className="flex items-center gap-2">
+                        <span className="text-xl">💡</span>
+                        <h4 className="font-black italic text-sm text-black">
+                          {getLanguage() === 'en' ? 'Frequently Asked Questions' : '常見問題解答'}
+                        </h4>
+                      </div>
+
+                      <div className="space-y-2.5 text-xs">
+                        <div className="p-3 bg-zinc-50 border-2 border-black/20 rounded-xl space-y-1">
+                          <strong className="text-black font-black block">Q: 在 LINE 記餐，這個網頁會同步更新嗎？</strong>
+                          <p className="text-zinc-600 font-bold leading-relaxed">
+                            會的！只要輸入過一次「綁定」，網頁與 LINE 官方帳號就共用同一個雲端資料庫。在 LINE 拍的照片與記錄，回到這個網頁就會立刻看到。
+                          </p>
+                        </div>
+
+                        <div className="p-3 bg-zinc-50 border-2 border-black/20 rounded-xl space-y-1">
+                          <strong className="text-black font-black block">Q: LINE 官方帳號需要收費嗎？</strong>
+                          <p className="text-zinc-600 font-bold leading-relaxed">
+                            完全免費，也沒有任何廣告干擾！Gemini AI 的圖像與語音運算成本全由開發者隨喜吸收，請放心盡情使用。
+                          </p>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 )}
 
