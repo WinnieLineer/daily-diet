@@ -799,16 +799,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <button 
                       key={tab.id} 
                       onClick={() => setActiveTab(tab.id)} 
-                      className={`flex flex-col items-center justify-center min-w-[66px] flex-1 p-2 rounded-xl border-2 transition-all relative ${
+                      className={`flex flex-col items-center justify-center min-w-[62px] flex-1 py-2 px-1 rounded-xl border-2 transition-all relative ${
                         isActive 
-                          ? (isLine ? 'bg-[#06C755] text-white border-black scale-105 shadow-neo-sm font-black' : 'bg-black text-white border-black scale-105 shadow-neo-sm') 
-                          : (isLine ? 'bg-emerald-50 text-emerald-950 border-2 border-black font-black shadow-neo-xs hover:bg-emerald-100' : 'bg-transparent text-zinc-400 border-transparent hover:text-black')
+                          ? (isLine ? 'bg-[#06C755] text-white border-black shadow-neo-sm font-black' : 'bg-black text-white border-black shadow-neo-sm font-black') 
+                          : 'bg-transparent text-zinc-400 border-transparent hover:text-black hover:bg-zinc-200/50'
                       }`}
                     >
-                      <tab.icon size={18} className={isLine && !isActive ? 'text-[#06C755]' : ''} />
-                      <span className="text-[8px] font-black mt-1 uppercase tracking-tight flex items-center gap-0.5">
+                      <tab.icon size={18} />
+                      <span className="text-[9px] font-black mt-1 uppercase tracking-tight whitespace-nowrap">
                         {tab.label}
-                        {isLine && !isActive && <span className="w-1.5 h-1.5 rounded-full bg-[#06C755] animate-pulse" />}
                       </span>
                     </button>
                   );
@@ -1254,10 +1253,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             href="https://line.me/R/ti/p/@618iipof"
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="bg-[#06C755] text-white py-3.5 px-4 rounded-2xl border-3 border-black font-black text-xs flex items-center justify-center gap-2 hover:bg-[#05b34c] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all shadow-neo-sm text-center"
+                            className="bg-[#06C755] text-white py-3.5 px-3 rounded-2xl border-3 border-black font-black text-xs flex items-center justify-center gap-2 hover:bg-[#05b34c] active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all shadow-neo-sm text-center"
                           >
                             <MessageCircle size={17} />
-                            <span>{getLanguage() === 'en' ? '💚 Add LINE Bot (Free)' : '💚 一鍵加入 LINE 好友 (免費)'}</span>
+                            <span>{getLanguage() === 'en' ? '💚 Add LINE Bot (Free)' : '💚 加 LINE 好友 (免費)'}</span>
                           </a>
 
                           {currentGistId ? (
@@ -1265,10 +1264,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               href={`https://line.me/R/oaMessage/@618iipof/?%E7%B6%81%E5%AE%9A%20${currentGistId}`}
                               target="_blank"
                               rel="noopener noreferrer"
-                              className="bg-black text-yellow-300 py-3.5 px-4 rounded-2xl border-3 border-black font-black text-xs flex items-center justify-center gap-2 hover:bg-zinc-900 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all shadow-neo-sm text-center"
+                              className="bg-black text-yellow-300 py-3.5 px-3 rounded-2xl border-3 border-black font-black text-xs flex items-center justify-center gap-2 hover:bg-zinc-900 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all shadow-neo-sm text-center"
                             >
                               <Zap size={15} className="text-yellow-400" />
-                              <span>{getLanguage() === 'en' ? '💬 Send Sync Command in LINE' : '💬 一鍵在 LINE 發送「綁定」'}</span>
+                              <span>{getLanguage() === 'en' ? '💬 Send Sync in LINE' : '💬 在 LINE 發送「綁定」'}</span>
                             </a>
                           ) : (
                             <button
@@ -1348,17 +1347,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
                     </div>
 
-                    {/* 🚀 熊貓教練 4 大進階隱藏神技（選單找不到的超能力） */}
+                    {/* 🚀 熊貓教練 4 大進階隱藏神技 */}
                     <div className="space-y-3.5 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-zinc-50 shadow-neo-sm">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between gap-2">
                         <div className="flex items-center gap-2">
                           <span className="text-xl">✨</span>
                           <h4 className="font-black italic text-sm text-black">
-                            {getLanguage() === 'en' ? 'Panda Coach 4 Hidden Superpowers' : '熊貓教練 4 大進階隱藏神技（選單找不到的超能力）'}
+                            {getLanguage() === 'en' ? 'Panda Coach 4 Hidden Superpowers' : '熊貓教練 4 大隱藏神技'}
                           </h4>
                         </div>
-                        <span className="text-[10px] font-black bg-yellow-300 text-black px-2.5 py-0.5 rounded-full border border-black shadow-neo-xs">
-                          {getLanguage() === 'en' ? 'Pro Tips' : '進階密技'}
+                        <span className="text-[10px] font-black bg-yellow-300 text-black px-2.5 py-0.5 rounded-full border border-black shadow-neo-xs shrink-0">
+                          {getLanguage() === 'en' ? 'Pro Tips' : '選單外超能力'}
                         </span>
                       </div>
 
@@ -1368,29 +1367,31 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           : 'LINE 圖文選單已有日常打卡按鈕，但這些「非選單」的對話式 AI 隱藏功能，才是真正讓記餐快 10 倍的神器！'}
                       </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-3">
                         {/* 神技 1: 對話式自然語言改單 */}
                         <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               <span className="text-base">💬</span>
                               <span className="font-black text-xs text-black">
                                 {getLanguage() === 'en' ? 'Natural Language Tweaks' : '說人話直接微調改單'}
                               </span>
                             </div>
-                            <span className="text-[9px] font-black bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded border border-emerald-300">
+                            <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
                               免刪除重打
                             </span>
                           </div>
-                          <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1 text-[11px]">
-                            <div className="text-zinc-600 font-bold">
-                              🗣️ 您說：<span className="text-black font-black">「這份只吃一半」</span>、<span className="text-black font-black">「飯換成地瓜」</span>
+                          <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1.5 text-xs">
+                            <div className="text-zinc-600 font-bold flex items-center gap-1.5 flex-wrap">
+                              <span>🗣️ 您說：</span>
+                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">「這份只吃一半」</span>
+                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">「飯換成地瓜」</span>
                             </div>
-                            <div className="text-emerald-700 font-bold text-[10px]">
+                            <div className="text-emerald-700 font-bold text-[11px]">
                               🐼 熊貓：即時延續上下文記憶，等比例重算卡路里與蛋白質！
                             </div>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                          <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
                             外食吃不完或臨時替換菜色，不用刪掉紀錄，像跟朋友傳訊息一樣講一句就修正完成。
                           </p>
                         </div>
@@ -1398,22 +1399,28 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         {/* 神技 2: 3 種教練性格自由切換 */}
                         <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               <span className="text-base">🎭</span>
                               <span className="font-black text-xs text-black">
-                                {getLanguage() === 'en' ? 'Switch Coach Persona' : '3 種教練性格任選'}
+                                {getLanguage() === 'en' ? 'Switch Coach Persona' : '3 種教練性格自由切換'}
                               </span>
                             </div>
-                            <span className="text-[9px] font-black bg-purple-100 text-purple-800 px-1.5 py-0.5 rounded border border-purple-300">
+                            <span className="text-[10px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-300">
                               輸入「切換性格」
                             </span>
                           </div>
-                          <div className="flex items-center justify-between gap-1 text-[10px] font-black">
-                            <span className="bg-red-50 text-red-800 px-1.5 py-1 rounded border border-red-200">🐼 傲嬌毒舌</span>
-                            <span className="bg-pink-50 text-pink-800 px-1.5 py-1 rounded border border-pink-200">🐼 治癒天使</span>
-                            <span className="bg-amber-50 text-amber-800 px-1.5 py-1 rounded border border-amber-200">🐼 魔鬼士官</span>
+                          <div className="grid grid-cols-3 gap-2 text-center text-xs font-black">
+                            <div className="bg-red-50 text-red-800 py-1.5 px-1 rounded-xl border border-red-200">
+                              🐼 傲嬌毒舌
+                            </div>
+                            <div className="bg-pink-50 text-pink-800 py-1.5 px-1 rounded-xl border border-pink-200">
+                              🐼 治癒天使
+                            </div>
+                            <div className="bg-amber-50 text-amber-800 py-1.5 px-1 rounded-xl border border-amber-200">
+                              🐼 魔鬼士官
+                            </div>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                          <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
                             在聊天室傳送「切換性格」隨時召喚專屬性格！想被毒舌吐槽還是被溫柔鼓勵，自由選擇。
                           </p>
                         </div>
@@ -1421,25 +1428,26 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         {/* 神技 3: 外食量身推薦顧問 */}
                         <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               <span className="text-base">🥗</span>
                               <span className="font-black text-xs text-black">
                                 {getLanguage() === 'en' ? 'AI Meal Advisor' : '隨身外食挑選顧問'}
                               </span>
                             </div>
-                            <span className="text-[9px] font-black bg-amber-100 text-amber-800 px-1.5 py-0.5 rounded border border-amber-300">
+                            <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300">
                               直接提問
                             </span>
                           </div>
-                          <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1 text-[11px]">
-                            <div className="text-zinc-600 font-bold">
-                              🗣️ 您問：<span className="text-black font-black">「蛋白質還差 25g，超商買啥？」</span>
+                          <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1.5 text-xs">
+                            <div className="text-zinc-600 font-bold flex items-center gap-1.5 flex-wrap">
+                              <span>🗣️ 您問：</span>
+                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">「蛋白質還差 25g，超商買啥？」</span>
                             </div>
-                            <div className="text-amber-800 font-bold text-[10px]">
+                            <div className="text-amber-800 font-bold text-[11px]">
                               🐼 熊貓：調閱今日已攝取額度，精準推薦熱量與蛋白質達標組合！
                             </div>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                          <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
                             不知道下一餐吃什麼？直接問熊貓，它會調出你的今日剩餘預算給出具體採買建議。
                           </p>
                         </div>
@@ -1447,35 +1455,35 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         {/* 神技 4: 卡片一鍵份量縮放 */}
                         <div className="p-3.5 rounded-2xl bg-white border-2 border-black shadow-neo-xs space-y-2">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-1.5">
+                            <div className="flex items-center gap-2">
                               <span className="text-base">🔢</span>
                               <span className="font-black text-xs text-black">
-                                {getLanguage() === 'en' ? 'Portion Multiplier' : 'Flex 卡片一秒縮放'}
+                                {getLanguage() === 'en' ? 'Portion Multiplier' : 'Flex 卡片一秒縮放份量'}
                               </span>
                             </div>
-                            <span className="text-[9px] font-black bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded border border-blue-300">
-                              按鈕即點即改
+                            <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full border border-blue-300">
+                              點按鈕即改
                             </span>
                           </div>
-                          <div className="flex items-center justify-center gap-2 py-1 text-[10px] font-mono font-black">
-                            <span className="px-2 py-0.5 bg-zinc-100 rounded border border-black shadow-neo-xs">0.5x</span>
-                            <span className="px-2 py-0.5 bg-yellow-200 rounded border border-black shadow-neo-xs">1.0x</span>
-                            <span className="px-2 py-0.5 bg-zinc-100 rounded border border-black shadow-neo-xs">1.5x</span>
-                            <span className="px-2 py-0.5 bg-zinc-100 rounded border border-black shadow-neo-xs">2.0x</span>
+                          <div className="flex items-center justify-center gap-2.5 py-1 text-xs font-mono font-black">
+                            <span className="px-3 py-1 bg-zinc-100 rounded-xl border border-black shadow-neo-xs">0.5x</span>
+                            <span className="px-3 py-1 bg-yellow-300 text-black rounded-xl border border-black shadow-neo-xs">1.0x (預設)</span>
+                            <span className="px-3 py-1 bg-zinc-100 rounded-xl border border-black shadow-neo-xs">1.5x</span>
+                            <span className="px-3 py-1 bg-zinc-100 rounded-xl border border-black shadow-neo-xs">2.0x</span>
                           </div>
-                          <p className="text-[10px] font-bold text-zinc-400 leading-relaxed">
+                          <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
                             每筆餐點分析卡片底部都有倍數按鈕，聚餐分食或大胃王加量，點一下立即更新所有數據。
                           </p>
                         </div>
                       </div>
                     </div>
 
-                    {/* 🔄「手機 LINE ✕ 電腦 Web」雙效極致協同指南 */}
+                    {/* 🔄「手機 LINE ✕ 電腦 Web」雙效極致工作流 */}
                     <div className="space-y-3.5 border-4 border-black p-4 sm:p-5 rounded-[2rem] bg-white shadow-neo-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">🔄</span>
                         <h4 className="font-black italic text-sm text-black">
-                          {getLanguage() === 'en' ? 'LINE + Web: The Ultimate Workflow' : '「手機 LINE ✕ 電腦 Web」雙效極致工作流'}
+                          {getLanguage() === 'en' ? 'LINE + Web: The Ultimate Workflow' : '「手機 LINE ✕ 電腦 Web」雙效工作流'}
                         </h4>
                       </div>
 
@@ -1485,24 +1493,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           : '綁定一次即可雙向同步！推薦這樣搭配使用，打造最輕鬆零負擔的飲食自律習慣：'}
                       </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                      <div className="space-y-3">
                         <div className="p-3.5 rounded-2xl bg-emerald-50/70 border-2 border-emerald-950/30 space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">📱</span>
+                            <span className="text-base">📱</span>
                             <strong className="font-black text-xs text-emerald-950">
                               {getLanguage() === 'en' ? 'Mobile LINE: Fast Ingest' : '出門在外用 LINE（秒速輸入神器）'}
                             </strong>
                           </div>
-                          <ul className="text-[10px] font-bold text-emerald-900/90 space-y-1.5 pl-1">
-                            <li className="flex items-start gap-1.5">
+                          <ul className="text-[11px] font-bold text-emerald-900/90 space-y-1.5 pl-1">
+                            <li className="flex items-start gap-2">
                               <span>📸</span>
                               <span><strong>外食開動前隨手拍</strong>：5 秒完成熱量拆解，不耽誤用餐。</span>
                             </li>
-                            <li className="flex items-start gap-1.5">
+                            <li className="flex items-start gap-2">
                               <span>🎙️</span>
                               <span><strong>通勤手忙用語音</strong>：長按說一句，免打字輕鬆登記。</span>
                             </li>
-                            <li className="flex items-start gap-1.5">
+                            <li className="flex items-start gap-2">
                               <span>⚡</span>
                               <span><strong>圖文選單單手打卡</strong>：喝水 500、體重、常用餐點一鍵完成。</span>
                             </li>
@@ -1511,21 +1519,21 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                         <div className="p-3.5 rounded-2xl bg-amber-50/70 border-2 border-amber-950/30 space-y-2">
                           <div className="flex items-center gap-2">
-                            <span className="text-lg">💻</span>
+                            <span className="text-base">💻</span>
                             <strong className="font-black text-xs text-amber-950">
                               {getLanguage() === 'en' ? 'Desktop Web: Deep Insights' : '晚上覆盤用 Web（深度分析中心）'}
                             </strong>
                           </div>
-                          <ul className="text-[10px] font-bold text-amber-900/90 space-y-1.5 pl-1">
-                            <li className="flex items-start gap-1.5">
+                          <ul className="text-[11px] font-bold text-amber-900/90 space-y-1.5 pl-1">
+                            <li className="flex items-start gap-2">
                               <span>📊</span>
                               <span><strong>大螢幕全方位圖表</strong>：查看全週熱量赤字走勢與三大營養素。</span>
                             </li>
-                            <li className="flex items-start gap-1.5">
+                            <li className="flex items-start gap-2">
                               <span>🎯</span>
                               <span><strong>AI 自動目標推算</strong>：依據體態變化動態調整 BMR/TDEE。</span>
                             </li>
-                            <li className="flex items-start gap-1.5">
+                            <li className="flex items-start gap-2">
                               <span>📂</span>
                               <span><strong>資料私有備份匯出</strong>：無廣告、無後門，資料永久完整掌控。</span>
                             </li>

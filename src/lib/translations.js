@@ -225,7 +225,7 @@ const translations = {
     change_name: "修改名稱",
     // v1.8.0 — Settings redesign
     settings_profile: "個人資料",
-    settings_line: "LINE 飲食管家",
+    settings_line: "LINE 管家",
     settings_goals: "目標",
     settings_shop: "良心燃料商店",
     settings_data: "備份同步",
