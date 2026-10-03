@@ -703,10 +703,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       sizeKb: null,
     });
 
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+
     try {
       const activeToken = permanentToken || safeGetStorage(PERMANENT_TOKEN_KEY) || '';
       const targetUrl = `${GAS_API_URL}?action=getLinePhoto&messageId=${encodeURIComponent(messageId)}&token=${encodeURIComponent(activeToken)}&_t=${Date.now()}`;
-      const res = await fetch(targetUrl);
+      const res = await fetch(targetUrl, { signal: controller.signal });
+      clearTimeout(timeoutId);
       if (!res.ok) throw new Error(`HTTP Error ${res.status}`);
       const data = await res.json();
 
@@ -735,11 +739,18 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         }));
       }
     } catch (err) {
+      clearTimeout(timeoutId);
+      const isTimeout = err.name === 'AbortError';
+      const isWeb = String(messageId || '').startsWith('wp_') || String(messageId || '').startsWith('web_');
       setPhotoModalState((prev) => ({
         ...prev,
         loading: false,
-        error: err.message || (isEn ? 'Network error occurred while fetching photo' : '調閱照片時發生連線異常'),
-        errorCode: 'NETWORK_ERROR',
+        error: isTimeout 
+          ? (isEn 
+              ? 'Google Apps Script cloud request timed out (cold-starting). Please click Retry below.' 
+              : 'Google 雲端伺服器回應逾時（雲端試算表喚醒延遲），請點擊下方「重新調閱」')
+          : (err.message || (isEn ? 'Network error occurred while fetching photo' : '調閱照片時發生連線異常')),
+        errorCode: isTimeout ? 'TIMEOUT' : 'NETWORK_ERROR',
       }));
     }
   };
@@ -4141,6 +4152,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                           </div>
                           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-zinc-100 border border-black/20 text-[11px] font-bold text-zinc-600">
                             <span>🔒 端到端私有調閱 · 不經第三方匿名圖床</span>
+                          </div>
+                          <div className="text-[11px] font-bold text-zinc-600 bg-amber-50/90 border border-amber-300/80 rounded-xl px-3 py-2 max-w-xs mx-auto leading-relaxed shadow-neo-xs">
+                            💡 {isEn ? 'Tip: Google Cloud Sheets requires 10~20s to wake up and retrieve data.' : '提示：Google 試算表雲端喚醒與檢索約需 10~20 秒，請稍候...'}
                           </div>
                         </div>
                       )}

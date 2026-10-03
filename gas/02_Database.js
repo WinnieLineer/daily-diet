@@ -2295,8 +2295,9 @@ function handleGetWebPhoto(photoId, isAdmin, props) {
       };
     }
 
-    const chunk1 = String(photoSheet.getRange(foundRow, 6).getValue() || '');
-    const chunk2 = String(photoSheet.getRange(foundRow, 7).getValue() || '');
+    const chunks = photoSheet.getRange(foundRow, 6, 1, 2).getValues()[0] || [];
+    const chunk1 = String(chunks[0] || '');
+    const chunk2 = String(chunks[1] || '');
     const fullDataUrl = chunk1 + chunk2;
 
     if (!fullDataUrl || !fullDataUrl.startsWith('data:image/')) {
