@@ -53,6 +53,7 @@ import {
 import NeoButton from './NeoButton';
 import ReplyHelperModal from './ReplyHelperModal';
 import { setFounderStatus, isFounderUser } from '../lib/founderService';
+import { updateAppFavicon } from '../lib/faviconService';
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
 const DEFAULT_MAINTAINER_USER = 'Winnie';
@@ -372,6 +373,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [maskedEmail, setMaskedEmail] = useState('mai***@winnie-lin.space');
   const [otpSuccessMsg, setOtpSuccessMsg] = useState('');
   const otpInputRef = useRef(null);
+
+  // 🐼 後台載入時啟用 Admin 特務熊貓 Favicon，離開時自動恢復
+  useEffect(() => {
+    updateAppFavicon(true);
+    return () => {
+      updateAppFavicon(false);
+    };
+  }, []);
 
   // 📢 LINE Official Broadcast & Push States (Encrypted Auth)
   const [showLineBroadcastModal, setShowLineBroadcastModal] = useState(false);

@@ -12,7 +12,7 @@ export default defineConfig(({ command }) => ({
       devOptions: {
         enabled: true
       },
-      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'mask-icon.svg'],
+      includeAssets: ['favicon.png', 'apple-touch-icon.png', 'mask-icon.svg', 'admin-favicon.svg'],
       workbox: {
         skipWaiting: true,
         clientsClaim: true,

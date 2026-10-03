@@ -26,6 +26,7 @@ import {
   isFounderGlowEnabled, 
   checkFounderStatusFromCloud 
 } from './lib/founderService';
+import { updateAppFavicon } from './lib/faviconService';
 
 // 🛡️ Safe Lazy Loader with Automatic Cache Busting on Deployment Update
 function lazyWithRetry(componentImport) {
@@ -1038,6 +1039,11 @@ function App() {
       window.removeEventListener('open-admin-logs', handleOpenAdminLogs);
     };
   }, []);
+
+  // 🐼 動態切換 Admin 與一般介面 Favicon
+  useEffect(() => {
+    updateAppFavicon(currentView === 'logs');
+  }, [currentView]);
 
   const toggleLanguage = async () => {
     const nextLang = currentLang === 'en' ? 'zh' : 'en';

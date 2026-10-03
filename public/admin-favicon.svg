@@ -1,0 +1,36 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200" width="512" height="512">
+  <!-- Background Badge: Neo-brutalist rounded squircle in vibrant Amber Yellow -->
+  <rect x="10" y="10" width="180" height="180" rx="48" fill="#FDE047" stroke="#000000" stroke-width="14" />
+  
+  <!-- Panda Left Ear -->
+  <circle cx="54" cy="62" r="28" fill="#000000" />
+  <!-- Panda Right Ear -->
+  <circle cx="146" cy="62" r="28" fill="#000000" />
+  
+  <!-- Panda Head / Face -->
+  <ellipse cx="100" cy="118" rx="68" ry="58" fill="#FFFFFF" stroke="#000000" stroke-width="10" />
+  
+  <!-- Cool Agent Sunglasses -->
+  <!-- Left Lens -->
+  <rect x="44" y="94" width="48" height="32" rx="7" fill="#000000" />
+  <!-- Right Lens -->
+  <rect x="108" y="94" width="48" height="32" rx="7" fill="#000000" />
+  <!-- Sunglasses Bridge -->
+  <rect x="88" y="101" width="24" height="6" rx="2" fill="#000000" />
+  
+  <!-- Sunglasses Neon Cyan Glare / Reflection -->
+  <polygon points="50,118 60,98 67,98 57,118" fill="#38BDF8" />
+  <polygon points="66,118 73,105 78,105 71,118" fill="#38BDF8" opacity="0.85" />
+  <polygon points="114,118 124,98 131,98 121,118" fill="#38BDF8" />
+  <polygon points="130,118 137,105 142,105 135,118" fill="#38BDF8" opacity="0.85" />
+  
+  <!-- Nose -->
+  <ellipse cx="100" cy="137" rx="10" ry="7" fill="#000000" />
+  
+  <!-- Cute Smile -->
+  <path d="M 86 148 Q 100 160 114 148" fill="none" stroke="#000000" stroke-width="5" stroke-linecap="round" />
+
+  <!-- Admin Badge (Top Right): Neo-brutalist Black Pill with Glowing Cyan Lightning ⚡ -->
+  <rect x="122" y="10" width="66" height="38" rx="14" fill="#000000" stroke="#FDE047" stroke-width="4" />
+  <path d="M 158 15 L 145 28 L 153 28 L 148 42 L 165 26 L 157 26 Z" fill="#38BDF8" />
+</svg>
