@@ -2355,6 +2355,7 @@ function getRecentLogsData(limit, days) {
     if (ss) {
       const sheet = ss.getSheets()[0];
       const lastRow = sheet.getLastRow();
+      if (lastRow > 1) {
         // 🚀 智能動態拉取：依據天數與筆數智能調整拉取範圍，日常監控（<=7 天）只需讀取 400~800 列，極速秒回！
         let fetchLimit = targetLimit * 2;
         if (targetDays <= 1) {
