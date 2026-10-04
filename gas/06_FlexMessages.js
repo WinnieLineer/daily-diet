@@ -4701,6 +4701,76 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
         spacing: "md",
         paddingAll: "14px",
         contents: [
+          // 📸 最推薦核心用法提示
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#000000",
+            cornerRadius: "14px",
+            paddingBottom: "3px",
+            paddingEnd: "3px",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#DCFCE7",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingAll: "10px",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    alignItems: "center",
+                    contents: [
+                      {
+                        type: "text",
+                        text: isEn ? "📸 Direct Photo AI Recognition" : "📸 最神用法：直接丟食物照片",
+                        weight: "bold",
+                        size: "xs",
+                        color: "#000000",
+                        flex: 1,
+                        wrap: true
+                      },
+                      {
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#000000",
+                        cornerRadius: "8px",
+                        width: isEn ? "48px" : "44px",
+                        height: "20px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flex: 0,
+                        contents: [
+                          {
+                            type: "text",
+                            text: isEn ? "SNAP" : "最推薦",
+                            size: "xxs",
+                            color: "#86EFAC",
+                            weight: "bold",
+                            align: "center",
+                            gravity: "center"
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    type: "text",
+                    text: isEn
+                      ? "No buttons needed! Just send any food photo into this chat, and AI will calculate calories & macros instantly 🐼✨"
+                      : "不用找任何按鈕、不用開網頁！直接在聊天室丟食物照片，AI 熊貓自動辨識餐點並精算熱量與三大營養素 🐼✨",
+                    size: "xxs",
+                    color: "#14532D",
+                    margin: "xs",
+                    wrap: true
+                  }
+                ]
+              }
+            ]
+          },
           {
             type: "box",
             layout: "vertical",
@@ -5030,7 +5100,7 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
 
   return {
     type: "flex",
-    altText: isEn ? "🐼 Welcome to Daily Diet Nutrition Coach!" : "🐼 歡迎使用 Daily Diet 飲食管理助手！",
+    altText: isEn ? "🐼 Welcome to Daily Diet Nutrition Butler!" : "🐼 歡迎使用 Daily Diet 隨身飲食管家！",
     contents: {
       type: "bubble",
       size: "mega",
@@ -5052,12 +5122,12 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
             layout: "horizontal",
             contents: [
               { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: isEn ? "AI Coach" : "AI 智能教練", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: isEn ? "AI Butler" : "AI 智能管家", color: "#A1A1AA", size: "xs", align: "end" }
             ]
           },
           {
             type: "text",
-            text: isEn ? "✨ Your Personal AI Nutrition Coach" : "✨ 您的個人專屬 AI 飲食記錄教練",
+            text: isEn ? "✨ Snap & Log in Seconds · No App Needed" : "✨ 隨手拍 · 秒速記 · 免開網頁",
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
@@ -5070,89 +5140,161 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
         type: "box",
         layout: "vertical",
         spacing: "md",
-        paddingAll: "16px",
+        paddingAll: "14px",
+        backgroundColor: "#FAFAFA",
         contents: [
+          // 💡 核心亮點卡片：為什麼在 LINE 記超好用
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#EFF6FF",
-            borderColor: "#3B82F6",
+            backgroundColor: "#FFFFFF",
+            borderColor: "#000000",
             borderWidth: "2px",
-            cornerRadius: "12px",
+            cornerRadius: "14px",
             paddingAll: "12px",
-            spacing: "xs",
+            spacing: "sm",
             contents: [
               {
-                type: "text",
-                text: isEn ? "❓ Are you a new user or used the Web app before?" : "❓ 請問您是新用戶，還是使用過 Web 版？",
-                weight: "bold",
-                size: "xs",
-                color: "#1E3A8A",
-                wrap: true
-              },
-              {
-                type: "text",
-                text: isEn ? "Tap below to get started:" : "點擊下方符合您的身份，教練將立即引導專屬設定：",
-                size: "xxs",
-                color: "#2563EB",
-                wrap: true
-              },
-              {
                 type: "box",
-                layout: "vertical",
-                spacing: "xs",
-                margin: "sm",
+                layout: "horizontal",
+                alignItems: "center",
                 contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "⚡ 3 Easiest Ways to Log" : "⚡ 3 招神速上手，超好用！",
+                    weight: "bold",
+                    size: "sm",
+                    color: "#000000",
+                    flex: 1
+                  },
                   {
                     type: "box",
                     layout: "vertical",
                     backgroundColor: "#FDE047",
                     borderColor: "#000000",
-                    borderWidth: "2.5px",
-                    cornerRadius: "14px",
-                    paddingAll: "12px",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    action: {
-                      type: "postback",
-                      label: isEn ? "🐣 New User Guide (30s)" : "🐣 全新用戶 30 秒引導",
-                      data: JSON.stringify({ action: 'onboarding', type: 'new' }),
-                      displayText: isEn ? "🐣 I am a new user" : "🐣 我是全新用戶"
-                    },
+                    borderWidth: "1.5px",
+                    cornerRadius: "6px",
+                    paddingStart: "6px",
+                    paddingEnd: "6px",
+                    paddingTop: "2px",
+                    paddingBottom: "2px",
                     contents: [
                       {
                         type: "text",
-                        text: isEn ? "🐣 New User Fast Start (30s)" : "🐣 全新用戶快速上手 (30秒)",
+                        text: isEn ? "SUPER FAST" : "免下載APP",
                         weight: "bold",
-                        size: "sm",
-                        color: "#000000",
-                        wrap: true
+                        size: "xxs",
+                        color: "#000000"
                       }
                     ]
+                  }
+                ]
+              },
+              // 1. 📸 拍照記餐
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                alignItems: "flex-start",
+                contents: [
+                  {
+                    type: "text",
+                    text: "📸",
+                    size: "md",
+                    flex: 0
                   },
                   {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#FFFFFF",
-                    borderColor: "#000000",
-                    borderWidth: "2.5px",
-                    cornerRadius: "14px",
-                    paddingAll: "12px",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    action: {
-                      type: "postback",
-                      label: isEn ? "🌐 Existing Web User Gist Sync" : "🌐 舊用戶 Gist 資料綁定",
-                      data: JSON.stringify({ action: 'onboarding', type: 'web_user' }),
-                      displayText: isEn ? "🌐 Used Web app before" : "🌐 我用過 Web 版"
-                    },
+                    spacing: "none",
+                    flex: 1,
                     contents: [
                       {
                         type: "text",
-                        text: isEn ? "🌐 Existing Web User Gist Sync" : "🌐 舊用戶 Gist 資料綁定",
+                        text: isEn ? "1. Snap Food Photos (Recommended)" : "1. 拍照即記錄（最推薦）",
                         weight: "bold",
-                        size: "sm",
-                        color: "#000000",
+                        size: "xs",
+                        color: "#000000"
+                      },
+                      {
+                        type: "text",
+                        text: isEn ? "Send any meal or drink photo directly into this chat! AI calculates calories & macros instantly." : "便當、飲料、點心拍照直接丟聊天室！AI立刻為您分析熱量與營養素。",
+                        size: "xxs",
+                        color: "#52525B",
+                        wrap: true
+                      }
+                    ]
+                  }
+                ]
+              },
+              // 2. 💬 文字或語音記餐
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                alignItems: "flex-start",
+                contents: [
+                  {
+                    type: "text",
+                    text: "🎙️",
+                    size: "md",
+                    flex: 0
+                  },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "none",
+                    flex: 1,
+                    contents: [
+                      {
+                        type: "text",
+                        text: isEn ? "2. Voice or Text (Super Fast)" : "2. 語音或文字（免打字）",
+                        weight: "bold",
+                        size: "xs",
+                        color: "#000000"
+                      },
+                      {
+                        type: "text",
+                        text: isEn ? "Type \"Chicken salad + black tea\" or hold the mic to say \"Weight 65kg, drank 500ml water\"!" : "輸入「排骨便當+無糖豆漿」或長按麥克風說「喝水500、體重65公斤」，秒速入帳！",
+                        size: "xxs",
+                        color: "#52525B",
+                        wrap: true
+                      }
+                    ]
+                  }
+                ]
+              },
+              // 3. 📊 圖文選單看報表
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                alignItems: "flex-start",
+                contents: [
+                  {
+                    type: "text",
+                    text: "📊",
+                    size: "md",
+                    flex: 0
+                  },
+                  {
+                    type: "box",
+                    layout: "vertical",
+                    spacing: "none",
+                    flex: 1,
+                    contents: [
+                      {
+                        type: "text",
+                        text: isEn ? "3. Interactive Menu & Dashboard" : "3. 點選單隨時查（精緻報表）",
+                        weight: "bold",
+                        size: "xs",
+                        color: "#000000"
+                      },
+                      {
+                        type: "text",
+                        text: isEn ? "Tap bottom menu for Daily Summary, Water Log, or Open Web Report for 30-day trends!" : "點下方選單「今日總結」快速掌握；想看長期曲線或歷史日曆再點「個人報表」！",
+                        size: "xxs",
+                        color: "#52525B",
                         wrap: true
                       }
                     ]
@@ -5160,9 +5302,106 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
                 ]
               }
             ]
+          },
+          // 🔘 行動按鈕區
+          {
+            type: "box",
+            layout: "vertical",
+            spacing: "sm",
+            contents: [
+              createNeoFlexButton({
+                label: isEn ? "📸 Snap First Meal (Try It Now)" : "📸 拍照試算第一餐（直接體驗）",
+                variant: "accent",
+                size: "md",
+                action: {
+                  type: "postback",
+                  label: isEn ? "Camera Guide" : "拍照試算",
+                  data: JSON.stringify({ action: 'guideCamera' }),
+                  displayText: isEn ? "📸 Open Camera" : "📸 拍照試算"
+                }
+              }),
+              createNeoFlexButton({
+                label: isEn ? "📖 View All Features & Commands" : "📖 查看功能手冊與常用指令",
+                variant: "white",
+                size: "md",
+                action: {
+                  type: "postback",
+                  label: isEn ? "Command Guide" : "功能手冊",
+                  data: JSON.stringify({ action: 'onboarding', type: 'new' }),
+                  displayText: isEn ? "Guide" : "說明"
+                }
+              }),
+              // 🌐 老朋友入口 (小巧精緻)
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                justifyContent: "center",
+                paddingTop: "4px",
+                action: {
+                  type: "postback",
+                  label: isEn ? "Sync Web Data" : "Web 舊用戶連動",
+                  data: JSON.stringify({ action: 'onboarding', type: 'web_user' }),
+                  displayText: isEn ? "Sync Web Data" : "Web 舊用戶連動"
+                },
+                contents: [
+                  {
+                    type: "text",
+                    text: isEn ? "🌐 Used Web app before? Tap to sync ➔" : "🌐 用過 Web 版？點此綁定歷史資料 ➔",
+                    size: "xxs",
+                    color: "#71717A",
+                    align: "center",
+                    decoration: "underline"
+                  }
+                ]
+              }
+            ]
           }
         ]
       }
+    },
+    quickReply: {
+      items: [
+        {
+          type: "action",
+          action: {
+            type: "camera",
+            label: isEn ? "📷 Camera" : "📷 拍照記錄"
+          }
+        },
+        {
+          type: "action",
+          action: {
+            type: "cameraRoll",
+            label: isEn ? "🖼️ Album" : "🖼️ 挑選照片"
+          }
+        },
+        {
+          type: "action",
+          action: {
+            type: "postback",
+            label: isEn ? "💧 +500ml Water" : "💧 喝水 500",
+            data: JSON.stringify({ action: 'quickWater', amount: 500 }),
+            displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 500ml"
+          }
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: isEn ? "📊 Daily Summary" : "📊 今日總結",
+            text: isEn ? "Daily Summary" : "今日總結"
+          }
+        },
+        {
+          type: "action",
+          action: {
+            type: "message",
+            label: isEn ? "📖 Guide" : "📖 使用手冊",
+            text: isEn ? "Guide" : "說明"
+          }
+        }
+      ]
     }
   };
 }

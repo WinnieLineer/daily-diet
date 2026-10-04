@@ -2097,7 +2097,7 @@ function doPost(e) {
       if (event.type === 'follow') {
         currentOperation = '首次加入好友 (Follow)';
         currentUserInput = '加入好友';
-        recordSystemLog('新用戶加入', userId, '加入好友', '', '回傳精美圖文歡迎卡片、新手30秒引導與免責聲明');
+        recordSystemLog('新用戶加入', userId, '加入好友', '', '回傳新手極速上手歡迎卡片、3招神速記法與相機快捷鍵');
         const welcomeFlex = generateWelcomeFlex(userId, LIFF_ID, userGistId, userLang);
         replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
         continue;
@@ -2881,8 +2881,34 @@ function doPost(e) {
             continue;
           }
 
-          // 💡 說明 / 指令 / 教學 / 歡迎 / 功能清單
-          if (userText === '說明' || userText.toLowerCase() === 'help' || userText.toLowerCase() === 'guide' || userText === '使用說明' || userText === '開始' || userText === '教學' || userText === '免責聲明' || userText === '歡迎' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
+          // 🐼 親切問候 (你好 / 哈囉 / 早安 / hi / hello)
+          if (/^(你好|您好|哈囉|嗨|早安|午安|晚安|hello|hi|hey)$/i.test(userText)) {
+            const greetingMsg = isEn
+              ? "🐼 Hello! I am your Daily Diet AI Butler!\n\n📸 Fastest way to log: Just send a food photo directly into this chat or type what you ate, and I'll calculate calories & nutrients instantly!\n\n💡 Try tapping 【📷 Camera】 below or type \"Guide\" for all commands 🐼✨"
+              : "🐼 您好！我是您的 Daily Diet 隨身飲食管家！\n\n📸 最快記法：直接把食物照片丟進聊天室，或輸入「排骨便當+無糖豆漿」，我會立刻幫您估算熱量與三大營養素！\n\n💡 點擊下方【📷 拍照記錄】試試看，或輸入「說明」查看所有指令 🐼✨";
+            recordSystemLog('問候打招呼', userId, userText, '', '回傳管家親切問候與快速記法引導');
+            const quickReplies = {
+              items: [
+                { type: "action", action: { type: "camera", label: isEn ? "📷 Camera" : "📷 拍照記錄" } },
+                { type: "action", action: { type: "cameraRoll", label: isEn ? "🖼️ Album" : "🖼️ 挑選照片" } },
+                { type: "action", action: { type: "postback", label: isEn ? "💧 +500ml Water" : "💧 喝水 500", data: JSON.stringify({ action: 'quickWater', amount: 500 }), displayText: isEn ? "💧 Drink 500ml water" : "💧 喝水 500ml" } },
+                { type: "action", action: { type: "message", label: isEn ? "📖 Guide" : "📖 使用手冊", text: isEn ? "Guide" : "說明" } }
+              ]
+            };
+            replyTextMessage(replyToken, greetingMsg, CHANNEL_ACCESS_TOKEN, userId, props, quickReplies);
+            continue;
+          }
+
+          // 🐣 歡迎 / 開始引導 (新朋友或再次查看上手技巧)
+          if (userText === '歡迎' || userText === '開始' || userText.toLowerCase() === 'start') {
+            recordSystemLog('歡迎引導', userId, userText, '', '回傳極速上手歡迎卡片與3招神速記法');
+            const welcomeFlex = generateWelcomeFlex(userId, LIFF_ID, userGistId, userLang);
+            replyFlexMessage(replyToken, welcomeFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 💡 說明 / 指令 / 教學 / 功能清單
+          if (userText === '說明' || userText.toLowerCase() === 'help' || userText.toLowerCase() === 'guide' || userText === '使用說明' || userText === '教學' || userText === '免責聲明' || userText === '指令' || userText === '功能' || userText === '功能清單' || userText === '全部功能' || userText === '操作說明' || userText === '指南') {
             recordSystemLog('使用說明', userId, userText, '', '回傳操作說明與功能手冊卡片');
             const helpFlex = generateCommandMenuFlex(userId, LIFF_ID, userGistId, props);
             replyFlexMessage(replyToken, helpFlex, CHANNEL_ACCESS_TOKEN, userId, props);
