@@ -256,7 +256,7 @@ const normalizeLog = (item) => {
   } else if (isWeb || finalUserName.includes('(user)') || finalUserName.includes('(ient)')) {
     if (!finalUserName || ['Web 用戶', '用戶', '訪客', 'web_user', 'default_user', 'web_client', '用戶 (user)', '用戶 (ient)', '用戶 (Web)'].includes(finalUserName) || finalUserName.startsWith('用戶 (')) {
       if (userId && !userId.startsWith('U') && !isGistId(userId) && !['web_user', 'default_user', 'web_client', 'API-Gateway', 'unknown', 'user', 'ient', '用戶 (Web)', 'admin'].includes(userId)) {
-        finalUserName = userId; // 用他的名字
+        finalUserName = userId.startsWith('client_') ? `訪客 (${userId.replace('client_', '').slice(0, 4)})` : userId; // 用他的名字或優雅訪客代稱
       } else if (raw.name && !isGistId(raw.name) && raw.name !== 'default_user') {
         finalUserName = raw.name;
       } else if (isGistId(userId)) {
@@ -267,9 +267,11 @@ const normalizeLog = (item) => {
     }
   }
 
-  // 🛡️ 二次防護：絕不讓任何 Gist ID 作為最終顯示的用戶名稱
+  // 🛡️ 二次防護：絕不讓任何 Gist ID 或生硬的 client_ 隨機碼作為最終顯示的用戶名稱
   if (isGistId(finalUserName)) {
     finalUserName = KNOWN_GIST_NAMES[finalUserName.toLowerCase()] || (raw.name && !isGistId(raw.name) && raw.name !== 'default_user' ? raw.name : 'Web 用戶');
+  } else if (finalUserName && finalUserName.startsWith('client_')) {
+    finalUserName = `訪客 (${finalUserName.replace('client_', '').slice(0, 4)})`;
   }
 
   if (finalUserName === 'default_user' || !finalUserName) {

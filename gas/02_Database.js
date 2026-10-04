@@ -1856,7 +1856,7 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
   }
   // Web 用戶 caller 的名稱拿不到就用他的名字（排除 Gist ID）
   if ((!displayName || isFoodName(displayName) || displayName === 'default_user' || isGistIdStr(displayName)) && userId && !userId.startsWith('U') && !isGistIdStr(userId) && !['web_client', 'unknown', 'default_user', 'web_user', 'line_api', 'admin'].includes(userId)) {
-    displayName = userId;
+    displayName = userId.startsWith('client_') ? `訪客 (${userId.replace('client_', '').slice(0, 4)})` : userId;
   }
   if (!displayName || isFoodName(displayName) || displayName === 'default_user' || isGistIdStr(displayName)) {
     if (userId === 'admin' || userId === 'Maintainer') {
@@ -1866,7 +1866,7 @@ function recordSystemLog(type, userId, input, aiResult, output, userName, extra)
     } else if (userId && userId.length > 8 && userId.startsWith('U')) {
       displayName = `LINE 用戶 (${userId.slice(-4)})`;
     } else {
-      displayName = (userId && !isGistIdStr(userId)) ? userId : 'Web 用戶';
+      displayName = (userId && !isGistIdStr(userId)) ? (userId.startsWith('client_') ? `訪客 (${userId.replace('client_', '').slice(0, 4)})` : userId) : 'Web 用戶';
     }
   }
 
