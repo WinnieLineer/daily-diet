@@ -2058,6 +2058,9 @@ function saveCleanedCachedLogs(cleanedLogs, props) {
  */
 function purgeSystemLogsGist(props) {
   if (!props) props = PropertiesService.getScriptProperties();
+  if (props.getProperty('GIST_LOGS_PERM_PURGED') === 'true') {
+    return; // 🚀 已銷毀過，免發出外部昂貴網路請求，立省 1~2 秒
+  }
   const pat = props.getProperty('GITHUB_PAT');
   const targetGists = [
     props.getProperty('SYSTEM_LOGS_GIST_ID'),
@@ -2079,6 +2082,7 @@ function purgeSystemLogsGist(props) {
     }
   }
   props.deleteProperty('SYSTEM_LOGS_GIST_ID');
+  props.setProperty('GIST_LOGS_PERM_PURGED', 'true');
 }
 
 function getOrCreateLogSheet(props) {
@@ -2351,9 +2355,18 @@ function getRecentLogsData(limit, days) {
     if (ss) {
       const sheet = ss.getSheets()[0];
       const lastRow = sheet.getLastRow();
-      if (lastRow > 1) {
-        // 🚀 擴增回溯筆數：依據請求上限與時間窗口動態拉取（預設至少 4,000 筆），避免短時間大量操作沖刷掉過去紀錄
-        const maxFetch = Math.min(lastRow - 1, Math.max(targetLimit * 5, 4000));
+        // 🚀 智能動態拉取：依據天數與筆數智能調整拉取範圍，日常監控（<=7 天）只需讀取 400~800 列，極速秒回！
+        let fetchLimit = targetLimit * 2;
+        if (targetDays <= 1) {
+          fetchLimit = Math.min(targetLimit, 300);
+        } else if (targetDays <= 7) {
+          fetchLimit = Math.min(Math.max(targetLimit * 1.5, 400), 800);
+        } else if (targetDays <= 30) {
+          fetchLimit = Math.min(Math.max(targetLimit * 2, 600), 1500);
+        } else {
+          fetchLimit = Math.min(Math.max(targetLimit * 3, 1000), 3000);
+        }
+        const maxFetch = Math.min(lastRow - 1, Math.max(fetchLimit, 100));
         const startRow = lastRow - maxFetch + 1;
         const lastCol = sheet.getLastColumn();
         const fetchCols = Math.min(Math.max(lastCol, 9), 10);

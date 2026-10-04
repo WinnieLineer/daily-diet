@@ -1246,10 +1246,8 @@ function doGet(e) {
           message: 'Forbidden: 維護者身分驗證失敗，請先登入後台' 
         })).setMimeType(ContentService.MimeType.JSON);
       }
-      const limit = Number(e?.parameter?.limit) || 1000;
-      const days = typeof e?.parameter?.days !== 'undefined' ? Number(e?.parameter?.days) : 30;
-      // 確保自動永久清除系統 Gist
-      purgeSystemLogsGist(props);
+      const limit = Number(e?.parameter?.limit) || 500;
+      const days = typeof e?.parameter?.days !== 'undefined' ? Number(e?.parameter?.days) : 7;
       const logs = getRecentLogsData(limit, days);
       const sheetId = props.getProperty('LOG_SHEET_ID');
       const sheetUrl = sheetId ? `https://docs.google.com/spreadsheets/d/${sheetId}/edit` : '';

@@ -452,25 +452,46 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     return () => clearInterval(timer);
   }, [loginStep, resendCooldown]);
 
-  // 📊 Dashboard Data States
-  const [rawLogs, setRawLogs] = useState([]);
-  const [aiQuota, setAiQuota] = useState(null);
+  // 📊 Dashboard Data States (⚡ 啟用 SWR 本地秒開快取，進頁面 0 毫秒呈現)
+  const [rawLogs, setRawLogs] = useState(() => {
+    try {
+      const cached = safeGetStorage('dd_admin_cached_logs');
+      return cached ? JSON.parse(cached) : [];
+    } catch (e) {
+      return [];
+    }
+  });
+  const [aiQuota, setAiQuota] = useState(() => {
+    try {
+      const cached = safeGetStorage('dd_admin_cached_quota');
+      return cached ? JSON.parse(cached) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [sheetUrl, setSheetUrl] = useState('');
   const [lastMaintainerLogin, setLastMaintainerLogin] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [lastFetchedAt, setLastFetchedAt] = useState(null);
+  const [lastFetchedAt, setLastFetchedAt] = useState(() => {
+    try {
+      const t = safeGetStorage('dd_admin_last_fetch');
+      return t ? new Date(Number(t)) : null;
+    } catch (e) {
+      return null;
+    }
+  });
   const [fetchError, setFetchError] = useState(null);
 
   // ⚙️ View & Filtering States
-  const [retentionDays, setRetentionDays] = useState(30); // 預設留存 30 天 (1個月)
-  const [logLimit, setLogLimit] = useState(1000); // 預設讀取上限 1000 筆
+  const [retentionDays, setRetentionDays] = useState(7); // 🚀 預設留存 7 天（日常秒開黃金範圍），可切換 30 天/全量
+  const [logLimit, setLogLimit] = useState(500); // 🚀 預設讀取上限 500 筆（極速載入且完全涵蓋日誌分析需求）
   const [viewMode, setViewMode] = useState('kibana'); // 'kibana' (table) or 'cards' (stream)
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('ALL');
   const [selectedActionType, setSelectedActionType] = useState('ALL');
   const [selectedUser, setSelectedUser] = useState('ALL');
-  const [autoRefreshInterval, setAutoRefreshInterval] = useState(10); // seconds (0 = off)
-  const [countdown, setCountdown] = useState(10);
+  const [autoRefreshInterval, setAutoRefreshInterval] = useState(30); // 🚀 預設 30 秒自動更新（避免頻繁搶占 GAS 隊列），可切換 10s/關閉
+  const [countdown, setCountdown] = useState(30);
   const [copiedId, setCopiedId] = useState(null);
 
   // 👥 Active & Heavy Users Analytics States
@@ -1097,8 +1118,12 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
     setLoginStep('CREDENTIALS');
   };
 
+  const isFetchingRef = useRef(false);
+
   // Fetch Dashboard Logs and Quota from GAS (支援自訂留存天數與筆數，攜帶後端權杖)
   const fetchDashboardData = async (silent = false, customDays = retentionDays, customLimit = logLimit, explicitToken = null) => {
+    if (isFetchingRef.current) return;
+    isFetchingRef.current = true;
     if (!silent) setIsLoading(true);
     setFetchError(null);
     try {
@@ -1174,15 +1199,30 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
             const timeB = formatUnifiedTimestamp(b.time || b[0] || '');
             return timeB.localeCompare(timeA);
           });
+
+          // ⚡ 將最新日誌快取至本地，下一次開啟 0ms 秒開
+          try {
+            safeSetStorage('dd_admin_cached_logs', JSON.stringify(combined.slice(0, 300)));
+          } catch (e) {}
+
           return combined;
         });
 
-        setAiQuota(data.aiQuota || null);
+        if (data.aiQuota) {
+          setAiQuota(data.aiQuota);
+          try {
+            safeSetStorage('dd_admin_cached_quota', JSON.stringify(data.aiQuota));
+          } catch (e) {}
+        }
         if (data.founderSupporters && typeof data.founderSupporters === 'object') {
           setFounderSupporters(data.founderSupporters);
         }
         if (data.sheetUrl) setSheetUrl(data.sheetUrl);
-        setLastFetchedAt(new Date());
+        const fetchTime = new Date();
+        setLastFetchedAt(fetchTime);
+        try {
+          safeSetStorage('dd_admin_last_fetch', String(fetchTime.getTime()));
+        } catch (e) {}
       } else {
         throw new Error(data.message || 'Failed to fetch logs');
       }
@@ -1190,6 +1230,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       console.error('Fetch dashboard logs error:', err);
       setFetchError(err.message || String(err));
     } finally {
+      isFetchingRef.current = false;
       if (!silent) setIsLoading(false);
     }
   };
@@ -1310,7 +1351,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // Initial Fetch on Authenticate
   useEffect(() => {
     if (isAuthenticated) {
-      fetchDashboardData();
+      // 🚀 若本地已有快取日誌，使用 silent=true 靜默更新，讓畫面 0 秒立顯，不轉圈阻礙操作！
+      const hasCache = rawLogs && rawLogs.length > 0;
+      fetchDashboardData(hasCache);
 
       // If permanent token exists but client info is missing, populate it
       if (!clientInfo) {
@@ -2059,6 +2102,11 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                   ? `${isEn ? 'Last updated:' : '最後同步：'} ${lastFetchedAt.toLocaleTimeString()}`
                   : (isEn ? 'Connecting...' : '連線同步中...')}
                 {autoRefreshInterval > 0 && ` · ${countdown}s ${isEn ? 'next refresh' : '後自動更新'}`}
+                {isLoading && (
+                  <span className="ml-2 text-emerald-600 font-black animate-pulse">
+                    ⚡ {isEn ? 'Syncing...' : '同步最新中...'}
+                  </span>
+                )}
               </p>
               <div className="flex items-center gap-2 mt-1.5 flex-wrap">
                 <span className="bg-emerald-100 text-emerald-900 border border-emerald-400 px-2 py-0.5 rounded-lg text-[10px] font-black flex items-center gap-1 shadow-neo-xs">
@@ -2086,9 +2134,9 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                 }}
                 className="bg-transparent font-black text-xs outline-none cursor-pointer pr-1 text-amber-950"
               >
-                <option value={1}>{isEn ? 'Last 24 Hours' : '最近 24 小時'}</option>
-                <option value={7}>{isEn ? 'Last 7 Days' : '最近 7 天'}</option>
-                <option value={30}>{isEn ? 'Last 30 Days (1 Month) ⭐' : '最近 30 天 (1個月) ⭐'}</option>
+                <option value={1}>{isEn ? 'Last 24 Hours (Fastest)' : '最近 24 小時 (極速)'}</option>
+                <option value={7}>{isEn ? 'Last 7 Days ⭐ (Recommended)' : '最近 7 天 ⭐ (推薦秒開)'}</option>
+                <option value={30}>{isEn ? 'Last 30 Days (1 Month)' : '最近 30 天 (1個月)'}</option>
                 <option value={60}>{isEn ? 'Last 60 Days (2 Months)' : '最近 60 天 (2個月)'}</option>
                 <option value={90}>{isEn ? 'Last 90 Days (3 Months)' : '最近 90 天 (3個月)'}</option>
                 <option value={0}>{isEn ? 'All Historical' : '全部歷史紀錄'}</option>
@@ -2100,13 +2148,17 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
               <Clock size={14} className="text-zinc-500 ml-1" />
               <select
                 value={autoRefreshInterval}
-                onChange={(e) => setAutoRefreshInterval(Number(e.target.value))}
+                onChange={(e) => {
+                  const val = Number(e.target.value);
+                  setAutoRefreshInterval(val);
+                  setCountdown(val);
+                }}
                 className="bg-transparent font-black text-xs outline-none cursor-pointer pr-1"
               >
                 <option value={0}>{isEn ? 'Auto: Off' : '自動: 關閉'}</option>
-                <option value={5}>5s</option>
                 <option value={10}>10s</option>
-                <option value={30}>30s</option>
+                <option value={30}>30s ⭐</option>
+                <option value={60}>60s</option>
               </select>
             </div>
 
