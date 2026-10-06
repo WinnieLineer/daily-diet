@@ -1091,6 +1091,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
         setOtpCountdown(data.expiresIn || 300);
         setResendCooldown(60);
         setOtpInput('');
+        if (data.maskedEmail) setMaskedEmail(data.maskedEmail);
         setOtpSuccessMsg(isEn ? 'A new OTP has been sent!' : '全新驗證碼已發送至您的 LINE 與信箱！');
         setTimeout(() => setOtpSuccessMsg(''), 5000);
         if (otpInputRef.current) otpInputRef.current.focus();

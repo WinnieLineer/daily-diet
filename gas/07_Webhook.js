@@ -288,8 +288,13 @@ function getSystemEmailOptions(extraOptions, props) {
  * 📧 統一寄送系統郵件 (MailApp 優先，GmailApp 備援)
  */
 function sendSystemEmail(to, subject, body, extraOptions, props) {
+  const targetTo = String(to || '').trim();
+  if (!targetTo || !targetTo.includes('@')) {
+    return { success: false, error: '無效的收件信箱地址' };
+  }
+
   const mailOptions = getSystemEmailOptions(Object.assign({
-    to: to,
+    to: targetTo,
     subject: subject,
     body: body
   }, extraOptions || {}), props);
@@ -303,7 +308,12 @@ function sendSystemEmail(to, subject, body, extraOptions, props) {
   } catch (mailErr) {
     error = mailErr.message || String(mailErr);
     try {
-      GmailApp.sendEmail(to, subject, body, mailOptions);
+      const gmailOpts = {};
+      if (mailOptions.htmlBody) gmailOpts.htmlBody = mailOptions.htmlBody;
+      if (mailOptions.name) gmailOpts.name = mailOptions.name;
+      if (mailOptions.replyTo) gmailOpts.replyTo = mailOptions.replyTo;
+      if (mailOptions.from) gmailOpts.from = mailOptions.from;
+      GmailApp.sendEmail(targetTo, subject, body, gmailOpts);
       success = true;
       error = '';
     } catch (gmailErr) {
@@ -321,10 +331,11 @@ function sendOtpToAdmin(otpCode, configuredUser, props) {
   if (!props) props = PropertiesService.getScriptProperties();
   const token = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN');
   const adminLineId = props.getProperty('ADMIN_LINE_USER_ID');
-  const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'maintainer@winnie-lin.space';
 
   let lineSent = false;
   let emailSent = false;
+  const sentAddresses = [];
+  const failedAddresses = [];
 
   // 1. LINE 推播
   if (adminLineId && token) {
@@ -342,13 +353,41 @@ function sendOtpToAdmin(otpCode, configuredUser, props) {
     }
   }
 
-  // 2. Email 寄送 (雙軌並進，發送至 maintainer@winnie-lin.space)
-  if (adminEmail) {
-    try {
-      const subject = `🔐 [Daily-Diet] 後台登入動態驗證碼：${otpCode}`;
-      const textBody = `【Daily-Diet 後台登入動態驗證碼】\n\n您的 6 位數一次性驗證碼為：${otpCode}\n\n有效時間：5 分鐘\n\n若非您本人操作，代表您的管理員密碼可能已洩露，請立即檢查！\n\n時間：${new Date().toLocaleString('zh-TW', { hour12: false })}`;
-      
-      const htmlBody = `
+  // 2. Email 信箱候選名單解析 (多軌直達：GAS 部署帳號、ADMIN_EMAIL、DEVELOPER_EMAIL、maintainer 網域)
+  const candidateEmails = [
+    props.getProperty('ADMIN_EMAIL'),
+    props.getProperty('DEVELOPER_EMAIL'),
+    (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL),
+    'maintainer@winnie-lin.space',
+    'hi@winnie-lin.space'
+  ];
+
+  // 優先解析 Google Apps Script 當前執行者/部署者帳號 (原生 Gmail 直送，完全免疫網域別名轉信與自發自收去重攔截)
+  try {
+    const effectiveUser = Session.getEffectiveUser().getEmail();
+    if (effectiveUser && effectiveUser.includes('@')) {
+      candidateEmails.unshift(effectiveUser);
+    }
+  } catch (e) {}
+  try {
+    const activeUser = Session.getActiveUser().getEmail();
+    if (activeUser && activeUser.includes('@')) {
+      candidateEmails.unshift(activeUser);
+    }
+  } catch (e) {}
+
+  const validEmails = [...new Set(
+    candidateEmails
+      .filter(Boolean)
+      .map(e => String(e).trim())
+      .filter(e => e.includes('@') && !e.includes('undefined') && !e.includes('null'))
+  )];
+
+  const timeStr = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
+  const subject = `🔐 [Daily-Diet] 後台登入動態驗證碼：${otpCode}`;
+  const textBody = `【Daily-Diet 後台登入動態驗證碼】\n\n您的 6 位數一次性驗證碼為：${otpCode}\n\n有效時間：5 分鐘\n\n若非您本人操作，代表您的管理員密碼可能已洩露，請立即檢查！\n\n時間：${timeStr}`;
+
+  const htmlBody = `
 <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 480px; margin: 0 auto; padding: 24px; border: 2px solid #000000; border-radius: 16px; background-color: #ffffff; box-shadow: 4px 4px 0px #000000;">
   <div style="display: inline-block; padding: 4px 10px; background-color: #2563EB; color: #ffffff; font-size: 11px; font-weight: 800; border-radius: 6px; letter-spacing: 1px;">
     2FA SECURITY NOTICE
@@ -375,19 +414,62 @@ function sendOtpToAdmin(otpCode, configuredUser, props) {
   </p>
 </div>`;
 
-      const result = sendSystemEmail(adminEmail, subject, textBody, { htmlBody: htmlBody }, props);
-      emailSent = result.success;
-      if (emailSent) {
-        console.log(`✅ [Admin OTP] 動態驗證碼郵件已成功寄送至 ${adminEmail}`);
-      } else {
-        console.warn(`⚠️ [Admin OTP] 寄送郵件失敗: ${result.error}`);
+  // 記錄當前發信配額 (供排查記錄)
+  try {
+    const quota = MailApp.getRemainingDailyQuota();
+    console.log(`ℹ️ [Admin OTP] 當前 MailApp 剩餘發信配額: ${quota}`);
+  } catch (qErr) {}
+
+  // 2.1 逐一發送至所有候選信箱 (隔離各信箱異常，確保成功率最大化)
+  if (validEmails.length > 0) {
+    for (const targetEmail of validEmails) {
+      try {
+        const result = sendSystemEmail(targetEmail, subject, textBody, { htmlBody: htmlBody }, props);
+        if (result.success) {
+          sentAddresses.push(targetEmail);
+          emailSent = true;
+          console.log(`✅ [Admin OTP] 動態驗證碼郵件已成功寄送至 ${targetEmail}`);
+        } else {
+          failedAddresses.push(`${targetEmail} (${result.error})`);
+          console.warn(`⚠️ [Admin OTP] 寄送至 ${targetEmail} 失敗: ${result.error}`);
+        }
+      } catch (emailErr) {
+        failedAddresses.push(`${targetEmail} (${emailErr.message || String(emailErr)})`);
+        console.warn(`⚠️ [Admin OTP] 寄送至 ${targetEmail} 發生例外:`, emailErr);
       }
-    } catch (emailErr) {
-      console.warn('⚠️ [Admin OTP] 寄送郵件發生例外:', emailErr);
     }
   }
 
-  return { lineSent, emailSent };
+  // 2.2 Web3Forms 第三方備援通道 (雙重保險防單點失效)
+  try {
+    const web3Res = UrlFetchApp.fetch('https://api.web3forms.com/submit', {
+      method: 'post',
+      contentType: 'application/json',
+      payload: JSON.stringify({
+        access_key: '72d7f10c-b6c8-42f2-9c40-fc5fac45cad0',
+        subject: `🔐 [Daily-Diet OTP] 後台登入動態驗證碼：${otpCode}`,
+        from_name: 'Daily-Diet 2FA 驗證中心',
+        otp_code: otpCode,
+        valid_until: '5 分鐘內有效',
+        message: `【Daily-Diet 後台登入動態驗證碼】\n\n您的 6 位數一次性動態驗證碼為：${otpCode}\n\n有效時間：5 分鐘。\n\n若非您本人操作，代表您的管理員密碼可能已洩露，請立即檢查！\n\n發送時間：${timeStr}`
+      }),
+      muteHttpExceptions: true
+    });
+    if (web3Res && web3Res.getResponseCode() === 200) {
+      emailSent = true;
+      console.log('✅ [Admin OTP] Web3Forms 備援通道已成功發送 OTP 通知');
+    }
+  } catch (web3Err) {
+    console.warn('⚠️ [Admin OTP] Web3Forms 備援發送失敗:', web3Err);
+  }
+
+  return {
+    lineSent,
+    emailSent,
+    sentAddresses,
+    failedAddresses,
+    candidateEmails: validEmails
+  };
 }
 
 /**
@@ -452,22 +534,32 @@ function handleMaintainerAuthActions(action, paramData, props) {
       cache.put('MAINTAINER_OTP_USER', configuredUser, 300);
       cache.remove(otpFailKey);
 
-      // 發送 OTP 至 LINE 與 Email
+      // 發送 OTP 至 LINE 與 Email (多軌直達)
       const dispatchResult = sendOtpToAdmin(otpCode, configuredUser, props);
-      const adminEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || props.getProperty('ADMIN_EMAIL') || 'maintainer@winnie-lin.space';
-      const emailParts = adminEmail.split('@');
-      const maskedEmail = emailParts.length === 2 
-        ? `${emailParts[0].slice(0, 3)}***@${emailParts[1]}`
-        : 'mai***@winnie-lin.space';
+      const notifiedList = (dispatchResult.sentAddresses && dispatchResult.sentAddresses.length > 0)
+        ? dispatchResult.sentAddresses
+        : (dispatchResult.candidateEmails && dispatchResult.candidateEmails.length > 0
+            ? dispatchResult.candidateEmails
+            : ['maintainer@winnie-lin.space']);
+
+      function formatMaskedEmail(email) {
+        if (!email || !email.includes('@')) return 'mai***@winnie-lin.space';
+        const parts = email.split('@');
+        const prefix = parts[0].length > 2 ? parts[0].slice(0, 3) : parts[0].slice(0, 1);
+        return `${prefix}***@${parts[1]}`;
+      }
+
+      const maskedEmailDisplay = [...new Set(notifiedList.map(formatMaskedEmail))].join(', ');
+      const rawTargetDisplay = notifiedList.join(', ');
 
       return {
         status: 'ok',
         otpRequired: true,
         expiresIn: 300,
-        maskedEmail: maskedEmail,
+        maskedEmail: maskedEmailDisplay,
         lineSent: dispatchResult.lineSent,
         emailSent: dispatchResult.emailSent,
-        message: `動態驗證碼已發送至您的 LINE 官方帳號與管理員信箱 (${adminEmail})`
+        message: `動態驗證碼已發送至您的 LINE 官方帳號與管理員信箱 (${rawTargetDisplay})`
       };
     } else {
       cache.put(failKey, String(failCount + 1), 900);
@@ -577,14 +669,30 @@ function handleMaintainerAuthActions(action, paramData, props) {
     cache.remove(otpFailKey);
 
     const dispatchResult = sendOtpToAdmin(otpCode, configuredUser, props);
+    const notifiedList = (dispatchResult.sentAddresses && dispatchResult.sentAddresses.length > 0)
+      ? dispatchResult.sentAddresses
+      : (dispatchResult.candidateEmails && dispatchResult.candidateEmails.length > 0
+          ? dispatchResult.candidateEmails
+          : ['maintainer@winnie-lin.space']);
+
+    function formatMaskedEmail(email) {
+      if (!email || !email.includes('@')) return 'mai***@winnie-lin.space';
+      const parts = email.split('@');
+      const prefix = parts[0].length > 2 ? parts[0].slice(0, 3) : parts[0].slice(0, 1);
+      return `${prefix}***@${parts[1]}`;
+    }
+
+    const maskedEmailDisplay = [...new Set(notifiedList.map(formatMaskedEmail))].join(', ');
+    const rawTargetDisplay = notifiedList.join(', ');
 
     return {
       status: 'ok',
       otpRequired: true,
       expiresIn: 300,
+      maskedEmail: maskedEmailDisplay,
       lineSent: dispatchResult.lineSent,
       emailSent: dispatchResult.emailSent,
-      message: '全新動態驗證碼已重新發送至您的 LINE 官方帳號與管理員信箱！'
+      message: `全新動態驗證碼已重新發送至您的 LINE 官方帳號與管理員信箱 (${rawTargetDisplay})！`
     };
   }
 
@@ -1374,7 +1482,7 @@ function doGet(e) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', code: 'UNAUTHORIZED', message: 'Forbidden: Unauthorized' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
-      const targetEmail = e?.parameter?.email || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space';
+      const targetEmail = e?.parameter?.email || props.getProperty('ADMIN_EMAIL') || (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space';
       const senderEmail = (typeof DEFAULT_SENDER_EMAIL !== 'undefined' && DEFAULT_SENDER_EMAIL) || props.getProperty('SENDER_EMAIL') || 'auto-message@winnie-lin.space';
       const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
       const testSub = `🐼 Daily-Diet 郵件發送診斷測試 (${timeNow})`;
@@ -4286,13 +4394,31 @@ function verifyLineSignature(rawBody, signature, channelSecret) {
  * 🧪 在 Google Apps Script 編輯器手動執行此函式以完成一次性郵件發送權限授權
  */
 function testMailAuthorization() {
-  const testEmail = (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 'maintainer@winnie-lin.space';
-  const testOptions = getEmailSendOptions({
+  const props = PropertiesService.getScriptProperties();
+  const testEmail = props.getProperty('ADMIN_EMAIL') || 
+    (typeof DEFAULT_ADMIN_EMAIL !== 'undefined' && DEFAULT_ADMIN_EMAIL) || 
+    'maintainer@winnie-lin.space';
+  const testOptions = getSystemEmailOptions({
     to: testEmail,
     subject: '🐼 Daily-Diet 郵件權限授權測試信',
     body: '恭喜！若您收到這封信，代表 Google Apps Script 郵件發送服務已完全授權成功！'
-  });
+  }, props);
   MailApp.sendEmail(testOptions);
   console.log('✅ 測試信已寄出至: ' + testEmail);
+
+  // 若能獲取 effectiveUser，亦同步測試 Google 部署帳號信箱
+  try {
+    const effective = Session.getEffectiveUser().getEmail();
+    if (effective && effective.includes('@') && effective !== testEmail) {
+      const effOptions = getSystemEmailOptions({
+        to: effective,
+        subject: '🐼 Daily-Diet 郵件權限授權測試信 (Google 部署帳號備援)',
+        body: '恭喜！若您收到這封信，代表 Google Apps Script 郵件發送服務已完全授權成功！'
+      }, props);
+      MailApp.sendEmail(effOptions);
+      console.log('✅ 備援測試信已寄出至 Google 部署帳號: ' + effective);
+    }
+  } catch (e) {}
+
   return 'SUCCESS';
 }
