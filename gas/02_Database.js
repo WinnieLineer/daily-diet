@@ -2936,10 +2936,27 @@ function saveFounderSupporterData(props, data, operatorName) {
     const existing = currentMap[key] || {};
     const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
 
-    // 計算預設創始編號 (如 NO. 001)
+    // 計算預設創始編號 (尊榮防推算格式，如 GENESIS · #8821 或由管理員自訂)
     const validFounders = Object.values(currentMap).filter(item => !item._refKey);
     const existingSeq = existing.number || '';
-    const nextSeq = existingSeq || ('NO. ' + String(validFounders.length + 1).padStart(3, '0'));
+
+    // 若管理員有明確輸入序號 (非空字串) 則完全採用管理員自訂值；
+    // 若無輸入且已有既有序號則保留；若全新登記則產生尊榮防推算編號
+    let resolvedNumber = '';
+    if (data.number !== undefined && String(data.number).trim() !== '') {
+      resolvedNumber = String(data.number).trim();
+    } else if (existingSeq) {
+      resolvedNumber = existingSeq;
+    } else {
+      let hash = 0;
+      const seedStr = key + '_' + (validFounders.length + 1);
+      for (let i = 0; i < seedStr.length; i++) {
+        hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+        hash |= 0;
+      }
+      const pseudoCode = 8000 + (Math.abs(hash) % 1990);
+      resolvedNumber = `GENESIS · #${pseudoCode}`;
+    }
 
     // 分離內部對帳備註與公開寄語
     const rawNote = String(data.note || existing.note || '').trim();
@@ -2953,7 +2970,7 @@ function saveFounderSupporterData(props, data, operatorName) {
       internalNote: internalNote,
       greeting: greeting,
       note: internalNote, // 向下相容
-      number: String(data.number || nextSeq).trim(),
+      number: resolvedNumber,
       tier: 'FOUNDER',
       badge: '🎖️ 創始支持者',
       addedAt: existing.addedAt || timeNow,

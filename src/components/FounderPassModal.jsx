@@ -36,7 +36,7 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
   };
 
   const holderName = founderData?.name || userName || '尊貴的支持者';
-  const founderSeq = founderData?.number || 'NO. 001';
+  const founderSeq = founderData?.number || 'GENESIS · #8821';
   const addedDate = founderData?.addedAt || founderData?.updatedAt || '創始草創期';
 
   // 寄語文字：若後台有指定公開寄語則優先採用，否則顯示真摯感人的官方致謝詞
@@ -105,8 +105,9 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
                     DAILY DIET FOUNDER
                   </span>
                 </div>
-                <div className="bg-black text-amber-300 font-mono font-black text-[10px] px-2 py-0.5 rounded-lg border border-black shadow-[1px_1px_0px_rgba(255,255,255,0.4)]">
-                  {founderSeq}
+                <div className="bg-black text-amber-300 font-mono font-black text-[10px] px-2.5 py-1 rounded-lg border border-amber-400/50 shadow-[0_2px_4px_rgba(0,0,0,0.3)] tracking-wider flex items-center gap-1">
+                  <span className="text-[9px]">👑</span>
+                  <span>{founderSeq}</span>
                 </div>
               </div>
 

@@ -538,15 +538,15 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
 
   // 開啟創始支持者登記/編輯彈窗
   const handleOpenFounderModal = (user = {}) => {
-    const existing = checkIsFounder(user.userId, user.name, user.email);
+    const existing = checkIsFounder(user.userId || user.id, user.name, user.email) || (user.number || user.greeting ? user : null);
     setEditingFounder({
-      id: existing?.id || user.userId || user.name || '',
+      id: existing?.id || user.userId || user.id || user.name || '',
       name: existing?.name || user.name || '',
       email: existing?.email || user.email || '',
-      internalNote: existing?.internalNote || existing?.note || '',
-      greeting: existing?.greeting || '',
-      number: existing?.number || '',
-      isFounder: Boolean(existing)
+      internalNote: existing?.internalNote || existing?.note || user.internalNote || user.note || '',
+      greeting: existing?.greeting || user.greeting || '',
+      number: existing?.number || user.number || '',
+      isFounder: Boolean(existing?.tier === 'FOUNDER' || existing?.number || checkIsFounder(user.userId || user.id, user.name, user.email))
     });
     setFounderActionSuccess('');
     setIsFounderModalOpen(true);
@@ -619,7 +619,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           id: payload.id,
           name: payload.name || '創始支持者',
           email: payload.email,
-          number: payload.number || 'NO. 001',
+          number: payload.number || 'GENESIS · #8821',
           greeting: payload.greeting,
           addedAt: new Date().toLocaleString()
         } : null);
@@ -4475,11 +4475,11 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                       type="text"
                       value={editingFounder.number}
                       onChange={(e) => setEditingFounder({ ...editingFounder, number: e.target.value })}
-                      placeholder="e.g. NO. 001, NO. 008"
+                      placeholder={isEn ? "e.g. GENESIS · #8821, NO. 888, VIP-007" : "例如：GENESIS · #8821、NO. 888、VIP-007"}
                       className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-mono font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
                     />
                     <span className="text-[10px] text-zinc-400 font-normal mt-0.5 block">
-                      {isEn ? 'Leave empty to assign automatically based on registration order.' : '留空將自動依登記先後順序排定序號。'}
+                      {isEn ? 'Leave empty to automatically assign a prestigious non-linear pass code (GENESIS · #xxxx).' : '留空將自動產生尊榮防推算編號 (GENESIS · #xxxx)，亦可在此自由修改為任意自訂序號。'}
                     </span>
                   </div>
 

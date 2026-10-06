@@ -844,7 +844,7 @@ function doGet(e) {
         clientSafeData = {
           id: founderData.id || '',
           name: founderData.name || '',
-          number: founderData.number || 'NO. 001',
+          number: founderData.number || 'GENESIS · #8821',
           greeting: safeGreeting,
           addedAt: founderData.addedAt || '',
           tier: founderData.tier || 'FOUNDER',
@@ -1400,6 +1400,9 @@ function doGet(e) {
         name: e?.parameter?.name || e?.parameter?.userName,
         email: e?.parameter?.email,
         note: e?.parameter?.note,
+        internalNote: e?.parameter?.internalNote !== undefined ? e?.parameter?.internalNote : e?.parameter?.note,
+        greeting: e?.parameter?.greeting,
+        number: e?.parameter?.number,
         isFounder: e?.parameter?.isFounder !== undefined ? (e?.parameter?.isFounder === 'true' || e?.parameter?.isFounder === true) : true
       };
       const opName = e?.parameter?.user || '管理員';
@@ -1785,6 +1788,9 @@ function doPost(e) {
         name: data?.name || data?.userName || e?.parameter?.name || e?.parameter?.userName,
         email: data?.email || e?.parameter?.email,
         note: data?.note || e?.parameter?.note,
+        internalNote: data?.internalNote !== undefined ? data?.internalNote : (data?.note || e?.parameter?.internalNote || e?.parameter?.note),
+        greeting: data?.greeting !== undefined ? data?.greeting : e?.parameter?.greeting,
+        number: data?.number !== undefined ? data?.number : e?.parameter?.number,
         isFounder: data?.isFounder !== undefined ? (data?.isFounder !== false && data?.isFounder !== 'false') : (e?.parameter?.isFounder !== 'false')
       };
       const opName = data?.user || data?.userName || e?.parameter?.user || '管理員';
