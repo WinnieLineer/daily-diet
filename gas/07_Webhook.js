@@ -3982,14 +3982,16 @@ function notifyAdminViaLine(params) {
                   weight: "bold",
                   size: "sm",
                   color: "#FDE047",
-                  flex: 1
+                  flex: 1,
+                  wrap: true
                 },
                 {
                   type: "text",
                   text: timeStr,
                   size: "xxs",
                   color: "#A1A1AA",
-                  align: "end"
+                  align: "end",
+                  wrap: true
                 }
               ]
             }
@@ -4011,13 +4013,15 @@ function notifyAdminViaLine(params) {
                   text: `👤 回報用戶：${reporterName} (${reporterId ? reporterId.slice(-6) : '未知'})`,
                   size: "xs",
                   weight: "bold",
-                  color: "#27272A"
+                  color: "#27272A",
+                  wrap: true
                 },
                 {
                   type: "text",
                   text: `🌐 用戶語言：${userLang || 'zh'}`,
                   size: "xxs",
-                  color: "#71717A"
+                  color: "#71717A",
+                  wrap: true
                 }
               ]
             },
@@ -4035,7 +4039,8 @@ function notifyAdminViaLine(params) {
                   text: "📝 回報內容：",
                   size: "xxs",
                   color: "#991B1B",
-                  weight: "bold"
+                  weight: "bold",
+                  wrap: true
                 },
                 {
                   type: "text",

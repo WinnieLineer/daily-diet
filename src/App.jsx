@@ -1709,11 +1709,13 @@ function App() {
     setShowNamePrompt(false);
   };
   
-  const handleOnboardingComplete = () => {
+  const handleOnboardingComplete = (enteredName) => {
     safeSetStorage('onboarding_seen', 'true');
     safeSetStorage('seen_whatsnew_id', CURRENT_WHATSNEW_ID); // 標記已看，避免新手進入後被打斷
     safeSetStorage('last_seen_version', APP_VERSION);
-    setUserName(safeGetStorage('user_name') || '');
+    const finalName = (enteredName && String(enteredName).trim()) || safeGetStorage('user_name') || '';
+    if (finalName) safeSetStorage('user_name', finalName);
+    setUserName(finalName);
     setShowOnboarding(false);
   };
   

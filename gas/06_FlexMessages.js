@@ -75,7 +75,7 @@ function createNeoFlexButton(config) {
         size: config.fontSize || (isSm ? 'xxs' : 'xs'),
         color: textColor,
         align: 'center',
-        wrap: config.wrap !== undefined ? config.wrap : false
+        wrap: config.wrap !== undefined ? config.wrap : true
       }
     ]
   };
@@ -189,7 +189,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           type: "box",
           layout: "horizontal",
           contents: [
-            { type: "text", text: isEn ? "🧮 Nutrient Breakdown" : "🧮 估算拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 5 },
+            { type: "text", text: isEn ? "🧮 Nutrient Breakdown" : "🧮 估算拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 5, wrap: true },
             { type: "text", text: isEn ? "Calories / Protein" : "估算熱量 / 蛋白質", size: "xxs", color: "#71717A", align: "end", flex: 6, wrap: true }
           ]
         },
@@ -269,7 +269,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           text: label,
           weight: "bold",
           size: "xs",
-          color: isSelected ? "#FFFFFF" : "#000000"
+          color: isSelected ? "#FFFFFF" : "#000000",
+          wrap: true
         }
       ]
     };
@@ -299,7 +300,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
         text: isCustomActive ? `x${curM}` : (isEn ? "Custom" : "自訂"),
         weight: "bold",
         size: "xs",
-        color: isCustomActive ? "#FFFFFF" : "#000000"
+        color: isCustomActive ? "#FFFFFF" : "#000000",
+        wrap: true
       }
     ]
   };
@@ -337,8 +339,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", weight: "bold", size: "sm", color: "#000000" },
-              { type: "text", text: isEn ? "AI MEAL LOG" : "AI 即時記錄", weight: "bold", size: "xs", color: "#713F12", align: "end" }
+              { type: "text", text: "🐼 DAILY DIET", weight: "bold", size: "sm", color: "#000000", wrap: true },
+              { type: "text", text: isEn ? "AI MEAL LOG" : "AI 即時記錄", weight: "bold", size: "xs", color: "#713F12", align: "end", wrap: true }
             ]
           },
           {
@@ -378,7 +380,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 size: "xxl",
                 color: "#E11D48",
                 align: "end",
-                flex: 2
+                flex: 2,
+                wrap: true
               },
               {
                 type: "text",
@@ -388,7 +391,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 align: "end",
                 weight: "bold",
                 gravity: "bottom",
-                flex: 1
+                flex: 1,
+                wrap: true
               }
             ]
           },
@@ -408,9 +412,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🔥 Calories" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
-                  { type: "text", text: `${analysis.calories}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: "kcal", size: "xxs", color: "#881337", weight: "bold" }
+                  { type: "text", text: isEn ? "🔥 Calories" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
+                  { type: "text", text: `${analysis.calories}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: "kcal", size: "xxs", color: "#881337", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -424,9 +428,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
-                  { type: "text", text: `${analysis.protein}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "grams" : "克", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
+                  { type: "text", text: `${analysis.protein}g`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "grams" : "克", size: "xxs", color: "#1E3A8A", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -440,9 +444,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
-                  { type: "text", text: `${analysis.water || 0}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
+                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
+                  { type: "text", text: `${analysis.water || 0}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold", wrap: true }
                 ]
               }
             ]
@@ -499,7 +503,8 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
                     text: isEn ? "⚖️ PORTION SIZE (ALL NUTRIENTS)" : "⚖️ 份量調整 (整份等比縮放)",
                     size: "xxs",
                     weight: "bold",
-                    color: "#71717A"
+                    color: "#71717A",
+                    wrap: true
                   }
                 ]
               },
@@ -652,7 +657,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
           color: "#854D0E",
           weight: "bold",
           align: "center",
-          flex: 1
+          flex: 1,
+          wrap: true
         }
       ]
     });
@@ -717,7 +723,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
               color: "#71717A",
               align: "end",
               flex: 2,
-              gravity: "center"
+              gravity: "center",
+              wrap: true
             }
           ]
         },
@@ -729,16 +736,16 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
           contents: [
             {
               type: "box", layout: "horizontal", backgroundColor: "#FFF1F2", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", flex: 0,
-              contents: [{ type: "text", text: `🔥 ${calVal} kcal`, size: "xxs", color: "#E11D48", weight: "bold", flex: 0 }]
+              contents: [{ type: "text", text: `🔥 ${calVal} kcal`, size: "xxs", color: "#E11D48", weight: "bold", flex: 0, wrap: true }]
             },
             ...(proVal > 0 ? [{
               type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", flex: 0,
-              contents: [{ type: "text", text: `🥩 ${proVal}g`, size: "xxs", color: "#2563EB", weight: "bold", flex: 0 }]
+              contents: [{ type: "text", text: `🥩 ${proVal}g`, size: "xxs", color: "#2563EB", weight: "bold", flex: 0, wrap: true }]
             }] : []),
             { type: "filler" },
             {
               type: "box", layout: "horizontal", backgroundColor: "#FDE047", cornerRadius: "6px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "7px", paddingEnd: "7px", paddingTop: "2px", paddingBottom: "2px", flex: 0,
-              contents: [{ type: "text", text: isEn ? "🔍 Details" : "🔍 詳情", size: "xxs", color: "#000000", weight: "bold", flex: 0 }]
+              contents: [{ type: "text", text: isEn ? "🔍 Details" : "🔍 詳情", size: "xxs", color: "#000000", weight: "bold", flex: 0, wrap: true }]
             }
           ]
         }
@@ -824,10 +831,10 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 paddingTop: "2px",
                 paddingBottom: "2px",
                 contents: [
-                  { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "xxs" }
+                  { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "xxs", wrap: true }
                 ]
               },
-              { type: "text", text: `📅 ${todayStr}`, color: "#713F12", weight: "bold", size: "xs", align: "end", gravity: "center" }
+              { type: "text", text: `📅 ${todayStr}`, color: "#713F12", weight: "bold", size: "xs", align: "end", gravity: "center", wrap: true }
             ]
           },
           {
@@ -858,9 +865,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: isOverCal ? "#FFE4E6" : "#FFF1F2", borderColor: isOverCal ? "#BE123C" : "#000000", borderWidth: "2.5px",
                   cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? (isOverCal ? "⚠️ Cal" : "🔥 Cal") : (isOverCal ? "⚠️ 熱量" : "🔥 熱量"), size: "xxs", color: isOverCal ? "#BE123C" : "#E11D48", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: isOverCal ? "#BE123C" : "#000000", margin: "xs" },
-                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: isOverCal ? "#9F1239" : "#881337", weight: "bold", wrap: false }
+                    { type: "text", text: isEn ? (isOverCal ? "⚠️ Cal" : "🔥 Cal") : (isOverCal ? "⚠️ 熱量" : "🔥 熱量"), size: "xxs", color: isOverCal ? "#BE123C" : "#E11D48", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: isOverCal ? "#BE123C" : "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: isOverCal ? "#9F1239" : "#881337", weight: "bold", wrap: true }
                   ]
                 },
                 {
@@ -868,9 +875,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2.5px",
                   cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: `ml / ${watGoal}`, size: "xxs", color: "#164E63", weight: "bold", wrap: false }
+                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: `ml / ${watGoal}`, size: "xxs", color: "#164E63", weight: "bold", wrap: true }
                   ]
                 }
               ]
@@ -884,9 +891,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2px",
                   cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "🥩 Pro" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalPro}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: `/${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
+                    { type: "text", text: isEn ? "🥩 Pro" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalPro}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: `/${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold", wrap: true }
                   ]
                 },
                 {
@@ -894,9 +901,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: "#FFF7ED", borderColor: "#000000", borderWidth: "2px",
                   cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "🍞 Carbs" : "🍞 碳水", size: "xxs", color: "#C2410C", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalCarbs}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: `/${carbsGoal}g`, size: "xxs", color: "#92400E", weight: "bold" }
+                    { type: "text", text: isEn ? "🍞 Carbs" : "🍞 碳水", size: "xxs", color: "#C2410C", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalCarbs}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: `/${carbsGoal}g`, size: "xxs", color: "#92400E", weight: "bold", wrap: true }
                   ]
                 },
                 {
@@ -904,9 +911,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: "#F0FDF4", borderColor: "#000000", borderWidth: "2px",
                   cornerRadius: "10px", paddingAll: "6px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "🥑 Fat" : "🥑 脂肪", size: "xxs", color: "#166534", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalFat}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: `/${fatGoal}g`, size: "xxs", color: "#14532D", weight: "bold" }
+                    { type: "text", text: isEn ? "🥑 Fat" : "🥑 脂肪", size: "xxs", color: "#166534", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalFat}g`, size: "sm", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: `/${fatGoal}g`, size: "xxs", color: "#14532D", weight: "bold", wrap: true }
                   ]
                 }
               ]
@@ -921,9 +928,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: isOverCal ? "#FFE4E6" : "#FFF1F2", borderColor: isOverCal ? "#BE123C" : "#000000", borderWidth: "2.5px",
                   cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? (isOverCal ? "⚠️ Calories" : "🔥 Calories") : (isOverCal ? "⚠️ 熱量" : "🔥 熱量"), size: "xxs", color: isOverCal ? "#BE123C" : "#E11D48", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: isOverCal ? "#BE123C" : "#000000", margin: "xs" },
-                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: isOverCal ? "#9F1239" : "#881337", weight: "bold" }
+                    { type: "text", text: isEn ? (isOverCal ? "⚠️ Cal" : "🔥 Cal") : (isOverCal ? "⚠️ 熱量" : "🔥 熱量"), size: "xxs", color: isOverCal ? "#BE123C" : "#E11D48", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalCal}`, size: "md", weight: "bold", color: isOverCal ? "#BE123C" : "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: `kcal (${calPercent}%)`, size: "xxs", color: isOverCal ? "#9F1239" : "#881337", weight: "bold", wrap: true }
                   ]
                 },
                 {
@@ -931,9 +938,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2.5px",
                   cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold" }
+                    { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: `/ ${proGoal}g`, size: "xxs", color: "#71717A", weight: "bold", wrap: true }
                   ]
                 },
                 {
@@ -941,9 +948,9 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                   backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2.5px",
                   cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
                   contents: [
-                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: false },
-                    { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                    { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold" }
+                    { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
+                    { type: "text", text: `${totalWater}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                    { type: "text", text: "ml", size: "xxs", color: "#164E63", weight: "bold", wrap: true }
                   ]
                 }
               ]
@@ -969,8 +976,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: isEn ? "🥩 Protein Target" : "🥩 當日蛋白質進度", size: "xxs", weight: "bold", color: "#1E40AF", flex: 0 },
-                      { type: "text", text: `${totalPro} / ${proGoal}g (${proPercent}%)`, size: "xxs", weight: "bold", color: isProReached ? "#16A34A" : "#1E40AF", align: "end", flex: 1, wrap: false }
+                      { type: "text", text: isEn ? "🥩 Protein Target" : "🥩 當日蛋白質進度", size: "xxs", weight: "bold", color: "#1E40AF", flex: 0, wrap: true },
+                      { type: "text", text: `${totalPro} / ${proGoal}g (${proPercent}%)`, size: "xxs", weight: "bold", color: isProReached ? "#16A34A" : "#1E40AF", align: "end", flex: 1, wrap: true }
                     ]
                   },
                   {
@@ -1012,8 +1019,8 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: isEn ? "⚡ Calorie Target" : "⚡ 每日熱量進度", size: "xxs", weight: "bold", color: "#71717A", flex: 0 },
-                      { type: "text", text: `${totalCal} / ${calGoal} kcal (${calPercent}%)`, size: "xxs", weight: "bold", color: isOverCal ? "#E11D48" : "#71717A", align: "end", flex: 1, wrap: false }
+                      { type: "text", text: isEn ? "⚡ Calorie Target" : "⚡ 每日熱量進度", size: "xxs", weight: "bold", color: "#71717A", flex: 0, wrap: true },
+                      { type: "text", text: `${totalCal} / ${calGoal} kcal (${calPercent}%)`, size: "xxs", weight: "bold", color: isOverCal ? "#E11D48" : "#71717A", align: "end", flex: 1, wrap: true }
                     ]
                   },
                   {
@@ -1063,11 +1070,11 @@ function generateDailySummaryFlex(userId, justSavedMeal, liffId, userGistId, pro
                 type: "box",
                 layout: "horizontal",
                 contents: [
-                  { type: "text", text: isEn ? (isToday ? `🍱 Logged ${allLogs.length} meals:` : `🍱 ${allLogs.length} meals on ${todayStr}:`) : (isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`), size: "xs", weight: "bold", color: "#000000", flex: 3 },
-                  { type: "text", text: isEn ? "Tap meal for AI info 🔍" : "點擊餐點看 AI 詳情 🔍", size: "xxs", color: "#71717A", align: "end", flex: 3, gravity: "center" }
+                  { type: "text", text: isEn ? (isToday ? `🍱 Logged ${allLogs.length} meals:` : `🍱 ${allLogs.length} meals on ${todayStr}:`) : (isToday ? `🍱 今日已記 ${allLogs.length} 餐：` : `🍱 該日已記 ${allLogs.length} 餐：`), size: "xs", weight: "bold", color: "#000000", flex: 3, wrap: true },
+                  { type: "text", text: isEn ? "Tap meal for AI info 🔍" : "點擊餐點看 AI 詳情 🔍", size: "xxs", color: "#71717A", align: "end", flex: 3, gravity: "center", wrap: true }
                 ]
               },
-              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isEn ? (isToday ? "No meals logged yet today" : "No meals logged on this date") : (isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄"), size: "xs", color: "#A1A1AA", margin: "sm" }])
+              ...(mealItems.length > 0 ? mealItems : [{ type: "text", text: isEn ? (isToday ? "No meals logged yet today" : "No meals logged on this date") : (isToday ? "今日尚未有飲食紀錄" : "該日尚未有飲食紀錄"), size: "xs", color: "#A1A1AA", margin: "sm", wrap: true }])
             ]
           },
           // 教練提示框
@@ -1202,8 +1209,8 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: info.goal_type ? `🎯 ${info.goal_type}` : (isEn ? "🎯 Goals" : "🎯 目標設定"), color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+              { type: "text", text: info.goal_type ? `🎯 ${info.goal_type}` : (isEn ? "🎯 Goals" : "🎯 目標設定"), color: "#A1A1AA", size: "xs", align: "end", wrap: true }
             ]
           },
           {
@@ -1246,8 +1253,8 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🔥 Daily Cal" : "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
-                  { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "kcal / day" : "kcal / 天", size: "xxs", color: "#881337", weight: "bold" }
+                  { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "kcal / day" : "kcal / 天", size: "xxs", color: "#881337", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -1260,8 +1267,8 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
-                  { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                  { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -1274,8 +1281,8 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "💧 Daily Water" : "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
-                  { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "ml / day" : "ml / 天", size: "xxs", color: "#164E63", weight: "bold" }
+                  { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "ml / day" : "ml / 天", size: "xxs", color: "#164E63", weight: "bold", wrap: true }
                 ]
               }
             ]
@@ -1294,7 +1301,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                 type: "box",
                 layout: "horizontal",
                 contents: [
-                  { type: "text", text: isEn ? "🔬 Calorie Definition" : "🔬 熱量科學計算依據", weight: "bold", size: "xs", color: "#0F172A", flex: 1 },
+                  { type: "text", text: isEn ? "🔬 Calorie Definition" : "🔬 熱量科學計算依據", weight: "bold", size: "xs", color: "#0F172A", flex: 1, wrap: true },
                   ...(info.activity_level ? [{ type: "text", text: `${info.activity_level}`, size: "xxs", color: "#64748B", align: "end", wrap: true }] : [])
                 ]
               },
@@ -1313,8 +1320,8 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                     flex: 1,
                     alignItems: "center",
                     contents: [
-                      { type: "text", text: isEn ? "🧬 Basal BMR" : "🧬 基礎代謝", size: "xxs", color: "#64748B" },
-                      { type: "text", text: `${info.bmr || '-'} kcal`, size: "xs", weight: "bold", color: "#0F172A" }
+                      { type: "text", text: isEn ? "🧬 Basal BMR" : "🧬 基礎代謝", size: "xxs", color: "#64748B", wrap: true },
+                      { type: "text", text: `${info.bmr || '-'} kcal`, size: "xs", weight: "bold", color: "#0F172A", wrap: true }
                     ]
                   },
                   {
@@ -1326,8 +1333,8 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                     flex: 1,
                     alignItems: "center",
                     contents: [
-                      { type: "text", text: isEn ? "⚡ TDEE Burn" : "⚡ 每日總消耗", size: "xxs", color: "#64748B" },
-                      { type: "text", text: `${info.tdee || '-'} kcal`, size: "xs", weight: "bold", color: "#0F172A" }
+                      { type: "text", text: isEn ? "⚡ TDEE Burn" : "⚡ 每日總消耗", size: "xxs", color: "#64748B", wrap: true },
+                      { type: "text", text: `${info.tdee || '-'} kcal`, size: "xs", weight: "bold", color: "#0F172A", wrap: true }
                     ]
                   },
                   {
@@ -1339,7 +1346,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
                     flex: 1,
                     alignItems: "center",
                     contents: [
-                      { type: "text", text: isEn ? "⚖️ Deficit/Gain" : "⚖️ 赤字/盈餘", size: "xxs", color: "#64748B" },
+                      { type: "text", text: isEn ? "⚖️ Deficit/Gain" : "⚖️ 赤字/盈餘", size: "xxs", color: "#64748B", wrap: true },
                       { type: "text", text: `${info.deficit_or_surplus ? info.deficit_or_surplus.replace(/每日熱量/g, '') : (info.tdee ? `${cal - info.tdee} kcal` : '-')}`, size: "xs", weight: "bold", color: "#0F172A", wrap: true }
                     ]
                   }
@@ -1480,7 +1487,7 @@ function generateGoalSettingFlex(info, cal, pro, wat, liffId, userGistId, lang) 
             cornerRadius: "10px",
             paddingAll: "10px",
             contents: [
-              { type: "text", text: isEn ? "🐼 Panda Coach Advice:" : "🐼 熊貓教練體態變化建議：", size: "xs", color: "#713F12", weight: "bold" },
+              { type: "text", text: isEn ? "🐼 Panda Coach Advice:" : "🐼 熊貓教練體態變化建議：", size: "xs", color: "#713F12", weight: "bold", wrap: true },
               {
                 type: "text",
                 text: (isEn && /[\u4e00-\u9fa5]/.test(info.panda_advice || '')) 
@@ -1551,8 +1558,8 @@ function generateGoalGuideFlex(userId, liffId, userGistId, lang) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: isEn ? "🪄 Smart Goals" : "🪄 AI 智能推薦", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+              { type: "text", text: isEn ? "🪄 Smart Goals" : "🪄 AI 智能推薦", color: "#A1A1AA", size: "xs", align: "end", wrap: true }
             ]
           },
           {
@@ -1851,8 +1858,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: isEn ? "🎯 Current Goals" : "🎯 目前設定目標", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+              { type: "text", text: isEn ? "🎯 Current Goals" : "🎯 目前設定目標", color: "#A1A1AA", size: "xs", align: "end", wrap: true }
             ]
           },
           {
@@ -1887,8 +1894,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🔥 Daily Cal" : "🔥 每日熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
-                  { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "kcal / day" : "kcal / 天", size: "xxs", color: "#881337", weight: "bold" }
+                  { type: "text", text: `${cal}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "kcal / day" : "kcal / 天", size: "xxs", color: "#881337", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -1901,8 +1908,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
-                  { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold" }
+                  { type: "text", text: `${pro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#1E3A8A", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -1915,8 +1922,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "💧 Daily Water" : "💧 每日水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
-                  { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "ml / day" : "ml / 天", size: "xxs", color: "#164E63", weight: "bold" }
+                  { type: "text", text: `${wat}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "ml / day" : "ml / 天", size: "xxs", color: "#164E63", weight: "bold", wrap: true }
                 ]
               }
             ]
@@ -1936,8 +1943,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🍞 Daily Carbs" : "🍞 每日碳水", size: "xxs", color: "#EA580C", weight: "bold", wrap: true },
-                  { type: "text", text: `${goals.carbs || 200}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#9A3412", weight: "bold" }
+                  { type: "text", text: `${goals.carbs || 200}g`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#9A3412", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -1950,8 +1957,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🥑 Daily Fat" : "🥑 每日脂肪", size: "xxs", color: "#16A34A", weight: "bold", wrap: true },
-                  { type: "text", text: `${goals.fat || 60}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#166534", weight: "bold" }
+                  { type: "text", text: `${goals.fat || 60}g`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: isEn ? "g / day" : "克 / 天", size: "xxs", color: "#166534", weight: "bold", wrap: true }
                 ]
               }
             ]
@@ -1976,7 +1983,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                     text: isEn ? "⏰ Eating Window (16:8)" : "⏰ 16:8 進食窗口",
                     size: "xs",
                     weight: "bold",
-                    color: "#000000"
+                    color: "#000000",
+                    wrap: true
                   },
                   {
                     type: "text",
@@ -1985,7 +1993,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                       : (isEn ? "Not enabled (tap Settings to turn on)" : "未開啟 (點擊設定開啟輕斷食)"),
                     size: "xxs",
                     color: "#71717A",
-                    margin: "xs"
+                    margin: "xs",
+                    wrap: true
                   }
                 ]
               },
@@ -2006,7 +2015,8 @@ function generateCurrentGoalFlex(userId, goals, liffId, userGistId, lang) {
                     color: "#FFFFFF",
                     weight: "bold",
                     align: "center",
-                    gravity: "center"
+                    gravity: "center",
+                    wrap: true
                   }
                 ]
               }
@@ -2112,7 +2122,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
           color: isToday ? "#000000" : "#52525B",
           weight: isToday ? "bold" : "regular",
           flex: 3,
-          wrap: false
+          wrap: true
         },
         {
           type: "box",
@@ -2141,7 +2151,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
           color: isToday ? "#E11D48" : "#18181B",
           align: "end",
           flex: 5,
-          wrap: false
+          wrap: true
         }
       ]
     };
@@ -2163,8 +2173,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: isEn ? "7-Day Trend" : "7 日趨勢週報", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+              { type: "text", text: isEn ? "7-Day Trend" : "7 日趨勢週報", color: "#A1A1AA", size: "xs", align: "end", wrap: true }
             ]
           },
           {
@@ -2199,8 +2209,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🔥 7-Day Avg Cal" : "🔥 7 日平均熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
-                  { type: "text", text: `${avgCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: `kcal / ${goalCal}`, size: "xxs", color: "#881337", weight: "bold" }
+                  { type: "text", text: `${avgCal}`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: `kcal / ${goalCal}`, size: "xxs", color: "#881337", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -2213,8 +2223,8 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🥩 7-Day Avg Pro" : "🥩 7 日平均蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
-                  { type: "text", text: `${avgPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                  { type: "text", text: `/ ${goalPro}g`, size: "xxs", color: "#71717A", weight: "bold" }
+                  { type: "text", text: `${avgPro}g`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                  { type: "text", text: `/ ${goalPro}g`, size: "xxs", color: "#71717A", weight: "bold", wrap: true }
                 ]
               }
             ]
@@ -2229,7 +2239,7 @@ function generateWeeklyTrendsFlex(userId, liffId, userGistId, props, lang) {
             paddingAll: "12px",
             spacing: "xs",
             contents: [
-              { type: "text", text: isEn ? "📊 Daily Calorie Trajectory:" : "📊 每日熱量水平長條圖：", size: "xs", weight: "bold", color: "#000000" },
+              { type: "text", text: isEn ? "📊 Daily Calorie Trajectory:" : "📊 每日熱量水平長條圖：", size: "xs", weight: "bold", color: "#000000", wrap: true },
               ...chartRows
             ]
           }
@@ -2307,7 +2317,8 @@ function generateWeightConfirmFlex(userId, weightData, liffId, userGistId, props
             text: isEn ? "⚖️ Weight Tracker" : "⚖️ 體重打卡記錄",
             color: "#FFFFFF",
             weight: "bold",
-            size: "md"
+            size: "md",
+            wrap: true
           }
         ]
       },
@@ -2328,14 +2339,16 @@ function generateWeightConfirmFlex(userId, weightData, liffId, userGistId, props
                 text: `${weight}`,
                 size: "4xl",
                 weight: "bold",
-                color: "#000000"
+                color: "#000000",
+                wrap: true
               },
               {
                 type: "text",
                 text: "kg (公斤)",
                 size: "xs",
                 color: "#71717A",
-                weight: "bold"
+                weight: "bold",
+                wrap: true
               }
             ]
           },
@@ -2359,7 +2372,8 @@ function generateWeightConfirmFlex(userId, weightData, liffId, userGistId, props
                     text: diffBadgeText,
                     size: "xs",
                     color: diffColor,
-                    weight: "bold"
+                    weight: "bold",
+                    wrap: true
                   }
                 ]
               }
@@ -2464,7 +2478,8 @@ function generatePoopConfirmFlex(userId, poopData, liffId, userGistId, props, la
             text: isEn ? "💩 Gut Health Tracker" : "💩 腸道排便打卡",
             color: "#92400E",
             weight: "bold",
-            size: "md"
+            size: "md",
+            wrap: true
           }
         ]
       },
@@ -2490,14 +2505,16 @@ function generatePoopConfirmFlex(userId, poopData, liffId, userGistId, props, la
                 text: isEn ? "Logged Successfully!" : "順暢打卡成功！",
                 size: "md",
                 weight: "bold",
-                color: "#000000"
+                color: "#000000",
+                wrap: true
               },
               {
                 type: "text",
                 text: intervalText,
                 size: "xs",
                 color: "#059669",
-                weight: "bold"
+                weight: "bold",
+                wrap: true
               }
             ]
           },
@@ -2625,7 +2642,8 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
               text: isEn ? "⚖️ Weight & Gut Tracker" : "⚖️ 體重與排便健康追蹤",
               weight: "bold",
               color: "#000000",
-              size: "md"
+              size: "md",
+              wrap: true
             }
           ]
         },
@@ -2776,7 +2794,8 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
           text: label,
           size: "xxs",
           color: "#71717A",
-          align: "center"
+          align: "center",
+          wrap: true
         }
       ]
     };
@@ -2825,8 +2844,8 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "⚖️ Latest Weight" : "⚖️ 最新體重", size: "xs", color: "#059669", weight: "bold" },
-                  { type: "text", text: `${latestWeight} kg`, size: "md", weight: "bold", color: "#000000", margin: "xs" }
+                  { type: "text", text: isEn ? "⚖️ Latest Weight" : "⚖️ 最新體重", size: "xs", color: "#059669", weight: "bold", wrap: true },
+                  { type: "text", text: `${latestWeight} kg`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true }
                 ]
               },
               {
@@ -2838,8 +2857,8 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "💩 7-Day Poop" : "💩 近期排便", size: "xs", color: "#92400E", weight: "bold" },
-                  { type: "text", text: isEn ? `${recentPoopCount} times` : `${recentPoopCount} 次`, size: "md", weight: "bold", color: "#000000", margin: "xs" }
+                  { type: "text", text: isEn ? "💩 7-Day Poop" : "💩 近期排便", size: "xs", color: "#92400E", weight: "bold", wrap: true },
+                  { type: "text", text: isEn ? `${recentPoopCount} times` : `${recentPoopCount} 次`, size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true }
                 ]
               }
             ]
@@ -2863,7 +2882,8 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 size: "xs",
                 weight: "bold",
                 color: "#475569",
-                flex: 1
+                flex: 1,
+                wrap: true
               },
               {
                 type: "text",
@@ -2872,7 +2892,8 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 weight: "bold",
                 color: changeColor,
                 align: "end",
-                flex: 0
+                flex: 0,
+                wrap: true
               }
             ]
           },
@@ -2891,7 +2912,8 @@ function generateWeightPoopChartFlex(userId, liffId, userGistId, props, lang) {
                 text: isEn ? "💩 Past 7 Days Bowel Movement:" : "💩 近 7 日排便標記：",
                 size: "xxs",
                 color: "#71717A",
-                weight: "bold"
+                weight: "bold",
+                wrap: true
               },
               {
                 type: "box",
@@ -2995,7 +3017,7 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
         borderColor: "#000000", borderWidth: "2px",
         paddingAll: "16px", alignItems: "center", spacing: "md",
         contents: [
-          { type: "text", text: isEn ? "No meals logged on this date \uD83D\uDC3C" : "\u8A72\u65E5\u671F\u5C1A\u672A\u6709\u4EFB\u4F55\u98F2\u98DF\u7D00\u9304 \uD83D\uDC3C", size: "xs", color: "#71717A", weight: "bold" },
+          { type: "text", text: isEn ? "No meals logged on this date \uD83D\uDC3C" : "\u8A72\u65E5\u671F\u5C1A\u672A\u6709\u4EFB\u4F55\u98F2\u98DF\u7D00\u9304 \uD83D\uDC3C", size: "xs", color: "#71717A", weight: "bold", wrap: true },
           createNeoFlexButton({
             label: isEn ? (isToday ? "\u2795 Log Meal" : ("\u2795 Log Meal for " + todayStr)) : (isToday ? "\u2795 \u8A18\u9304\u4ECA\u65E5\u9910\u9ede" : ("\u2795 \u88DC\u8A18 " + todayStr + " \u9910\u9ede")),
             variant: "green", size: "md",
@@ -3023,16 +3045,16 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
         }
 
         var chipRow = [
-          { type: "box", layout: "horizontal", backgroundColor: "#FFF1F2", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83D\uDD25 " + log.calories + " kcal", size: "xxs", color: "#E11D48", weight: "bold" }] },
-          { type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83E\uDD69 " + log.protein + "g", size: "xxs", color: "#2563EB", weight: "bold" }] },
-          { type: "box", layout: "horizontal", backgroundColor: "#ECFEFF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83D\uDCA7 " + (log.water || 0) + "ml", size: "xxs", color: "#0891B2", weight: "bold" }] }
+          { type: "box", layout: "horizontal", backgroundColor: "#FFF1F2", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83D\uDD25 " + log.calories + " kcal", size: "xxs", color: "#E11D48", weight: "bold", wrap: true }] },
+          { type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83E\uDD69 " + log.protein + "g", size: "xxs", color: "#2563EB", weight: "bold", wrap: true }] },
+          { type: "box", layout: "horizontal", backgroundColor: "#ECFEFF", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83D\uDCA7 " + (log.water || 0) + "ml", size: "xxs", color: "#0891B2", weight: "bold", wrap: true }] }
         ];
 
         var extraChips = [];
         if (showCarbsFat && (Number(log.carbs) > 0 || Number(log.fat) > 0)) {
           var row2 = [];
-          if (Number(log.carbs) > 0) row2.push({ type: "box", layout: "horizontal", backgroundColor: "#FFF7ED", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83C\uDF5E " + log.carbs + "g", size: "xxs", color: "#C2410C", weight: "bold" }] });
-          if (Number(log.fat) > 0) row2.push({ type: "box", layout: "horizontal", backgroundColor: "#F0FDF4", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83E\uDD51 " + log.fat + "g", size: "xxs", color: "#166534", weight: "bold" }] });
+          if (Number(log.carbs) > 0) row2.push({ type: "box", layout: "horizontal", backgroundColor: "#FFF7ED", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83C\uDF5E " + log.carbs + "g", size: "xxs", color: "#C2410C", weight: "bold", wrap: true }] });
+          if (Number(log.fat) > 0) row2.push({ type: "box", layout: "horizontal", backgroundColor: "#F0FDF4", cornerRadius: "6px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px", contents: [{ type: "text", text: "\uD83E\uDD51 " + log.fat + "g", size: "xxs", color: "#166534", weight: "bold", wrap: true }] });
           if (row2.length > 0) extraChips.push({ type: "box", layout: "horizontal", spacing: "xs", contents: row2 });
         }
 
@@ -3063,7 +3085,7 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
           contents: [
             { type: "box", layout: "horizontal", contents: [
               { type: "text", text: (globalIdx + 1) + ". " + dishName, size: "sm", color: "#18181B", weight: "bold", flex: 3, wrap: true },
-              { type: "text", text: timeText, size: "xxs", color: "#A1A1AA", flex: 1, align: "end" }
+              { type: "text", text: timeText, size: "xxs", color: "#A1A1AA", flex: 1, align: "end", wrap: true }
             ]},
             { type: "box", layout: "horizontal", spacing: "xs", contents: chipRow }
           ].concat(extraChips).concat([
@@ -3096,8 +3118,8 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
         backgroundColor: "#000000", paddingAll: "14px",
         contents: [
           { type: "box", layout: "horizontal", contents: [
-            { type: "text", text: "\uD83D\uDC3C DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-            { type: "text", text: "\uD83D\uDCC5 " + todayStr, color: "#A1A1AA", size: "xs", align: "end" }
+            { type: "text", text: "\uD83D\uDC3C DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+            { type: "text", text: "\uD83D\uDCC5 " + todayStr, color: "#A1A1AA", size: "xs", align: "end", wrap: true }
           ]},
           { type: "text", text: isToday ? (isEn ? "\uD83D\uDCCB Today's Meals Management" : "\uD83D\uDCCB \u4ECA\u65E5\u9910\u9ede\u7BA1\u7406\u6E05\u55AE") : (isEn ? ("\uD83D\uDCCB " + todayStr + " Meals Management") : ("\uD83D\uDCCB " + todayStr + " \u9910\u9ede\u7BA1\u7406\u6E05\u55AE")), color: "#FFFFFF", weight: "bold", size: "md", margin: "xs", wrap: true },
           { type: "text", text: totalPages > 1 ? (isEn ? (totalLogs + " meals | " + totalCal + " kcal | Page " + pageNum + "/" + totalPages) : ("\u5171 " + totalLogs + " \u9910 \uFF5C " + totalCal + " kcal \uFF5C \u7B2C " + pageNum + "/" + totalPages + " \u9801")) : (isEn ? (totalLogs + " meals logged | Total " + totalCal + " kcal") : ((isToday ? "\u4ECA\u65E5" : "\u8A72\u65E5") + "\u5DF2\u8A18\u9304 " + totalLogs + " \u9910 \uFF5C \u7D2F\u8A08\u651D\u53D6 " + totalCal + " kcal")), color: "#FDE047", size: "xxs", margin: "xs", wrap: true }
@@ -3112,7 +3134,7 @@ function generateManageMealsFlex(userId, targetDateStr, liffId, userGistId, prop
       footer: {
         type: "box", layout: "vertical",
         spacing: "sm", paddingAll: "14px",
-        contents: footerContents.length > 0 ? footerContents : [{ type: "text", text: isEn ? "Swipe for more pages" : "\u5DE6\u53F3\u6ED1\u52D5\u67E5\u770B\u66F4\u591A", size: "xxs", color: "#A1A1AA", align: "center" }]
+        contents: footerContents.length > 0 ? footerContents : [{ type: "text", text: isEn ? "Swipe for more pages" : "\u5DE6\u53F3\u6ED1\u52D5\u67E5\u770B\u66F4\u591A", size: "xxs", color: "#A1A1AA", align: "center", wrap: true }]
       }
     };
   }
@@ -3156,8 +3178,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             layout: "horizontal",
             alignItems: "center",
             contents: [
-              { type: "text", text: isEn ? "💧 Hydration Station" : "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF", flex: 0 },
-              { type: "text", text: isEn ? "⚡ 1-Tap" : "⚡ 一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end" }
+              { type: "text", text: isEn ? "💧 Hydration Station" : "💧 快速補水站", weight: "bold", size: "sm", color: "#FFFFFF", flex: 1, wrap: true },
+              { type: "text", text: isEn ? "⚡ 1-Tap" : "⚡ 一鍵打卡", weight: "bold", size: "xs", color: "#CFFAFE", align: "end", wrap: true }
             ]
           },
           {
@@ -3165,7 +3187,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             text: isEn ? "Tap below to log water quickly" : "點擊下方快速記錄水分",
             size: "xxs",
             color: "#E0F2FE",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -3230,8 +3253,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: isEn ? "⭐ Favorite" : "⭐ 常用餐點", weight: "bold", size: "xs", color: "#000000" },
-              { type: "text", text: `#${globalIdx + 1} / ${totalCount}`, weight: "bold", size: "xxs", color: "#713F12", align: "end" }
+              { type: "text", text: isEn ? "⭐ Favorite" : "⭐ 常用餐點", weight: "bold", size: "xs", color: "#000000", wrap: true },
+              { type: "text", text: `#${globalIdx + 1} / ${totalCount}`, weight: "bold", size: "xxs", color: "#713F12", align: "end", wrap: true }
             ]
           },
           {
@@ -3266,8 +3289,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🔥 Cal" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
-                  { type: "text", text: `${fav.calories || 0}`, size: "xs", color: "#000000", weight: "bold" }
+                  { type: "text", text: isEn ? "🔥 Cal" : "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
+                  { type: "text", text: `${fav.calories || 0}`, size: "xs", color: "#000000", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -3279,8 +3302,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
-                  { type: "text", text: `${fav.protein || 0}g`, size: "xs", color: "#000000", weight: "bold" }
+                  { type: "text", text: isEn ? "🥩 Protein" : "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
+                  { type: "text", text: `${fav.protein || 0}g`, size: "xs", color: "#000000", weight: "bold", wrap: true }
                 ]
               },
               {
@@ -3292,8 +3315,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
                 flex: 1,
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
-                  { type: "text", text: `${fav.water || 0}ml`, size: "xs", color: "#000000", weight: "bold" }
+                  { type: "text", text: isEn ? "💧 Water" : "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
+                  { type: "text", text: `${fav.water || 0}ml`, size: "xs", color: "#000000", weight: "bold", wrap: true }
                 ]
               }
             ]
@@ -3394,8 +3417,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: isEn ? "➡️ Next Page" : "➡️ 下一頁常用", weight: "bold", size: "sm", color: "#FFFFFF" },
-              { type: "text", text: `${curPage}/${totalP}`, weight: "bold", size: "xs", color: "#DBEAFE", align: "end" }
+              { type: "text", text: isEn ? "➡️ Next Page" : "➡️ 下一頁常用", weight: "bold", size: "sm", color: "#FFFFFF", wrap: true },
+              { type: "text", text: `${curPage}/${totalP}`, weight: "bold", size: "xs", color: "#DBEAFE", align: "end", wrap: true }
             ]
           },
           {
@@ -3403,7 +3426,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             text: isEn ? `More favorites (${remaining} items left)` : `還有 ${remaining} 道常用餐點`,
             size: "xxs",
             color: "#EFF6FF",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -3473,8 +3497,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: isEn ? "⬅️ Previous Page" : "⬅️ 上一頁常用", weight: "bold", size: "sm", color: "#FFFFFF" },
-              { type: "text", text: `${curPage}/${totalP}`, weight: "bold", size: "xs", color: "#F1F5F9", align: "end" }
+              { type: "text", text: isEn ? "⬅️ Previous Page" : "⬅️ 上一頁常用", weight: "bold", size: "sm", color: "#FFFFFF", wrap: true },
+              { type: "text", text: `${curPage}/${totalP}`, weight: "bold", size: "xs", color: "#F1F5F9", align: "end", wrap: true }
             ]
           },
           {
@@ -3482,7 +3506,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
             text: isEn ? `Back to items 1..${startItemIdx}` : `返回前 ${startItemIdx} 道餐點與補水`,
             size: "xxs",
             color: "#E2E8F0",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -3548,8 +3573,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         backgroundColor: "#E5E7EB",
         paddingAll: "12px",
         contents: [
-          { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用庫管理", weight: "bold", size: "sm", color: "#111827" },
-          { type: "text", text: isEn ? `${totalCount} items in list` : `目前已建立 ${totalCount} 道專屬常用餐點`, size: "xxs", color: "#4B5563", margin: "xs" }
+          { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用庫管理", weight: "bold", size: "sm", color: "#111827", wrap: true },
+          { type: "text", text: isEn ? `${totalCount} items in list` : `目前已建立 ${totalCount} 道專屬常用餐點`, size: "xxs", color: "#4B5563", margin: "xs", wrap: true }
         ]
       },
       body: {
@@ -3627,8 +3652,8 @@ function generateFavoritesCarouselFlex(userId, liffId, userGistId, props, page) 
         backgroundColor: "#FEF9C3",
         paddingAll: "14px",
         contents: [
-          { type: "text", text: isEn ? "⭐ No Favorites Yet" : "⭐ 尚未建立常用餐點", weight: "bold", size: "sm", color: "#713F12" },
-          { type: "text", text: isEn ? "Build your personal favorite list" : "隨時建立您的專屬美食庫", size: "xxs", color: "#A16207", margin: "xs" }
+          { type: "text", text: isEn ? "⭐ No Favorites Yet" : "⭐ 尚未建立常用餐點", weight: "bold", size: "sm", color: "#713F12", wrap: true },
+          { type: "text", text: isEn ? "Build your personal favorite list" : "隨時建立您的專屬美食庫", size: "xxs", color: "#A16207", margin: "xs", wrap: true }
         ]
       },
       body: {
@@ -3766,7 +3791,8 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang, pa
           type: "text", 
           text: isEn ? "⭐ No favorites in your list yet 🐼" : "⭐ 常用清單目前是空的 🐼", 
           size: "xs", 
-          color: "#A1A1AA" 
+          color: "#A1A1AA",
+          wrap: true
         }
       ]
     });
@@ -3813,7 +3839,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang, pa
                 paddingEnd: "6px",
                 paddingTop: "2px",
                 paddingBottom: "2px",
-                contents: [{ type: "text", text: `🔥 ${fav.calories || 0} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+                contents: [{ type: "text", text: `🔥 ${fav.calories || 0} kcal`, size: "xxs", color: "#E11D48", weight: "bold", wrap: true }]
               },
               {
                 type: "box",
@@ -3824,7 +3850,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang, pa
                 paddingEnd: "6px",
                 paddingTop: "2px",
                 paddingBottom: "2px",
-                contents: [{ type: "text", text: `🥩 ${fav.protein || 0}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+                contents: [{ type: "text", text: `🥩 ${fav.protein || 0}g`, size: "xxs", color: "#2563EB", weight: "bold", wrap: true }]
               },
               {
                 type: "box",
@@ -3835,7 +3861,7 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang, pa
                 paddingEnd: "6px",
                 paddingTop: "2px",
                 paddingBottom: "2px",
-                contents: [{ type: "text", text: `💧 ${fav.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
+                contents: [{ type: "text", text: `💧 ${fav.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold", wrap: true }]
               }
             ]
           },
@@ -3947,8 +3973,8 @@ function generateManageFavoritesFlex(userId, liffId, userGistId, props, lang, pa
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用餐點管理", weight: "bold", size: "md", color: "#713F12" },
-              { type: "text", text: isEn ? `Page ${curPage}/${totalPages} (${totalFavs})` : `第 ${curPage}/${totalPages} 頁 (共 ${totalFavs} 道)`, size: "xs", color: "#854D0E", align: "end" }
+              { type: "text", text: isEn ? "⭐ Favorites Manager" : "⭐ 常用餐點管理", weight: "bold", size: "md", color: "#713F12", wrap: true, flex: 3 },
+              { type: "text", text: isEn ? `Page ${curPage}/${totalPages} (${totalFavs})` : `第 ${curPage}/${totalPages} 頁 (共 ${totalFavs} 道)`, size: "xs", color: "#854D0E", align: "end", wrap: true, flex: 2 }
             ]
           },
           {
@@ -4099,7 +4125,7 @@ function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang, isEdit) {
                 paddingEnd: "6px",
                 paddingTop: "2px",
                 paddingBottom: "2px",
-                contents: [{ type: "text", text: `🔥 ${favItem.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold" }]
+                contents: [{ type: "text", text: `🔥 ${favItem.calories} kcal`, size: "xxs", color: "#E11D48", weight: "bold", wrap: true }]
               },
               {
                 type: "box",
@@ -4110,7 +4136,7 @@ function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang, isEdit) {
                 paddingEnd: "6px",
                 paddingTop: "2px",
                 paddingBottom: "2px",
-                contents: [{ type: "text", text: `🥩 ${favItem.protein}g`, size: "xxs", color: "#2563EB", weight: "bold" }]
+                contents: [{ type: "text", text: `🥩 ${favItem.protein}g`, size: "xxs", color: "#2563EB", weight: "bold", wrap: true }]
               },
               {
                 type: "box",
@@ -4121,7 +4147,7 @@ function generateFavoriteAddedFlex(favItem, liffId, userGistId, lang, isEdit) {
                 paddingEnd: "6px",
                 paddingTop: "2px",
                 paddingBottom: "2px",
-                contents: [{ type: "text", text: `💧 ${favItem.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold" }]
+                contents: [{ type: "text", text: `💧 ${favItem.water || 0}ml`, size: "xxs", color: "#0891B2", weight: "bold", wrap: true }]
               }
             ]
           },
@@ -4286,8 +4312,8 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: "🔤 LANGUAGE", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+              { type: "text", text: "🔤 LANGUAGE", color: "#A1A1AA", size: "xs", align: "end", wrap: true }
             ]
           },
           {
@@ -4296,14 +4322,16 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           },
           {
             type: "text",
             text: "請選擇您偏好的語言模式 / Choose preferred language",
             color: "#A1A1AA",
             size: "xxs",
-            margin: "xs"
+            margin: "xs",
+            wrap: true
           }
         ]
       },
@@ -4327,8 +4355,8 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
                 layout: "horizontal",
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🇹🇼 繁體中文 (Traditional Chinese)", weight: "bold", size: "sm", color: "#000000", flex: 1 },
-                  ...(!isEn ? [{ type: "text", text: "✓ 使用中", weight: "bold", size: "xs", color: "#854D0E", align: "end" }] : [])
+                  { type: "text", text: "🇹🇼 繁體中文 (Traditional Chinese)", weight: "bold", size: "sm", color: "#000000", flex: 1, wrap: true },
+                  ...(!isEn ? [{ type: "text", text: "✓ 使用中", weight: "bold", size: "xs", color: "#854D0E", align: "end", wrap: true }] : [])
                 ]
               },
               {
@@ -4362,7 +4390,8 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
                     text: !isEn ? "✅ 保持繁體中文" : "切換至繁體中文",
                     weight: "bold",
                     size: "xs",
-                    color: "#000000"
+                    color: "#000000",
+                    wrap: true
                   }
                 ]
               }
@@ -4382,8 +4411,8 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
                 layout: "horizontal",
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "🇺🇸 English (Bilingual Mode)", weight: "bold", size: "sm", color: "#000000", flex: 1 },
-                  ...(isEn ? [{ type: "text", text: "✓ Active", weight: "bold", size: "xs", color: "#854D0E", align: "end" }] : [])
+                  { type: "text", text: "🇺🇸 English (Bilingual Mode)", weight: "bold", size: "sm", color: "#000000", flex: 1, wrap: true },
+                  ...(isEn ? [{ type: "text", text: "✓ Active", weight: "bold", size: "xs", color: "#854D0E", align: "end", wrap: true }] : [])
                 ]
               },
               {
@@ -4417,7 +4446,8 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
                     text: isEn ? "✅ Active (English)" : "Switch to English",
                     weight: "bold",
                     size: "xs",
-                    color: "#000000"
+                    color: "#000000",
+                    wrap: true
                   }
                 ]
               }
@@ -4452,7 +4482,8 @@ function generateLanguageSelectionFlex(userId, liffId, userGistId, curLang) {
                 text: isEn ? "📱 Open Diary Profile Settings" : "📱 開啟個人飲食日記設定",
                 weight: "bold",
                 size: "sm",
-                color: "#000000"
+                color: "#000000",
+                wrap: true
               }
             ]
           }] : [])
@@ -4498,7 +4529,7 @@ function generatePersonaSelectionFlex(userId, liffId, userGistId, props, lang) {
         paddingAll: "14px",
         contents: [
           { type: "text", text: p.emoji, size: "3xl", align: "center" },
-          { type: "text", text: p.name, weight: "bold", size: "md", align: "center", color: "#000000", margin: "sm" }
+          { type: "text", text: p.name, weight: "bold", size: "md", align: "center", color: "#000000", margin: "sm", wrap: true }
         ]
       },
       body: {
@@ -4515,7 +4546,8 @@ function generatePersonaSelectionFlex(userId, liffId, userGistId, props, lang) {
             weight: "bold",
             color: isCurrent ? "#16A34A" : "#A1A1AA",
             align: "center",
-            margin: "md"
+            margin: "md",
+            wrap: true
           }
         ]
       },
@@ -4546,7 +4578,8 @@ function generatePersonaSelectionFlex(userId, liffId, userGistId, props, lang) {
                 text: isCurrent ? (isEn ? "✅ Active" : "✅ 目前使用中") : (isEn ? "Switch to this" : "切換至此性格"),
                 weight: "bold",
                 size: "xs",
-                color: "#000000"
+                color: "#000000",
+                wrap: true
               }
             ]
           }
@@ -4644,7 +4677,8 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
               weight: "bold",
               size: "xs",
               color: "#000000",
-              flex: 1
+              flex: 1,
+              wrap: true
             }
           ]
         },
@@ -4679,8 +4713,8 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🛠️ DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", flex: 0 },
-              { type: "text", text: isEn ? "Command Manual" : "全功能操作手冊", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🛠️ DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", flex: 0, wrap: true },
+              { type: "text", text: isEn ? "Command Manual" : "全功能操作手冊", color: "#A1A1AA", size: "xs", align: "end", wrap: true }
             ]
           },
           {
@@ -4751,7 +4785,8 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                             color: "#86EFAC",
                             weight: "bold",
                             align: "center",
-                            gravity: "center"
+                            gravity: "center",
+                            wrap: true
                           }
                         ]
                       }
@@ -4820,7 +4855,8 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                             color: "#FDE047",
                             weight: "bold",
                             align: "center",
-                            gravity: "center"
+                            gravity: "center",
+                            wrap: true
                           }
                         ]
                       }
@@ -5121,8 +5157,8 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
             type: "box",
             layout: "horizontal",
             contents: [
-              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-              { type: "text", text: isEn ? "AI Butler" : "AI 智能管家", color: "#A1A1AA", size: "xs", align: "end" }
+              { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+              { type: "text", text: isEn ? "AI Butler" : "AI 智能管家", color: "#A1A1AA", size: "xs", align: "end", wrap: true }
             ]
           },
           {
@@ -5158,6 +5194,7 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
                 type: "box",
                 layout: "horizontal",
                 alignItems: "center",
+                justifyContent: "space-between",
                 contents: [
                   {
                     type: "text",
@@ -5165,26 +5202,32 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
                     weight: "bold",
                     size: "sm",
                     color: "#000000",
+                    wrap: true,
                     flex: 1
                   },
                   {
                     type: "box",
-                    layout: "vertical",
+                    layout: "horizontal",
                     backgroundColor: "#FDE047",
                     borderColor: "#000000",
                     borderWidth: "1.5px",
                     cornerRadius: "6px",
-                    paddingStart: "6px",
-                    paddingEnd: "6px",
+                    paddingStart: "8px",
+                    paddingEnd: "8px",
                     paddingTop: "2px",
                     paddingBottom: "2px",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    flex: 0,
                     contents: [
                       {
                         type: "text",
                         text: isEn ? "SUPER FAST" : "免下載APP",
                         weight: "bold",
                         size: "xxs",
-                        color: "#000000"
+                        color: "#000000",
+                        align: "center",
+                        wrap: true
                       }
                     ]
                   }
@@ -5214,7 +5257,8 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
                         text: isEn ? "1. Snap Food Photos (Recommended)" : "1. 拍照即記錄（最推薦）",
                         weight: "bold",
                         size: "xs",
-                        color: "#000000"
+                        color: "#000000",
+                        wrap: true
                       },
                       {
                         type: "text",
@@ -5251,7 +5295,8 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
                         text: isEn ? "2. Voice or Text (Super Fast)" : "2. 語音或文字（免打字）",
                         weight: "bold",
                         size: "xs",
-                        color: "#000000"
+                        color: "#000000",
+                        wrap: true
                       },
                       {
                         type: "text",
@@ -5288,7 +5333,8 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
                         text: isEn ? "3. Interactive Menu & Dashboard" : "3. 點選單隨時查（精緻報表）",
                         weight: "bold",
                         size: "xs",
-                        color: "#000000"
+                        color: "#000000",
+                        wrap: true
                       },
                       {
                         type: "text",
@@ -5351,7 +5397,8 @@ function generateWelcomeFlex(userId, liffId, userGistId, lang) {
                     size: "xxs",
                     color: "#71717A",
                     align: "center",
-                    decoration: "underline"
+                    decoration: "underline",
+                    wrap: true
                   }
                 ]
               }
@@ -5510,7 +5557,8 @@ function generateBugReportAckFlex(userText, isSuccess, lang) {
               : (isEn ? "🛠️ Report Recorded!" : "🛠️ 問題回報已記錄！"),
             weight: "bold",
             size: "md",
-            color: "#FDE047"
+            color: "#FDE047",
+            wrap: true
           },
           {
             type: "text",
@@ -5707,7 +5755,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     text: isEn ? "OFFICIAL NOTICE" : "官方維護通報",
                     color: "#A7F3D0",
                     weight: "bold",
-                    size: "xxs"
+                    size: "xxs",
+                    wrap: true
                   }
                 ]
               },
@@ -5717,7 +5766,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 color: "#71717A",
                 size: "xxs",
                 align: "end",
-                weight: "bold"
+                weight: "bold",
+                wrap: true
               }
             ]
           },
@@ -5764,7 +5814,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 text: isEn ? "📋 Incident Brief & Apology" : "📋 異常概述與致歉說明",
                 weight: "bold",
                 size: "xs",
-                color: "#334155"
+                color: "#334155",
+                wrap: true
               },
               {
                 type: "text",
@@ -5801,7 +5852,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: isEn ? "🛡️ Key Resolutions" : "🛡️ 修復進度與資料保障", weight: "bold", size: "xs", color: "#166534", flex: 1 },
+                      { type: "text", text: isEn ? "🛡️ Key Resolutions" : "🛡️ 修復進度與資料保障", weight: "bold", size: "xs", color: "#166534", flex: 1, wrap: true },
                       {
                         type: "box",
                         layout: "vertical",
@@ -5813,7 +5864,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                         paddingBottom: "2px",
                         flex: 0,
                         contents: [
-                          { type: "text", text: isEn ? "100% SECURED" : "已全數解決", size: "xxs", color: "#FFFFFF", weight: "bold" }
+                          { type: "text", text: isEn ? "100% SECURED" : "已全數解決", size: "xxs", color: "#FFFFFF", weight: "bold", wrap: true }
                         ]
                       }
                     ]
@@ -5877,8 +5928,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 type: "box",
                 layout: "horizontal",
                 contents: [
-                  { type: "text", text: isEn ? "SERVICE STATUS" : "核心服務狀態驗證", size: "xxs", color: "#71717A", weight: "bold", flex: 1 },
-                  { type: "text", text: isEn ? "ALL GREEN" : "全數正常", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 1 }
+                  { type: "text", text: isEn ? "SERVICE STATUS" : "核心服務狀態驗證", size: "xxs", color: "#71717A", weight: "bold", flex: 1, wrap: true },
+                  { type: "text", text: isEn ? "ALL GREEN" : "全數正常", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 1, wrap: true }
                 ]
               },
               {
@@ -5886,8 +5937,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 layout: "horizontal",
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "💬 LINE Messaging & Bot" : "💬 LINE 訊息回覆與解析", size: "xxs", color: "#27272A", flex: 3 },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2 }
+                  { type: "text", text: isEn ? "💬 LINE Messaging & Bot" : "💬 LINE 訊息回覆與解析", size: "xxs", color: "#27272A", flex: 3, wrap: true },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
                 ]
               },
               {
@@ -5895,8 +5946,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 layout: "horizontal",
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "🔄 Cloud Two-way Sync" : "🔄 雲端雙向資料同步", size: "xxs", color: "#27272A", flex: 3 },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2 }
+                  { type: "text", text: isEn ? "🔄 Cloud Two-way Sync" : "🔄 雲端雙向資料同步", size: "xxs", color: "#27272A", flex: 3, wrap: true },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
                 ]
               },
               {
@@ -5904,8 +5955,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 layout: "horizontal",
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "📊 Daily Summary & Charts" : "📊 每日飲食與蛋白質總結", size: "xxs", color: "#27272A", flex: 3 },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2 }
+                  { type: "text", text: isEn ? "📊 Daily Summary & Charts" : "📊 每日飲食與蛋白質總結", size: "xxs", color: "#27272A", flex: 3, wrap: true },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
                 ]
               }
             ]
@@ -6040,8 +6091,8 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
           backgroundColor: "#000000",
           paddingAll: "14px",
           contents: [
-            { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm" },
-            { type: "text", text: isEn ? "Meal Record Not Found" : "未找到該筆餐點詳情", color: "#FFFFFF", weight: "bold", size: "md", margin: "xs" }
+            { type: "text", text: "🐼 DAILY DIET", color: "#FDE047", weight: "bold", size: "sm", wrap: true },
+            { type: "text", text: isEn ? "Meal Record Not Found" : "未找到該筆餐點詳情", color: "#FFFFFF", weight: "bold", size: "md", margin: "xs", wrap: true }
           ]
         },
         body: {
@@ -6112,10 +6163,10 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
             paddingTop: "2px",
             paddingBottom: "2px",
             contents: [
-              { type: "text", text: "🐼 AI NUTRITION", color: "#FDE047", weight: "bold", size: "xxs" }
+              { type: "text", text: "🐼 AI NUTRITION", color: "#FDE047", weight: "bold", size: "xxs", wrap: true }
             ]
           },
-          { type: "text", text: (date ? (date + " ") : "") + time, color: "#713F12", weight: "bold", size: "xs", align: "end", gravity: "center" }
+          { type: "text", text: (date ? (date + " ") : "") + time, color: "#713F12", weight: "bold", size: "xs", align: "end", gravity: "center", wrap: true }
         ]
       },
       { type: "text", text: dishName, color: "#000000", weight: "bold", size: "xl", margin: "xs", wrap: true }
@@ -6127,19 +6178,19 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
     var catEmoji = meal.category === 'breakfast' ? '🍳 ' : (meal.category === 'lunch' ? '🍱 ' : (meal.category === 'dinner' ? '🍲 ' : (meal.category === 'snack' ? '☕ ' : '')));
     badges.push({
       type: "box", layout: "horizontal", backgroundColor: "#F4F4F5", cornerRadius: "8px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-      contents: [{ type: "text", text: catEmoji + meal.category, size: "xxs", color: "#18181B", weight: "bold" }]
+      contents: [{ type: "text", text: catEmoji + meal.category, size: "xxs", color: "#18181B", weight: "bold", wrap: true }]
     });
   }
   if (meal.model_used) {
     badges.push({
       type: "box", layout: "horizontal", backgroundColor: "#EFF6FF", cornerRadius: "8px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-      contents: [{ type: "text", text: "🤖 " + meal.model_used, size: "xxs", color: "#2563EB", weight: "bold" }]
+      contents: [{ type: "text", text: "🤖 " + meal.model_used, size: "xxs", color: "#2563EB", weight: "bold", wrap: true }]
     });
   }
   if (imageUrl) {
     badges.push({
       type: "box", layout: "horizontal", backgroundColor: "#FEF08A", cornerRadius: "8px", borderColor: "#000000", borderWidth: "1.5px", paddingStart: "6px", paddingEnd: "6px", paddingTop: "2px", paddingBottom: "2px",
-      contents: [{ type: "text", text: "📸 照片已同步 (24h)", size: "xxs", color: "#854D0E", weight: "bold" }]
+      contents: [{ type: "text", text: "📸 照片已同步 (24h)", size: "xxs", color: "#854D0E", weight: "bold", wrap: true }]
     });
   }
 
@@ -6198,7 +6249,8 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
           text: label,
           weight: "bold",
           size: "xxs",
-          color: isSelected ? "#FFFFFF" : "#000000"
+          color: isSelected ? "#FFFFFF" : "#000000",
+          wrap: true
         }
       ]
     };
@@ -6237,10 +6289,10 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
                     paddingTop: "2px",
                     paddingBottom: "2px",
                     contents: [
-                      { type: "text", text: "🐼 AI NUTRITION", color: "#FDE047", weight: "bold", size: "xxs" }
+                      { type: "text", text: "🐼 AI NUTRITION", color: "#FDE047", weight: "bold", size: "xxs", wrap: true }
                     ]
                   },
-                  { type: "text", text: (date ? (date + " ") : "") + time, color: "#71717A", size: "xs", align: "end", gravity: "center" }
+                  { type: "text", text: (date ? (date + " ") : "") + time, color: "#71717A", size: "xs", align: "end", gravity: "center", wrap: true }
                 ]
               },
               { type: "text", text: dishName, weight: "bold", size: "xl", color: "#18181B", wrap: true }
@@ -6264,25 +6316,25 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
             {
               type: "box", layout: "vertical", backgroundColor: "#FFF1F2", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
-                { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold" },
-                { type: "text", text: String(cal), size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                { type: "text", text: "kcal", size: "xxs", color: "#881337", weight: "bold" }
+                { type: "text", text: "🔥 熱量", size: "xxs", color: "#E11D48", weight: "bold", wrap: true },
+                { type: "text", text: String(cal), size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                { type: "text", text: "kcal", size: "xxs", color: "#881337", weight: "bold", wrap: true }
               ]
             },
             {
               type: "box", layout: "vertical", backgroundColor: "#EFF6FF", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
-                { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold" },
-                { type: "text", text: pro + "g", size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                { type: "text", text: "Protein", size: "xxs", color: "#1E40AF", weight: "bold" }
+                { type: "text", text: "🥩 蛋白質", size: "xxs", color: "#2563EB", weight: "bold", wrap: true },
+                { type: "text", text: pro + "g", size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                { type: "text", text: "Protein", size: "xxs", color: "#1E40AF", weight: "bold", wrap: true }
               ]
             },
             {
               type: "box", layout: "vertical", backgroundColor: "#ECFEFF", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
-                { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold" },
-                { type: "text", text: wat + "ml", size: "md", weight: "bold", color: "#000000", margin: "xs" },
-                { type: "text", text: "Water", size: "xxs", color: "#155E75", weight: "bold" }
+                { type: "text", text: "💧 水分", size: "xxs", color: "#0891B2", weight: "bold", wrap: true },
+                { type: "text", text: wat + "ml", size: "md", weight: "bold", color: "#000000", margin: "xs", wrap: true },
+                { type: "text", text: "Water", size: "xxs", color: "#155E75", weight: "bold", wrap: true }
               ]
             }
           ]
@@ -6296,16 +6348,16 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
             {
               type: "box", layout: "vertical", backgroundColor: "#FFF7ED", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
-                { type: "text", text: "🍞 碳水化合物", size: "xxs", color: "#C2410C", weight: "bold" },
-                { type: "text", text: carb + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs" }
+                { type: "text", text: "🍞 碳水化合物", size: "xxs", color: "#C2410C", weight: "bold", wrap: true },
+                { type: "text", text: carb + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs", wrap: true }
               ]
             },
             {
               type: "box", layout: "vertical", backgroundColor: "#F0FDF4", borderColor: "#000000", borderWidth: "2.5px", cornerRadius: "14px", paddingAll: "8px", flex: 1, alignItems: "center",
               contents: [
-                { type: "text", text: "🥑 脂肪", size: "xxs", color: "#166534", weight: "bold" },
-                { type: "text", text: fat + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs" }
-              ]
+                { type: "text", text: "🥑 脂肪", size: "xxs", color: "#166534", weight: "bold", wrap: true },
+                { type: "text", text: fat + "g", size: "sm", weight: "bold", color: "#000000", margin: "xs", wrap: true }
+              ] 
             }
           ]
         },
@@ -6325,8 +6377,8 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
                 type: "box",
                 layout: "horizontal",
                 contents: [
-                  { type: "text", text: "🧮 AI 成分與熱量拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 4 },
-                  { type: "text", text: "熱量 / 蛋白質", size: "xxs", color: "#71717A", align: "end", flex: 3 }
+                  { type: "text", text: "🧮 AI 成分與熱量拆解明細", size: "xxs", color: "#000000", weight: "bold", flex: 4, wrap: true },
+                  { type: "text", text: "熱量 / 蛋白質", size: "xxs", color: "#71717A", align: "end", flex: 3, wrap: true }
                 ]
               },
               ...breakdownRows,
@@ -6374,7 +6426,7 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
           paddingAll: "10px",
           spacing: "xs",
           contents: [
-            { type: "text", text: "⚖️ 份量微調 (整份等比縮放)", size: "xxs", weight: "bold", color: "#71717A" },
+            { type: "text", text: "⚖️ 份量微調 (整份等比縮放)", size: "xxs", weight: "bold", color: "#71717A", wrap: true },
             {
               type: "box",
               layout: "horizontal",
@@ -6498,10 +6550,10 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
                 paddingBottom: "2px",
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: "2FA AUTH", color: "#FFFFFF", weight: "bold", size: "xxs" }
+                  { type: "text", text: "2FA AUTH", color: "#FFFFFF", weight: "bold", size: "xxs", wrap: true }
                 ]
               },
-              { type: "text", text: "Daily-Diet 管理後台", color: "#A1A1AA", size: "xxs", align: "end", weight: "bold" }
+              { type: "text", text: "Daily-Diet 管理後台", color: "#A1A1AA", size: "xxs", align: "end", weight: "bold", wrap: true }
             ]
           },
           {
@@ -6510,7 +6562,8 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
             color: "#FFFFFF",
             weight: "bold",
             size: "md",
-            margin: "sm"
+            margin: "sm",
+            wrap: true
           }
         ]
       },
@@ -6552,7 +6605,8 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
                     weight: "bold",
                     size: "xxl",
                     color: "#1D4ED8",
-                    align: "center"
+                    align: "center",
+                    wrap: true
                   },
                   {
                     type: "text",
@@ -6560,7 +6614,8 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
                     size: "xxs",
                     color: "#3B82F6",
                     weight: "bold",
-                    margin: "xs"
+                    margin: "xs",
+                    wrap: true
                   }
                 ]
               }
@@ -6589,7 +6644,8 @@ function generateAdminOtpFlex(otpCode, validMinutes) {
             text: `發送時間：${timeStr}`,
             size: "xxs",
             color: "#A1A1AA",
-            align: "center"
+            align: "center",
+            wrap: true
           }
         ]
       }
@@ -6642,7 +6698,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 color: '#FDE047',
                 size: 'xxs',
                 weight: 'bold',
-                flex: 1
+                flex: 1,
+                wrap: true
               },
               {
                 type: 'text',
@@ -6650,7 +6707,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 color: '#FFFFFF',
                 size: 'xxs',
                 weight: 'bold',
-                align: 'center'
+                align: 'center',
+                wrap: true
               }
             ]
           },
@@ -6660,7 +6718,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
             color: '#FFFFFF',
             size: 'md',
             weight: 'bold',
-            margin: 'xs'
+            margin: 'xs',
+            wrap: true
           }
         ]
       },
@@ -6684,7 +6743,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 text: coachTitle,
                 size: 'xs',
                 weight: 'bold',
-                color: '#854D0E'
+                color: '#854D0E',
+                wrap: true
               },
               {
                 type: 'text',
@@ -6715,7 +6775,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                     text: isEn ? 'Bank' : '銀行代碼',
                     size: 'xxs',
                     color: '#71717A',
-                    flex: 2
+                    flex: 2,
+                    wrap: true
                   },
                   {
                     type: 'text',
@@ -6723,7 +6784,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                     size: 'xxs',
                     weight: 'bold',
                     color: '#18181B',
-                    flex: 4
+                    flex: 4,
+                    wrap: true
                   }
                 ]
               },
@@ -6736,7 +6798,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                     text: isEn ? 'Account' : '銀行帳號',
                     size: 'xxs',
                     color: '#71717A',
-                    flex: 2
+                    flex: 2,
+                    wrap: true
                   },
                   {
                     type: 'text',
@@ -6744,7 +6807,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                     size: 'xs',
                     weight: 'bold',
                     color: '#0F766E',
-                    flex: 4
+                    flex: 4,
+                    wrap: true
                   }
                 ]
               },
@@ -6758,7 +6822,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                     text: isEn ? 'Beneficiary' : '戶名資訊',
                     size: 'xxs',
                     color: '#71717A',
-                    flex: 2
+                    flex: 2,
+                    wrap: true
                   },
                   {
                     type: 'text',
@@ -6791,7 +6856,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
             size: 'xxs',
             color: '#71717A',
             align: 'center',
-            margin: 'none'
+            margin: 'none',
+            wrap: true
           },
           {
             type: 'box',
@@ -6836,8 +6902,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 cornerRadius: '8px',
                 paddingAll: '6px',
                 contents: [
-                  { type: 'text', text: '☕ 拿鐵', size: 'xxs', weight: 'bold', color: '#854D0E', align: 'center' },
-                  { type: 'text', text: '$50', size: 'xxs', color: '#713F12', align: 'center' }
+                  { type: 'text', text: '☕ 拿鐵', size: 'xxs', weight: 'bold', color: '#854D0E', align: 'center', wrap: true },
+                  { type: 'text', text: '$50', size: 'xxs', color: '#713F12', align: 'center', wrap: true }
                 ]
               },
               {
@@ -6847,8 +6913,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 cornerRadius: '8px',
                 paddingAll: '6px',
                 contents: [
-                  { type: 'text', text: '🍱 補給', size: 'xxs', weight: 'bold', color: '#0F766E', align: 'center' },
-                  { type: 'text', text: '$100', size: 'xxs', color: '#115E59', align: 'center' }
+                  { type: 'text', text: '🍱 補給', size: 'xxs', weight: 'bold', color: '#0F766E', align: 'center', wrap: true },
+                  { type: 'text', text: '$100', size: 'xxs', color: '#115E59', align: 'center', wrap: true }
                 ]
               },
               {
@@ -6858,8 +6924,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 cornerRadius: '8px',
                 paddingAll: '6px',
                 contents: [
-                  { type: 'text', text: '🎋 核心', size: 'xxs', weight: 'bold', color: '#9F1239', align: 'center' },
-                  { type: 'text', text: '$150', size: 'xxs', color: '#881337', align: 'center' }
+                  { type: 'text', text: '🎋 核心', size: 'xxs', weight: 'bold', color: '#9F1239', align: 'center', wrap: true },
+                  { type: 'text', text: '$150', size: 'xxs', color: '#881337', align: 'center', wrap: true }
                 ]
               }
             ]
@@ -6879,7 +6945,8 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
                 text: isEn ? '🎁 Founding Supporter Notice' : '🎁 打款後請回覆末 5 碼登記【創始支持者】',
                 size: 'xs',
                 weight: 'bold',
-                color: '#92400E'
+                color: '#92400E',
+                wrap: true
               },
               {
                 type: 'text',
