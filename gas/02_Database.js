@@ -2908,6 +2908,40 @@ function getFounderSupportersData(props) {
 }
 
 /**
+ * 🎋 創始支持者吉利稀有號碼池 (方案 C: 避免流水號暴露人數，賦予尊榮吉祥寓意)
+ */
+const LUCKY_FOUNDER_NUMBERS = [
+  'NO. 168',  // 一路發
+  'NO. 888',  // 發發發
+  'NO. 088',  // 雙發吉祥
+  'NO. 520',  // 我愛你
+  'NO. 666',  // 六六大順
+  'NO. 188',  // 要發發
+  'NO. 288',  // 易發發
+  'NO. 369',  // 步步高升
+  'NO. 777',  // 幸運大滿貫
+  'NO. 999',  // 長長久久
+  'NO. 368',  // 生財發
+  'NO. 588',  // 我發發
+  'NO. 668',  // 路路發
+  'NO. 688',  // 順發發
+  'NO. 889',  // 發發久
+  'NO. 988',  // 久發發
+  'NO. 108',  // 圓滿吉數
+  'NO. 128',  // 要順發
+  'NO. 218',  // 容易發
+  'NO. 328',  // 生生發
+  'NO. 518',  // 我要發
+  'NO. 818',  // 發了發
+  'NO. 868',  // 發又順
+  'NO. 918',  // 就要發
+  'NO. 968',  // 久久順發
+  'NO. 1314', // 一生一世
+  'NO. 1688', // 一路發發
+  'NO. 8888'  // 四季大發
+];
+
+/**
  * 儲存或更新創始支持者資料
  * @param {Properties} props 
  * @param {Object} data { id, name, email, note, isFounder: boolean }
@@ -2936,26 +2970,44 @@ function saveFounderSupporterData(props, data, operatorName) {
     const existing = currentMap[key] || {};
     const timeNow = Utilities.formatDate(new Date(), "Asia/Taipei", "yyyy-MM-dd HH:mm:ss");
 
-    // 計算預設創始編號 (尊榮防推算格式，如 GENESIS · #8821 或由管理員自訂)
+    // 方案 C：吉利稀有號碼池指派機制 (如 NO. 168, NO. 888 等，不暴露人數且兼具尊榮感)
     const validFounders = Object.values(currentMap).filter(item => !item._refKey);
     const existingSeq = existing.number || '';
 
-    // 若管理員有明確輸入序號 (非空字串) 則完全採用管理員自訂值；
-    // 若無輸入且已有既有序號則保留；若全新登記則產生尊榮防推算編號
     let resolvedNumber = '';
     if (data.number !== undefined && String(data.number).trim() !== '') {
+      // 1. 管理員手動輸入：100% 完全採用
       resolvedNumber = String(data.number).trim();
     } else if (existingSeq) {
+      // 2. 既有支持者未修改：保留原序號
       resolvedNumber = existingSeq;
     } else {
-      let hash = 0;
-      const seedStr = key + '_' + (validFounders.length + 1);
-      for (let i = 0; i < seedStr.length; i++) {
-        hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
-        hash |= 0;
+      // 3. 全新支持者留空：從吉利稀有號碼池中自動分發 (排除已被使用的號碼)
+      const usedNumbers = new Set(
+        Object.values(currentMap)
+          .filter(item => !item._refKey && item.number)
+          .map(item => String(item.number).trim().toUpperCase())
+      );
+
+      const availablePool = (typeof LUCKY_FOUNDER_NUMBERS !== 'undefined' ? LUCKY_FOUNDER_NUMBERS : [
+        'NO. 168', 'NO. 888', 'NO. 088', 'NO. 520', 'NO. 666', 'NO. 288', 'NO. 369', 'NO. 777', 'NO. 999'
+      ]).filter(num => !usedNumbers.has(num.toUpperCase()));
+
+      if (availablePool.length > 0) {
+        // 依用戶 key 散列取模，確保分發均勻且穩定
+        let hash = 0;
+        const seedStr = key + '_' + (validFounders.length + 1);
+        for (let i = 0; i < seedStr.length; i++) {
+          hash = ((hash << 5) - hash) + seedStr.charCodeAt(i);
+          hash |= 0;
+        }
+        const pickIdx = Math.abs(hash) % availablePool.length;
+        resolvedNumber = availablePool[pickIdx];
+      } else {
+        // 若吉利號碼池已分發完畢，動態產生 8000~9999 吉利大號
+        const fallbackNum = 8800 + ((validFounders.length * 18) % 1180);
+        resolvedNumber = `NO. ${fallbackNum}`;
       }
-      const pseudoCode = 8000 + (Math.abs(hash) % 1990);
-      resolvedNumber = `GENESIS · #${pseudoCode}`;
     }
 
     // 分離內部對帳備註與公開寄語

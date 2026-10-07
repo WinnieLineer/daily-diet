@@ -619,7 +619,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
           id: payload.id,
           name: payload.name || '創始支持者',
           email: payload.email,
-          number: payload.number || 'GENESIS · #8821',
+          number: payload.number || 'NO. 168',
           greeting: payload.greeting,
           addedAt: new Date().toLocaleString()
         } : null);
@@ -4475,11 +4475,11 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                       type="text"
                       value={editingFounder.number}
                       onChange={(e) => setEditingFounder({ ...editingFounder, number: e.target.value })}
-                      placeholder={isEn ? "e.g. GENESIS · #8821, NO. 888, VIP-007" : "例如：GENESIS · #8821、NO. 888、VIP-007"}
+                      placeholder={isEn ? "e.g. NO. 168, NO. 888, NO. 520" : "例如：NO. 168、NO. 888、NO. 520"}
                       className="w-full px-3 py-2 bg-zinc-50 border-2 border-black rounded-xl font-mono font-bold text-xs focus:bg-white focus:outline-none focus:ring-2 focus:ring-amber-400"
                     />
                     <span className="text-[10px] text-zinc-400 font-normal mt-0.5 block">
-                      {isEn ? 'Leave empty to automatically assign a prestigious non-linear pass code (GENESIS · #xxxx).' : '留空將自動產生尊榮防推算編號 (GENESIS · #xxxx)，亦可在此自由修改為任意自訂序號。'}
+                      {isEn ? 'Leave empty to automatically draw an available lucky rare number (e.g. NO. 168, NO. 888, NO. 520).' : '留空將自動由吉利稀有號碼池抽籤派發（如 NO. 168、NO. 888、NO. 520 等，不重複且不洩露總人數）。'}
                     </span>
                   </div>
 

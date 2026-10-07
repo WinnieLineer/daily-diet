@@ -36,7 +36,7 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
   };
 
   const holderName = founderData?.name || userName || '尊貴的支持者';
-  const founderSeq = founderData?.number || 'GENESIS · #8821';
+  const founderSeq = founderData?.number || 'NO. 168';
   const addedDate = founderData?.addedAt || founderData?.updatedAt || '創始草創期';
 
   // 寄語文字：若後台有指定公開寄語則優先採用，否則顯示真摯感人的官方致謝詞

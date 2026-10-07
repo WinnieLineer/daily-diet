@@ -844,7 +844,7 @@ function doGet(e) {
         clientSafeData = {
           id: founderData.id || '',
           name: founderData.name || '',
-          number: founderData.number || 'GENESIS · #8821',
+          number: founderData.number || 'NO. 168',
           greeting: safeGreeting,
           addedAt: founderData.addedAt || '',
           tier: founderData.tier || 'FOUNDER',
