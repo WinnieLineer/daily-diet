@@ -2,23 +2,57 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, ShieldCheck } from 'lucide-react';
-import { getFounderData, isFounderGlowEnabled, toggleFounderGlow } from '../lib/founderService';
+import { 
+  getFounderData, 
+  isFounderGlowEnabled, 
+  toggleFounderGlow, 
+  checkFounderStatusFromCloud 
+} from '../lib/founderService';
 
 export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
-  const [founderData, setFounderData] = useState(null);
+  const [founderData, setFounderData] = useState(() => getFounderData());
   const [glowEnabled, setGlowEnabled] = useState(true);
 
+  // 1. 監聽創始者資料更新事件 (即時響應 SWR 與本機廣播)
+  useEffect(() => {
+    const handleStatusUpdate = (e) => {
+      if (e.detail?.data) {
+        setFounderData(e.detail.data);
+      } else {
+        setFounderData(getFounderData());
+      }
+    };
+    window.addEventListener('founder-status-updated', handleStatusUpdate);
+    return () => window.removeEventListener('founder-status-updated', handleStatusUpdate);
+  }, []);
+
+  // 2. 當彈窗開啟時：先讀本機秒開，同時立即向雲端發起非同步校驗更新 (做到即刻同步)
   useEffect(() => {
     if (isOpen) {
-      setFounderData(getFounderData());
+      const cached = getFounderData();
+      setFounderData(cached);
       setGlowEnabled(isFounderGlowEnabled());
+
+      // SWR 即時後台校驗：向雲端拉取管理員最新修改的序號與感謝詞
+      try {
+        const curUser = (typeof localStorage !== 'undefined' && (localStorage.getItem('user_name') || localStorage.getItem('line_user_name'))) || userName || cached?.name || '';
+        const curId = (typeof localStorage !== 'undefined' && (localStorage.getItem('line_user_id') || localStorage.getItem('client_id'))) || cached?.id || '';
+        const curEmail = cached?.email || '';
+        if (curUser || curId || curEmail) {
+          checkFounderStatusFromCloud(curId, curUser, curEmail).then(() => {
+            const fresh = getFounderData();
+            if (fresh) setFounderData(fresh);
+          }).catch(() => {});
+        }
+      } catch (err) {}
+
       const prevOverflow = document.body.style.overflow;
       document.body.style.overflow = 'hidden';
       return () => {
         document.body.style.overflow = prevOverflow;
       };
     }
-  }, [isOpen]);
+  }, [isOpen, userName]);
 
   useEffect(() => {
     if (!isOpen) return;

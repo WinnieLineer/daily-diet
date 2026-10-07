@@ -1799,19 +1799,33 @@ function App() {
 
     checkVersion();
     
-    // Check version whenever the app is brought to the foreground or focused
+    // Check version & founder status whenever the app is brought to the foreground or focused
+    let lastFounderCheck = 0;
+    const syncStatusOnForeground = () => {
+      checkVersion();
+      const now = Date.now();
+      if (now - lastFounderCheck > 15000) {
+        lastFounderCheck = now;
+        const curUser = safeGetStorage('user_name') || safeGetStorage('line_user_name') || '';
+        const curId = safeGetStorage('line_user_id') || safeGetStorage('client_id') || '';
+        if (curUser || curId) {
+          checkFounderStatusFromCloud(curId, curUser).catch(() => {});
+        }
+      }
+    };
+
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
-        checkVersion();
+        syncStatusOnForeground();
       }
     };
     const handleFocus = () => {
-      checkVersion();
+      syncStatusOnForeground();
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     window.addEventListener('focus', handleFocus);
-    const intervalId = setInterval(checkVersion, 3 * 60 * 1000);
+    const intervalId = setInterval(syncStatusOnForeground, 3 * 60 * 1000);
     
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
