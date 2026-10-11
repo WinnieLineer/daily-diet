@@ -141,10 +141,10 @@
     <div class="container">
         <a href="./" class="back-btn">← 返回應用程式 (APP)</a>
         <div class="card">
-            <div class="logo-tag">DAILY DIET · PRIVACY 🐼</div>
+            <div class="logo-tag">DAILY DIET · PRIVACY & SECURITY 🐼</div>
             <h1>用戶隱私保護與數據安全政策</h1>
-            <p>最後修訂生效日期：2026年9月26日</p>
-            <p>歡迎使用 <strong>Daily Diet 飲食控制助手（包含 Web App 與 LINE 官方帳號機器人）</strong>。我們深知飲食紀錄與體態數據屬於高度私密的個人健康資訊，因此本應用程式全面貫徹<strong>「隱私設計（Privacy by Design）」與「去中心化儲存」</strong>架構，讓您擁有 100% 的個人數據掌控權。</p>
+            <p>最後修訂生效日期：2026年10月11日（針對資安透明度與數據防護架構全面修訂）</p>
+            <p>歡迎使用 <strong>Daily Diet 飲食控制助手（包含 Web App 與 LINE 官方帳號機器人）</strong>。我們深知飲食紀錄、體態數據與生活作息屬於高度私密的個人健康資訊。本應用程式堅持以<strong>「資料自主（Data Ownership）」、「最小化收集」與「透明公開」</strong>為最高原則，本政策向您詳盡說明數據的儲存位置、傳輸機制、外部 AI 處理邊界與您的自主控制權。</p>
 
             <div class="alert-box">
                 <div class="alert-title">🩺 重要健康與非醫療用途免責聲明</div>
@@ -154,52 +154,57 @@
                 </p>
             </div>
 
-            <h2>1. 資料收集與極小化原則</h2>
-            <p>本服務致力於將資料收集降至最低，採用無需註冊密碼的無感連動設計：</p>
+            <h2>1. 本地優先架構與資料收集極小化</h2>
+            <p>本服務致力於將伺服器端資料收集降至最低，採用無需註冊帳號密碼的設計：</p>
             <ul>
-                <li><strong>本地瀏覽器儲存（IndexedDB）：</strong> 您的餐點日誌、自訂目標、歷史體重皆優先儲存於您本地裝置之瀏覽器中，離線亦可正常運作。</li>
-                <li><strong>LINE 平台連動（LIFF / Bot）：</strong> 當您透過 LINE 發送飲食訊息或照片時，系統僅接收 LINE 平台分配之用戶虛擬識別碼（LINE User ID），以利為您綁定個人專屬雲端空間。<strong>我們絕不主動收集您的真實姓名、電話號碼、通訊錄或信用卡號碼。</strong></li>
+                <li><strong>本地優先儲存（IndexedDB）：</strong> 您的餐點日誌、自訂目標、歷史體重與常用餐點皆<strong>優先且完整儲存於您本地裝置之瀏覽器資料庫中</strong>。在未開啟雲端同步時，應用程式具備 100% 離線運作能力，資料完全不離開您的手機或電腦。</li>
+                <li><strong>LINE 平台連動（LIFF / Bot）：</strong> 當您透過 LINE 發送飲食訊息或照片時，系統僅接收 LINE 平台分配之用戶虛擬識別碼（LINE User ID），以利為您綁定個人專屬雲端空間。<strong>我們絕不主動收集您的真實姓名、電話號碼、通訊錄、定位軌跡或信用卡號碼。</strong></li>
             </ul>
 
-            <h2>2. 雲端隔離儲存（GitHub Gist 私有空間與 GAS 安全通道）</h2>
-            <p>為達成跨裝置（電腦、手機、LINE）即時同步，系統採用專屬的私有雲端儲存：</p>
+            <h2>2. 雲端同步架構（GitHub Secret Gist 儲存邊界與安全告知）</h2>
+            <p>為達成跨裝置（電腦、手機瀏覽器與 LINE 機器人）即時雙向同步，系統採用 GitHub Gist 作為雲端中繼存儲：</p>
             <ul>
-                <li>每位用戶的飲食與體態資料均被獨立寫入至 <strong>私有（Secret）GitHub Gist</strong> 空間。</li>
-                <li>私有 Gist 具備存取權限隔離機制，不會被公開搜尋引擎索引，亦不會與其他用戶資料混合儲存。訪客裝置亦具備獨立 Client ID 隔離防護，絕不交叉污染。</li>
-                <li>我們絕不將您的個人飲食資料用於廣告行銷推播或出售給第三方資料庫。</li>
+                <li><strong>儲存機制（Secret Gist / 未公開網址）：</strong> 每位啟用雲端同步的用戶，其飲食與體態資料均被寫入至專屬的 <strong>Secret GitHub Gist</strong> 空間中。</li>
+                <li><strong>【明確資安告知與邊界】</strong> 依據 GitHub 官方架構說明，Secret Gist 屬於「未被搜尋引擎或 Explore 頁面公開索引的 Unlisted 網址」，<strong>其並非由帳號密碼鎖定之完全封閉私有庫，任何取得該隨機 Gist ID 網址者均可能直接檢視內容</strong>。</li>
+                <li><strong>後端存取控制與防護：</strong> 系統伺服器（Google Apps Script）部署了用戶 ID 與 Gist 擁有權嚴格比對機制（防範越權存取 IDOR），絕不對外公開用戶之 Gist ID。</li>
+                <li><strong>用戶隱私建議：</strong> 鑑於上述特性，<strong>我們強烈建議使用者勿在紀錄或備註中填寫身分證字號、姓名全名、病歷密碼或機密資訊</strong>。若您對雲端儲存有更高隱私要求，可選擇：
+                    <br>① 於 Web App 設定中「解除雲端綁定」，採用純本機離線模式；
+                    <br>② 在進階設定中填入個人專屬 GitHub PAT（Personal Access Token），將備份權限直接歸屬於您個人名下的 GitHub 帳號。
+                </li>
             </ul>
 
-            <h2>3. AI 影像與語意辨識服務條款（Google Gemini & Groq Cloud 合規告知）</h2>
-            <p><strong>【法定告知義務】</strong> 當您使用 AI 飲食分析功能時，<strong>您傳送的照片與菜名將由安全之第三方 AI 模型（如 Google Gemini、Groq Cloud）進行影像辨識與語意分析處理</strong>，以提取食物營養特徵並估算熱量、蛋白質與水分。</p>
+            <h2>3. AI 影像與語意辨識服務條款（Google Gemini 雲端推論透明度告知）</h2>
+            <p><strong>【法定告知義務】</strong> 當您使用拍照辨識或 AI 飲食拆解功能時，<strong>您傳送的照片與菜名將傳輸至第三方 AI 雲端模型（Google Gemini）進行多模態影像推論與語意分析</strong>，以提取食物營養特徵並估算熱量、蛋白質與水分。</p>
             <ul>
-                <li><strong>傳輸與隱私保護：</strong> 系統全程透過 HTTPS 企業級端到端加密通道將圖片與文字傳輸至 AI 雲端推論節點，僅用於即時推論與分析。</li>
-                <li><strong>不作公開用途：</strong> 傳輸之照片與對話內容不會被公開發佈，分析結果將直接交付於您的個人紀錄中。</li>
-                <li><strong>模型限制提示：</strong> AI 模型之辨識數據為演算法統計估算，建議您依個人實際攝取情況進行確認或手動微調。</li>
+                <li><strong>傳輸層加密（In-Transit Encryption）：</strong> 系統全程採用 <strong>HTTPS / TLS 1.3 企業級傳輸層加密安全通道</strong> 傳輸圖片與文字，防範傳輸過程中的中途竊聽與攔截。</li>
+                <li><strong>非端到端加密（Non-E2EE）揭露：</strong> 由於第三方 AI 模型必須於雲端運算節點將數據解碼為張量矩陣以執行即時推論，<strong>此過程屬於雲端推論處理，並非端到端加密（End-to-End Encryption）</strong>。Daily Diet 絕不對外公開發布您的相片，但建議使用者<strong>避免上傳拍攝到清晰個人面孔、身分證件或私密居家背景之照片</strong>。</li>
+                <li><strong>推論性質提示：</strong> AI 模型之辨識數據為演算法統計估算，非屬精密儀器量測，建議您依實際攝取情況手動微調。</li>
             </ul>
 
-            <h2>4. 使用者體驗遙測與分析（Microsoft Clarity）</h2>
-            <p>為提升操作流暢度並迅速修復異常崩潰，本 Web 應用程式導入了微軟 <strong>Microsoft Clarity</strong> 分析工具：</p>
+            <h2>4. 使用者體驗遙測與分析（Microsoft Clarity 嚴格全域遮蔽）</h2>
+            <p>為監控頁面崩潰並持續優化介面流暢度，本 Web 應用程式導入了微軟 <strong>Microsoft Clarity</strong> 體驗分析工具：</p>
             <ul>
-                <li><strong>完全去識別化：</strong> 僅用於分析操作動線、滾動熱圖與按鈕流暢度，絕不收集或記錄您的個人密碼、敏感健康日記文字或私人聯絡方式。</li>
-                <li><strong>符合現代隱私標準：</strong> 所有遙測資料均經過嚴格資料遮蔽（Data Masking）處理，確保您的個人健康數據保有最高隱私等級。</li>
+                <li><strong>嚴格全域客戶端遮蔽（Strict Client-side Text Masking）：</strong> 前端網頁已在 HTML 根節點配置 <code>data-clarity-mask="true"</code> 嚴格脫敏指令。<strong>所有文字內容（包含您的餐點品名、熱量數字、體重紀錄、自訂目標及所有輸入框文字）均在瀏覽器端即時轉化為星號（*）遮蔽</strong>，微軟伺服器與開發人員均無法窺探您的具體日記文字。</li>
+                <li><strong>僅收集操作動線：</strong> 遙測資料僅限於無關個人隱私之滑鼠點擊座標、滾動比例、螢幕解析度與系統崩潰日誌。</li>
             </ul>
 
-            <h2>5. 實時日誌脫敏與自動銷毀機制</h2>
+            <h2>5. 伺服器運作日誌脫敏與自動銷毀機制</h2>
             <ul>
-                <li><strong>去識別化遮蔽：</strong> 為保障用戶隱私，系統運作診斷日誌中一律將用戶 ID 進行脫敏遮蔽（僅顯示末尾 6 碼，如 <code>...497c66</code>）。</li>
-                <li><strong>動態輪替銷毀：</strong> 運作伺服器（Google Apps Script）僅採先進先出（FIFO）暫存最近 60 筆執行事件用於連線調試，超出即自動永久覆蓋銷毀，不建立永久對話快取。</li>
+                <li><strong>去識別化遮蔽：</strong> 為保障用戶隱私，系統伺服器（GAS）運作日誌中一律將用戶 ID 進行脫敏遮蔽（僅顯示末尾 6 碼，如 <code>...497c66</code>）。</li>
+                <li><strong>先進先出動態覆蓋：</strong> 伺服器僅採先進先出（FIFO）暫存最近 60 筆執行事件用於連線除錯，超出即自動永久覆蓋銷毀，絕不留存歷史對話快取。</li>
             </ul>
 
-            <h2>6. 資料自主權與被遺忘權（刪除資料）</h2>
-            <p>依據個人資料保護規範，您隨時享有完整的資料控制權：</p>
+            <h2>6. 資料自主權、匯出與被遺忘權（刪除資料）</h2>
+            <p>依據個人資料保護法與現代數據自主精神，您隨時享有完整的資料控制權：</p>
             <ul>
-                <li><strong>單筆與今日刪除：</strong> 您可隨時在 LINE 輸入「<code>刪除最後一筆</code>」或在管理清單點擊「<code>🗑️ 清空今日所有紀錄</code>」。</li>
-                <li><strong>完全銷毀權（被遺忘權）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中一鍵「清除本機資料」或重置 Gist ID，徹底抹除所有儲存數據。</li>
-                <li><strong>資料匯出：</strong> 您可在 Web 端隨時一鍵匯出完整 JSON 備份檔，實現資料無障礙遷移。</li>
+                <li><strong>隨時一鍵匯出（資料可攜性）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>📥 匯出完整 JSON 備份</strong>」，隨時將本機所有歷史飲食日誌、體重與偏好完整下載備份至您的裝置。</li>
+                <li><strong>徹底抹除本機（被遺忘權）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>🗑️ 抹除本機所有資料</strong>」，系統將經雙重確認後永久清空本機瀏覽器（IndexedDB）所有數據與本機快取。</li>
+                <li><strong>解除雲端同步：</strong> 點擊「解除雲端綁定」可立即切斷本機與雲端 Gist 的同步關聯，停止任何雲端資料傳輸。</li>
+                <li><strong>雲端 Gist 備份之特性：</strong> 由於 GitHub Gist 具備 Git 版本歷史紀錄特性，若您欲覆蓋雲端紀錄，可清空本機後點擊「手動同步」將空白備份推送覆蓋最新版；若使用個人 GitHub PAT，亦可隨時登入 GitHub 直接徹底刪除該 Gist 及其所有版本紀錄。</li>
             </ul>
 
             <h2>7. 條款變更與聯繫管道</h2>
-            <p>若本隱私政策有任何修訂，我們將更新於本頁面。若您對個人隱私保護有任何疑慮，歡迎透過 Web App「設定 ➔ 意見回饋」與開發團隊聯繫。</p>
+            <p>若本隱私與安全政策有任何更新，我們將即時公告於本頁面。若您對個人隱私保護或資安架構有任何疑問或建議，歡迎透過 Web App「設定 ➔ 意見回饋」與維護團隊聯繫。再次感謝您對 Daily Diet 的支持與信任！</p>
 
             <footer>
                 Daily Diet © 2026 Winnie Lin Space · All Rights Reserved.

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db, calculateStreak } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, ChevronDown, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3, MessageCircle } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, ChevronDown, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3, MessageCircle, Trash2, ShieldCheck } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION, GAS_API_URL } from '../lib/constants';
@@ -724,6 +724,82 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       alert("🎉 已成功解除雲端綁定！");
     }
     refreshStats();
+  };
+
+  // 📥 一鍵匯出所有個人飲食與體重資料 (符合隱私權資料可攜性要求)
+  const handleExportJson = async () => {
+    try {
+      const dietLogs = await db.dietLogs.toArray();
+      const weightLogs = await db.weightLogs.toArray();
+      const settings = await db.settings.toArray();
+      const favorites = await db.favorites.toArray();
+      const exportObject = {
+        app: 'Daily Diet',
+        version: APP_VERSION,
+        exportedAt: new Date().toISOString(),
+        totalDietLogs: dietLogs.length,
+        totalWeightLogs: weightLogs.length,
+        dietLogs,
+        weightLogs,
+        settings,
+        favorites,
+        localStorage: {
+          user_name: safeGetStorage('user_name'),
+          line_user_name: safeGetStorage('line_user_name'),
+          calorie_goal: safeGetStorage('calorie_goal'),
+          protein_goal: safeGetStorage('protein_goal'),
+          water_goal: safeGetStorage('water_goal'),
+          gist_backup_id: safeGetStorage('gist_backup_id')
+        }
+      };
+
+      const blob = new Blob([JSON.stringify(exportObject, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `daily-diet-backup-${new Date().toISOString().slice(0, 10)}.json`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      alert("匯出備份失敗：" + (e.message || String(e)));
+    }
+  };
+
+  // 🗑️ 徹底抹除本機所有紀錄（符合被遺忘權原則）
+  const handleWipeAllLocalData = async () => {
+    const confirm1 = confirm("⚠️【高風險操作：抹除本機所有資料】\n\n這將永久清空：\n1. 本機所有飲食日記紀錄\n2. 歷史體重紀錄與目標\n3. 常用餐點與個人偏好\n4. 本機儲存之登入名稱與雲端綁定\n\n此操作無法復原，是否確定要抹除本機資料？");
+    if (!confirm1) return;
+
+    const confirm2 = prompt("請輸入「DELETE」以確認徹底清空本機資料：");
+    if (confirm2 !== 'DELETE') {
+      alert("輸入不符，已取消抹除操作。");
+      return;
+    }
+
+    try {
+      await db.transaction('rw', db.dietLogs, db.weightLogs, db.settings, db.favorites, async () => {
+        await db.dietLogs.clear();
+        await db.weightLogs.clear();
+        await db.settings.clear();
+        await db.favorites.clear();
+      });
+
+      const keysToClear = [
+        'user_name', 'line_user_name', 'line_user_id', 'gist_backup_id',
+        'calorie_goal', 'protein_goal', 'water_goal', 'daily_diet_is_founder',
+        'daily_diet_founder_data', 'onboarding_seen', 'location_granted'
+      ];
+      keysToClear.forEach(k => {
+        try { localStorage.removeItem(k); } catch (e) {}
+      });
+
+      alert("🧹 本機資料已徹底抹除！應用程式即將重新載入。");
+      window.location.reload();
+    } catch (err) {
+      alert("抹除失敗：" + (err.message || String(err)));
+    }
   };
 
   useEffect(() => {
@@ -2009,21 +2085,69 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <p className="text-xs font-bold text-emerald-800 leading-relaxed">
                         您的飲食紀錄、體重趨勢與熱量目標已透過雲端即時雙向同步。無論在 LINE 還是 Web App 記錄，資料皆會自動安全備份。
                       </p>
-                      <div className="mt-4 pt-3 border-t-2 border-dashed border-emerald-300 flex items-center justify-between">
+                      <div className="mt-4 pt-3 border-t-2 border-dashed border-emerald-300 flex flex-wrap items-center justify-between gap-2">
                         <span className="text-[10px] font-black uppercase text-emerald-700">狀態：即時連線中 ⚡</span>
+                        <div className="flex items-center gap-2">
+                          {currentGistId && (
+                            <button
+                              type="button"
+                              onClick={handleCloudRestore}
+                              disabled={syncStatus === 'syncing'}
+                              className="px-2.5 py-1.5 rounded-xl text-xs font-black italic border-2 border-black bg-white hover:bg-zinc-100 active:scale-95 flex items-center gap-1 shadow-neo-xs transition-colors"
+                              title="從 Gist 雲端拉取並還原最新備份"
+                            >
+                              <Upload size={12} />
+                              <span>{isEn ? 'Restore' : '雲端還原'}</span>
+                            </button>
+                          )}
+                          <button
+                            onClick={handleCloudBackup}
+                            disabled={syncStatus === 'syncing'}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-black italic border-2 border-black active:scale-95 flex items-center gap-1.5 shadow-neo-xs transition-colors ${
+                              syncStatus === 'success'
+                                ? 'bg-emerald-500 text-white'
+                                : syncStatus === 'error'
+                                ? 'bg-red-500 text-white'
+                                : 'bg-black text-white hover:bg-zinc-800'
+                            }`}
+                          >
+                            <RotateCcw size={12} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
+                            {syncStatus === 'syncing' ? '同步中...' : syncStatus === 'success' ? '✅ 已同步' : '手動同步'}
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* 🛡️ 資料自主權與被遺忘權 (Data Portability & Erasure) */}
+                    <div className="bg-white border-4 border-black rounded-3xl p-5 shadow-neo-sm space-y-4">
+                      <div className="flex items-center gap-2">
+                        <ShieldCheck size={20} className="text-black" />
+                        <h4 className="font-black italic text-sm uppercase tracking-tight text-black">
+                          {isEn ? 'Data Privacy & Self-Control' : '資料自主與隱私控制權'}
+                        </h4>
+                      </div>
+
+                      <p className="text-xs font-bold text-zinc-600 leading-relaxed">
+                        您的所有飲食日記優先存放於本機瀏覽器（IndexedDB）。您隨時擁有資料的完整導出權與被遺忘權（徹底清除本機儲存）。
+                      </p>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
                         <button
-                          onClick={handleCloudBackup}
-                          disabled={syncStatus === 'syncing'}
-                          className={`px-3 py-1.5 rounded-xl text-xs font-black italic active:scale-95 flex items-center gap-1.5 transition-colors ${
-                            syncStatus === 'success'
-                              ? 'bg-emerald-600 text-white'
-                              : syncStatus === 'error'
-                              ? 'bg-red-600 text-white'
-                              : 'bg-black text-white hover:bg-zinc-800'
-                          }`}
+                          type="button"
+                          onClick={handleExportJson}
+                          className="bg-zinc-100 hover:bg-zinc-200 text-black py-2.5 px-3 rounded-xl border-2 border-black font-black text-xs active:scale-95 transition-all flex items-center justify-center gap-2 shadow-neo-xs"
                         >
-                          <RotateCcw size={12} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
-                          {syncStatus === 'syncing' ? '同步中...' : syncStatus === 'success' ? '✅ 已同步' : '手動同步'}
+                          <Download size={14} />
+                          <span>{isEn ? 'Export JSON Backup' : '📥 匯出完整 JSON 備份'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleWipeAllLocalData}
+                          className="bg-rose-50 hover:bg-rose-100 text-rose-700 py-2.5 px-3 rounded-xl border-2 border-rose-900 font-black text-xs active:scale-95 transition-all flex items-center justify-center gap-2 shadow-neo-xs"
+                        >
+                          <Trash2 size={14} className="text-rose-600" />
+                          <span>{isEn ? 'Wipe All Local Data' : '🗑️ 抹除本機所有資料'}</span>
                         </button>
                       </div>
                     </div>
