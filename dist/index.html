@@ -42,6 +42,18 @@
 
   <script type="text/javascript">
     (function (c, l, a, r, i, t, y) {
+      // 🛡️ Privacy by Design: Strictly respect Do Not Track (DNT), GPC, and User Opt-Out
+      try {
+        if (
+          navigator.doNotTrack === "1" || 
+          window.doNotTrack === "1" || 
+          navigator.globalPrivacyControl || 
+          (typeof localStorage !== 'undefined' && localStorage.getItem('daily_diet_disable_telemetry') === 'true')
+        ) {
+          console.info("🛡️ [Privacy Protection] Do Not Track / Telemetry Opt-Out active. Clarity script execution suppressed.");
+          return;
+        }
+      } catch (e) {}
       c[a] = c[a] || function () { (c[a].q = c[a].q || []).push(arguments) };
       t = l.createElement(r); t.async = 1; t.src = "https://www.clarity.ms/tag/" + i;
       y = l.getElementsByTagName(r)[0]; y.parentNode.insertBefore(t, y);
@@ -52,12 +64,12 @@
   <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Outfit:wght@400;700;900&family=JetBrains+Mono:wght@400;700&family=Zen+Maru+Gothic:wght@400;500;700&family=Noto+Sans+TC:wght@400;500;700&display=swap"
     rel="stylesheet">
-  <script type="module" crossorigin src="/daily-diet/assets/index-CMfTmj5j.js"></script>
+  <script type="module" crossorigin src="/daily-diet/assets/index-DlZy4Cax.js"></script>
   <link rel="modulepreload" crossorigin href="/daily-diet/assets/vendor-motion-B6G5eJcq.js">
   <link rel="modulepreload" crossorigin href="/daily-diet/assets/vendor-charts-BuZKj8hg.js">
-  <link rel="modulepreload" crossorigin href="/daily-diet/assets/vendor-icons-CpR0he84.js">
+  <link rel="modulepreload" crossorigin href="/daily-diet/assets/vendor-icons-Dbhc4dDh.js">
   <link rel="modulepreload" crossorigin href="/daily-diet/assets/vendor-db-vxEOxAKg.js">
-  <link rel="stylesheet" crossorigin href="/daily-diet/assets/index-XgaZhxdH.css">
+  <link rel="stylesheet" crossorigin href="/daily-diet/assets/index-en9MMWd0.css">
 <link rel="manifest" href="/daily-diet/manifest.webmanifest"></head>
 
 <body class="bg-[#F8FAFC] selection:bg-accent selection:text-black" data-clarity-mask="true">

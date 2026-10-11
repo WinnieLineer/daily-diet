@@ -1,9 +1,34 @@
 import { getLocalDateString } from './constants';
 import { getEffectiveIds } from './syncService';
+import { encryptBackupPayload, decryptBackupPayload } from './cryptoService';
 
 const GITHUB_API = 'https://api.github.com/gists';
 const BACKUP_FILENAME = 'daily-diet-backup.json';
 const GAS_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
+
+/**
+ * 檢查是否啟用端對端加密金庫 (Zero-Knowledge AES-256-GCM)
+ */
+export function isVaultEncryptionEnabled() {
+  try {
+    return localStorage.getItem('dd_vault_encryption_enabled') === 'true';
+  } catch (e) {
+    return false;
+  }
+}
+
+/**
+ * 設定是否啟用端對端加密金庫
+ */
+export function setVaultEncryptionEnabled(enabled) {
+  try {
+    if (enabled) {
+      localStorage.setItem('dd_vault_encryption_enabled', 'true');
+    } else {
+      localStorage.removeItem('dd_vault_encryption_enabled');
+    }
+  } catch (e) {}
+}
 
 /**
  * Get GitHub PAT (from env or user settings in IndexedDB)
@@ -100,10 +125,11 @@ export async function getBackupInfo() {
 export async function uploadToGist(jsonData, explicitGistId = null) {
   const token = getGistToken();
   const gistId = explicitGistId || getStoredGistId();
+  const payloadToSave = isVaultEncryptionEnabled() ? await encryptBackupPayload(jsonData) : jsonData;
 
   // 1. 若本機已手動配置 GitHub PAT (例如開發者本機環境)，直接調用 GitHub REST API
   if (token) {
-    const fileContent = JSON.stringify(jsonData, null, 0);
+    const fileContent = JSON.stringify(payloadToSave, null, 0);
     const gistPayload = {
       description: `Daily Diet Backup - ${getLocalDateString()}`,
       public: false,
@@ -165,7 +191,7 @@ export async function uploadToGist(jsonData, explicitGistId = null) {
         userId: userId || 'web_user',
         userName: userName || 'Web訪客',
         gistId: gistId || '',
-        data: jsonData
+        data: payloadToSave
       })
     });
 
@@ -217,7 +243,8 @@ export async function downloadFromGist(explicitGistId = null) {
           const rawRes = await fetch(file.raw_url);
           content = await rawRes.text();
         }
-        return JSON.parse(content);
+        const rawJson = JSON.parse(content);
+        return await decryptBackupPayload(rawJson);
       }
     } else if (res.status === 404) {
       try {
@@ -235,7 +262,7 @@ export async function downloadFromGist(explicitGistId = null) {
     if (res.ok) {
       const result = await res.json();
       if (result.status === 'ok' && result.data) {
-        return result.data;
+        return await decryptBackupPayload(result.data);
       }
     }
   } catch (gasErr) {
@@ -243,4 +270,55 @@ export async function downloadFromGist(explicitGistId = null) {
   }
 
   throw new Error("無法從雲端讀取備份資料，請確認網路連線或 Gist ID 是否正確。");
+}
+
+/**
+ * 🗑️ 物理銷毀雲端 Gist 備份 (向 GitHub API 發送 DELETE 請求，徹底抹除該 Gist 及其所有歷史 Git 提交版本)
+ */
+export async function destroyCloudGist(explicitGistId = null) {
+  const token = getGistToken();
+  const gistId = explicitGistId || getStoredGistId();
+  if (!gistId) return { status: 'ok', message: '本機無雲端 Gist 紀錄' };
+
+  // 1. 若本機有個人 PAT，直連 GitHub API 執行 DELETE
+  if (token) {
+    try {
+      const res = await fetch(`${GITHUB_API}/${gistId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Accept': 'application/vnd.github+json',
+        }
+      });
+      if (res.status === 204 || res.status === 404) {
+        setStoredGistId(null);
+        return { status: 'ok', message: '已成功從 GitHub 物理刪除 Gist 及其所有歷史版本！' };
+      }
+    } catch (e) {
+      console.warn("Direct gist deletion failed, attempting proxy:", e);
+    }
+  }
+
+  // 2. 透過 GAS 代理後端呼叫 GitHub DELETE 徹底銷毀
+  try {
+    const { userId, userName } = typeof getEffectiveIds === 'function' ? getEffectiveIds() : { userId: '', userName: '' };
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify({
+        action: 'deleteGist',
+        gistId,
+        userId: userId || 'web_user',
+        userName: userName || 'Web訪客'
+      })
+    });
+    const result = await res.json();
+    if (result.status === 'ok') {
+      setStoredGistId(null);
+    }
+    return result;
+  } catch (err) {
+    console.error("Cloud gist deletion failed:", err);
+    throw err;
+  }
 }

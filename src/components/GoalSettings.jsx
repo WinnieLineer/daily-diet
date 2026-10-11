@@ -3,11 +3,11 @@ import { createPortal } from 'react-dom';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
 import { db, calculateStreak } from '../db';
-import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, ChevronDown, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3, MessageCircle, Trash2, ShieldCheck } from 'lucide-react';
+import { Settings, Sparkles, X, Target, Check, Database, Download, Upload, Globe, Calculator, User, Zap, Info, RotateCcw, LayoutGrid, MapPin, AlertCircle, ChevronRight, ChevronDown, History, Loader2, Clock, MessageSquare, Copy, Eye, EyeOff, Heart, BarChart3, MessageCircle, Trash2, ShieldCheck, Lock, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { t, getLanguage, setLanguage } from '../lib/translations';
 import { APP_VERSION, GAS_API_URL } from '../lib/constants';
-import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId } from '../lib/gistService';
+import { uploadToGist, downloadFromGist, getBackupInfo, getCurrentGistId, setGistId, destroyCloudGist, isVaultEncryptionEnabled, setVaultEncryptionEnabled } from '../lib/gistService';
 import { PandaSticker } from './PandaStickers';
 import { liffService } from '../lib/liffService';
 import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateClientId } from '../lib/syncService';
@@ -146,6 +146,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   const [activeSticker, setActiveSticker] = useState(() => safeGetStorage('panda_active_sticker') || '');
   const [selectedQr, setSelectedQr] = useState(null);
   const [showSponsorInfo, setShowSponsorInfo] = useState(false);
+
+  // 🛡️ 資安與隱私偏好狀態
+  const [vaultEnabled, setVaultEnabled] = useState(() => isVaultEncryptionEnabled());
+  const [telemetryDisabled, setTelemetryDisabled] = useState(() => safeGetStorage('daily_diet_disable_telemetry') === 'true');
 
   // 📝 審計追蹤：記錄前端贊助與支持行為 (無感背景日誌)
   const trackSponsorAudit = (actionType, input, output) => {
@@ -799,6 +803,36 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       window.location.reload();
     } catch (err) {
       alert("抹除失敗：" + (err.message || String(err)));
+    }
+  };
+
+  // 🔥 物理銷毀雲端 Gist 備份 (調用 GitHub API DELETE 徹底抹除 Gist 及其所有 Git 版本歷程)
+  const handleDestroyCloudGist = async () => {
+    if (!currentGistId) {
+      alert("目前無雲端 Gist 備份。");
+      return;
+    }
+    const confirm1 = confirm("⚠️【高危險操作：物理銷毀 GitHub 雲端 Gist】\n\n這將向 GitHub API 發送 DELETE 請求，徹底刪除您的 Gist 以及其在 GitHub 伺服器上的所有歷史 Git 提交版本！\n\n刪除後此 Gist 網址將永遠回傳 404 Not Found，此操作由 GitHub 物理永久抹除，絕無任何還原可能。\n\n是否確定物理銷毀？");
+    if (!confirm1) return;
+
+    const confirm2 = prompt("請輸入「DESTROY」以確認物理抹除 GitHub 雲端 Gist：");
+    if (confirm2 !== 'DESTROY') {
+      alert("輸入不符，已取消銷毀操作。");
+      return;
+    }
+
+    try {
+      setSyncStatus('syncing');
+      const res = await destroyCloudGist();
+      setGistId('');
+      setCurrentGistId('');
+      safeRemoveStorage('gist_backup_id');
+      alert(res?.message || "🎉 已成功從 GitHub 物理銷毀 Gist 及其所有版本！");
+      refreshStats();
+    } catch (err) {
+      alert("銷毀失敗：" + (err.message || String(err)));
+    } finally {
+      setSyncStatus('idle');
     }
   };
 
@@ -2128,10 +2162,66 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
 
                       <p className="text-xs font-bold text-zinc-600 leading-relaxed">
-                        您的所有飲食日記優先存放於本機瀏覽器（IndexedDB）。您隨時擁有資料的完整導出權與被遺忘權（徹底清除本機儲存）。
+                        您的所有飲食日記優先存放於本機瀏覽器（IndexedDB）。您隨時擁有資料的完整導出權、隱私遙測開關與物理銷毀權。
                       </p>
 
-                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+                      {/* 隱私與安全控制面板 */}
+                      <div className="space-y-2 pt-1">
+                        <div className="p-3 bg-zinc-50 border-2 border-black rounded-2xl flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-black flex items-center gap-1.5 text-zinc-900">
+                              <Lock size={14} className="text-amber-500" />
+                              <span>端對端金庫加密 (AES-256-GCM)</span>
+                            </div>
+                            <div className="text-[10px] font-bold text-zinc-500 mt-0.5">
+                              備份上傳前經由瀏覽器 Web Crypto API 加密為密文，GitHub 僅儲存亂碼
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !vaultEnabled;
+                              setVaultEnabled(next);
+                              setVaultEncryptionEnabled(next);
+                              alert(next ? "🔐 已啟用端對端 AES-256-GCM 加密！下次備份將以密文儲存至 Gist。" : "ℹ️ 已切換為標準雙向同步模式。");
+                            }}
+                            className={`w-11 h-6 rounded-full border-2 border-black relative transition-colors shrink-0 ${vaultEnabled ? 'bg-amber-400' : 'bg-zinc-200'}`}
+                          >
+                            <div className={`w-4 h-4 rounded-full bg-white border-2 border-black absolute top-0.5 transition-all ${vaultEnabled ? 'left-5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+
+                        <div className="p-3 bg-zinc-50 border-2 border-black rounded-2xl flex items-center justify-between gap-3">
+                          <div>
+                            <div className="text-xs font-black flex items-center gap-1.5 text-zinc-900">
+                              <Shield size={14} className="text-blue-500" />
+                              <span>體驗遙測與分析 (Microsoft Clarity)</span>
+                            </div>
+                            <div className="text-[10px] font-bold text-zinc-500 mt-0.5">
+                              已全域啟動星號文字遮蔽；關閉或啟用 Do-Not-Track 則完全不載入腳本
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = !telemetryDisabled;
+                              setTelemetryDisabled(next);
+                              if (next) {
+                                safeSetStorage('daily_diet_disable_telemetry', 'true');
+                                alert("🛡️ 已停用 Microsoft Clarity 體驗遙測！重新載入頁面後生效。");
+                              } else {
+                                safeRemoveStorage('daily_diet_disable_telemetry');
+                                alert("ℹ️ 已啟用體驗遙測（所有文字仍維持嚴格星號遮蔽）。");
+                              }
+                            }}
+                            className={`w-11 h-6 rounded-full border-2 border-black relative transition-colors shrink-0 ${!telemetryDisabled ? 'bg-emerald-400' : 'bg-zinc-200'}`}
+                          >
+                            <div className={`w-4 h-4 rounded-full bg-white border-2 border-black absolute top-0.5 transition-all ${!telemetryDisabled ? 'left-5' : 'left-0.5'}`} />
+                          </button>
+                        </div>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2">
                         <button
                           type="button"
                           onClick={handleExportJson}
@@ -2150,6 +2240,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <span>{isEn ? 'Wipe All Local Data' : '🗑️ 抹除本機所有資料'}</span>
                         </button>
                       </div>
+
+                      {currentGistId && (
+                        <div className="pt-1">
+                          <button
+                            type="button"
+                            onClick={handleDestroyCloudGist}
+                            className="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 px-3 rounded-xl border-2 border-black font-black text-xs active:scale-95 transition-all flex items-center justify-center gap-2 shadow-neo-xs"
+                          >
+                            <Trash2 size={14} className="text-white" />
+                            <span>🔥 物理銷毀 GitHub 雲端 Gist (含所有歷史 Git 版本)</span>
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* ⚙️ 進階開發者選項：自訂個人 GitHub PAT (選填) */}

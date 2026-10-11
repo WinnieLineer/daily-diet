@@ -161,31 +161,30 @@
                 <li><strong>LINE 平台連動（LIFF / Bot）：</strong> 當您透過 LINE 發送飲食訊息或照片時，系統僅接收 LINE 平台分配之用戶虛擬識別碼（LINE User ID），以利為您綁定個人專屬雲端空間。<strong>我們絕不主動收集您的真實姓名、電話號碼、通訊錄、定位軌跡或信用卡號碼。</strong></li>
             </ul>
 
-            <h2>2. 雲端同步架構（GitHub Secret Gist 儲存邊界與安全告知）</h2>
+            <h2>2. 雲端同步架構（GitHub Gist 邊界與 Zero-Knowledge 端對端加密金庫）</h2>
             <p>為達成跨裝置（電腦、手機瀏覽器與 LINE 機器人）即時雙向同步，系統採用 GitHub Gist 作為雲端中繼存儲：</p>
             <ul>
-                <li><strong>儲存機制（Secret Gist / 未公開網址）：</strong> 每位啟用雲端同步的用戶，其飲食與體態資料均被寫入至專屬的 <strong>Secret GitHub Gist</strong> 空間中。</li>
-                <li><strong>【明確資安告知與邊界】</strong> 依據 GitHub 官方架構說明，Secret Gist 屬於「未被搜尋引擎或 Explore 頁面公開索引的 Unlisted 網址」，<strong>其並非由帳號密碼鎖定之完全封閉私有庫，任何取得該隨機 Gist ID 網址者均可能直接檢視內容</strong>。</li>
+                <li><strong>儲存機制（Secret Gist / 未公開網址）：</strong> 每位啟用雲端同步的用戶，其飲食與體態資料均被寫入至專屬的 <strong>Secret GitHub Gist</strong> 空間中。依 GitHub 官方定義，Secret Gist 屬於「未被搜尋引擎公開索引的 Unlisted 空間」，任何取得該隨機 Gist ID 網址者均可能檢視檔案內容。</li>
+                <li><strong>🔐【全新升級】端對端金庫加密（Zero-Knowledge AES-256-GCM）：</strong> 為從根本上消除 Secret Gist 網址外洩風險，Web App 現已提供<strong>「端對端金庫加密」模式</strong>。啟用後，備份檔案在離開您的手機前，由瀏覽器原生 Web Crypto API 採用 <strong>AES-256-GCM</strong> 進行高強度加密。<strong>GitHub 雲端上僅儲存不可逆的亂碼密文，即使 Gist 網址外洩，無本機金鑰的第三方或 GitHub 官方均絕對無法解密您的任何飲食或體態數據。</strong></li>
                 <li><strong>後端存取控制與防護：</strong> 系統伺服器（Google Apps Script）部署了用戶 ID 與 Gist 擁有權嚴格比對機制（防範越權存取 IDOR），絕不對外公開用戶之 Gist ID。</li>
-                <li><strong>用戶隱私建議：</strong> 鑑於上述特性，<strong>我們強烈建議使用者勿在紀錄或備註中填寫身分證字號、姓名全名、病歷密碼或機密資訊</strong>。若您對雲端儲存有更高隱私要求，可選擇：
-                    <br>① 於 Web App 設定中「解除雲端綁定」，採用純本機離線模式；
-                    <br>② 在進階設定中填入個人專屬 GitHub PAT（Personal Access Token），將備份權限直接歸屬於您個人名下的 GitHub 帳號。
-                </li>
+                <li><strong>用戶隱私建議：</strong> 若您希望維持 100% 離線，亦可隨時在 Web App 設定中「解除雲端綁定」，資料絕不離開本機；或在進階設定中填入個人專屬 GitHub PAT，直接儲存於個人 GitHub 帳號。</li>
             </ul>
 
-            <h2>3. AI 影像與語意辨識服務條款（Google Gemini 雲端推論透明度告知）</h2>
+            <h2>3. AI 影像與語意辨識服務條款（前端 EXIF 自動脫敏與 Google Gemini 推論透明度）</h2>
             <p><strong>【法定告知義務】</strong> 當您使用拍照辨識或 AI 飲食拆解功能時，<strong>您傳送的照片與菜名將傳輸至第三方 AI 雲端模型（Google Gemini）進行多模態影像推論與語意分析</strong>，以提取食物營養特徵並估算熱量、蛋白質與水分。</p>
             <ul>
+                <li><strong>📸 前端自動 EXIF 個資剝除（Client-side Metadata Sanitization）：</strong> 當您上傳相片時，前端應用程式會先在瀏覽器端透過 HTML5 Canvas 重新解碼與壓縮，<strong>100% 自動剝除照片中的所有 EXIF 元數據（包含拍攝時的 GPS 地理座標、相機鏡頭型號、拍攝時間等隱私資訊）</strong>，絕不將原始相片個資傳輸至外部。</li>
                 <li><strong>傳輸層加密（In-Transit Encryption）：</strong> 系統全程採用 <strong>HTTPS / TLS 1.3 企業級傳輸層加密安全通道</strong> 傳輸圖片與文字，防範傳輸過程中的中途竊聽與攔截。</li>
                 <li><strong>非端到端加密（Non-E2EE）揭露：</strong> 由於第三方 AI 模型必須於雲端運算節點將數據解碼為張量矩陣以執行即時推論，<strong>此過程屬於雲端推論處理，並非端到端加密（End-to-End Encryption）</strong>。Daily Diet 絕不對外公開發布您的相片，但建議使用者<strong>避免上傳拍攝到清晰個人面孔、身分證件或私密居家背景之照片</strong>。</li>
                 <li><strong>推論性質提示：</strong> AI 模型之辨識數據為演算法統計估算，非屬精密儀器量測，建議您依實際攝取情況手動微調。</li>
             </ul>
 
-            <h2>4. 使用者體驗遙測與分析（Microsoft Clarity 嚴格全域遮蔽）</h2>
+            <h2>4. 使用者體驗遙測與分析（Microsoft Clarity 嚴格全域遮蔽與 DNT / 自由開關）</h2>
             <p>為監控頁面崩潰並持續優化介面流暢度，本 Web 應用程式導入了微軟 <strong>Microsoft Clarity</strong> 體驗分析工具：</p>
             <ul>
                 <li><strong>嚴格全域客戶端遮蔽（Strict Client-side Text Masking）：</strong> 前端網頁已在 HTML 根節點配置 <code>data-clarity-mask="true"</code> 嚴格脫敏指令。<strong>所有文字內容（包含您的餐點品名、熱量數字、體重紀錄、自訂目標及所有輸入框文字）均在瀏覽器端即時轉化為星號（*）遮蔽</strong>，微軟伺服器與開發人員均無法窺探您的具體日記文字。</li>
-                <li><strong>僅收集操作動線：</strong> 遙測資料僅限於無關個人隱私之滑鼠點擊座標、滾動比例、螢幕解析度與系統崩潰日誌。</li>
+                <li><strong>🛡️ 嚴格尊重 Do Not Track (DNT) 與用戶開關：</strong> 系統原生支援 W3C Do Not Track (DNT) 與 Global Privacy Control (GPC)。<strong>若您的瀏覽器啟用了 DNT，或在 Web App 設定中關閉「體驗遙測與分析」，系統將在程式碼層級徹底阻斷 Clarity 腳本之載入與執行</strong>。</li>
+                <li><strong>僅收集操作動線：</strong> 在用戶允許的狀態下，遙測資料僅限於無關個人隱私之滑鼠點擊座標、滾動比例、螢幕解析度與系統崩潰日誌。</li>
             </ul>
 
             <h2>5. 伺服器運作日誌脫敏與自動銷毀機制</h2>
@@ -199,8 +198,8 @@
             <ul>
                 <li><strong>隨時一鍵匯出（資料可攜性）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>📥 匯出完整 JSON 備份</strong>」，隨時將本機所有歷史飲食日誌、體重與偏好完整下載備份至您的裝置。</li>
                 <li><strong>徹底抹除本機（被遺忘權）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>🗑️ 抹除本機所有資料</strong>」，系統將經雙重確認後永久清空本機瀏覽器（IndexedDB）所有數據與本機快取。</li>
-                <li><strong>解除雲端同步：</strong> 點擊「解除雲端綁定」可立即切斷本機與雲端 Gist 的同步關聯，停止任何雲端資料傳輸。</li>
-                <li><strong>雲端 Gist 備份之特性：</strong> 由於 GitHub Gist 具備 Git 版本歷史紀錄特性，若您欲覆蓋雲端紀錄，可清空本機後點擊「手動同步」將空白備份推送覆蓋最新版；若使用個人 GitHub PAT，亦可隨時登入 GitHub 直接徹底刪除該 Gist 及其所有版本紀錄。</li>
+                <li><strong>🔥 雲端 Gist 物理銷毀權（Physical Destruction via GitHub API）：</strong> 若您欲徹底清除雲端備份，可直接在 Web App 點擊「<strong>🔥 物理銷毀 GitHub 雲端 Gist</strong>」。系統將直接向 GitHub REST API 發送 <code>DELETE</code> 請求，<strong>徹底從 GitHub 伺服器永久抹除該 Gist 及其所有歷史 Git 提交歷程（回傳 204 No Content），絕無任何雲端殘留數據</strong>。</li>
+                <li><strong>解除雲端同步：</strong> 點擊「解除雲端綁定」可切斷本機與雲端 Gist 的同步關聯，停止任何雲端資料傳輸。</li>
             </ul>
 
             <h2>7. 條款變更與聯繫管道</h2>

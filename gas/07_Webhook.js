@@ -2006,6 +2006,63 @@ function doPost(e) {
       }
     }
 
+    // 🗑️ 0.95 物理銷毀雲端 Gist 備份端點 (向 GitHub API 發起 DELETE，連同所有 Git Commit 歷史版本徹底抹除)
+    if (action === 'deleteGist' || action === 'destroyGistBackup') {
+      const pat = props.getProperty('GITHUB_PAT');
+      const userId = data?.userId || e?.parameter?.userId || '';
+      const isGeneric = !userId || (typeof isGenericUserId === 'function' ? isGenericUserId(userId) : false);
+      const targetGistId = data?.gistId || e?.parameter?.gistId || (!isGeneric ? props.getProperty(`USER_GIST_${userId}`) : '');
+
+      if (!targetGistId) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '缺少 Gist ID' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      // Gist 所有權校驗防護
+      if (typeof verifyGistOwnership === 'function' && !verifyGistOwnership(targetGistId, userId, props)) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '無權銷毀此 Gist (所有權校驗失敗)' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      try {
+        if (!pat) {
+          return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '後端未設定 GITHUB_PAT' }))
+            .setMimeType(ContentService.MimeType.JSON);
+        }
+
+        const delRes = UrlFetchApp.fetch(`https://api.github.com/gists/${targetGistId}`, {
+          method: 'delete',
+          headers: {
+            'Authorization': `Bearer ${pat}`,
+            'Accept': 'application/vnd.github+json'
+          },
+          muteHttpExceptions: true
+        });
+
+        const code = delRes.getResponseCode();
+        if (code === 204 || code === 404) {
+          if (userId && !isGeneric) {
+            props.deleteProperty(`USER_GIST_${userId}`);
+          }
+          if (typeof recordSystemLog === 'function') {
+            recordSystemLog('刪除Gist備份', userId, '物理銷毀雲端 Gist', targetGistId, '已成功永久抹除 GitHub Gist 及其所有歷史 Git 提交歷程', data?.userName || userId);
+          }
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'ok',
+            message: '雲端 Gist 及所有歷史版本已成功物理銷毀！'
+          })).setMimeType(ContentService.MimeType.JSON);
+        } else {
+          return ContentService.createTextOutput(JSON.stringify({
+            status: 'error',
+            message: `GitHub 回應狀態碼 ${code}: ${delRes.getContentText().slice(0, 100)}`
+          })).setMimeType(ContentService.MimeType.JSON);
+        }
+      } catch (err) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: err.message }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+    }
+
     // 🌟 1. Web App 專屬安全通道：Gemini AI 辨識 API (含防盜刷、時戳驗證與頻率防護)
     if (action === 'analyzeMeal' || action === 'analyzeFoodImage' || action === 'analyzeText' || action === 'analyzeFoodText' || action === 'completeText' || action === 'getPandaAdvice') {
       const sec = verifyWebAIRequest(data, e);
