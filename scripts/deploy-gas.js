@@ -6,14 +6,15 @@ try {
   const claspConfig = JSON.parse(fs.readFileSync('./.clasp.json', 'utf8'));
 
   // 2. 推送最新程式碼
+  const npxCmd = process.platform === 'win32' ? 'npx.cmd' : 'npx';
   console.log('🚀 正在推送最新程式碼至 Google Apps Script...');
-  execSync('npx @google/clasp push --force', { stdio: 'inherit' });
+  execSync(`${npxCmd} @google/clasp push --force`, { stdio: 'inherit', timeout: 30000 });
 
   // 3. 取得要鎖定更新的 Deployment ID
   let deploymentId = claspConfig.deploymentId;
 
   if (!deploymentId) {
-    const output = execSync('npx @google/clasp deployments', { encoding: 'utf8' });
+    const output = execSync(`${npxCmd} @google/clasp deployments`, { encoding: 'utf8', timeout: 20000 });
     const lines = output.split('\n').filter(l => l.includes('- AKfyc') && !l.includes('@HEAD'));
     if (lines.length > 0) {
       // 預設鎖定最早建立的原始 Webhook 部署或已設定的部署
@@ -30,10 +31,10 @@ try {
   // 4. 覆蓋更新同一個 Deployment (保證 URL 永不改變)
   if (deploymentId) {
     console.log(`🔄 正在更新現有部署 (URL 永不改變): ${deploymentId}`);
-    execSync(`npx @google/clasp deploy -i ${deploymentId} -d "Auto-updated on ${new Date().toLocaleString('zh-TW')}"`, { stdio: 'inherit' });
+    execSync(`${npxCmd} @google/clasp deploy -i ${deploymentId} -d "Auto-updated on ${new Date().toLocaleString('zh-TW')}"`, { stdio: 'inherit', timeout: 30000 });
     console.log(`\n✅ 部署完成！您的 Webhook URL 永遠固定為：\n👉 https://script.google.com/macros/s/${deploymentId}/exec\n`);
   } else {
-    execSync('npx @google/clasp deploy', { stdio: 'inherit' });
+    execSync(`${npxCmd} @google/clasp deploy`, { stdio: 'inherit', timeout: 30000 });
   }
 
   // 5. 查詢當前版本總數並即時反饋
