@@ -836,6 +836,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     }
   };
 
+  const tabsContainerRef = useRef(null);
+
   useEffect(() => {
     if (activeTab === 'data') {
       refreshStats();
@@ -845,11 +847,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
+      if (tabsContainerRef.current) {
+        const activeEl = tabsContainerRef.current.querySelector('[data-active="true"]');
+        if (activeEl) {
+          setTimeout(() => {
+            activeEl.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
+          }, 60);
+        }
+      }
       return () => {
         document.body.style.overflow = '';
       };
     }
-  }, [isOpen]);
+  }, [isOpen, activeTab]);
 
   return (
     <div className="relative">
@@ -893,14 +903,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
               </div>
 
               {/* Tabs */}
-              <div className="flex p-2 gap-1 bg-zinc-100 overflow-x-auto no-scrollbar border-b-4 border-black shrink-0">
+              <div 
+                ref={tabsContainerRef}
+                className="flex items-stretch p-2 gap-1.5 bg-zinc-100 overflow-x-auto no-scrollbar border-b-4 border-black shrink-0 scroll-smooth touch-pan-x"
+              >
                 {[
                   { id: 'profile', icon: User, label: t('settings_profile') },
                   { id: 'line', icon: MessageCircle, label: t('settings_line') || 'LINE 管家' },
                   { id: 'goals', icon: Target, label: t('settings_goals') },
-                  { id: 'fasting', icon: Clock, label: t('fasting_mode') },
-                  { id: 'data', icon: Database, label: t('settings_data') },
-                  { id: 'feedback', icon: MessageSquare, label: t('settings_contact') },
+                  { id: 'fasting', icon: Clock, label: t('settings_fasting') || t('fasting_mode') },
+                  { id: 'data', icon: Database, label: t('settings_backup_tab') || t('settings_data') },
+                  { id: 'feedback', icon: MessageSquare, label: t('settings_feedback') || t('settings_contact') },
                   { id: 'appinfo', icon: Info, label: t('settings_about') }
                 ].map(tab => {
                   const isActive = activeTab === tab.id;
@@ -908,15 +921,17 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                   return (
                     <button 
                       key={tab.id} 
+                      data-tab-id={tab.id}
+                      data-active={isActive ? "true" : "false"}
                       onClick={() => setActiveTab(tab.id)} 
-                      className={`flex flex-col items-center justify-center min-w-[62px] flex-1 py-2 px-1 rounded-xl border-2 transition-all relative ${
+                      className={`flex flex-col items-center justify-center min-w-[62px] min-w-fit flex-1 shrink-0 py-2 px-2.5 sm:px-3 rounded-xl border-2 transition-all relative ${
                         isActive 
                           ? (isLine ? 'bg-[#06C755] text-white border-black shadow-neo-sm font-black' : 'bg-black text-white border-black shadow-neo-sm font-black') 
-                          : 'bg-transparent text-zinc-400 border-transparent hover:text-black hover:bg-zinc-200/50'
+                          : 'bg-transparent text-zinc-500 border-transparent hover:text-black hover:bg-zinc-200/60'
                       }`}
                     >
-                      <tab.icon size={18} />
-                      <span className="text-[9px] font-black mt-1 uppercase tracking-tight whitespace-nowrap">
+                      <tab.icon size={18} className="shrink-0" />
+                      <span className="text-[10px] font-black mt-1 uppercase tracking-tight whitespace-nowrap text-center leading-none">
                         {tab.label}
                       </span>
                     </button>
