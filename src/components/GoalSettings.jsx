@@ -18,13 +18,15 @@ const getVersionHistory = (isEn) => {
   const lang = isEn ? 'en' : 'zh';
   return [
   {
-    version: '3.3.157',
+    version: '3.3.158',
     date: '2026-10-18',
     features: isEn ? [
+      '🐼 Dynamic English localization for Feedback Form & Coach bug reports',
       '🛡️ Full English Privacy Policy & Terms of Service with instant language toggle',
       '🌐 Reactive bilingual UI: Daily Goals, AI Recommendations & Version History',
       '⚡ Settings responsive layout enhancements'
     ] : [
+      '🐼 意見回饋與抓野生 Bug 表單全面支援即時雙語切換',
       '🛡️ 隱私政策與服務條款支援完整英文版及即時雙語切換',
       '🌐 全面支援即時雙語切換（每日目標設定、AI 智能推薦、版本歷史）',
       '⚡ 設定選單響應式架構優化'
@@ -266,7 +268,14 @@ const GoalSettings = ({
   const [goals, setGoals] = useState({ calories: 2000, protein: 100, water: 2500, fasting_enabled: false, fasting_start: '12:00', fasting_end: '20:00', show_carbs_fat: false, carbs: 200, fat: 60, water_reminder_interval: 0 });
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState(initialTab);
-  const [contactForm, setContactForm] = useState({ subject: t('feedback_subject'), message: '', contact: '' });
+  const [contactForm, setContactForm] = useState(() => {
+    const initIsEn = (propLang || safeGetStorage('daily_diet_lang') || getLanguage()) === 'en';
+    return {
+      subject: initIsEn ? "[Daily Diet 🐼] Coach! I captured a wild bug!" : "[Daily Diet 🐼] 報告教練！我抓到一隻野生的 Bug 了！",
+      message: '',
+      contact: ''
+    };
+  });
   const [newName, setNewName] = useState(userName || '');
   const [locationStatus, setLocationStatus] = useState('unknown');
   const [apiKey, setApiKey] = useState('');
@@ -408,6 +417,20 @@ const GoalSettings = ({
   }, []);
 
   const isEn = (propLang || activeLang || getLanguage()) === 'en';
+
+  useEffect(() => {
+    const zhDefault = "[Daily Diet 🐼] 報告教練！我抓到一隻野生的 Bug 了！";
+    const enDefault = "[Daily Diet 🐼] Coach! I captured a wild bug!";
+    setContactForm(prev => {
+      if (!prev.subject || prev.subject === zhDefault || prev.subject === enDefault) {
+        return {
+          ...prev,
+          subject: isEn ? enDefault : zhDefault
+        };
+      }
+      return prev;
+    });
+  }, [isEn]);
 
   const shopText = {
     title: isEn ? "Conscience Fuel Store" : "良心燃料商店",
@@ -2652,15 +2675,16 @@ const GoalSettings = ({
                           <Zap size={24} className="text-amber-400" />
                         </div>
                         <h4 className="font-black italic text-xl tracking-tighter uppercase leading-none">
-                          {t('v201_feedback_title')}
+                          {isEn ? 'Report to Coach! 🐼' : t('v201_feedback_title')}
                         </h4>
 
                         <div className="space-y-3">
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{t('contact_subject')}</label>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{isEn ? 'Subject' : t('contact_subject')}</label>
                             <input
                               type="text"
                               value={contactForm.subject}
+                              placeholder={isEn ? '[Daily Diet 🐼] Coach! I captured a wild bug!' : '[Daily Diet 🐼] 報告教練！我抓到一隻野生的 Bug 了！'}
                               onChange={e => setContactForm({ ...contactForm, subject: e.target.value })}
                               className="w-full bg-white border-4 border-black p-3 rounded-xl font-black italic text-sm shadow-neo-xs outline-none focus:bg-amber-100 transition-colors"
                             />
@@ -2678,13 +2702,13 @@ const GoalSettings = ({
                             />
                           </div>
                           <div className="space-y-1">
-                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{t('contact_message')}</label>
+                            <label className="text-[10px] font-black uppercase text-zinc-400 ml-1">{isEn ? 'Message' : t('contact_message')}</label>
                             <textarea
                               rows={4}
                               value={contactForm.message}
                               onChange={e => setContactForm({ ...contactForm, message: e.target.value })}
                               className="w-full bg-white border-4 border-black p-3 rounded-xl font-black italic text-sm shadow-neo-xs outline-none focus:bg-amber-100 transition-colors resize-none"
-                              placeholder="..."
+                              placeholder={isEn ? 'Describe what happened or suggestions...' : '請描述您遇到的問題或建議...'}
                             />
                           </div>
                         </div>
@@ -2756,14 +2780,14 @@ const GoalSettings = ({
                               }
 
                               if (isSuccess) {
-                                alert(t('contact_success'));
-                                setContactForm({ subject: t('feedback_subject'), message: '', contact: '' });
+                                alert(isEn ? 'Feedback Sent! Thank you 🐼' : t('contact_success'));
+                                setContactForm({ subject: isEn ? '[Daily Diet 🐼] Coach! I captured a wild bug!' : '[Daily Diet 🐼] 報告教練！我抓到一隻野生的 Bug 了！', message: '', contact: '' });
                               } else {
                                 throw new Error('Submission failed on all channels');
                               }
                             } catch (err) {
                               console.error("Feedback failed", err);
-                              alert(t('contact_error'));
+                              alert(isEn ? 'Submission failed. Please try again.' : t('contact_error'));
                             } finally {
                               setSyncStatus('idle');
                             }
@@ -2776,7 +2800,7 @@ const GoalSettings = ({
                           ) : (
                             <Check size={20} className="text-emerald-400" />
                           )}
-                          {syncStatus === 'syncing' ? t('contact_sending') : t('contact_send')}
+                          {syncStatus === 'syncing' ? (isEn ? 'Sending...' : t('contact_sending')) : (isEn ? 'Send Feedback' : t('contact_send'))}
                         </button>
 
                         {/* ☕ 低調展開支持資訊 (不主動顯示，想支持的人點開查看) */}
