@@ -91,10 +91,10 @@ export default function PandaLiveCallModal({ isOpen, onClose, todaySummary, goal
   }[activePersona] || {
     avatar: '🐼',
     mood: '😏',
-    badge: '教練',
+    badge: isEn ? 'Coach' : '教練',
     badgeColor: 'bg-zinc-100 text-black border-black',
-    intro: '喂？說吧！',
-    thinkingHint: '教練正在整理回覆中...',
+    intro: isEn ? 'Hello? Go ahead!' : '喂？說吧！',
+    thinkingHint: isEn ? 'Coach is thinking...' : '教練正在整理回覆中...',
     pitch: 1.0,
     rate: speechRate
   };
@@ -589,7 +589,7 @@ RULES:
                 {callStatus === 'calling' ? (
                   <span className="text-amber-400 animate-pulse flex items-center gap-1.5 font-sans">
                     <Radio size={13} className="animate-spin" />
-                    <span>{t('live_call_calling')} (嘟...)</span>
+                    <span>{t('live_call_calling')} {isEn ? '(Calling...)' : '(嘟...)'}</span>
                   </span>
                 ) : callStatus === 'ended' ? (
                   <span className="text-rose-400 font-sans flex items-center gap-1">
@@ -618,7 +618,7 @@ RULES:
               title={t('live_call_voice_settings')}
             >
               <Sliders size={15} className="text-accent" />
-              <span className="hidden sm:inline">聲音</span>
+              <span className="hidden sm:inline">{isEn ? 'Voice' : '聲音'}</span>
             </button>
             <button
               onClick={handleEndCall}
@@ -651,7 +651,7 @@ RULES:
               </span>
             ) : isMuted ? (
               <span className="text-xs font-black text-rose-400 flex items-center gap-1.5">
-                <span>🔇</span> 已靜音
+                <span>🔇</span> {isEn ? 'Muted' : '已靜音'}
               </span>
             ) : (
               <span className="text-xs font-black flex items-center gap-1.5 text-cyan-300">
@@ -729,7 +729,7 @@ RULES:
                 <span className="text-[10px] font-black uppercase text-amber-400 animate-pulse flex items-center gap-1">
                   <span>🐼</span> {personaConfig.badge}
                 </span>
-                <span className="text-[9px] font-mono text-zinc-500">正在輸入...</span>
+                <span className="text-[9px] font-mono text-zinc-500">{isEn ? 'Typing...' : '正在輸入...'}</span>
               </div>
               <div className="max-w-[85%] p-3 rounded-2xl border-2 border-amber-400 bg-amber-950/50 text-amber-200 rounded-tl-none flex items-center gap-2.5 shadow-neo-xs">
                 <div className="flex items-center gap-1">
@@ -854,8 +854,8 @@ RULES:
                     <Sparkles size={16} />
                   </div>
                   <div>
-                    <h4 className="font-black text-sm text-white">選擇教練聲音 (自然人聲)</h4>
-                    <p className="text-[10px] text-zinc-400 font-bold">已自動過濾機械音，優先選擇自然高音質人聲</p>
+                    <h4 className="font-black text-sm text-white">{isEn ? 'Select Coach Voice (Natural)' : '選擇教練聲音 (自然人聲)'}</h4>
+                    <p className="text-[10px] text-zinc-400 font-bold">{isEn ? 'Robotic voices filtered, natural high-quality voices prioritized' : '已自動過濾機械音，優先選擇自然高音質人聲'}</p>
                   </div>
                 </div>
                 <button
@@ -869,13 +869,13 @@ RULES:
               {/* ⚡ 語速調節 (Speech Rate) */}
               <div className="py-2 px-3 bg-zinc-900 border border-zinc-800 rounded-2xl my-2 flex items-center justify-between gap-2 shrink-0">
                 <span className="text-xs font-black text-zinc-300 flex items-center gap-1.5">
-                  <span>⏱️</span> 語速節奏
+                  <span>⏱️</span> {isEn ? 'Speech Pace' : '語速節奏'}
                 </span>
                 <div className="flex items-center gap-1.5">
                   {[
-                    { rate: 0.88, label: '0.88x 柔和' },
-                    { rate: 0.96, label: '0.96x 自然 ⭐' },
-                    { rate: 1.05, label: '1.05x 快速' }
+                    { rate: 0.88, label: isEn ? '0.88x Gentle' : '0.88x 柔和' },
+                    { rate: 0.96, label: isEn ? '0.96x Natural ⭐' : '0.96x 自然 ⭐' },
+                    { rate: 1.05, label: isEn ? '1.05x Fast' : '1.05x 快速' }
                   ].map((s) => (
                     <button
                       key={s.rate}
@@ -899,7 +899,7 @@ RULES:
               <div className="flex-1 overflow-y-auto py-2 space-y-2 custom-scrollbar">
                 {availableVoices.length === 0 ? (
                   <div className="text-center py-10 text-xs text-zinc-400 font-bold">
-                    系統尚未載入語音，請稍後重試...
+                    {isEn ? 'System has not loaded voices yet, please retry in a moment...' : '系統尚未載入語音，請稍後重試...'}
                   </div>
                 ) : (
                   availableVoices.map((item, idx) => {
@@ -924,12 +924,12 @@ RULES:
                             </span>
                             {item.isNatural && (
                               <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-emerald-400 text-black">
-                                自然人聲 ✨
+                                {isEn ? 'Natural Voice ✨' : '自然人聲 ✨'}
                               </span>
                             )}
                             {idx === 0 && (
                               <span className="text-[9px] font-black px-1.5 py-0.2 rounded bg-amber-400 text-black">
-                                最佳推薦 🏆
+                                {isEn ? 'Recommended 🏆' : '最佳推薦 🏆'}
                               </span>
                             )}
                           </div>
@@ -952,7 +952,7 @@ RULES:
                             }`}
                           >
                             <Play size={11} />
-                            <span>{isPreviewing ? '播放中' : '試聽'}</span>
+                            <span>{isPreviewing ? (isEn ? 'Playing' : '播放中') : (isEn ? 'Preview' : '試聽')}</span>
                           </button>
 
                           {isSelected && (
@@ -972,7 +972,7 @@ RULES:
                   onClick={() => setShowVoiceSheet(false)}
                   className="w-full py-2.5 bg-accent text-black font-black text-xs rounded-xl border-2 border-black shadow-neo-xs hover:bg-yellow-300 active:scale-95 transition-all cursor-pointer"
                 >
-                  確認完成
+                  {isEn ? 'Done' : '確認完成'}
                 </button>
               </div>
             </motion.div>

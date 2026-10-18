@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Sparkles, X, ShieldCheck } from 'lucide-react';
+import { getLanguage } from '../lib/translations';
 import { 
   getFounderData, 
   isFounderGlowEnabled, 
@@ -10,6 +11,7 @@ import {
 } from '../lib/founderService';
 
 export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
+  const isEn = getLanguage() === 'en';
   const [founderData, setFounderData] = useState(() => getFounderData());
   const [glowEnabled, setGlowEnabled] = useState(true);
 
@@ -69,14 +71,72 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
     toggleFounderGlow(next);
   };
 
-  const holderName = founderData?.name || userName || '尊貴的支持者';
+  const holderName = founderData?.name || userName || (isEn ? 'Valued Supporter' : '尊貴的支持者');
   const founderSeq = founderData?.number || 'NO. 168';
-  const addedDate = founderData?.addedAt || founderData?.updatedAt || '創始草創期';
+  const addedDate = founderData?.addedAt || founderData?.updatedAt || (isEn ? 'Genesis Era' : '創始草創期');
 
   // 寄語文字：若後台有指定公開寄語則優先採用，否則顯示真摯感人的官方致謝詞
+  const defaultGreeting = isEn
+    ? 'Thank you for giving us your warmest support and strength in the early days of Daily Diet. Your kindness is our eternal foundation! 🎋✨'
+    : '感謝您在 Daily Diet 萌芽之初給予最溫暖的肯定與力量，這份心意是 Daily Diet 持續進化的永恆基石！🎋✨';
+
   const thankYouGreeting = (founderData?.greeting && founderData.greeting.trim())
     ? founderData.greeting.trim()
-    : '感謝您在 Daily Diet 萌芽之初給予最溫暖的肯定與力量，這份心意是 Daily Diet 持續進化的永恆基石！🎋✨';
+    : defaultGreeting;
+
+  const perks = isEn ? [
+    {
+      icon: '👑',
+      title: 'Pure Gold Crown & Exclusive Gold Title',
+      desc: 'Coach avatar permanently dons a pure gold crown with a golden VIP badge next to your name.'
+    },
+    {
+      icon: '💬',
+      title: 'Special Dialogue & Easter Eggs',
+      desc: 'Tapping Panda Coach triggers founder-exclusive heartfelt gratitude, witty banter, and greetings.'
+    },
+    {
+      icon: '🌟',
+      title: 'App-wide Golden Aura Glow',
+      desc: 'Customize card borders with a luxurious gold ambient glow highlighting your founder status.'
+    },
+    {
+      icon: '🚀',
+      title: 'Lifetime Free Early Access to New Features',
+      desc: 'Permanent first-priority testing access whenever new modules, advanced analytics, or tools release.'
+    },
+    {
+      icon: '🛡️',
+      title: 'Pure Ad-Free Healthy Lifestyle Commitment',
+      desc: 'Thanks to your support, Daily Diet promises an untracked, clean, and distraction-free experience forever.'
+    }
+  ] : [
+    {
+      icon: '👑',
+      title: '熊貓教練純金皇冠 & 專屬金牌稱號',
+      desc: '教練頭像已戴上永久純金皇冠，名稱旁常駐專屬金色尊榮徽章。'
+    },
+    {
+      icon: '💬',
+      title: '專屬親暱對話與感謝彩蛋',
+      desc: '點擊熊貓教練可觸發創始支持者專屬的客製感謝、趣味吐槽與問候。'
+    },
+    {
+      icon: '🌟',
+      title: '全站金色流光尊榮光環',
+      desc: '全站卡片飾條可自訂金色奢華流光，彰顯獨一無二的創始身分。'
+    },
+    {
+      icon: '🚀',
+      title: '未來新功能永久免費優先內測',
+      desc: '任何新模組、進階分析或新功能上線，永久享有優先內測體驗權。'
+    },
+    {
+      icon: '🛡️',
+      title: '永久純淨無廣告健康承諾',
+      desc: '感謝您拉我們一把，Daily Diet 永遠為您提供純淨無干擾的紀錄體驗。'
+    }
+  ];
 
   const modalNode = (
     <AnimatePresence>
@@ -103,14 +163,14 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
               <div>
                 <div className="flex items-center gap-1.5">
                   <h3 className="font-black text-base sm:text-lg text-black italic tracking-tight">
-                    創始支持者尊榮金卡
+                    {isEn ? 'Founder Supporter Gold Pass' : '創始支持者尊榮金卡'}
                   </h3>
                   <span className="bg-black text-amber-300 text-[8px] font-black px-1.5 py-0.5 rounded font-mono uppercase tracking-wider">
                     LIFETIME VIP
                   </span>
                 </div>
                 <p className="text-[10px] font-bold text-amber-950 mt-0.5">
-                  Daily Diet 早期種子支持者專屬榮譽通行證
+                  {isEn ? 'Exclusive Honor Pass for Early Seed Supporters' : 'Daily Diet 早期種子支持者專屬榮譽通行證'}
                 </p>
               </div>
             </div>
@@ -156,7 +216,7 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
                 <div className="flex items-center gap-1 mt-1">
                   <span className="inline-block w-1.5 h-1.5 rounded-full bg-black/80" />
                   <span className="text-[10px] font-bold text-amber-950">
-                    早期種子支持者 · 永久榮譽會員
+                    {isEn ? 'Early Seed Supporter · Lifetime VIP' : '早期種子支持者 · 永久榮譽會員'}
                   </span>
                 </div>
               </div>
@@ -185,13 +245,13 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
             <div className="p-3.5 bg-amber-50/80 border-2 border-amber-300 rounded-2xl relative shadow-xs">
               <div className="flex items-center gap-1.5 text-amber-950 font-black text-[11px] mb-1">
                 <span>💌</span>
-                <span>創作者致謝寄語</span>
+                <span>{isEn ? "Creator's Note of Gratitude" : '創作者致謝寄語'}</span>
               </div>
               <p className="text-[11px] text-amber-900 leading-relaxed font-bold italic pl-1 border-l-2 border-amber-400">
                 「{thankYouGreeting}」
               </p>
               <div className="text-right text-[9px] font-black text-amber-800/80 mt-1 font-mono">
-                — Daily Diet 團隊 敬上 🎋
+                {isEn ? '— Daily Diet Team 🎋' : '— Daily Diet 團隊 敬上 🎋'}
               </div>
             </div>
 
@@ -199,37 +259,11 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
             <div className="space-y-2">
               <h5 className="font-black text-xs text-zinc-900 flex items-center gap-1.5">
                 <Sparkles size={14} className="text-amber-500" />
-                <span>您的專屬解鎖特權</span>
+                <span>{isEn ? 'Your Unlocked Exclusive Perks' : '您的專屬解鎖特權'}</span>
               </h5>
 
               <div className="space-y-1.5">
-                {[
-                  {
-                    icon: '👑',
-                    title: '熊貓教練純金皇冠 & 專屬金牌稱號',
-                    desc: '教練頭像已戴上永久純金皇冠，名稱旁常駐專屬金色尊榮徽章。'
-                  },
-                  {
-                    icon: '💬',
-                    title: '專屬親暱對話與感謝彩蛋',
-                    desc: '點擊熊貓教練可觸發創始支持者專屬的客製感謝、趣味吐槽與問候。'
-                  },
-                  {
-                    icon: '🌟',
-                    title: '全站金色流光尊榮光環',
-                    desc: '全站卡片飾條可自訂金色奢華流光，彰顯獨一無二的創始身分。'
-                  },
-                  {
-                    icon: '🚀',
-                    title: '未來新功能永久免費優先內測',
-                    desc: '任何新模組、進階分析或新功能上線，永久享有優先內測體驗權。'
-                  },
-                  {
-                    icon: '🛡️',
-                    title: '永久純淨無廣告健康承諾',
-                    desc: '感謝您拉我們一把，Daily Diet 永遠為您提供純淨無干擾的紀錄體驗。'
-                  }
-                ].map((perk, i) => (
+                {perks.map((perk, i) => (
                   <div 
                     key={i} 
                     className="p-2.5 bg-zinc-50 border-2 border-black/10 rounded-2xl flex items-start gap-2.5 transition-all hover:border-black/30"
@@ -253,8 +287,8 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
               <div className="flex items-center gap-2">
                 <span className="text-base">🌟</span>
                 <div>
-                  <div className="font-black text-xs text-amber-950">全站金色流光尊榮光環</div>
-                  <div className="text-[9px] font-bold text-amber-700">為卡片邊框套用金色奢華微光飾條</div>
+                  <div className="font-black text-xs text-amber-950">{isEn ? 'Golden Aura Glow' : '全站金色流光尊榮光環'}</div>
+                  <div className="text-[9px] font-bold text-amber-700">{isEn ? 'Apply luxury gold accent glow to card borders' : '為卡片邊框套用金色奢華微光飾條'}</div>
                 </div>
               </div>
               <button
@@ -283,7 +317,7 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
               onClick={onClose}
               className="px-5 py-2 bg-black text-white hover:bg-zinc-800 border-2 border-black rounded-xl text-xs font-black shadow-neo-xs active:scale-95 transition-all cursor-pointer"
             >
-              太棒了 🐼✨
+              {isEn ? 'Awesome 🐼✨' : '太棒了 🐼✨'}
             </button>
           </div>
         </motion.div>
@@ -297,3 +331,4 @@ export default function FounderPassModal({ isOpen, onClose, userName = '' }) {
   }
   return modalNode;
 }
+

@@ -296,7 +296,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
         await db.favorites.bulkAdd(newFavorites.map(({ id, ...item }) => item));
       });
       await loadFavorites();
-      setFavToast(t('order_updated') || '常用順序已更新！');
+      setFavToast(t('order_updated') || (isEn ? 'Favorites order updated!' : '常用順序已更新！'));
       setTimeout(() => setFavToast(null), 1500);
 
       const currentGist = getCurrentGistId();
@@ -1001,10 +1001,10 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 type="button"
                 onClick={() => window.dispatchEvent(new CustomEvent('open-founder-pass'))}
                 className="bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-400 text-black px-1.5 py-1 rounded-xl border border-black text-[9px] font-black shadow-neo-xs flex items-center gap-0.5 shrink-0 cursor-pointer active:scale-95 transition-transform"
-                title="創始支持者 AI 極速通道已開通"
+                title={isEn ? "Founder Fast-Track AI Lane Active" : "創始支持者 AI 極速通道已開通"}
               >
                 <span>⚡</span>
-                <span className="hidden sm:inline">創始通道</span>
+                <span className="hidden sm:inline">{isEn ? 'Fast Track' : '創始通道'}</span>
               </button>
             )}
             {[{ id: 'ai', label: t('ai_mode') }, { id: 'manual', label: t('manual_mode') }, { id: 'favorites', label: t('favorites_mode') }, { id: 'search', label: t('search_mode') }].map(tab => (
@@ -1028,7 +1028,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 <div className="absolute inset-0 flex items-center justify-center"><span className="text-white font-black font-mono text-xs">{loadTime}s</span></div>
               </div>
               <span className="text-accent text-[9px] font-black uppercase tracking-widest leading-none mt-1">
-                {isFounder ? '⚡ 創始支持者 AI 極速通道分析中' : t('analyzing')}
+                {isFounder ? (isEn ? '⚡ Founder AI Fast Track Analyzing...' : '⚡ 創始支持者 AI 極速通道分析中') : t('analyzing')}
               </span>
             </div>
 
@@ -1112,7 +1112,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   onClick={handleTextOnlyAnalysis}
                 >
                   <Sparkles size={18} className="text-accent animate-pulse" />
-                  AI 快速計算 ⚡
+                  {isEn ? 'Quick Calculate ⚡' : 'AI 快速計算 ⚡'}
                 </NeoButton>
               </motion.div>
             )}
@@ -1133,7 +1133,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                   <div className="w-16 h-16 bg-white border-4 border-black rounded-2xl flex items-center justify-center shadow-neo-sm mb-3">
                     <Sparkles size={32} className="text-amber-500 animate-pulse" />
                   </div>
-                  <div className="font-black italic text-lg uppercase tracking-tight">AI 快速免圖辨識</div>
+                  <div className="font-black italic text-lg uppercase tracking-tight">{isEn ? 'AI Text Estimator' : 'AI 快速免圖辨識'}</div>
                   <div className="text-xs font-bold text-zinc-500 mt-1 max-w-[200px]">"{userInstructions}"</div>
                 </>
               )}
@@ -1147,10 +1147,10 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     <AlertCircle size={24} className="text-white" strokeWidth={3} />
                   </div>
                   <h4 className="font-black text-sm uppercase tracking-tight leading-none mb-1 text-black">
-                    {t('ai_fail_title') || "辨識失敗"}
+                    {t('ai_fail_title') || (isEn ? "Analysis Failed" : "辨識失敗")}
                   </h4>
                   <p className="text-[11px] font-bold text-zinc-500 mb-4 max-w-[250px] mx-auto leading-tight">
-                    {aiError || t('ai_error') || "分析中斷或伺服器無回應，請點擊重試。"}
+                    {aiError || t('ai_error') || (isEn ? "Analysis interrupted or server unavailable. Please try again." : "分析中斷或伺服器無回應，請點擊重試。")}
                   </p>
                   <div className="flex gap-3 justify-center">
                     <NeoButton
@@ -1158,13 +1158,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       className="px-5 py-2.5 rounded-xl font-black italic text-xs flex items-center gap-1.5 active:scale-95 transition-all shadow-neo-sm"
                       onClick={() => handleAnalysis(preview, null)}
                     >
-                      <RefreshCw size={14} /> {t('retry') || "重試"}
+                      <RefreshCw size={14} /> {t('retry') || (isEn ? "Retry" : "重試")}
                     </NeoButton>
                     <button
                       onClick={() => { setPreview(null); setAiError(null); }}
                       className="px-4 py-2.5 rounded-xl font-black italic text-xs border-4 border-black bg-white text-black shadow-neo-sm active:scale-95 transition-all"
                     >
-                      {t('cancel') || "取消"}
+                      {t('cancel') || (isEn ? "Cancel" : "取消")}
                     </button>
                   </div>
                 </div>
@@ -1210,12 +1210,12 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         ...prev,
                         carbs: newCarbs,
                         calories: newCals,
-                        calculation_note: (prev.calculation_note ? prev.calculation_note + '；' : '') + `🍚 飯/碳水已減半 (碳水 -${diffCarbs}g, 熱量 -${savedCals} kcal)`
+                        calculation_note: (prev.calculation_note ? prev.calculation_note + (isEn ? '; ' : '；') : '') + (isEn ? `🍚 Carbs halved (Carbs -${diffCarbs}g, Cals -${savedCals} kcal)` : `🍚 飯/碳水已減半 (碳水 -${diffCarbs}g, 熱量 -${savedCals} kcal)`)
                       }));
                     }}
                     className="px-3 py-1.5 rounded-xl font-black text-xs border-2 border-black bg-amber-100 text-amber-950 shadow-neo-sm hover:bg-amber-200 active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    🍚 飯/碳水減半 (-50%)
+                    🍚 {isEn ? 'Halve Carbs (-50%)' : '飯/碳水減半 (-50%)'}
                   </button>
 
                   <button
@@ -1233,7 +1233,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                     }}
                     className="px-3 py-1.5 rounded-xl font-black text-xs border-2 border-black bg-blue-50 text-blue-900 shadow-neo-sm hover:bg-blue-100 active:scale-95 transition-all flex items-center gap-1.5 whitespace-nowrap shrink-0"
                   >
-                    🥩 蛋白質加倍 (+50%)
+                    🥩 {isEn ? 'Double Protein (+50%)' : '蛋白質加倍 (+50%)'}
                   </button>
 
                   <button
@@ -1244,7 +1244,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       showMacroEditor ? "bg-black text-white" : "bg-white text-black hover:bg-zinc-100"
                     )}
                   >
-                    <Sliders size={13} /> {showMacroEditor ? "收起微調" : "✏️ 自訂克數 (g)"}
+                    <Sliders size={13} /> {showMacroEditor ? (isEn ? "Collapse" : "收起微調") : (isEn ? "✏️ Custom (g)" : "✏️ 自訂克數 (g)")}
                   </button>
                 </div>
 
@@ -1260,7 +1260,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-1.5 font-black text-xs text-black">
                           <span>⚖️</span>
-                          <span>編輯計算後的營養素克數 (g)</span>
+                          <span>{isEn ? 'Edit nutrient grams directly (g)' : '編輯計算後的營養素克數 (g)'}</span>
                         </div>
                         <button
                           type="button"
@@ -1273,13 +1273,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                           }}
                           className="text-[10px] font-black bg-white border-2 border-black px-2.5 py-1 rounded-xl shadow-neo-sm hover:bg-amber-100 active:scale-95 transition-all text-zinc-800"
                         >
-                          ✨ 自動重算熱量 (4P+4C+9F)
+                          ✨ {isEn ? 'Auto Recalc Cals (4P+4C+9F)' : '自動重算熱量 (4P+4C+9F)'}
                         </button>
                       </div>
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                         <div className="bg-white border-2 border-black p-2.5 rounded-xl">
-                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🍞 碳水 (g)</label>
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🍞 {t('carbs')} (g)</label>
                           <input
                             type="number"
                             step="1"
@@ -1294,7 +1294,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         </div>
 
                         <div className="bg-white border-2 border-black p-2.5 rounded-xl">
-                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🥩 蛋白質 (g)</label>
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🥩 {t('protein')} (g)</label>
                           <input
                             type="number"
                             step="1"
@@ -1309,7 +1309,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         </div>
 
                         <div className="bg-white border-2 border-black p-2.5 rounded-xl">
-                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🥑 脂肪 (g)</label>
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🥑 {t('fat')} (g)</label>
                           <input
                             type="number"
                             step="1"
@@ -1324,7 +1324,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         </div>
 
                         <div className="bg-white border-2 border-black p-2.5 rounded-xl">
-                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🔥 熱量 (kcal)</label>
+                          <label className="text-[9px] font-black uppercase text-zinc-500 block mb-1">🔥 {t('calories')} (kcal)</label>
                           <input
                             type="number"
                             step="5"
@@ -1339,7 +1339,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                         </div>
                       </div>
                       <p className="text-[9px] font-bold text-zinc-400">
-                        💡 提示：微調克數後直接點擊最下方「儲存這餐」即可按您修改後的數值記錄！
+                        {isEn ? '💡 Tip: After adjusting macros, simply tap "Save This Meal" below to record your custom values!' : '💡 提示：微調克數後直接點擊最下方「儲存這餐」即可按您修改後的數值記錄！'}
                       </p>
                     </motion.div>
                   )}
@@ -1442,7 +1442,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                           <div className="flex items-center gap-1.5 bg-zinc-50 px-3 py-1.5 rounded-xl border border-black/5">
                             <MapPin size={14} className="text-zinc-400" />
                             <span className="text-[10px] font-bold text-zinc-600">
-                              {locationLoading ? (t('locating') || '定位中...') : result.location}
+                              {locationLoading ? (t('locating') || (isEn ? 'Locating...' : '定位中...')) : result.location}
                             </span>
                             {!locationLoading && isValidLocation(result.location) && (
                               <button onClick={fetchCurrentLocation} className="text-zinc-400 hover:text-black ml-1">
@@ -1457,7 +1457,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                             className="flex items-center gap-1.5 bg-zinc-50 hover:bg-zinc-100 px-2.5 py-1.5 rounded-xl border border-black/5 text-[10px] font-bold text-zinc-400 hover:text-zinc-700 transition-colors"
                           >
                             <MapPin size={13} className="text-zinc-400" />
-                            <span>{t('get_current_location') || '加入地點'}</span>
+                            <span>{t('get_current_location') || (isEn ? 'Add Location' : '加入地點')}</span>
                           </button>
                         )}
                         <div className="flex bg-zinc-50 p-1 rounded-xl border border-black/5">
@@ -1995,7 +1995,7 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                 </h2>
 
                 <div style={{ width: '100%', maxWidth: '100%', boxSizing: 'border-box', fontSize: '16px' }} className="bg-zinc-100 border-4 border-black p-4 rounded-2xl mb-8 italic font-bold text-sm">
-                  "現在是斷食時間喔！你確定要對這份美食投降嗎？熊貓會很失望的...🐼"
+                  {isEn ? '“You are currently in a fasting window! Are you sure you want to surrender to this temptation? Coach will be disappointed... 🐼”' : '“現在是斷食時間喔！你確定要對這份美食投降嗎？熊貓會很失望的...🐼”'}
                 </div>
 
                 <div className="flex flex-col gap-3">
@@ -2024,13 +2024,13 @@ export default function FoodDetective({ onLogAdded, summary, goals, recentLogs =
                       setManualSaving(false);
                     }}
                   >
-                    是的，我投降了 🏳️
+                    {isEn ? 'Yes, I surrender 🏳️' : '是的，我投降了 🏳️'}
                   </NeoButton>
                   <button
                     onClick={() => setShowFastingConfirm(false)}
                     className="w-full py-3 font-black text-sm text-zinc-400 hover:text-black transition-colors"
                   >
-                    點錯了，我還可以堅持！💪
+                    {isEn ? 'Miss-click, I can keep going! 💪' : '點錯了，我還可以堅持！💪'}
                   </button>
                 </div>
               </motion.div>

@@ -136,8 +136,9 @@ function getAppQueryParams() {
 }
 
 const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
+  const isEn = getLanguage() === 'en';
   const [formData, setFormData] = useState({
-    dish_name: initialData.dish_name || '餐點',
+    dish_name: initialData.dish_name || (isEn ? 'Meal' : '餐點'),
     calories: initialData.calories || 0,
     protein: initialData.protein || 0,
     carbs: initialData.carbs || 0,
@@ -208,9 +209,9 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
                 🍱
               </div>
               <div>
-                <h3 className="font-black italic text-lg leading-none">LINE 辨識餐點微調</h3>
+                <h3 className="font-black italic text-lg leading-none">{isEn ? 'Adjust LINE Meal' : 'LINE 辨識餐點微調'}</h3>
                 <p className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mt-1">
-                  請確認並調整營養數值後儲存
+                  {isEn ? 'Please review & adjust macros before saving' : '請確認並調整營養數值後儲存'}
                 </p>
               </div>
             </div>
@@ -232,7 +233,7 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
                     disabled={isRecalculating || !formData.dish_name.trim()}
                     onClick={handleRecalculateMeal}
                     className="text-[10px] font-black bg-white border-2 border-black px-2 py-0.5 rounded-lg shadow-neo-sm hover:bg-yellow-100 flex items-center gap-1 active:scale-95 disabled:opacity-50"
-                    title="依修改後的品名由 AI 重新估算熱量與營養"
+                    title={isEn ? "AI recalculates nutrition based on edited name" : "依修改後的品名由 AI 重新估算熱量與營養"}
                   >
                     {isRecalculating ? <Loader2 size={11} className="animate-spin text-black" /> : <Sparkles size={11} className="text-amber-500" />}
                     <span>{t('ai_recalculate_btn')}</span>
@@ -273,7 +274,7 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
                 </div>
                 <div className="bg-cyan-50/50 border-4 border-black p-2.5 rounded-2xl">
                   <label className="text-[10px] font-black uppercase tracking-widest text-cyan-600 block mb-1">
-                    💧 水分 (ml)
+                    💧 {isEn ? 'Water' : '水分'} (ml)
                   </label>
                   <input 
                     type="number" 
@@ -315,7 +316,7 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
 
               <div>
                 <label className="text-[10px] font-black uppercase tracking-widest text-zinc-400 block mb-1">
-                  🕒 用餐時間
+                  🕒 {isEn ? 'Meal Time' : '用餐時間'}
                 </label>
                 <input 
                   type="datetime-local" 
@@ -329,7 +330,7 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
                 <div className="bg-accent border-4 border-black p-4 rounded-2xl relative overflow-hidden">
                   <div className="flex items-center gap-2 mb-1">
                     <Zap size={14} className="text-black" />
-                    <span className="text-[10px] font-black uppercase tracking-widest text-black/70">🐼 熊貓評語</span>
+                    <span className="text-[10px] font-black uppercase tracking-widest text-black/70">🐼 {isEn ? 'Panda Coach Comment' : '熊貓評語'}</span>
                   </div>
                   <p className="font-bold text-xs text-black/90 leading-relaxed">
                     {formData.comment}
@@ -353,7 +354,7 @@ const IncomingMealModal = ({ initialData, goals, onSave, onClose }) => {
                 variant="black" 
                 className="flex-1 h-12 text-sm font-black italic"
               >
-                💾 儲存餐點
+                💾 {isEn ? 'Save Meal' : '儲存餐點'}
               </NeoButton>
             </div>
           </form>
@@ -562,7 +563,7 @@ const LogItem = ({ log, goals, isRecent, editingId, editValues, setEditValues, c
               disabled={isRecalculating || !editValues.dish_name.trim()}
               onClick={handleRecalculateLog}
               className="text-[10px] font-black bg-white border-2 border-black px-2 py-0.5 rounded-lg shadow-neo-sm hover:bg-yellow-100 flex items-center gap-1 active:scale-95 disabled:opacity-50"
-              title="依修改後的品名由 AI 重新估算熱量與營養"
+              title={getLanguage() === 'en' ? "AI recalculates nutrition based on edited name" : "依修改後的品名由 AI 重新估算熱量與營養"}
             >
               {isRecalculating ? <Loader2 size={11} className="animate-spin text-black" /> : <Sparkles size={11} className="text-amber-500" />}
               <span>{t('ai_recalculate_btn')}</span>
@@ -1692,7 +1693,7 @@ function App() {
       }
     } catch (err) {
       console.error("Failed to save incoming meal:", err);
-      alert("儲存失敗: " + err.message);
+      alert((currentLang === 'en' ? 'Save failed: ' : '儲存失敗: ') + err.message);
     }
   };
 
@@ -2184,7 +2185,7 @@ function App() {
 
   if (currentView === 'logs') {
     return (
-      <Suspense fallback={<div className="min-h-screen min-h-[100dvh] bg-[#FFFDF5] flex items-center justify-center font-black">🐼 載入監控儀表板中...</div>}>
+      <Suspense fallback={<div className="min-h-screen min-h-[100dvh] bg-[#FFFDF5] flex items-center justify-center font-black">{currentLang === 'en' ? '🐼 Loading monitor dashboard...' : '🐼 載入監控儀表板中...'}</div>}>
         <LogMonitorDashboard 
           lang={currentLang} 
           onBack={() => {
@@ -2287,7 +2288,7 @@ function App() {
           <div 
             onClick={() => setShowFounderPassModal(true)}
             className="h-1 sm:h-1.5 w-full bg-gradient-to-r from-amber-400 via-yellow-200 to-amber-500 shadow-[0_0_10px_rgba(251,191,36,0.8)] cursor-pointer animate-pulse" 
-            title="創始支持者尊榮流光光環（點擊檢視專屬證書）"
+            title={currentLang === 'en' ? "Founder Golden Aura (Click to view certificate)" : "創始支持者尊榮流光光環（點擊檢視專屬證書）"}
           />
         )}
 
@@ -2370,7 +2371,7 @@ function App() {
                       type="button"
                       onClick={() => setShowFounderPassModal(true)}
                       className="bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 text-black px-1.5 py-0.5 rounded-full border border-black shadow-[1px_1px_0px_0px_rgba(0,0,0,1)] text-[8.5px] sm:text-[9px] font-black tracking-tight shrink-0 inline-flex items-center gap-0.5 hover:scale-105 active:scale-95 transition-transform cursor-pointer leading-none"
-                      title="創始支持者尊榮身份（點擊檢視特權通行證）"
+                      title={currentLang === 'en' ? "Founder Supporter VIP Status (Click to view pass)" : "創始支持者尊榮身份（點擊檢視特權通行證）"}
                     >
                       <span>🎖️</span>
                       <span>{currentLang === 'en' ? 'Founder' : '創始者'}</span>
@@ -2398,13 +2399,15 @@ function App() {
                   new Date().getDay() === 0 ? "bg-accent text-black animate-pulse" : "bg-black text-white hover:bg-zinc-800"
                 )}
                 onClick={() => setShowWeeklyReport(true)}
-                title="週結算報告"
+                title={getLanguage() === 'en' ? "Weekly Report" : "週結算報告"}
               >
                 <BarChart2 className={`w-3.5 h-3.5 ${new Date().getDay() === 0 ? 'text-black font-black' : 'text-white'}`} />
                 {new Date().getDay() === 0 && (
                   <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5 sm:h-3 sm:w-3">
                     <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-accent opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-accent border border-black flex items-center justify-center text-[5.5px] sm:text-[6px] font-black text-black">週</span>
+                    <span className="relative inline-flex rounded-full h-2.5 w-2.5 sm:h-3 sm:w-3 bg-accent border border-black flex items-center justify-center text-[5.5px] sm:text-[6px] font-black text-black">
+                      {getLanguage() === 'en' ? 'W' : '週'}
+                    </span>
                   </span>
                 )}
               </button>

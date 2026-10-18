@@ -983,9 +983,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           </div>
                           <div>
                             <div className="flex items-center gap-1.5 flex-wrap">
-                              <h4 className="font-black italic text-sm text-black">原來還有 LINE 飲食管家？！</h4>
+                              <h4 className="font-black italic text-sm text-black">
+                                {isEn ? 'Did you know there’s a LINE Bot?!' : '原來還有 LINE 飲食管家？！'}
+                              </h4>
                               <span className="text-[9px] font-black bg-[#FFE600] text-black px-2 py-0.5 rounded-full border border-black shadow-neo-xs -rotate-1">
-                                隨身拍照記餐
+                                {isEn ? 'Snap & Log' : '隨身拍照記餐'}
                               </span>
                             </div>
                             <span className="text-[10px] font-mono font-bold text-zinc-500 mt-0.5 block">
@@ -998,7 +1000,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <div className="p-3 bg-yellow-50/80 border-2 border-black rounded-xl text-xs font-bold text-amber-950 flex items-start gap-2">
                         <span className="text-xl shrink-0 -mt-0.5">🐼</span>
                         <p className="leading-relaxed">
-                          出門聚餐懶得開網頁？在 LINE 拍張食物照或傳送語音，Gemini AI 就會幫你估算熱量，並與本網頁 100% 雙向即時同步！
+                          {isEn 
+                            ? "Too busy to open the browser? Snap food photos or send a voice note on LINE! Gemini AI estimates calories and macros with 100% two-way real-time sync!"
+                            : "出門聚餐懶得開網頁？在 LINE 拍張食物照或傳送語音，Gemini AI 就會幫你估算熱量，並與本網頁 100% 雙向即時同步！"}
                         </p>
                       </div>
 
@@ -1008,7 +1012,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           onClick={() => setActiveTab('line')}
                           className="flex-1 bg-black text-white py-2.5 px-3 rounded-xl border-2 border-black font-black text-xs shadow-neo-xs hover:bg-zinc-800 active:scale-95 transition-all text-center flex items-center justify-center gap-1.5"
                         >
-                          <span>📖 查看 LINE 用法專頁</span>
+                          <span>{isEn ? '📖 View LINE Guide' : '📖 查看 LINE 用法專頁'}</span>
                           <ChevronRight size={14} />
                         </button>
                         <a
@@ -1018,7 +1022,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           className="bg-[#06C755] text-white py-2.5 px-4 rounded-xl border-2 border-black font-black text-xs shadow-neo-xs hover:bg-[#05b34c] active:scale-95 transition-all text-center flex items-center justify-center gap-1 shrink-0"
                         >
                           <MessageCircle size={14} />
-                          <span>加好友</span>
+                          <span>{isEn ? 'Add Friend' : '加好友'}</span>
                         </a>
                       </div>
                     </div>
@@ -1029,7 +1033,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="flex items-center gap-2">
                           <span className="text-xl">🎭</span>
                           <div>
-                            <h4 className="font-black italic text-sm text-black">熊貓教練語氣與性格切換</h4>
+                            <h4 className="font-black italic text-sm text-black">
+                              {isEn ? 'Coach Persona & Tone' : '熊貓教練語氣與性格切換'}
+                            </h4>
                             <span className="text-[8px] font-black tracking-widest text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-0.5 rounded-full inline-block mt-0.5 uppercase">
                               COACH PERSONA
                             </span>
@@ -1037,15 +1043,15 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         </div>
 
                         <p className="text-[10px] text-zinc-600 font-bold leading-relaxed">
-                          可直接點選下方頭像切換教練在聊天室與分析時的語氣與性格：
+                          {isEn ? 'Tap an avatar to switch the coach’s personality and tone in chat & analysis:' : '可直接點選下方頭像切換教練在聊天室與分析時的語氣與性格：'}
                         </p>
 
                         {/* Personas Grid */}
                         <div className="grid grid-cols-3 gap-2">
                           {[
-                            { id: 'tsundere', emoji: '🐼😤', label: '傲嬌教練', desc: '口嫌體正直、毒舌但關心你' },
-                            { id: 'gentle', emoji: '🐼🥰', label: '治癒天使', desc: '溫柔鼓勵、滿滿正能量' },
-                            { id: 'hardcore', emoji: '🐼🔥', label: '魔鬼士官長', desc: '熱血嚴格、斯巴達式紀律' }
+                            { id: 'tsundere', emoji: '🐼😤', label: isEn ? 'Tsundere' : '傲嬌教練', desc: isEn ? 'Sharp-tongued & sarcastic, but deeply caring' : '口嫌體正直、毒舌但關心你' },
+                            { id: 'gentle', emoji: '🐼🥰', label: isEn ? 'Healing Angel' : '治癒天使', desc: isEn ? 'Warm, gentle encouragement & positive vibes' : '溫柔鼓勵、滿滿正能量' },
+                            { id: 'hardcore', emoji: '🐼🔥', label: isEn ? 'Drill Sergeant' : '魔鬼士官長', desc: isEn ? 'Hardcore, fiery Spartan gym discipline' : '熱血嚴格、斯巴達式紀律' }
                           ].map((persona) => {
                             const isActive = activePersona === persona.id;
                             return (
@@ -1057,7 +1063,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   setActivePersona(persona.id);
                                   syncPersonaToCloud(persona.id);
                                   window.dispatchEvent(new CustomEvent('panda-persona-updated'));
-                                  alert(`🎉 已成功切換為【${persona.label}】！快去跟教練對話看看吧 🐼✨`);
+                                  alert(isEn 
+                                    ? `🎉 Successfully switched to [${persona.label}]! Go chat with Coach Panda now 🐼✨` 
+                                    : `🎉 已成功切換為【${persona.label}】！快去跟教練對話看看吧 🐼✨`);
                                 }}
                                 className={`relative p-3 rounded-2xl border-2 border-black flex flex-col items-center justify-between text-center transition-all ${
                                   isActive
@@ -1085,10 +1093,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <div className="space-y-3 border-4 border-black p-4 rounded-[2rem] bg-accent/10 shadow-neo-sm">
                       <div className="flex items-center gap-2">
                         <span className="text-xl">💬</span>
-                        <h4 className="font-black italic text-sm">LINE 官方帳號串接</h4>
+                        <h4 className="font-black italic text-sm">{isEn ? 'LINE Bot Integration' : 'LINE 官方帳號串接'}</h4>
                       </div>
                       <p className="text-[10px] font-bold text-zinc-500 leading-tight">
-                        已支援 LINE LIFF 官方帳號無縫整合，在 LINE 聊天室中傳照片或打字即可即時雙向記錄！
+                        {isEn 
+                          ? 'Seamless LINE LIFF integration supported. Snap food photos or send text in LINE chat for instant two-way logging!' 
+                          : '已支援 LINE LIFF 官方帳號無縫整合，在 LINE 聊天室中傳照片或打字即可即時雙向記錄！'}
                       </p>
 
                       <div className="space-y-2 mt-2 pt-2 border-t-2 border-dashed border-black/10">
@@ -1096,19 +1106,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="flex flex-col gap-1.5 p-2 bg-white rounded-xl border-2 border-black">
                           <div className="flex items-center justify-between">
                             <span className="font-black text-xs flex items-center gap-1.5">
-                              💬 LINE 連動狀態
+                              💬 {isEn ? 'LINE Status' : 'LINE 連動狀態'}
                             </span>
                             {liffService.isInClient() ? (
                               <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
-                                LINE 內建開啟 🟢
+                                {isEn ? 'Inside LINE App 🟢' : 'LINE 內建開啟 🟢'}
                               </span>
                             ) : lineProfile ? (
                               <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
-                                LINE 已連動 🟢
+                                {isEn ? 'LINE Linked 🟢' : 'LINE 已連動 🟢'}
                               </span>
                             ) : (
                               <span className="bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full text-[8px] font-black uppercase">
-                                免登入即用 🟢 (PWA 模式)
+                                {isEn ? 'No-Login Mode 🟢 (PWA)' : '免登入即用 🟢 (PWA 模式)'}
                               </span>
                             )}
                           </div>
@@ -1678,16 +1688,24 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                       <div className="space-y-2.5 text-xs">
                         <div className="p-3 bg-zinc-50 border-2 border-black/20 rounded-xl space-y-1">
-                          <strong className="text-black font-black block">Q: 在 LINE 記餐，這個網頁會同步更新嗎？</strong>
+                          <strong className="text-black font-black block">
+                            {isEn ? 'Q: Do meals logged in LINE sync with this web app?' : 'Q: 在 LINE 記餐，這個網頁會同步更新嗎？'}
+                          </strong>
                           <p className="text-zinc-600 font-bold leading-relaxed">
-                            會的！只要輸入過一次「綁定」，網頁與 LINE 官方帳號就共用同一個雲端資料庫。在 LINE 拍的照片與記錄，回到這個網頁就會立刻看到。
+                            {isEn 
+                              ? 'Yes! Once you bind your Gist ID, the web app and LINE official bot share the same cloud database. Food photos and meals logged in LINE appear immediately on this web app.'
+                              : '會的！只要輸入過一次「綁定」，網頁與 LINE 官方帳號就共用同一個雲端資料庫。在 LINE 拍的照片與記錄，回到這個網頁就會立刻看到。'}
                           </p>
                         </div>
 
                         <div className="p-3 bg-zinc-50 border-2 border-black/20 rounded-xl space-y-1">
-                          <strong className="text-black font-black block">Q: LINE 官方帳號需要收費嗎？</strong>
+                          <strong className="text-black font-black block">
+                            {isEn ? 'Q: Is the LINE Official Account free?' : 'Q: LINE 官方帳號需要收費嗎？'}
+                          </strong>
                           <p className="text-zinc-600 font-bold leading-relaxed">
-                            完全免費，也沒有任何廣告干擾！Gemini AI 的圖像與語音運算成本全由開發者隨喜吸收，請放心盡情使用。
+                            {isEn 
+                              ? '100% free with zero ads! All Gemini AI vision, text, and voice computation costs are absorbed by the developer. Please feel free to use it anytime.'
+                              : '完全免費，也沒有任何廣告干擾！Gemini AI 的圖像與語音運算成本全由開發者隨喜吸收，請放心盡情使用。'}
                           </p>
                         </div>
                       </div>
@@ -1717,7 +1735,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           }`}
                         >
                           <Calculator size={16} />
-                          <span>{showCalculator ? '收合計算器' : '自動推薦'}</span>
+                          <span>{showCalculator ? (isEn ? 'Hide Calculator' : '收合計算器') : (isEn ? 'AI Suggestion' : '自動推薦')}</span>
                         </button>
                       </div>
                     </div>
@@ -1727,22 +1745,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <div className="bg-[#DCFCE7] border-4 border-black p-4 rounded-2xl shadow-neo-sm space-y-2 text-left animate-fade-in">
                         <div className="flex items-center justify-between flex-wrap gap-1">
                           <span className="font-black text-xs text-green-900 flex items-center gap-1">
-                            <span>✅</span> 已自動計算並套用個人化推薦！
+                            <span>✅</span> {isEn ? 'Personalized recommendation calculated & applied!' : '已自動計算並套用個人化推薦！'}
                           </span>
                           <span className="text-[10px] bg-white border-2 border-black font-black px-2 py-0.5 rounded-full shadow-neo-xs text-black">
                             {calcResult.goalName}
                           </span>
                         </div>
                         <div className="text-[11px] font-bold text-green-800">
-                          依身高 <strong>{calcResult.height} cm</strong> / 體重 <strong>{calcResult.weight} kg</strong> 計算：
+                          {isEn ? `Calculated based on ${calcResult.height} cm / ${calcResult.weight} kg:` : `依身高 ${calcResult.height} cm / 體重 ${calcResult.weight} kg 計算：`}
                           <span className="block mt-0.5 font-mono font-black text-xs text-green-900">
                             ⚡ BMR: {calcResult.bmr} kcal ｜ TDEE: {calcResult.tdee} kcal
                           </span>
                         </div>
                         <div className="text-[11px] font-black text-black pt-1.5 border-t-2 border-green-300 flex items-center justify-between flex-wrap gap-2">
-                          <span>🎯 建議熱量：<strong>{calcResult.calories}</strong> kcal</span>
-                          <span>🥚 蛋白質：<strong>{calcResult.protein}</strong> g</span>
-                          <span>💧 水分：<strong>{calcResult.water}</strong> ml</span>
+                          <span>🎯 {isEn ? 'Suggested Calories: ' : '建議熱量：'}<strong>{calcResult.calories}</strong> kcal</span>
+                          <span>🥚 {isEn ? 'Protein: ' : '蛋白質：'}<strong>{calcResult.protein}</strong> g</span>
+                          <span>💧 {isEn ? 'Water: ' : '水分：'}<strong>{calcResult.water}</strong> ml</span>
                         </div>
                       </div>
                     )}
@@ -1830,8 +1848,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     )}
 
                     <div className="flex items-center justify-between pt-1">
-                      <span className="text-xs font-black text-black">🎯 每日目標設定</span>
-                      <span className="text-[10px] font-bold text-zinc-400">可隨時在此微調</span>
+                      <span className="text-xs font-black text-black">🎯 {isEn ? 'Daily Goals Setup' : '每日目標設定'}</span>
+                      <span className="text-[10px] font-bold text-zinc-400">{isEn ? 'Fine-tune anytime' : '可隨時在此微調'}</span>
                     </div>
 
                     <div className="space-y-4">
@@ -2021,27 +2039,29 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="flex items-center gap-2">
                           <span className="text-lg">☁️</span>
                           <h4 className="font-black italic text-sm uppercase tracking-tight text-amber-950">
-                            雲端 Gist 專屬同步 ID
+                            {isEn ? 'Cloud Gist Sync ID' : '雲端 Gist 專屬同步 ID'}
                           </h4>
                         </div>
                         {currentGistId ? (
                           <span className="bg-amber-200 text-amber-900 border border-black/20 px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                            已就緒 🟢
+                            {isEn ? 'Ready 🟢' : '已就緒 🟢'}
                           </span>
                         ) : (
                           <span className="bg-zinc-200 text-zinc-600 px-2.5 py-0.5 rounded-full text-[10px] font-black">
-                            尚未產生 ⚪
+                            {isEn ? 'Not Created ⚪' : '尚未產生 ⚪'}
                           </span>
                         )}
                       </div>
 
                       <p className="text-xs font-bold text-amber-900 leading-relaxed">
-                        此 ID 為您在 GitHub Gist 的私有資料庫識別碼。在 LINE 官方帳號（@618iipof）聊天室輸入「<span className="font-black text-black">綁定 {currentGistId ? currentGistId.slice(0, 8) + '...' : '您的ID'}</span>」，即可將 Web 端的飲食日誌、常用餐點與熱量目標 100% 雙向同步！
+                        {isEn 
+                          ? <>This ID is your private GitHub Gist database key. Send &quot;<span className="font-black text-black">Bind {currentGistId ? currentGistId.slice(0, 8) + '...' : 'YOUR_ID'}</span>&quot; in the LINE Bot (@618iipof) to enable 100% two-way sync for diet logs, favorites, and goals!</>
+                          : <>此 ID 為您在 GitHub Gist 的私有資料庫識別碼。在 LINE 官方帳號（@618iipof）聊天室輸入「<span className="font-black text-black">綁定 {currentGistId ? currentGistId.slice(0, 8) + '...' : '您的ID'}</span>」，即可將 Web 端的飲食日誌、常用餐點與熱量目標 100% 雙向同步！</>}
                       </p>
 
                       <div className="flex items-center gap-2">
                         <div className="flex-1 bg-white border-2 border-black p-2.5 rounded-xl font-mono text-xs font-black text-zinc-800 break-all select-all shadow-neo-xs">
-                          {currentGistId || '尚未產生 (點擊下方「手動同步」即可自動建立)'}
+                          {currentGistId || (isEn ? 'Not created yet (Tap "Manual Sync" below to create)' : '尚未產生 (點擊下方「手動同步」即可自動建立)')}
                         </div>
                         {currentGistId && (
                           <button
@@ -2054,7 +2074,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             className="bg-black text-white px-3 py-2.5 rounded-xl font-black text-xs active:scale-95 transition-transform flex items-center gap-1.5 shrink-0 shadow-neo-xs"
                           >
                             {copiedGist ? <Check size={14} className="text-emerald-400" /> : <Copy size={14} />}
-                            <span>{copiedGist ? '已複製' : '複製 ID'}</span>
+                            <span>{copiedGist ? (isEn ? 'Copied' : '已複製') : (isEn ? 'Copy ID' : '複製 ID')}</span>
                           </button>
                         )}
                       </div>
@@ -2068,7 +2088,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             className="flex-1 bg-[#06C755] text-white py-2 px-3 rounded-xl border-2 border-black font-black text-xs flex items-center justify-center gap-1.5 hover:bg-[#05b34c] active:scale-95 transition-all shadow-neo-xs text-center"
                           >
                             <MessageSquare size={14} />
-                            💬 在 LINE 一鍵送出綁定
+                            {isEn ? '💬 1-Tap Bind in LINE' : '💬 在 LINE 一鍵送出綁定'}
                           </a>
                         )}
                         {currentGistId && (
@@ -2078,7 +2098,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             className="bg-rose-50 text-rose-700 py-2 px-3 rounded-xl border-2 border-black font-black text-xs active:scale-95 hover:bg-rose-100 transition-all text-center shadow-neo-xs flex items-center justify-center gap-1.5"
                           >
                             <X size={14} />
-                            解除雲端綁定
+                            {isEn ? 'Unlink Cloud' : '解除雲端綁定'}
                           </button>
                         )}
                         <button
@@ -2086,39 +2106,39 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           onClick={() => setIsEditingGist(!isEditingGist)}
                           className="bg-white text-zinc-700 py-2 px-3 rounded-xl border-2 border-black font-black text-xs active:scale-95 hover:bg-zinc-100 transition-all text-center shadow-neo-xs"
                         >
-                          {isEditingGist ? '收起' : '✏️ 手動填入既有 Gist ID'}
+                          {isEditingGist ? (isEn ? 'Collapse' : '收起') : (isEn ? '✏️ Enter Existing Gist ID' : '✏️ 手動填入既有 Gist ID')}
                         </button>
                       </div>
 
                       {isEditingGist && (
                         <div className="p-3 bg-white border-2 border-black rounded-2xl space-y-2 mt-2">
                           <label className="text-[10px] font-black text-zinc-600 block">
-                            手動填入其他裝置或既有的 GitHub Gist ID：
+                            {isEn ? 'Manually enter existing Gist ID from another device:' : '手動填入其他裝置或既有的 GitHub Gist ID：'}
                           </label>
                           <div className="flex gap-2">
                             <input
                               type="text"
                               value={manualGistInput}
                               onChange={(e) => setManualGistInput(e.target.value.trim())}
-                              placeholder="例如：7c9a28b184f..."
+                              placeholder="e.g. 7c9a28b184f..."
                               className="flex-1 bg-zinc-50 border-2 border-black p-2 rounded-xl text-xs font-mono font-bold outline-none"
                             />
                             <button
                               type="button"
                               onClick={() => {
                                 if (!manualGistInput) {
-                                  alert("請輸入有效的 Gist ID！");
+                                  alert(isEn ? "Please enter a valid Gist ID!" : "請輸入有效的 Gist ID！");
                                   return;
                                 }
                                 safeSetStorage('gist_backup_id', manualGistInput);
                                 setGistId(manualGistInput);
                                 setCurrentGistId(manualGistInput);
                                 setIsEditingGist(false);
-                                alert("🎉 已成功儲存 Gist ID！現在可以點擊「手動同步」還原或同步您的飲食資料！");
+                                alert(isEn ? "🎉 Gist ID saved! Click 'Manual Sync' anytime to backup/restore!" : "🎉 已成功儲存 Gist ID！現在可以點擊「手動同步」還原或同步您的飲食資料！");
                               }}
                               className="bg-black text-white px-3 rounded-xl font-black text-xs active:scale-95"
                             >
-                              儲存
+                              {isEn ? 'Save' : '儲存'}
                             </button>
                           </div>
                         </div>
@@ -2129,13 +2149,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     <div className="bg-emerald-50 border-4 border-black rounded-3xl p-5 shadow-neo-sm">
                       <div className="flex items-center gap-2 mb-2">
                         <span className="w-3 h-3 rounded-full bg-emerald-500 animate-pulse"></span>
-                        <h4 className="font-black italic text-sm uppercase tracking-tighter text-emerald-950">雲端即時同步已啟用</h4>
+                        <h4 className="font-black italic text-sm uppercase tracking-tighter text-emerald-950">
+                          {isEn ? 'Live Cloud Sync Active' : '雲端即時同步已啟用'}
+                        </h4>
                       </div>
                       <p className="text-xs font-bold text-emerald-800 leading-relaxed">
-                        您的飲食紀錄、體重趨勢與熱量目標已透過雲端即時雙向同步。無論在 LINE 還是 Web App 記錄，資料皆會自動安全備份。
+                        {isEn 
+                          ? 'Your meal logs, weight trends, and diet targets are synchronized bidirectionally via cloud. Whether logged in LINE or the Web App, all data is safely backed up.'
+                          : '您的飲食紀錄、體重趨勢與熱量目標已透過雲端即時雙向同步。無論在 LINE 還是 Web App 記錄，資料皆會自動安全備份。'}
                       </p>
                       <div className="mt-4 pt-3 border-t-2 border-dashed border-emerald-300 flex flex-wrap items-center justify-between gap-2">
-                        <span className="text-[10px] font-black uppercase text-emerald-700">狀態：即時連線中 ⚡</span>
+                        <span className="text-[10px] font-black uppercase text-emerald-700">
+                          {isEn ? 'Status: Live Connected ⚡' : '狀態：即時連線中 ⚡'}
+                        </span>
                         <div className="flex items-center gap-2">
                           {currentGistId && (
                             <button
@@ -2143,7 +2169,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               onClick={handleCloudRestore}
                               disabled={syncStatus === 'syncing'}
                               className="px-2.5 py-1.5 rounded-xl text-xs font-black italic border-2 border-black bg-white hover:bg-zinc-100 active:scale-95 flex items-center gap-1 shadow-neo-xs transition-colors"
-                              title="從 Gist 雲端拉取並還原最新備份"
+                              title={isEn ? "Fetch & restore latest cloud backup from Gist" : "從 Gist 雲端拉取並還原最新備份"}
                             >
                               <Upload size={12} />
                               <span>{isEn ? 'Restore' : '雲端還原'}</span>
@@ -2161,7 +2187,11 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             }`}
                           >
                             <RotateCcw size={12} className={syncStatus === 'syncing' ? 'animate-spin' : ''} />
-                            {syncStatus === 'syncing' ? '同步中...' : syncStatus === 'success' ? '✅ 已同步' : '手動同步'}
+                            {syncStatus === 'syncing' 
+                              ? (isEn ? 'Syncing...' : '同步中...') 
+                              : syncStatus === 'success' 
+                              ? (isEn ? '✅ Synced' : '✅ 已同步') 
+                              : (isEn ? 'Manual Sync' : '手動同步')}
                           </button>
                         </div>
                       </div>
@@ -2177,7 +2207,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       </div>
 
                       <p className="text-xs font-bold text-zinc-600 leading-relaxed">
-                        您的所有飲食日記優先存放於本機瀏覽器（IndexedDB）。您隨時擁有資料的完整導出權、隱私遙測開關與物理銷毀權。
+                        {isEn 
+                          ? 'All your food logs are stored locally in your browser (IndexedDB) first. You always retain full export, telemetry toggle, and physical purge rights.'
+                          : '您的所有飲食日記優先存放於本機瀏覽器（IndexedDB）。您隨時擁有資料的完整導出權、隱私遙測開關與物理銷毀權。'}
                       </p>
 
                       {/* 隱私與安全控制面板 */}
@@ -2186,10 +2218,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div>
                             <div className="text-xs font-black flex items-center gap-1.5 text-zinc-900">
                               <Lock size={14} className="text-amber-500" />
-                              <span>端對端金庫加密 (AES-256-GCM)</span>
+                              <span>{isEn ? 'End-to-End Vault Encryption (AES-256-GCM)' : '端對端金庫加密 (AES-256-GCM)'}</span>
                             </div>
                             <div className="text-[10px] font-bold text-zinc-500 mt-0.5">
-                              備份上傳前經由瀏覽器 Web Crypto API 加密為密文，GitHub 僅儲存亂碼
+                              {isEn 
+                                ? 'Data is encrypted via browser Web Crypto API before upload; GitHub stores only ciphertext.'
+                                : '備份上傳前經由瀏覽器 Web Crypto API 加密為密文，GitHub 僅儲存亂碼'}
                             </div>
                           </div>
                           <button
@@ -2198,7 +2232,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               const next = !vaultEnabled;
                               setVaultEnabled(next);
                               setVaultEncryptionEnabled(next);
-                              alert(next ? "🔐 已啟用端對端 AES-256-GCM 加密！下次備份將以密文儲存至 Gist。" : "ℹ️ 已切換為標準雙向同步模式。");
+                              alert(next 
+                                ? (isEn ? "🔐 End-to-end AES-256-GCM encryption enabled! Future backups will be encrypted on Gist." : "🔐 已啟用端對端 AES-256-GCM 加密！下次備份將以密文儲存至 Gist。") 
+                                : (isEn ? "ℹ️ Switched back to standard sync mode." : "ℹ️ 已切換為標準雙向同步模式。"));
                             }}
                             className={`w-11 h-6 rounded-full border-2 border-black relative transition-colors shrink-0 ${vaultEnabled ? 'bg-amber-400' : 'bg-zinc-200'}`}
                           >
@@ -2210,10 +2246,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div>
                             <div className="text-xs font-black flex items-center gap-1.5 text-zinc-900">
                               <Shield size={14} className="text-blue-500" />
-                              <span>體驗遙測與分析 (Microsoft Clarity)</span>
+                              <span>{isEn ? 'Experience Telemetry (Microsoft Clarity)' : '體驗遙測與分析 (Microsoft Clarity)'}</span>
                             </div>
                             <div className="text-[10px] font-bold text-zinc-500 mt-0.5">
-                              已全域啟動星號文字遮蔽；關閉或啟用 Do-Not-Track 則完全不載入腳本
+                              {isEn 
+                                ? 'Strict text masking active globally. Disabling or enabling Do-Not-Track will prevent the script from loading entirely.'
+                                : '已全域啟動星號文字遮蔽；關閉或啟用 Do-Not-Track 則完全不載入腳本'}
                             </div>
                           </div>
                           <button
@@ -2223,10 +2261,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               setTelemetryDisabled(next);
                               if (next) {
                                 safeSetStorage('daily_diet_disable_telemetry', 'true');
-                                alert("🛡️ 已停用 Microsoft Clarity 體驗遙測！重新載入頁面後生效。");
+                                alert(isEn ? "🛡️ Microsoft Clarity telemetry disabled! Takes effect after page reload." : "🛡️ 已停用 Microsoft Clarity 體驗遙測！重新載入頁面後生效。");
                               } else {
                                 safeRemoveStorage('daily_diet_disable_telemetry');
-                                alert("ℹ️ 已啟用體驗遙測（所有文字仍維持嚴格星號遮蔽）。");
+                                alert(isEn ? "ℹ️ Experience telemetry enabled (all text remains masked with asterisks)." : "ℹ️ 已啟用體驗遙測（所有文字仍維持嚴格星號遮蔽）。");
                               }
                             }}
                             className={`w-11 h-6 rounded-full border-2 border-black relative transition-colors shrink-0 ${!telemetryDisabled ? 'bg-emerald-400' : 'bg-zinc-200'}`}
@@ -2264,7 +2302,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             className="w-full bg-red-600 hover:bg-red-700 text-white py-2.5 px-3 rounded-xl border-2 border-black font-black text-xs active:scale-95 transition-all flex items-center justify-center gap-2 shadow-neo-xs"
                           >
                             <Trash2 size={14} className="text-white" />
-                            <span>🔥 物理銷毀 GitHub 雲端 Gist (含所有歷史 Git 版本)</span>
+                            <span>{isEn ? '🔥 Permanently Purge GitHub Cloud Gist' : '🔥 物理銷毀 GitHub 雲端 Gist (含所有歷史 Git 版本)'}</span>
                           </button>
                         </div>
                       )}
@@ -2579,8 +2617,8 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                       <div className="flex items-center gap-2">
                                         <span className="text-xl">🎖️</span>
                                         <div className="text-left">
-                                          <div className="font-black text-xs text-black">您已是 Daily Diet 最高榮譽【創始支持者】</div>
-                                          <div className="text-[9px] font-bold text-amber-950 mt-0.5">感謝您的核心贊助！全套特權與專屬徽章已為您終身開通 🎋</div>
+                                          <div className="font-black text-xs text-black">{isEn ? 'You are a Daily Diet [Founder Supporter]' : '您已是 Daily Diet 最高榮譽【創始支持者】'}</div>
+                                          <div className="text-[9px] font-bold text-amber-950 mt-0.5">{isEn ? 'Thank you for your support! Lifetime perks and badges unlocked 🎋' : '感謝您的核心贊助！全套特權與專屬徽章已為您終身開通 🎋'}</div>
                                         </div>
                                       </div>
                                       <button
@@ -2590,7 +2628,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                         }}
                                         className="px-2.5 py-1 bg-black text-amber-300 rounded-lg text-[9px] font-black shrink-0 active:scale-95 shadow-neo-xs-black cursor-pointer"
                                       >
-                                        查看證書
+                                        {isEn ? 'View Certificate' : '查看證書'}
                                       </button>
                                     </div>
                                   )}
@@ -2613,18 +2651,18 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   {/* CTBC QR Code & Details Card */}
                                   <div className="bg-white border-2 border-black p-3.5 rounded-2xl space-y-3 shadow-sm text-center">
                                     <div className="flex justify-between items-center text-[11px] font-black border-b border-zinc-100 pb-2">
-                                      <span className="text-zinc-600 flex items-center gap-1">🏦 中國信託 CTBC (822)</span>
+                                      <span className="text-zinc-600 flex items-center gap-1">🏦 {isEn ? 'CTBC Bank (822)' : '中國信託 CTBC (822)'}</span>
                                       <span className="font-mono text-teal-800 text-xs font-black select-all bg-teal-50 px-2 py-0.5 rounded border border-teal-200">174533815287</span>
                                     </div>
 
                                     {/* QR Code with Tap to Enlarge */}
                                     <div 
                                       onClick={() => {
-                                        setSelectedQr({ title: '中國信託 CTBC 贊助帳號', src: import.meta.env.BASE_URL + 'ctbc_qr.png' });
+                                        setSelectedQr({ title: isEn ? 'CTBC Bank Support Account' : '中國信託 CTBC 贊助帳號', src: import.meta.env.BASE_URL + 'ctbc_qr.png' });
                                         trackSponsorAudit('Web點開贊助QR', '點擊放大CTBC QR', '開啟中信 QR Code 彈窗放大檢視');
                                       }}
                                       className="inline-block p-2 bg-zinc-50 border-2 border-black rounded-2xl cursor-pointer hover:scale-105 active:scale-95 transition-transform shadow-neo-xs-black"
-                                      title="點擊放大 QR Code 掃描"
+                                      title={isEn ? "Tap to zoom QR Code" : "點擊放大 QR Code 掃描"}
                                     >
                                       <img
                                         src={import.meta.env.BASE_URL + 'ctbc_qr.png'}
@@ -2633,47 +2671,58 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                       />
                                       <div className="text-[9px] font-black text-zinc-500 mt-1 flex items-center justify-center gap-1">
                                         <span>🔍</span>
-                                        <span>點擊放大掃描</span>
+                                        <span>{isEn ? 'Tap to zoom' : '點擊放大掃描'}</span>
                                       </div>
                                     </div>
 
                                     <div className="text-[10px] font-bold text-zinc-400">
-                                      戶名：Daily Diet 專案支持帳戶（核對姓氏：林）<br />
-                                      📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）
+                                      {isEn ? (
+                                        <>
+                                          Account Name: Daily Diet Project Support (Last name: Lin)<br />
+                                          📲 Supports TWQR Scan (Any TWQR-enabled banking app)
+                                        </>
+                                      ) : (
+                                        <>
+                                          戶名：Daily Diet 專案支持帳戶（核對姓氏：林）<br />
+                                          📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）
+                                        </>
+                                      )}
                                     </div>
 
                                     <button
                                       type="button"
                                       onClick={() => {
                                         navigator.clipboard.writeText('174533815287');
-                                        alert('📋 中信帳號 174533815287 已成功複製到剪貼簿！');
+                                        alert(isEn ? '📋 CTBC Account 174533815287 copied to clipboard!' : '📋 中信帳號 174533815287 已成功複製到剪貼簿！');
                                         trackSponsorAudit('Web複製贊助帳號', '一鍵複製中信帳號', '已成功複製中信帳號 174533815287');
                                       }}
                                       className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-[11px] py-2.5 rounded-xl border-2 border-black flex items-center justify-center gap-1 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
                                     >
-                                      📋 一鍵複製中信帳號
+                                      {isEn ? '📋 Copy CTBC Account' : '📋 一鍵複製中信帳號'}
                                     </button>
 
                                     {/* Sincere Anchor Suggestions */}
                                     <div className="pt-2 border-t border-dashed border-zinc-200 grid grid-cols-3 gap-1.5 text-center">
                                       <div className="p-1.5 bg-yellow-50 rounded-lg border border-amber-200">
-                                        <div className="text-[10px] font-black text-amber-900">☕ 隨喜咖啡</div>
+                                        <div className="text-[10px] font-black text-amber-900">{isEn ? '☕ Coffee' : '☕ 隨喜咖啡'}</div>
                                         <div className="text-[9px] font-bold text-amber-700">$50</div>
                                       </div>
                                       <div className="p-1.5 bg-teal-50 rounded-lg border border-teal-200">
-                                        <div className="text-[10px] font-black text-teal-900">🍱 算力補給</div>
+                                        <div className="text-[10px] font-black text-teal-900">{isEn ? '🍱 AI Fuel' : '🍱 算力補給'}</div>
                                         <div className="text-[9px] font-bold text-teal-700">$100</div>
                                       </div>
                                       <div className="p-1.5 bg-rose-50 rounded-lg border border-rose-200">
-                                        <div className="text-[10px] font-black text-rose-900">🎋 核心支持</div>
+                                        <div className="text-[10px] font-black text-rose-900">{isEn ? '🎋 Core Hero' : '🎋 核心支持'}</div>
                                         <div className="text-[9px] font-bold text-rose-700">$150</div>
                                       </div>
                                     </div>
                                   </div>
 
                                   <div className="p-3.5 bg-gradient-to-r from-amber-100 to-yellow-100 border-2 border-amber-400 rounded-2xl text-[10.5px] font-bold text-amber-950 leading-relaxed text-left shadow-sm">
-                                    🎁 <b>老朋友專屬【創始支持者】禮遇 🎋✨</b><br />
-                                    轉帳後歡迎在上方表單留個「轉帳末 5 碼與 Email」，我們直接為您登記為【創始支持者】——永久享有專屬金色創始者徽章，未來若推出全新 AI 增強功能，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期成為我們的堅實後盾！❤️
+                                    🎁 <b>{isEn ? 'Exclusive [Founder Supporter] Perks 🎋✨' : '老朋友專屬【創始支持者】禮遇 🎋✨'}</b><br />
+                                    {isEn
+                                      ? 'After transferring, please share the last 5 digits and your email in the feedback form above. We will register you as a Founder Supporter—lifetime golden badge, VIP testing access, and heartfelt gratitude! ❤️'
+                                      : '轉帳後歡迎在上方表單留個「轉帳末 5 碼與 Email」，我們直接為您登記為【創始支持者】——永久享有專屬金色創始者徽章，未來若推出全新 AI 增強功能，享有第一優先免費內測權與老友專屬禮遇！感謝您在草創期成為我們的堅實後盾！❤️'}
                                   </div>
 
                                   {!isFounder && (
@@ -2693,7 +2742,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                             alert(isEn ? 'No matching supporter record found yet. Please allow a little time for manual verification.' : '目前在名冊中尚未比對到此紀錄。若您剛完成轉帳，請稍候管理員核對，或於反饋表單留言！');
                                           }
                                         } catch (e) {
-                                          alert('驗證連線失敗，請稍後再試');
+                                          alert(isEn ? 'Verification connection failed, please try again later.' : '驗證連線失敗，請稍後再試');
                                         }
                                       }}
                                       className="w-full mt-2.5 py-2 bg-amber-400 hover:bg-amber-300 text-black border-2 border-black rounded-xl text-xs font-black shadow-neo-xs flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 transition-all"
@@ -3027,7 +3076,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
                         {/* Thank You Note */}
                         <div className="text-center font-black italic text-xs text-zinc-500 pt-2 pb-4">
-                          「您的支持，是讓這隻熊貓教練繼續為您服務的最大動力！🎋❤️」
+                          {isEn ? '“Your support is the greatest fuel keeping this Panda Coach serving you! 🎋❤️”' : '「您的支持，是讓這隻熊貓教練繼續為您服務的最大動力！🎋❤️」'}
                         </div>
                       </div>
                     )}
@@ -3061,7 +3110,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             window.dispatchEvent(new CustomEvent('open-whatsnew'));
                           }}
                           className="group relative inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-amber-300 via-yellow-300 to-amber-200 hover:from-amber-400 hover:to-yellow-300 text-black font-black text-xs rounded-full border-2 border-black shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] hover:shadow-[3px_3px_0px_0px_rgba(0,0,0,1)] hover:-translate-y-0.5 active:translate-x-0.5 active:translate-y-0.5 active:shadow-none transition-all cursor-pointer select-none"
-                          title="查看最新版本功能特色介紹"
+                          title={isEn ? "View latest release highlights" : "查看最新版本功能特色介紹"}
                         >
                           <span className="relative flex h-2 w-2">
                             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-orange-400 opacity-75"></span>
@@ -3089,7 +3138,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           rel="noopener noreferrer"
                           className="flex-1 flex items-center justify-center gap-1.5 p-2.5 bg-yellow-50 hover:bg-yellow-100 border-2 border-black rounded-xl text-black font-black text-[11px] shadow-neo-sm-flat active:scale-95 transition-all"
                         >
-                          🛡️ 隱私政策與免責聲明
+                          🛡️ {isEn ? 'Privacy & Disclaimer' : '隱私政策與免責聲明'}
                         </a>
                         <a
                           href="./terms.html"
@@ -3097,7 +3146,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           rel="noopener noreferrer"
                           className="flex-1 flex items-center justify-center gap-1.5 p-2.5 bg-zinc-50 hover:bg-zinc-100 border-2 border-black rounded-xl text-black font-black text-[11px] shadow-neo-sm-flat active:scale-95 transition-all"
                         >
-                          📜 服務條款
+                          📜 {isEn ? 'Terms of Service' : '服務條款'}
                         </a>
                       </div>
 
@@ -3105,10 +3154,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <div className="p-3 bg-amber-50/90 border-2 border-amber-300 rounded-xl text-left">
                         <div className="flex items-center gap-1.5 mb-1 text-amber-900 font-black text-[11px]">
                           <span>💡</span>
-                          <span>免責聲明</span>
+                          <span>{isEn ? 'Medical Disclaimer' : '免責聲明'}</span>
                         </div>
                         <p className="text-[10px] font-bold text-amber-900/90 leading-relaxed">
-                          「Daily Diet 與熊貓教練所提供之營養素、卡路里估算、間歇斷食提醒及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。AI 辨識無法確認隱藏食材過敏原，若您有特殊疾病、過敏體質、孕期或特殊需求，進行任何飲食或斷食調整前請務必諮詢合格醫師或註冊營養師。」
+                          {isEn
+                            ? '“Nutrient estimation, calorie tracking, intermittent fasting reminders, and dietary suggestions provided by Daily Diet and Panda Coach are for personal lifestyle and health management reference only, and do not constitute medical diagnosis, treatment, or clinical nutrition prescriptions. AI cannot detect hidden food allergens. If you have medical conditions, allergies, or are pregnant, please consult a physician or registered dietitian before making dietary or fasting changes.”'
+                            : '「Daily Diet 與熊貓教練所提供之營養素、卡路里估算、間歇斷食提醒及飲食建議僅供個人日常健康管理參考，不具任何醫療診斷、治療或專業營養處方效益。AI 辨識無法確認隱藏食材過敏原，若您有特殊疾病、過敏體質、孕期或特殊需求，進行任何飲食或斷食調整前請務必諮詢合格醫師或註冊營養師。」'}
                         </p>
                       </div>
                     </div>
@@ -3152,18 +3203,28 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
             {selectedQr.src.includes('ctbc') && (
               <div className="w-full space-y-2 mb-4">
                 <div className="text-[10px] font-bold text-zinc-500 text-left bg-zinc-100 p-2.5 rounded-xl border border-zinc-200 leading-normal">
-                  💡 中信帳號：<span className="font-mono font-black text-teal-700 select-all">174533815287</span> (銀行代碼: 822)<br />
-                  戶名：Daily Diet 專案支持帳戶（核對姓氏：林）<br />
-                  📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）
+                  {isEn ? (
+                    <>
+                      💡 CTBC Account: <span className="font-mono font-black text-teal-700 select-all">174533815287</span> (Bank: 822)<br />
+                      Name: Daily Diet Project Support (Last name: Lin)<br />
+                      📲 Supports TWQR scan
+                    </>
+                  ) : (
+                    <>
+                      💡 中信帳號：<span className="font-mono font-black text-teal-700 select-all">174533815287</span> (銀行代碼: 822)<br />
+                      戶名：Daily Diet 專案支持帳戶（核對姓氏：林）<br />
+                      📲 支援 TWQR 掃碼（所有支援 TWQR APP 皆可）
+                    </>
+                  )}
                 </div>
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText("174533815287");
-                    alert("📋 中信帳號 174533815287 已成功複製到剪貼簿！");
+                    alert(isEn ? "📋 CTBC Account 174533815287 copied to clipboard!" : "📋 中信帳號 174533815287 已成功複製到剪貼簿！");
                   }}
                   className="w-full bg-[#008687] hover:bg-[#006e6f] text-white font-black text-xs py-3 rounded-2xl border-2 border-black flex items-center justify-center gap-1.5 active:scale-95 transition-all shadow-neo-xs-black cursor-pointer"
                 >
-                  📋 複製中信帳號
+                  📋 {isEn ? 'Copy CTBC Account' : '複製中信帳號'}
                 </button>
               </div>
             )}
@@ -3183,3 +3244,4 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 };
 
 export default GoalSettings;
+

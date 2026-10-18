@@ -29,21 +29,42 @@ const FALLBACK_ROASTS = {
   ]
 };
 
-const getRandomRoast = (score, name, loggedDays) => {
-  let list = FALLBACK_ROASTS.foodie;
-  if (score >= 90) list = FALLBACK_ROASTS.master;
-  else if (score >= 70) list = FALLBACK_ROASTS.warrior;
-  else if (score >= 50) list = FALLBACK_ROASTS.foodie;
-  else list = FALLBACK_ROASTS.shura;
+const FALLBACK_ROASTS_EN = {
+  master: [
+    "Whoa! Your discipline score hit {score} this week! {name}, did you reach enlightenment? Calories and protein are impeccably balanced, and your water intake is like a well-regulated reservoir! Coach was wondering if you snacked on chicken breasts all week. Keep it up, don't let me catch you with boba milk tea next week! 🐼",
+    "Congrats on unlocking 'Zen Diet Master'! Coach honestly can't find a single flaw in your performance this week. Calories rock steady, hydration smooth as clockwork. Keep this up and body fat will file for divorce! Stay awesome next week! 🐼"
+  ],
+  warrior: [
+    "Discipline score of {score} points—a solid 'Mortal Discipline Warrior'. Even though there was a day or two where you almost gave in to fried chicken, your willpower dragged you back! Protein passed, but weight seems to be in a tug-of-war with your appetite. Cut back on refined sugars next week and you will ascend! 🐼",
+    "Calories and protein look decent, but what's with the water intake? {name}, trying to turn into a mummy? Even though you held it together, that weekend cheat meal almost wiped out your progress. Drink more water, avoid deep fried stuff, and let's break 90 next week! 🐼"
+  ],
+  foodie: [
+    "Discipline score of {score} points—a classic 'Foodie With Room to Improve'. Was work so tiring that you used toast and milk tea as emotional crutches? Often flirting on the edge of calorie surplus and drinking water like you're lost in a desert. {name}, your muscles are crying and fat is throwing a party! Log properly next week! 🐼",
+    "Out of 7 days, you only logged {loggedDays} days! This {score} score is hilarious. Were you bingeing on the unlogged days? Coach is watching you! If you want healthy results, stop pretending and log every meal next week, got it? 🐼"
+  ],
+  shura: [
+    "A discipline score of only {score}?! {name}, you're basically a VIP member of 'Calorie Carnage' this week! Either missing logs or indulging in refined carbs, protein deficit so bad your muscles are protesting. Are you dieting or fattening up? Drink water and log your food, or I'll nag you daily! 🐼",
+    "These numbers are brutal; Coach doesn't even know where to start roasting. A score of {score}, cheat meals galore, and water intake completely failing. This isn't fat loss, it's a fat accumulation project! Starting tomorrow, drink water, ditch the feast, and reflect! 🐼"
+  ]
+};
+
+const getRandomRoast = (score, name, loggedDays, isEn = false) => {
+  const roasts = isEn ? FALLBACK_ROASTS_EN : FALLBACK_ROASTS;
+  let list = roasts.foodie;
+  if (score >= 90) list = roasts.master;
+  else if (score >= 70) list = roasts.warrior;
+  else if (score >= 50) list = roasts.foodie;
+  else list = roasts.shura;
 
   const template = list[Math.floor(Math.random() * list.length)];
   return template
     .replace(/{score}/g, score)
-    .replace(/{name}/g, name || '人類')
+    .replace(/{name}/g, name || (isEn ? 'Human' : '人類'))
     .replace(/{loggedDays}/g, loggedDays);
 };
 
 const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
+  const isEn = getLanguage() === 'en';
   const cardRef = useRef(null);
   const [exportState, setExportState] = useState(null); // 'download' | 'share' | null
   const [loading, setLoading] = useState(true);
@@ -159,10 +180,10 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
       }
 
       // Title Rank Assignment
-      let rankTitle = "爆卡修羅場常客 👹";
-      if (score >= 90) rankTitle = "修仙級飲控大師 🧘";
-      else if (score >= 70) rankTitle = "凡人自律戰士 🛡️";
-      else if (score >= 50) rankTitle = "有待加強的吃貨 🍰";
+      let rankTitle = isEn ? "Calorie Chaos VIP 👹" : "爆卡修羅場常客 👹";
+      if (score >= 90) rankTitle = isEn ? "Zen Diet Master 🧘" : "修仙級飲控大師 🧘";
+      else if (score >= 70) rankTitle = isEn ? "Mortal Discipline Warrior 🛡️" : "凡人自律戰士 🛡️";
+      else if (score >= 50) rankTitle = isEn ? "Aspiring Foodie 🍰" : "有待加強的吃貨 🍰";
 
       setReportData({
         dateRange: `${dates[0].replace(/-/g, '/')} ~ ${dates[6].replace(/-/g, '/')}`,
@@ -190,13 +211,38 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
     if (isRoasting || !reportData) return;
     setIsRoasting(true);
     try {
-      const weightDiffStr = reportData.weightDiff > 0 
-        ? `變重了 +${reportData.weightDiff}kg` 
-        : reportData.weightDiff < 0 
-          ? `變輕了 ${reportData.weightDiff}kg` 
-          : reportData.startWeight > 0 ? "體重維持不變" : "無記錄體重";
+      const weightDiffStr = isEn
+        ? (reportData.weightDiff > 0
+          ? `Gained +${reportData.weightDiff}kg`
+          : reportData.weightDiff < 0
+            ? `Lost ${reportData.weightDiff}kg`
+            : reportData.startWeight > 0 ? "Weight unchanged" : "No weight record")
+        : (reportData.weightDiff > 0 
+          ? `變重了 +${reportData.weightDiff}kg` 
+          : reportData.weightDiff < 0 
+            ? `變輕了 ${reportData.weightDiff}kg` 
+            : reportData.startWeight > 0 ? "體重維持不變" : "無記錄體重");
 
-      const prompt = `你是一位講話極度中肯、毒舌犀利卻專業無比的台灣熊貓營養師教練 🐼。
+      const prompt = isEn
+        ? `You are an extremely sharp, witty, humorous yet caring fitness Panda Dietitian Coach 🐼.
+      Please provide a 40-50 word weekly performance roast/review for the user.
+      
+      Weekly stats:
+      - Consecutive streak: ${streak} days
+      - Logged days: ${reportData.loggedDays}/7 days
+      - Daily avg calories: ${reportData.avgCalories} kcal / Goal ${goals.calories} kcal
+      - Daily avg protein: ${reportData.avgProtein}g / Goal ${goals.protein}g
+      - Daily avg water: ${reportData.avgWater}ml / Goal ${goals.water}ml
+      ${goals.show_carbs_fat ? `- Daily avg carbs: ${reportData.avgCarbs}g / fat: ${reportData.avgFat}g` : ''}
+      - Weight change: ${weightDiffStr}
+      - Discipline score: ${reportData.score} pts (Rank: ${reportData.rankTitle})
+
+      CRITICAL Rules:
+      1. Write in witty, colloquial English with fitness humor.
+      2. Be playfully roasting yet encouraging and scientifically sound.
+      3. Occasionally address the user by name "${userName || 'Human'}".
+      4. Keep it strictly under 50 words without any Markdown, JSON, or HTML.`
+        : `你是一位講話極度中肯、毒舌犀利卻專業無比的台灣熊貓營養師教練 🐼。
       請針對使用者這週的飲控表現給予大約 40-50 字的週結算銳評（Roast）。
       
       本週飲食數據：
@@ -220,7 +266,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
     } catch (err) {
       console.error("Weekly roast error:", err);
       // Fallback
-      setAiRoast(getRandomRoast(reportData.score, userName, reportData.loggedDays));
+      setAiRoast(getRandomRoast(reportData.score, userName, reportData.loggedDays, isEn));
     } finally {
       setIsRoasting(false);
     }
@@ -269,8 +315,8 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
       if (navigator.canShare && navigator.canShare({ files: [file] })) {
         await navigator.share({
           files: [file],
-          title: '熊貓教練 · 本週飲控自律週報',
-          text: '來看看我這週的自律分數！你想被教練銳評一下嗎？🐼'
+          title: isEn ? 'Panda Coach · Weekly Diet Report' : '熊貓教練 · 本週飲控自律週報',
+          text: isEn ? 'Check out my discipline score this week! Dare to get roasted by Coach? 🐼' : '來看看我這週的自律分數！你想被教練銳評一下嗎？🐼'
         });
       } else {
         // Fallback to download
@@ -342,11 +388,11 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                       </h1>
                       <div className="flex flex-wrap items-center gap-1 mt-1">
                         <span className="bg-black text-white px-2 py-0.5 rounded-lg text-[9px] font-black uppercase tracking-wide">
-                          {userName || '無名吃貨'}
+                          {userName || (isEn ? 'Foodie' : '無名吃貨')}
                         </span>
                         {hasCrown && (
                           <span className="bg-amber-400 text-black border-2 border-black px-1.5 py-0.5 rounded-md text-[8px] font-black tracking-wide flex items-center gap-0.5 shadow-neo-xs scale-90 origin-left transform">
-                            👑 榮譽金主
+                            {isEn ? '👑 VIP Founder' : '👑 榮譽金主'}
                           </span>
                         )}
                         {currentTitle && (
@@ -369,7 +415,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                   {loading ? (
                     <div className="flex-1 flex flex-col items-center justify-center gap-2 py-16 z-10">
                       <Loader2 size={32} className="animate-spin text-black" />
-                      <span className="font-black italic text-xs">正在分析本週數據...</span>
+                      <span className="font-black italic text-xs">{isEn ? 'Analyzing weekly data...' : '正在分析本週數據...'}</span>
                     </div>
                   ) : (
                     <div className="my-3 space-y-3 z-10 flex-1 flex flex-col justify-between">
@@ -380,10 +426,10 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                         </div>
                         <div className="flex-1 text-left">
                           <span className="text-[8px] font-black text-zinc-800 block mb-0.5">
-                            本週自律指數
+                            {isEn ? 'Discipline Index' : '本週自律指數'}
                           </span>
                           <div className="text-lg sm:text-xl font-black italic text-black leading-none flex items-baseline gap-1">
-                            {reportData?.score} <span className="text-xs">分</span>
+                            {reportData?.score} <span className="text-xs">{isEn ? 'pts' : '分'}</span>
                           </div>
                           <div className="text-[8px] sm:text-[9px] font-black bg-white border-2 border-black text-black px-1.5 py-0.5 rounded-md inline-block mt-0.5 transform rotate-1 shadow-neo-xs">
                             {reportData?.rankTitle}
@@ -398,61 +444,61 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                       <div className={`grid ${goals.show_carbs_fat ? 'grid-cols-2 gap-1.5 sm:gap-2' : 'grid-cols-2 gap-2'}`}>
                         {/* Calories */}
                         <div className="bg-white/80 backdrop-blur-md border-3 border-black p-2 sm:p-2.5 rounded-2xl shadow-neo-xs text-left transition-all">
-                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均熱量</span>
+                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">{isEn ? 'Avg Daily Cals' : '每日均熱量'}</span>
                           <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgCalories} kcal</div>
-                          <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">目標: {goals.calories} kcal</div>
+                          <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">{isEn ? 'Goal' : '目標'}: {goals.calories} kcal</div>
                         </div>
 
                         {/* Protein */}
                         <div className="bg-white/80 backdrop-blur-md border-3 border-black p-2 sm:p-2.5 rounded-2xl shadow-neo-xs text-left transition-all">
-                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均蛋白</span>
+                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">{isEn ? 'Avg Daily Protein' : '每日均蛋白'}</span>
                           <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgProtein} g</div>
-                          <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">目標: {goals.protein} g</div>
+                          <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">{isEn ? 'Goal' : '目標'}: {goals.protein} g</div>
                         </div>
 
                         {/* Carbs (Optional) */}
                         {goals.show_carbs_fat && (
                           <div className="bg-white/80 backdrop-blur-md border-3 border-black p-2 sm:p-2.5 rounded-2xl shadow-neo-xs text-left transition-all">
-                            <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均碳水</span>
+                            <span className="text-[8px] font-black text-zinc-500 block mb-0.5">{isEn ? 'Avg Daily Carbs' : '每日均碳水'}</span>
                             <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgCarbs} g</div>
-                            <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">目標: {goals.carbs || 200} g</div>
+                            <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">{isEn ? 'Goal' : '目標'}: {goals.carbs || 200} g</div>
                           </div>
                         )}
 
                         {/* Fat (Optional) */}
                         {goals.show_carbs_fat && (
                           <div className="bg-white/80 backdrop-blur-md border-3 border-black p-2 sm:p-2.5 rounded-2xl shadow-neo-xs text-left transition-all">
-                            <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均脂肪</span>
+                            <span className="text-[8px] font-black text-zinc-500 block mb-0.5">{isEn ? 'Avg Daily Fat' : '每日均脂肪'}</span>
                             <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgFat} g</div>
-                            <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">目標: {goals.fat || 60} g</div>
+                            <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">{isEn ? 'Goal' : '目標'}: {goals.fat || 60} g</div>
                           </div>
                         )}
 
                         {/* Water */}
                         <div className="bg-white/80 backdrop-blur-md border-3 border-black p-2 sm:p-2.5 rounded-2xl shadow-neo-xs text-left transition-all">
-                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">每日均飲水</span>
+                          <span className="text-[8px] font-black text-zinc-500 block mb-0.5">{isEn ? 'Avg Daily Water' : '每日均飲水'}</span>
                           <div className="text-xs sm:text-sm font-black italic leading-none my-0.5 text-black">{reportData?.avgWater} ml</div>
-                          <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">目標: {goals.water} ml</div>
+                          <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400">{isEn ? 'Goal' : '目標'}: {goals.water} ml</div>
                         </div>
 
                         {/* Weight Change */}
                         <div className="bg-white/80 backdrop-blur-md border-3 border-black p-2 sm:p-2.5 rounded-2xl shadow-neo-xs text-left flex flex-col justify-between transition-all">
                           <div>
-                            <span className="text-[8px] font-black text-zinc-500 block mb-0.5">體重變化</span>
+                            <span className="text-[8px] font-black text-zinc-500 block mb-0.5">{isEn ? 'Weight Change' : '體重變化'}</span>
                             <div className="text-xs sm:text-sm font-black italic flex items-center gap-1 leading-none my-0.5 text-black">
                               {!reportData?.hasWeight ? (
-                                <span className="text-zinc-400 font-bold not-italic">無紀錄</span>
+                                <span className="text-zinc-400 font-bold not-italic">{isEn ? 'No Record' : '無紀錄'}</span>
                               ) : reportData?.weightDiff > 0 ? (
                                 <><TrendingUp size={11} className="text-rose-500 shrink-0" /> +{reportData?.weightDiff} kg</>
                               ) : reportData?.weightDiff < 0 ? (
                                 <><TrendingDown size={11} className="text-emerald-500 shrink-0" /> {reportData?.weightDiff} kg</>
                               ) : (
-                                <span className="text-black font-black italic">維持不變</span>
+                                <span className="text-black font-black italic">{isEn ? 'Unchanged' : '維持不變'}</span>
                               )}
                             </div>
                           </div>
                           <div className="text-[7.5px] sm:text-[8px] font-bold text-zinc-400 mt-0.5">
-                            打卡累計: {reportData?.loggedDays} / 7 天
+                            {isEn ? 'Logged' : '打卡累計'}: {reportData?.loggedDays} / 7 {isEn ? 'days' : '天'}
                           </div>
                         </div>
                       </div>
@@ -461,7 +507,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                       <div className="bg-black text-white p-3 sm:p-3.5 rounded-2xl relative overflow-hidden text-left flex-1 min-h-[105px] sm:min-h-[120px] flex flex-col justify-between shadow-neo-xs">
                         <div className="absolute top-2 left-3 bg-accent text-black border border-black px-1.5 py-0.5 rounded-md flex items-center gap-1 shadow-sm z-20">
                           <Zap size={9} className="fill-black text-black animate-pulse" />
-                          <span className="text-[7.5px] sm:text-[8px] font-black uppercase">熊貓教練週終結銳評 🐼</span>
+                          <span className="text-[7.5px] sm:text-[8px] font-black uppercase">{isEn ? 'Panda Coach Weekly Roast 🐼' : '熊貓教練週終結銳評 🐼'}</span>
                         </div>
 
                         <div className="mt-5 flex flex-col items-center justify-center text-center flex-1 z-10">
@@ -472,17 +518,17 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                           ) : isRoasting ? (
                             <div className="flex flex-col items-center gap-1.5 py-3">
                               <Loader2 size={20} className="animate-spin text-accent" />
-                              <p className="font-black italic text-[9px] text-zinc-400">教練正在整理毒舌吐槽本...</p>
+                              <p className="font-black italic text-[9px] text-zinc-400">{isEn ? 'Coach is brewing a spicy roast...' : '教練正在整理毒舌吐槽本...'}</p>
                             </div>
                           ) : (
                             <div className="flex flex-col items-center gap-2 py-1.5">
-                              <p className="font-black italic text-[9px] text-zinc-400">這週過得怎麼樣？想聽聽教練的毒舌點評嗎？</p>
+                              <p className="font-black italic text-[9px] text-zinc-400">{isEn ? 'How was your week? Want to hear Coach roast your stats?' : '這週過得怎麼樣？想聽聽教練的毒舌點評嗎？'}</p>
                               <button
                                 onClick={handleGetWeeklyRoast}
                                 className="bg-accent border-3 border-black px-4 py-1.5 rounded-xl font-black italic text-[11px] sm:text-xs flex items-center gap-1 shadow-neo-xs hover:-translate-y-0.5 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none transition-all text-black cursor-pointer"
                               >
                                 <Sparkles size={12} fill="currentColor" />
-                                召喚教練週銳評 🐼✨
+                                {isEn ? 'Summon Weekly Roast 🐼✨' : '召喚教練週銳評 🐼✨'}
                               </button>
                             </div>
                           )}
@@ -501,7 +547,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                       winnie-lin.space/daily-diet
                     </div>
                     <div className="text-[7.5px] sm:text-[8px] font-black text-zinc-400 whitespace-nowrap">
-                      打卡是態度，減脂是生活
+                      {isEn ? 'Consistency is key, health is life' : '打卡是態度，減脂是生活'}
                     </div>
                   </div>
                 </div>
@@ -512,7 +558,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                 <button
                   onClick={onClose}
                   disabled={!!exportState}
-                  title="關閉"
+                  title={isEn ? "Close" : "關閉"}
                   className="w-10 sm:w-11 h-10 sm:h-11 bg-white border-3 border-black rounded-xl sm:rounded-2xl font-black transition-all hover:bg-rose-100 active:translate-x-[1px] active:translate-y-[1px] active:shadow-none shadow-neo-xs flex items-center justify-center disabled:opacity-50 text-black cursor-pointer shrink-0"
                 >
                   <X size={18} />
@@ -525,7 +571,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                   {exportState === 'download' ? (
                     <Loader2 size={14} className="animate-spin text-black" />
                   ) : (
-                    <><Download size={14} /> 下載 IG 卡片</>
+                    <><Download size={14} /> {isEn ? 'Download IG Card' : '下載 IG 卡片'}</>
                   )}
                 </button>
                 <button
@@ -536,7 +582,7 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
                   {exportState === 'share' ? (
                     <Loader2 size={14} className="animate-spin text-black" />
                   ) : (
-                    <><Share2 size={14} /> 分享自律週報</>
+                    <><Share2 size={14} /> {isEn ? 'Share Report' : '分享自律週報'}</>
                   )}
                 </button>
               </div>
@@ -550,3 +596,4 @@ const WeeklyReportCard = ({ isOpen, onClose, goals, streak, userName }) => {
 };
 
 export default WeeklyReportCard;
+
