@@ -21,6 +21,14 @@
             padding-top: 30px;
             padding-bottom: 80px;
         }
+        .top-nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 24px;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
         .card { 
             background: white; 
             padding: 40px; 
@@ -31,10 +39,10 @@
         }
         @media (max-width: 640px) {
             .card { padding: 24px; border-radius: 24px; }
-            h1 { font-size: 32px !important; }
+            h1 { font-size: 28px !important; }
         }
         h1 { 
-            font-size: 38px;
+            font-size: 36px;
             font-style: italic; 
             font-weight: 900; 
             border-bottom: 6px solid #000; 
@@ -91,7 +99,6 @@
             display: inline-flex; 
             align-items: center;
             gap: 8px;
-            margin-bottom: 24px; 
             padding: 12px 22px; 
             background: #000; 
             color: #fff; 
@@ -107,6 +114,29 @@
             transform: translate(-2px, -2px); 
             box-shadow: 6px 6px 0px #FDE047; 
         }
+        .lang-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 12px 20px;
+            background: #FDE047;
+            color: #000;
+            border: 3px solid #000;
+            border-radius: 16px;
+            font-weight: 900;
+            font-size: 13px;
+            cursor: pointer;
+            box-shadow: 4px 4px 0px #000;
+            transition: all 0.15s;
+        }
+        .lang-btn:hover {
+            transform: translate(-2px, -2px);
+            box-shadow: 6px 6px 0px #000;
+        }
+        .lang-btn:active {
+            transform: translate(2px, 2px);
+            box-shadow: 2px 2px 0px #000;
+        }
         .logo-tag {
             background: #000;
             color: #FDE047;
@@ -116,15 +146,6 @@
             font-size: 12px;
             display: inline-block;
             margin-bottom: 12px;
-        }
-        .badge {
-            background: #EFF6FF;
-            color: #1D4ED8;
-            padding: 2px 8px;
-            border-radius: 6px;
-            font-weight: 800;
-            font-size: 11px;
-            border: 1px solid #BFDBFE;
         }
         footer {
             margin-top: 40px;
@@ -139,76 +160,204 @@
 </head>
 <body>
     <div class="container">
-        <a href="./" class="back-btn">← 返回應用程式 (APP)</a>
+        <div class="top-nav">
+            <a href="./" class="back-btn" id="back-btn">← 返回應用程式 (APP)</a>
+            <button type="button" class="lang-btn" id="lang-toggle-btn" onclick="toggleLang()">
+                <span id="lang-btn-text">🌐 English</span>
+            </button>
+        </div>
+
         <div class="card">
             <div class="logo-tag">DAILY DIET · PRIVACY & SECURITY 🐼</div>
-            <h1>用戶隱私保護與數據安全政策</h1>
-            <p>最後修訂生效日期：2026年10月11日（針對資安透明度與數據防護架構全面修訂）</p>
-            <p>歡迎使用 <strong>Daily Diet 飲食控制助手（包含 Web App 與 LINE 官方帳號機器人）</strong>。我們深知飲食紀錄、體態數據與生活作息屬於高度私密的個人健康資訊。本應用程式堅持以<strong>「資料自主（Data Ownership）」、「最小化收集」與「透明公開」</strong>為最高原則，本政策向您詳盡說明數據的儲存位置、傳輸機制、外部 AI 處理邊界與您的自主控制權。</p>
 
-            <div class="alert-box">
-                <div class="alert-title">🩺 重要健康與非醫療用途免責聲明</div>
-                <p class="alert-desc">
-                    Daily Diet 與「熊貓教練」所提供之所有熱量（kcal）、蛋白質（g）、水分（ml）、BMR/TDEE 建議、飲食估算及<strong>間歇性斷食窗口提醒</strong>，<strong>均僅供個人日常自我健康管理與體重控制參考，非屬任何形式之醫療診斷、疾病治療或專業臨床處方</strong>。<br>
-                    若您患有慢性疾病（如糖尿病、低血糖、腎臟病、心血管疾病）、有進食障礙病史、處於孕期或哺乳期，在進行任何飲食調整或斷食前，請務必諮詢合格執業醫師或註冊營養師。
-                </p>
+            <!-- 繁體中文版本 (Traditional Chinese) -->
+            <div id="content-zh" class="lang-content">
+                <h1>用戶隱私保護與數據安全政策</h1>
+                <p>最後修訂生效日期：2026年10月11日（針對資安透明度與數據防護架構全面修訂）</p>
+                <p>歡迎使用 <strong>Daily Diet 飲食控制助手（包含 Web App 與 LINE 官方帳號機器人）</strong>。我們深知飲食紀錄、體態數據與生活作息屬於高度私密的個人健康資訊。本應用程式堅持以<strong>「資料自主（Data Ownership）」、「最小化收集」與「透明公開」</strong>為最高原則，本政策向您詳盡說明數據的儲存位置、傳輸機制、外部 AI 處理邊界與您的自主控制權。</p>
+
+                <div class="alert-box">
+                    <div class="alert-title">🩺 重要健康與非醫療用途免責聲明</div>
+                    <p class="alert-desc">
+                        Daily Diet 與「熊貓教練」所提供之所有熱量（kcal）、蛋白質（g）、水分（ml）、BMR/TDEE 建議、飲食估算及<strong>間歇性斷食窗口提醒</strong>，<strong>均僅供個人日常自我健康管理與體重控制參考，非屬任何形式之醫療診斷、疾病治療或專業臨床處方</strong>。<br>
+                        若您患有慢性疾病（如糖尿病、低血糖、腎臟病、心血管疾病）、有進食障礙病史、處於孕期或哺乳期，在進行任何飲食調整或斷食前，請務必諮詢合格執業醫師或註冊營養師。
+                    </p>
+                </div>
+
+                <h2>1. 本地優先架構與資料收集極小化</h2>
+                <p>本服務致力於將伺服器端資料收集降至最低，採用無需註冊帳號密碼的設計：</p>
+                <ul>
+                    <li><strong>本地優先儲存（IndexedDB）：</strong> 您的餐點日誌、自訂目標、歷史體重與常用餐點皆<strong>優先且完整儲存於您本地裝置之瀏覽器資料庫中</strong>。在未開啟雲端同步時，應用程式具備 100% 離線運作能力，資料完全不離開您的手機或電腦。</li>
+                    <li><strong>LINE 平台連動（LIFF / Bot）：</strong> 當您透過 LINE 發送飲食訊息或照片時，系統僅接收 LINE 平台分配之用戶虛擬識別碼（LINE User ID），以利為您綁定個人專屬雲端空間。<strong>我們絕不主動收集您的真實姓名、電話號碼、通訊錄、定位軌跡或信用卡號碼。</strong></li>
+                </ul>
+
+                <h2>2. 雲端同步架構（GitHub Gist 邊界與 Zero-Knowledge 端對端加密金庫）</h2>
+                <p>為達成跨裝置（電腦、手機瀏覽器與 LINE 機器人）即時雙向同步，系統採用 GitHub Gist 作為雲端中繼存儲：</p>
+                <ul>
+                    <li><strong>儲存機制（Secret Gist / 未公開網址）：</strong> 每位啟用雲端同步的用戶，其飲食與體態資料均被寫入至專屬的 <strong>Secret GitHub Gist</strong> 空間中。依 GitHub 官方定義，Secret Gist 屬於「未被搜尋引擎公開索引的 Unlisted 空間」，任何取得該隨機 Gist ID 網址者均可能檢視檔案內容。</li>
+                    <li><strong>🔐【全新升級】端對端金庫加密（Zero-Knowledge AES-256-GCM）：</strong> 為從根本上消除 Secret Gist 網址外洩風險，Web App 現已提供<strong>「端對端金庫加密」模式</strong>。啟用後，備份檔案在離開您的手機前，由瀏覽器原生 Web Crypto API 採用 <strong>AES-256-GCM</strong> 進行高強度加密。<strong>GitHub 雲端上僅儲存不可逆的亂碼密文，即使 Gist 網址外洩，無本機金鑰的第三方或 GitHub 官方均絕對無法解密您的任何飲食或體態數據。</strong></li>
+                    <li><strong>後端存取控制與防護：</strong> 系統伺服器（Google Apps Script）部署了用戶 ID 與 Gist 擁有權嚴格比對機制（防範越權存取 IDOR），絕不對外公開用戶之 Gist ID。</li>
+                    <li><strong>用戶隱私建議：</strong> 若您希望維持 100% 離線，亦可隨時在 Web App 設定中「解除雲端綁定」，資料絕不離開本機；或在進階設定中填入個人專屬 GitHub PAT，直接儲存於個人 GitHub 帳號。</li>
+                </ul>
+
+                <h2>3. AI 影像與語意辨識服務條款（前端 EXIF 自動脫敏與 Google Gemini 推論透明度）</h2>
+                <p><strong>【法定告知義務】</strong> 當您使用拍照辨識或 AI 飲食拆解功能時，<strong>您傳送的照片與菜名將傳輸至第三方 AI 雲端模型（Google Gemini）進行多模態影像推論與語意分析</strong>，以提取食物營養特徵並估算熱量、蛋白質與水分。</p>
+                <ul>
+                    <li><strong>📸 前端自動 EXIF 個資剝除（Client-side Metadata Sanitization）：</strong> 當您上傳相片時，前端應用程式會先在瀏覽器端透過 HTML5 Canvas 重新解碼與壓縮，<strong>100% 自動剝除照片中的所有 EXIF 元數據（包含拍攝時的 GPS 地理座標、相機鏡頭型號、拍攝時間等隱私資訊）</strong>，絕不將原始相片個資傳輸至外部。</li>
+                    <li><strong>傳輸層加密（In-Transit Encryption）：</strong> 系統全程採用 <strong>HTTPS / TLS 1.3 企業級傳輸層加密安全通道</strong> 傳輸圖片與文字，防範傳輸過程中的中途竊聽與攔截。</li>
+                    <li><strong>非端到端加密（Non-E2EE）揭露：</strong> 由於第三方 AI 模型必須於雲端運算節點將數據解碼為張量矩陣以執行即時推論，<strong>此過程屬於雲端推論處理，並非端到端加密（End-to-End Encryption）</strong>。Daily Diet 絕不對外公開發布您的相片，但建議使用者<strong>避免上傳拍攝到清晰個人面孔、身分證件或私密居家背景之照片</strong>。</li>
+                    <li><strong>推論性質提示：</strong> AI 模型之辨識數據為演算法統計估算，非屬精密儀器量測，建議您依實際攝取情況手動微調。</li>
+                </ul>
+
+                <h2>4. 使用者體驗遙測與分析（Microsoft Clarity 嚴格全域遮蔽與 DNT / 自由開關）</h2>
+                <p>為監控頁面崩潰並持續優化介面流暢度，本 Web 應用程式導入了微軟 <strong>Microsoft Clarity</strong> 體驗分析工具：</p>
+                <ul>
+                    <li><strong>嚴格全域客戶端遮蔽（Strict Client-side Text Masking）：</strong> 前端網頁已在 HTML 根節點配置 <code>data-clarity-mask="true"</code> 嚴格脫敏指令。<strong>所有文字內容（包含您的餐點品名、熱量數字、體重紀錄、自訂目標及所有輸入框文字）均在瀏覽器端即時轉化為星號（*）遮蔽</strong>，微軟伺服器與開發人員均無法窺探您的具體日記文字。</li>
+                    <li><strong>🛡️ 嚴格尊重 Do Not Track (DNT) 與用戶開關：</strong> 系統原生支援 W3C Do Not Track (DNT) 與 Global Privacy Control (GPC)。<strong>若您的瀏覽器啟用了 DNT，或在 Web App 設定中關閉「體驗遙測與分析」，系統將在程式碼層級徹底阻斷 Clarity 腳本之載入與執行</strong>。</li>
+                    <li><strong>僅收集操作動線：</strong> 在用戶允許的狀態下，遙測資料僅限於無關個人隱私之滑鼠點擊座標、滾動比例、螢幕解析度與系統崩潰日誌。</li>
+                </ul>
+
+                <h2>5. 伺服器運作日誌脫敏與自動銷毀機制</h2>
+                <ul>
+                    <li><strong>去識別化遮蔽：</strong> 為保障用戶隱私，系統伺服器（GAS）運作日誌中一律將用戶 ID 進行脫敏遮蔽（僅顯示末尾 6 碼，如 <code>...497c66</code>）。</li>
+                    <li><strong>先進先出動態覆蓋：</strong> 伺服器僅採先進先出（FIFO）暫存最近 60 筆執行事件用於連線除錯，超出即自動永久覆蓋銷毀，絕不留存歷史對話快取。</li>
+                </ul>
+
+                <h2>6. 資料自主權、匯出與被遺忘權（刪除資料）</h2>
+                <p>依據個人資料保護法與現代數據自主精神，您隨時享有完整的資料控制權：</p>
+                <ul>
+                    <li><strong>隨時一鍵匯出（資料可攜性）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>📥 匯出完整 JSON 備份</strong>」，隨時將本機所有歷史飲食日誌、體重與偏好完整下載備份至您的裝置。</li>
+                    <li><strong>徹底抹除本機（被遺忘權）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>🗑️ 抹除本機所有資料</strong>」，系統將經雙重確認後永久清空本機瀏覽器（IndexedDB）所有數據與本機快取。</li>
+                    <li><strong>🔥 雲端 Gist 物理銷毀權（Physical Destruction via GitHub API）：</strong> 若您欲徹底清除雲端備份，可直接在 Web App 點擊「<strong>🔥 物理銷毀 GitHub 雲端 Gist</strong>」。系統將直接向 GitHub REST API 發送 <code>DELETE</code> 請求，<strong>徹底從 GitHub 伺服器永久抹除該 Gist 及其所有歷史 Git 提交歷程（回傳 204 No Content），絕無任何雲端殘留數據</strong>。</li>
+                    <li><strong>解除雲端同步：</strong> 點擊「解除雲端綁定」可切斷本機與雲端 Gist 的同步關聯，停止任何雲端資料傳輸。</li>
+                </ul>
+
+                <h2>7. 條款變更與聯繫管道</h2>
+                <p>若本隱私與安全政策有任何更新，我們將即時公告於本頁面。若您對個人隱私保護或資安架構有任何疑問或建議，歡迎透過 Web App「設定 ➔ 意見回饋」與維護團隊聯繫。再次感謝您對 Daily Diet 的支持與信任！</p>
             </div>
 
-            <h2>1. 本地優先架構與資料收集極小化</h2>
-            <p>本服務致力於將伺服器端資料收集降至最低，採用無需註冊帳號密碼的設計：</p>
-            <ul>
-                <li><strong>本地優先儲存（IndexedDB）：</strong> 您的餐點日誌、自訂目標、歷史體重與常用餐點皆<strong>優先且完整儲存於您本地裝置之瀏覽器資料庫中</strong>。在未開啟雲端同步時，應用程式具備 100% 離線運作能力，資料完全不離開您的手機或電腦。</li>
-                <li><strong>LINE 平台連動（LIFF / Bot）：</strong> 當您透過 LINE 發送飲食訊息或照片時，系統僅接收 LINE 平台分配之用戶虛擬識別碼（LINE User ID），以利為您綁定個人專屬雲端空間。<strong>我們絕不主動收集您的真實姓名、電話號碼、通訊錄、定位軌跡或信用卡號碼。</strong></li>
-            </ul>
+            <!-- 英文版本 (English) -->
+            <div id="content-en" class="lang-content" style="display: none;">
+                <h1>User Privacy Protection & Data Security Policy</h1>
+                <p>Last Revised & Effective: October 11, 2026 (Comprehensive Revision for Security Transparency & Data Protection Architecture)</p>
+                <p>Welcome to <strong>Daily Diet Nutrition Coach (including the Web App and LINE Official Account Bot)</strong>. We recognize that meal logs, body weight, body metrics, and lifestyle routines represent highly sensitive personal health data. This application strictly adheres to the core tenets of <strong>"Data Ownership," "Minimal Collection," and "Open Transparency."</strong> This policy explains in detail where your data is stored, how it is encrypted and transmitted, the boundaries of third-party AI processing, and your complete autonomous rights over your information.</p>
 
-            <h2>2. 雲端同步架構（GitHub Gist 邊界與 Zero-Knowledge 端對端加密金庫）</h2>
-            <p>為達成跨裝置（電腦、手機瀏覽器與 LINE 機器人）即時雙向同步，系統採用 GitHub Gist 作為雲端中繼存儲：</p>
-            <ul>
-                <li><strong>儲存機制（Secret Gist / 未公開網址）：</strong> 每位啟用雲端同步的用戶，其飲食與體態資料均被寫入至專屬的 <strong>Secret GitHub Gist</strong> 空間中。依 GitHub 官方定義，Secret Gist 屬於「未被搜尋引擎公開索引的 Unlisted 空間」，任何取得該隨機 Gist ID 網址者均可能檢視檔案內容。</li>
-                <li><strong>🔐【全新升級】端對端金庫加密（Zero-Knowledge AES-256-GCM）：</strong> 為從根本上消除 Secret Gist 網址外洩風險，Web App 現已提供<strong>「端對端金庫加密」模式</strong>。啟用後，備份檔案在離開您的手機前，由瀏覽器原生 Web Crypto API 採用 <strong>AES-256-GCM</strong> 進行高強度加密。<strong>GitHub 雲端上僅儲存不可逆的亂碼密文，即使 Gist 網址外洩，無本機金鑰的第三方或 GitHub 官方均絕對無法解密您的任何飲食或體態數據。</strong></li>
-                <li><strong>後端存取控制與防護：</strong> 系統伺服器（Google Apps Script）部署了用戶 ID 與 Gist 擁有權嚴格比對機制（防範越權存取 IDOR），絕不對外公開用戶之 Gist ID。</li>
-                <li><strong>用戶隱私建議：</strong> 若您希望維持 100% 離線，亦可隨時在 Web App 設定中「解除雲端綁定」，資料絕不離開本機；或在進階設定中填入個人專屬 GitHub PAT，直接儲存於個人 GitHub 帳號。</li>
-            </ul>
+                <div class="alert-box">
+                    <div class="alert-title">🩺 Important Health & Non-Medical Use Disclaimer</div>
+                    <p class="alert-desc">
+                        All calorie estimates (kcal), protein (g), water intake (ml), BMR/TDEE recommendations, dietary suggestions, and <strong>intermittent fasting window reminders</strong> provided by Daily Diet and "Panda Coach" <strong>are solely for personal daily lifestyle management and weight awareness reference. They do not constitute medical diagnosis, treatment, or clinical nutrition prescriptions.</strong><br>
+                        If you have chronic medical conditions (e.g. diabetes, hypoglycemia, renal or cardiovascular diseases), a history of eating disorders, or are pregnant or breastfeeding, please consult a licensed medical physician or registered dietitian before making any dietary or fasting changes.
+                    </p>
+                </div>
 
-            <h2>3. AI 影像與語意辨識服務條款（前端 EXIF 自動脫敏與 Google Gemini 推論透明度）</h2>
-            <p><strong>【法定告知義務】</strong> 當您使用拍照辨識或 AI 飲食拆解功能時，<strong>您傳送的照片與菜名將傳輸至第三方 AI 雲端模型（Google Gemini）進行多模態影像推論與語意分析</strong>，以提取食物營養特徵並估算熱量、蛋白質與水分。</p>
-            <ul>
-                <li><strong>📸 前端自動 EXIF 個資剝除（Client-side Metadata Sanitization）：</strong> 當您上傳相片時，前端應用程式會先在瀏覽器端透過 HTML5 Canvas 重新解碼與壓縮，<strong>100% 自動剝除照片中的所有 EXIF 元數據（包含拍攝時的 GPS 地理座標、相機鏡頭型號、拍攝時間等隱私資訊）</strong>，絕不將原始相片個資傳輸至外部。</li>
-                <li><strong>傳輸層加密（In-Transit Encryption）：</strong> 系統全程採用 <strong>HTTPS / TLS 1.3 企業級傳輸層加密安全通道</strong> 傳輸圖片與文字，防範傳輸過程中的中途竊聽與攔截。</li>
-                <li><strong>非端到端加密（Non-E2EE）揭露：</strong> 由於第三方 AI 模型必須於雲端運算節點將數據解碼為張量矩陣以執行即時推論，<strong>此過程屬於雲端推論處理，並非端到端加密（End-to-End Encryption）</strong>。Daily Diet 絕不對外公開發布您的相片，但建議使用者<strong>避免上傳拍攝到清晰個人面孔、身分證件或私密居家背景之照片</strong>。</li>
-                <li><strong>推論性質提示：</strong> AI 模型之辨識數據為演算法統計估算，非屬精密儀器量測，建議您依實際攝取情況手動微調。</li>
-            </ul>
+                <h2>1. Local-First Architecture & Data Minimization</h2>
+                <p>Our service is designed to minimize server-side data retention by operating without accounts or passwords:</p>
+                <ul>
+                    <li><strong>Local-First Storage (IndexedDB):</strong> Your meal records, custom goals, weight logs, and favorite food items are <strong>stored primarily and completely inside your local browser database (IndexedDB)</strong>. When cloud synchronization is disabled, the application runs 100% offline, and your data never leaves your personal phone or computer.</li>
+                    <li><strong>LINE Platform Integration (LIFF / Bot):</strong> When you send meal messages or upload food photos via LINE, our server only receives the pseudonymous User ID allocated by the LINE platform to link your dedicated cloud backup. <strong>We never collect your legal name, phone number, address book, GPS tracks, or credit card details.</strong></li>
+                </ul>
 
-            <h2>4. 使用者體驗遙測與分析（Microsoft Clarity 嚴格全域遮蔽與 DNT / 自由開關）</h2>
-            <p>為監控頁面崩潰並持續優化介面流暢度，本 Web 應用程式導入了微軟 <strong>Microsoft Clarity</strong> 體驗分析工具：</p>
-            <ul>
-                <li><strong>嚴格全域客戶端遮蔽（Strict Client-side Text Masking）：</strong> 前端網頁已在 HTML 根節點配置 <code>data-clarity-mask="true"</code> 嚴格脫敏指令。<strong>所有文字內容（包含您的餐點品名、熱量數字、體重紀錄、自訂目標及所有輸入框文字）均在瀏覽器端即時轉化為星號（*）遮蔽</strong>，微軟伺服器與開發人員均無法窺探您的具體日記文字。</li>
-                <li><strong>🛡️ 嚴格尊重 Do Not Track (DNT) 與用戶開關：</strong> 系統原生支援 W3C Do Not Track (DNT) 與 Global Privacy Control (GPC)。<strong>若您的瀏覽器啟用了 DNT，或在 Web App 設定中關閉「體驗遙測與分析」，系統將在程式碼層級徹底阻斷 Clarity 腳本之載入與執行</strong>。</li>
-                <li><strong>僅收集操作動線：</strong> 在用戶允許的狀態下，遙測資料僅限於無關個人隱私之滑鼠點擊座標、滾動比例、螢幕解析度與系統崩潰日誌。</li>
-            </ul>
+                <h2>2. Cloud Sync Architecture (GitHub Gist & Zero-Knowledge E2EE Vault)</h2>
+                <p>To deliver seamless real-time 2-way synchronization across multiple devices (desktop browsers, mobile PWA, and LINE Bot), the system utilizes GitHub Gist as an intermediary cloud bridge:</p>
+                <ul>
+                    <li><strong>Storage Mechanism (Secret Gist / Unlisted URL):</strong> For users who enable cloud sync, meal and body metric data is synchronized to a dedicated <strong>Secret GitHub Gist</strong>. By GitHub's definition, Secret Gists are unlisted from search engines, but anyone possessing the unique Gist URL could technically view the file content.</li>
+                    <li><strong>🔐 [Upgraded] Zero-Knowledge End-to-End Vault Encryption (AES-256-GCM):</strong> To eliminate any exposure risk from shared URLs, the Web App features an optional <strong>"End-to-End Vault Encryption" mode</strong>. When enabled, your backup payload is encrypted directly on your device via the native browser Web Crypto API using military-grade <strong>AES-256-GCM</strong> before transmission. <strong>GitHub servers only receive irreversible ciphertext. Without your client-side key, neither third parties nor GitHub can ever decipher your meal or weight records.</strong></li>
+                    <li><strong>Backend Access Control & Protection:</strong> Our Google Apps Script proxy enforces strict ownership validation between User IDs and Gist IDs (preventing Insecure Direct Object References / IDOR) and never exposes your Gist ID to public listings.</li>
+                    <li><strong>User Privacy Recommendation:</strong> If you prefer complete offline isolation, you can click "Unbind Cloud" at any time in Web App Settings, ensuring data remains exclusively local; or enter your personal GitHub PAT in Advanced Settings to store backups directly into your personal repository.</li>
+                </ul>
 
-            <h2>5. 伺服器運作日誌脫敏與自動銷毀機制</h2>
-            <ul>
-                <li><strong>去識別化遮蔽：</strong> 為保障用戶隱私，系統伺服器（GAS）運作日誌中一律將用戶 ID 進行脫敏遮蔽（僅顯示末尾 6 碼，如 <code>...497c66</code>）。</li>
-                <li><strong>先進先出動態覆蓋：</strong> 伺服器僅採先進先出（FIFO）暫存最近 60 筆執行事件用於連線除錯，超出即自動永久覆蓋銷毀，絕不留存歷史對話快取。</li>
-            </ul>
+                <h2>3. AI Vision & Semantic Recognition Terms (EXIF Stripping & Gemini Transparency)</h2>
+                <p><strong>[Statutory Disclosure]</strong> When utilizing photo food recognition or AI meal breakdown, <strong>your food photos and dish titles are transmitted to third-party cloud AI models (Google Gemini) for multimodal image reasoning and semantic analysis</strong> to extract macronutrients, calories, protein, and water.</p>
+                <ul>
+                    <li><strong>📸 Automatic Client-Side EXIF Metadata Sanitization:</strong> Before any image leaves your browser, the client application re-encodes and compresses it via HTML5 Canvas, <strong>100% automatically stripping all EXIF metadata (including GPS coordinates, camera model, shooting timestamp, etc.)</strong>, guaranteeing sensitive photo metadata is never transmitted.</li>
+                    <li><strong>In-Transit Encryption:</strong> All communications with AI endpoints strictly utilize <strong>enterprise-grade HTTPS / TLS 1.3 encrypted secure channels</strong> to prevent eavesdropping and man-in-the-middle attacks.</li>
+                    <li><strong>Non-E2EE Cloud Inference Disclosure:</strong> Because AI neural networks must decode image tensors in high-performance cloud clusters to perform real-time visual reasoning, <strong>this process constitutes cloud inference processing rather than end-to-end encryption</strong>. Daily Diet never publishes your photos publicly, but we strongly advise users <strong>to avoid uploading pictures featuring clear human faces, government IDs, or sensitive private home settings</strong>.</li>
+                    <li><strong>Algorithmic Notice:</strong> AI nutrition estimates are algorithmic approximations based on statistical models, not precision laboratory measurements. Users are encouraged to fine-tune entries based on actual consumption.</li>
+                </ul>
 
-            <h2>6. 資料自主權、匯出與被遺忘權（刪除資料）</h2>
-            <p>依據個人資料保護法與現代數據自主精神，您隨時享有完整的資料控制權：</p>
-            <ul>
-                <li><strong>隨時一鍵匯出（資料可攜性）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>📥 匯出完整 JSON 備份</strong>」，隨時將本機所有歷史飲食日誌、體重與偏好完整下載備份至您的裝置。</li>
-                <li><strong>徹底抹除本機（被遺忘權）：</strong> 您可在 Web App「設定 ➔ 資料與備份」中點擊「<strong>🗑️ 抹除本機所有資料</strong>」，系統將經雙重確認後永久清空本機瀏覽器（IndexedDB）所有數據與本機快取。</li>
-                <li><strong>🔥 雲端 Gist 物理銷毀權（Physical Destruction via GitHub API）：</strong> 若您欲徹底清除雲端備份，可直接在 Web App 點擊「<strong>🔥 物理銷毀 GitHub 雲端 Gist</strong>」。系統將直接向 GitHub REST API 發送 <code>DELETE</code> 請求，<strong>徹底從 GitHub 伺服器永久抹除該 Gist 及其所有歷史 Git 提交歷程（回傳 204 No Content），絕無任何雲端殘留數據</strong>。</li>
-                <li><strong>解除雲端同步：</strong> 點擊「解除雲端綁定」可切斷本機與雲端 Gist 的同步關聯，停止任何雲端資料傳輸。</li>
-            </ul>
+                <h2>4. User Experience Telemetry & Analytics (Microsoft Clarity Masking & DNT Support)</h2>
+                <p>To detect runtime client crashes and enhance interface responsiveness, this Web App integrates <strong>Microsoft Clarity</strong> user experience analytics:</p>
+                <ul>
+                    <li><strong>Strict Client-Side Text Masking:</strong> The root HTML element is configured with the strict <code>data-clarity-mask="true"</code> directive. <strong>All textual inputs and displays (including dish names, calorie counts, weights, custom targets, and form fields) are masked into asterisks (*) on your browser before telemetry capture</strong>. Microsoft servers and application maintainers cannot inspect your meal logs.</li>
+                    <li><strong>🛡️ Full Respect for Do Not Track (DNT) & User Control:</strong> The system natively honors W3C Do Not Track (DNT) and Global Privacy Control (GPC). <strong>If DNT is active in your browser or if you toggle off "Experience Telemetry" in Web App Settings, the Clarity script is completely suppressed at code level from loading or running.</strong></li>
+                    <li><strong>Interaction Dynamics Only:</strong> Under user consent, telemetry is strictly confined to privacy-neutral mouse click coordinates, scroll depth, screen dimensions, and anonymous script crash traces.</li>
+                </ul>
 
-            <h2>7. 條款變更與聯繫管道</h2>
-            <p>若本隱私與安全政策有任何更新，我們將即時公告於本頁面。若您對個人隱私保護或資安架構有任何疑問或建議，歡迎透過 Web App「設定 ➔ 意見回饋」與維護團隊聯繫。再次感謝您對 Daily Diet 的支持與信任！</p>
+                <h2>5. Server Operation Logs De-Identification & Dynamic Purging</h2>
+                <ul>
+                    <li><strong>Pseudonymous Masking:</strong> To safeguard user privacy, server runtime logs (GAS) consistently mask user identifiers (only displaying the terminal 6 characters, e.g. <code>...497c66</code>).</li>
+                    <li><strong>FIFO Dynamic Overwriting:</strong> The server temporarily buffers only the last 60 operational events on a First-In-First-Out basis purely for connection diagnostics, permanently overwriting older entries without preserving historical chat contents.</li>
+                </ul>
+
+                <h2>6. Data Ownership, Export & Right to be Forgotten</h2>
+                <p>In accordance with global data protection standards and user data sovereignty, you maintain full command of your information at all times:</p>
+                <ul>
+                    <li><strong>1-Click Full Export (Data Portability):</strong> In Web App "Settings ➔ Data & Backup", click "<strong>📥 Export JSON Backup</strong>" to download your complete historical meal logs, weight history, and preferences to your device anytime.</li>
+                    <li><strong>Local Wipe (Right to be Forgotten):</strong> In "Settings ➔ Data & Backup", click "<strong>🗑️ Wipe All Local Data</strong>" to irreversibly erase all IndexedDB records, user settings, and local storage caches after a dual safety confirmation.</li>
+                    <li><strong>🔥 Cloud Gist Physical Destruction (via GitHub API):</strong> To permanently purge cloud records, click "<strong>🔥 Permanently Purge GitHub Cloud Gist</strong>" in the Web App. The system directly transmits an authenticated <code>DELETE</code> request to the GitHub REST API, <strong>physically purging the Gist and all historical Git commit snapshots from GitHub servers (returning HTTP 204 No Content) with zero lingering cloud footprint</strong>.</li>
+                    <li><strong>Unlink Cloud Synchronization:</strong> Clicking "Unbind Cloud" severs the connection between your device and the remote Gist, instantly halting all cloud transmissions.</li>
+                </ul>
+
+                <h2>7. Changes to Terms & Contact Channels</h2>
+                <p>Any revisions to this Privacy & Security Policy will be promptly published on this page. If you have questions or suggestions regarding data privacy or our security architecture, please contact our team via Web App "Settings ➔ Feedback". Thank you for your continued trust and support of Daily Diet!</p>
+            </div>
 
             <footer>
                 Daily Diet © 2026 Winnie Lin Space · All Rights Reserved.
             </footer>
         </div>
     </div>
+
+    <script>
+        function setLang(lang) {
+            var isEn = lang === 'en';
+            document.documentElement.lang = isEn ? 'en' : 'zh-TW';
+            document.title = isEn 
+                ? 'Privacy Policy & Data Security - Daily Diet 🐼' 
+                : '隱私權保護與數據安全政策 - Daily Diet 🐼';
+            
+            var zhEl = document.getElementById('content-zh');
+            var enEl = document.getElementById('content-en');
+            if (zhEl && enEl) {
+                zhEl.style.display = isEn ? 'none' : 'block';
+                enEl.style.display = isEn ? 'block' : 'none';
+            }
+
+            var backBtn = document.getElementById('back-btn');
+            if (backBtn) {
+                backBtn.textContent = isEn ? '← Back to App (APP)' : '← 返回應用程式 (APP)';
+            }
+
+            var langBtnText = document.getElementById('lang-btn-text');
+            if (langBtnText) {
+                langBtnText.textContent = isEn ? '🌐 繁體中文' : '🌐 English';
+            }
+
+            try {
+                localStorage.setItem('daily_diet_lang', lang);
+                var url = new URL(window.location.href);
+                url.searchParams.set('lang', lang);
+                window.history.replaceState({}, '', url.toString());
+            } catch (e) {}
+        }
+
+        function toggleLang() {
+            var cur = document.documentElement.lang === 'en' ? 'zh' : 'en';
+            setLang(cur);
+        }
+
+        // Initialize language from URL, localStorage, or browser language
+        (function() {
+            var params = new URLSearchParams(window.location.search);
+            var lang = params.get('lang');
+            if (!lang) {
+                try { lang = localStorage.getItem('daily_diet_lang'); } catch (e) {}
+            }
+            if (!lang) {
+                lang = (navigator.language || navigator.userLanguage || '').startsWith('zh') ? 'zh' : 'en';
+            }
+            setLang(lang === 'en' ? 'en' : 'zh');
+        })();
+    </script>
 </body>
 </html>

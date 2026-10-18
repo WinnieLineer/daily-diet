@@ -18,15 +18,15 @@ const getVersionHistory = (isEn) => {
   const lang = isEn ? 'en' : 'zh';
   return [
   {
-    version: '3.3.156',
+    version: '3.3.157',
     date: '2026-10-18',
     features: isEn ? [
-      '🌐 Full reactive bilingual UI: Daily Goals, AI Smart Recommendations & LINE deep features',
-      '📜 Version History full English localization',
+      '🛡️ Full English Privacy Policy & Terms of Service with instant language toggle',
+      '🌐 Reactive bilingual UI: Daily Goals, AI Recommendations & Version History',
       '⚡ Settings responsive layout enhancements'
     ] : [
-      '🌐 全面支援即時雙語切換（每日目標設定、AI 智能推薦、LINE 深度功能）',
-      '📜 版本歷史（Version History）全面支援雙語切換',
+      '🛡️ 隱私政策與服務條款支援完整英文版及即時雙語切換',
+      '🌐 全面支援即時雙語切換（每日目標設定、AI 智能推薦、版本歷史）',
       '⚡ 設定選單響應式架構優化'
     ]
   },
@@ -3329,7 +3329,7 @@ const GoalSettings = ({
                     <div className="pt-2 border-t-2 border-black/10 space-y-3">
                       <div className="flex gap-2">
                         <a
-                          href="./privacy.html"
+                          href={isEn ? './privacy.html?lang=en' : './privacy.html?lang=zh'}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 flex items-center justify-center gap-1.5 p-2.5 bg-yellow-50 hover:bg-yellow-100 border-2 border-black rounded-xl text-black font-black text-[11px] shadow-neo-sm-flat active:scale-95 transition-all"
@@ -3337,7 +3337,7 @@ const GoalSettings = ({
                           🛡️ {isEn ? 'Privacy & Disclaimer' : '隱私政策與免責聲明'}
                         </a>
                         <a
-                          href="./terms.html"
+                          href={isEn ? './terms.html?lang=en' : './terms.html?lang=zh'}
                           target="_blank"
                           rel="noopener noreferrer"
                           className="flex-1 flex items-center justify-center gap-1.5 p-2.5 bg-zinc-50 hover:bg-zinc-100 border-2 border-black rounded-xl text-black font-black text-[11px] shadow-neo-sm-flat active:scale-95 transition-all"
