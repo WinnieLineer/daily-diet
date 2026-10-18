@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import NeoCard from './NeoCard';
 import NeoButton from './NeoButton';
@@ -14,11 +14,32 @@ import { syncPersonaToCloud, syncLanguageToCloud, syncGoalsToCloud, getOrCreateC
 import { isFounderUser, getFounderData, checkFounderStatusFromCloud } from '../lib/founderService';
 
 
-const VERSION_HISTORY = [
+const getVersionHistory = (isEn) => {
+  const lang = isEn ? 'en' : 'zh';
+  return [
+  {
+    version: '3.3.156',
+    date: '2026-10-18',
+    features: isEn ? [
+      '🌐 Full reactive bilingual UI: Daily Goals, AI Smart Recommendations & LINE deep features',
+      '📜 Version History full English localization',
+      '⚡ Settings responsive layout enhancements'
+    ] : [
+      '🌐 全面支援即時雙語切換（每日目標設定、AI 智能推薦、LINE 深度功能）',
+      '📜 版本歷史（Version History）全面支援雙語切換',
+      '⚡ 設定選單響應式架構優化'
+    ]
+  },
   { 
     version: '3.3.80', 
     date: '2026-09-21', 
-    features: [
+    features: isEn ? [
+      '📌 Fixed Sticky Header for effortless access anytime',
+      '🔄 Dynamic 2-way cloud sync status pill & live indicator',
+      '📍 Smart location tagging: filtered unknowns & dual geocoding',
+      '🛡️ Neo-brutalist friendly error shield with 1-tap cache reset',
+      '✨ Portal-based settings modal architecture eliminating scroll issues'
+    ] : [
       '📌 頂部設定列改為固定置頂（Fixed Header），隨滑隨用', 
       '🔄 新增雲端雙向即時同步動態提示膠囊與微型狀態燈號',
       '📍 智慧地點標記優化：過濾未知地點並升級雙重地理反查',
@@ -29,7 +50,11 @@ const VERSION_HISTORY = [
   { 
     version: '3.3.42', 
     date: '2026-09-15', 
-    features: [
+    features: isEn ? [
+      '🚨 Emergency Fix: Guest device isolation & shared cache purge',
+      '🧹 Auto Self-Healing: Unbind faulty links & clean foreign meal logs on boot',
+      '🔗 Data Management: Added manual "Unbind Cloud" reset button'
+    ] : [
       '🚨 緊急修復：訪客裝置身分全面獨立隔離與共用快取淨空', 
       '🧹 自動自癒：開機自動解除誤綁並清理混入之他人餐點',
       '🔗 資料管理：新增「解除雲端綁定」手動重設按鈕'
@@ -38,7 +63,11 @@ const VERSION_HISTORY = [
   { 
     version: '3.3.26', 
     date: '2026-09-14', 
-    features: [
+    features: isEn ? [
+      '🍱 Dish name corrections & lightning-fast AI re-estimation',
+      '🔄 Web ↔ LINE 2-way instant sync for carbs and fats',
+      '⚡ Favorite meals pagination stability & delivery optimization'
+    ] : [
       '🍱 食物修正品名與 AI 極速重新拆解估算', 
       '🔄 碳水與脂肪 Web ↔ LINE 雙向即時同步',
       '⚡ 常用餐點管理分頁防爆與傳送最佳化'
@@ -47,7 +76,11 @@ const VERSION_HISTORY = [
   { 
     version: '3.3.0', 
     date: '2026-09-10', 
-    features: [
+    features: isEn ? [
+      '⚖️ Weight tracking, trend charts & delta calculations',
+      '💩 Poop logging & gut health cycle statistics',
+      '📈 Native chart rendering inside LINE chat'
+    ] : [
       '⚖️ 體重追蹤、折線走勢圖與差額計算', 
       '💩 便便打卡與腸道健康週期統計',
       '📈 LINE 聊天室原生圖表繪製'
@@ -56,31 +89,137 @@ const VERSION_HISTORY = [
   { 
     version: '3.2.0', 
     date: '2026-09-08', 
-    features: [
+    features: isEn ? [
+      '🎙️ Voice meal logging support in LINE Official Account',
+      '⚡ Task model routing & ultra-fast AI recognition'
+    ] : [
       '🎙️ LINE 官方帳號支援語音記餐', 
       '⚡ 任務模型分流與極速 AI 辨識'
     ] 
   },
-  { version: '3.1.0', date: '2026-08-31', features: ['LINE 官方帳號無縫連動 🐼', '雙向 Gist 雲端同步與綁定 ☁️', 'Gemini 8階梯 AI 容錯引擎 ⚡', '主視覺歡迎卡片與實時日誌 📊'] },
-  { version: '3.0.0', date: '2026-08-30', features: [t('whatsnew_v300_line_title'), t('whatsnew_v300_water_title')] },
-  { version: '2.5.0', date: '2026-06-05', features: [t('v250_vip_title'), t('v250_timers_title')] },
-  { version: '2.4.5', date: '2026-06-05', features: [t('v242_f1'), t('v242_f2'), t('v245_f1')] },
-  { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1'), t('v220_f2'), t('v220_f3')] },
-  { version: '2.1.2', date: '2026-05-19', features: [t('v212_f1')] },
-  { version: '2.1.1', date: '2026-05-18', features: [t('v211_f1')] },
-  { version: '2.1.0', date: '2026-05-17', features: [t('v210_f1'), t('v210_f2'), t('v210_f3')] },
-  { version: '2.0.1', date: '2026-05-07', features: [t('v201_f1'), t('v201_f2'), t('v201_f3')] },
-  { version: '2.0.0', date: '2026-05-06', features: [t('v200_f1'), t('v200_f2'), t('v200_f3'), t('v200_f4')] },
-  { version: '1.9.0', date: '2026-05-05', features: [t('v190_f1'), t('v190_f2'), t('v190_f3'), t('v190_f4')] },
-  { version: '1.8.4', date: '2026-05-04', features: [t('v184_f1'), t('v184_f2'), t('v184_f3')] },
-  { version: '1.8.2', date: '2026-04-29', features: ['PWA 安裝引導系統 📱', 'iOS/Android 專屬安裝教學', '可自訂提示出現頻率'] },
-  { version: '1.8.1', date: '2026-04-29', features: ['資料管理本地儲存警告 ⚠️', 'UI 配色與對比優化', '份量輸入體驗改進', '嘴砲區塊全面展開'] },
-  { version: '1.8.0', date: '2026-04-29', features: ['個人化名稱系統 🐼', '設定區全面進化', 'AI 嘴砲區塊', '移除通知優化效能', '全新水杯圖示'] },
-  { version: '1.7.19', date: '2026-04-20', features: ['AI 辨識穩定性優化', '歷史趨勢圖表改進', '多語系支援優化'] },
-  { version: '1.7.0', date: '2026-04-10', features: ['常用紀錄功能', '自動地點標記', '智慧建議計算機'] },
-  { version: '1.6.5', date: '2026-03-25', features: ['體重追蹤系統', '飲食分析日誌', '深色模式優化'] },
-  { version: '1.5.0', date: '2026-03-10', features: ['全新 Neo-brutalism UI', '熊貓營養師登場'] }
-];
+  { 
+    version: '3.1.0', 
+    date: '2026-08-31', 
+    features: isEn ? [
+      'Seamless LINE Official Account integration 🐼',
+      '2-way Gist cloud sync & binding ☁️',
+      'Gemini 8-tier AI fault-tolerant engine ⚡',
+      'Hero welcome card & real-time activity logs 📊'
+    ] : [
+      'LINE 官方帳號無縫連動 🐼',
+      '雙向 Gist 雲端同步與綁定 ☁️',
+      'Gemini 8階梯 AI 容錯引擎 ⚡',
+      '主視覺歡迎卡片與實時日誌 📊'
+    ] 
+  },
+  { version: '3.0.0', date: '2026-08-30', features: [t('whatsnew_v300_line_title', lang), t('whatsnew_v300_water_title', lang)] },
+  { version: '2.5.0', date: '2026-06-05', features: [t('v250_vip_title', lang), t('v250_timers_title', lang)] },
+  { version: '2.4.5', date: '2026-06-05', features: [t('v242_f1', lang), t('v242_f2', lang), t('v245_f1', lang)] },
+  { version: '2.2.0', date: '2026-05-26', features: [t('v220_f1', lang), t('v220_f2', lang), t('v220_f3', lang)] },
+  { version: '2.1.2', date: '2026-05-19', features: [t('v212_f1', lang)] },
+  { version: '2.1.1', date: '2026-05-18', features: [t('v211_f1', lang)] },
+  { version: '2.1.0', date: '2026-05-17', features: [t('v210_f1', lang), t('v210_f2', lang), t('v210_f3', lang)] },
+  { version: '2.0.1', date: '2026-05-07', features: [t('v201_f1', lang), t('v201_f2', lang), t('v201_f3', lang)] },
+  { version: '2.0.0', date: '2026-05-06', features: [t('v200_f1', lang), t('v200_f2', lang), t('v200_f3', lang), t('v200_f4', lang)] },
+  { version: '1.9.0', date: '2026-05-05', features: [t('v190_f1', lang), t('v190_f2', lang), t('v190_f3', lang), t('v190_f4', lang)] },
+  { version: '1.8.4', date: '2026-05-04', features: [t('v184_f1', lang), t('v184_f2', lang), t('v184_f3', lang)] },
+  { 
+    version: '1.8.2', 
+    date: '2026-04-29', 
+    features: isEn ? [
+      'PWA installation guide system 📱',
+      'iOS & Android dedicated installation tutorials',
+      'Customizable prompt frequency'
+    ] : [
+      'PWA 安裝引導系統 📱',
+      'iOS/Android 專屬安裝教學',
+      '可自訂提示出現頻率'
+    ] 
+  },
+  { 
+    version: '1.8.1', 
+    date: '2026-04-29', 
+    features: isEn ? [
+      'Data management local storage warning ⚠️',
+      'UI color scheme & contrast enhancements',
+      'Portion sizing input improvements',
+      'AI roast banter section full expansion'
+    ] : [
+      '資料管理本地儲存警告 ⚠️',
+      'UI 配色與對比優化',
+      '份量輸入體驗改進',
+      '嘴砲區塊全面展開'
+    ] 
+  },
+  { 
+    version: '1.8.0', 
+    date: '2026-04-29', 
+    features: isEn ? [
+      'Personalized nickname system 🐼',
+      'Comprehensive settings area overhaul',
+      'AI roast coach banter section',
+      'Notification removal for peak performance',
+      'All-new water cup icons'
+    ] : [
+      '個人化名稱系統 🐼',
+      '設定區全面進化',
+      'AI 嘴砲區塊',
+      '移除通知優化效能',
+      '全新水杯圖示'
+    ] 
+  },
+  { 
+    version: '1.7.19', 
+    date: '2026-04-20', 
+    features: isEn ? [
+      'AI recognition stability optimizations',
+      'Historical trend chart improvements',
+      'Multi-language support refinements'
+    ] : [
+      'AI 辨識穩定性優化',
+      '歷史趨勢圖表改進',
+      '多語系支援優化'
+    ] 
+  },
+  { 
+    version: '1.7.0', 
+    date: '2026-04-10', 
+    features: isEn ? [
+      'Quick favorite meal logging',
+      'Automatic location tagging',
+      'Smart goal suggestion calculator'
+    ] : [
+      '常用紀錄功能',
+      '自動地點標記',
+      '智慧建議計算機'
+    ] 
+  },
+  { 
+    version: '1.6.5', 
+    date: '2026-03-25', 
+    features: isEn ? [
+      'Weight tracking system',
+      'Diet analysis daily logs',
+      'Dark mode visual optimizations'
+    ] : [
+      '體重追蹤系統',
+      '飲食分析日誌',
+      '深色模式優化'
+    ] 
+  },
+  { 
+    version: '1.5.0', 
+    date: '2026-03-10', 
+    features: isEn ? [
+      'All-new Neo-brutalism UI design',
+      'Debut of Panda Nutritionist'
+    ] : [
+      '全新 Neo-brutalism UI',
+      '熊貓營養師登場'
+    ]
+  }
+  ];
+};
 
 const safeGetStorage = (key) => {
   try {
@@ -3179,7 +3318,7 @@ const GoalSettings = ({
                         </button>
                       </div>
                       <div className="space-y-2">
-                        {VERSION_HISTORY.map(v => (
+                        {getVersionHistory(isEn).map(v => (
                           <div key={v.version} className="p-3 border-2 border-black rounded-xl bg-white">
                             <div className="flex justify-between items-center mb-1"><span className="font-black text-xs italic">v{v.version}</span><span className="text-[8px] font-bold text-zinc-300">{v.date}</span></div>
                             <p className="text-[10px] font-bold text-zinc-500 leading-tight">{v.features.join(' · ')}</p>

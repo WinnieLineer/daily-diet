@@ -1159,7 +1159,7 @@ export const getLanguage = () => {
   return currentLang;
 };
 
-export const t = (key) => {
-  const lang = getLanguage();
+export const t = (key, forcedLang) => {
+  const lang = forcedLang || getLanguage();
   return (translations[lang] && translations[lang][key]) || (translations['zh'] && translations['zh'][key]) || (translations['en'] && translations['en'][key]) || key;
 };
