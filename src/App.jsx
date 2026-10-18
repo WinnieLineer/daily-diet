@@ -2416,6 +2416,7 @@ function App() {
               {/* 目標與設定 */}
               <Suspense fallback={<div className="w-7 sm:w-8 h-7 sm:h-8 bg-zinc-100 rounded-lg sm:rounded-xl border-2 border-black/80 animate-pulse" />}>
                 <GoalSettings 
+                  currentLang={currentLang}
                   initialTab={settingsTab} 
                   onGoalsUpdated={refreshData} 
                   onWatchTutorial={() => setShowOnboarding(true)}

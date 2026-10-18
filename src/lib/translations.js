@@ -1140,6 +1140,9 @@ export const setLanguage = (lang) => {
   try {
     localStorage.setItem('daily_diet_lang', lang);
   } catch (e) {}
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('language-changed', { detail: { lang } }));
+  }
 };
 
 export const getLanguage = () => {

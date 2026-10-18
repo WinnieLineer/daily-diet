@@ -102,7 +102,19 @@ const safeRemoveStorage = (key) => {
   } catch (e) {}
 };
 
-const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, userName, onSetUserName, onToggleLayoutEdit, isEditingLayout, pwaPrompt, onPwaPromptUsed, initialTab = 'profile' }) => {
+const GoalSettings = ({ 
+  currentLang: propLang,
+  onGoalsUpdated, 
+  onWatchTutorial, 
+  onLanguageChanged, 
+  userName, 
+  onSetUserName, 
+  onToggleLayoutEdit, 
+  isEditingLayout, 
+  pwaPrompt, 
+  onPwaPromptUsed, 
+  initialTab = 'profile' 
+}) => {
   // 誠實商店銀行帳戶設定 (在此修改您的收款帳戶資訊即可！)
   const BANK_INFO = {
     bankName: "台新銀行",
@@ -241,7 +253,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
 
   const SHOW_FUEL_STORE = false; // 暫時隱藏良心燃料商店區塊
 
-  const isEn = getLanguage() === 'en';
+  const [activeLang, setActiveLang] = useState(() => propLang || getLanguage());
+
+  useEffect(() => {
+    if (propLang) setActiveLang(propLang);
+  }, [propLang]);
+
+  useEffect(() => {
+    const handleLangChanged = (e) => {
+      const nextLang = e?.detail?.lang || getLanguage();
+      setActiveLang(nextLang);
+    };
+    window.addEventListener('language-changed', handleLangChanged);
+    return () => window.removeEventListener('language-changed', handleLangChanged);
+  }, []);
+
+  const isEn = (propLang || activeLang || getLanguage()) === 'en';
 
   const shopText = {
     title: isEn ? "Conscience Fuel Store" : "良心燃料商店",
@@ -519,7 +546,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       alert(t('save_success') || "Settings saved successfully!");
     } catch (error) {
       console.error("Failed to save goals:", error);
-      alert("儲存目標時發生錯誤，請重試！\n錯誤原因: " + error.message);
+      alert(isEn ? ("Error saving goals, please try again!\nDetails: " + error.message) : ("儲存目標時發生錯誤，請重試！\n錯誤原因: " + error.message));
     }
   };
 
@@ -550,10 +577,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
     });
 
     const goalNames = {
-      lose: '減脂雕塑 (-500 kcal)',
-      recomp: '減脂增肌 (-200 kcal)',
-      maintain: '維持體態 (TDEE)',
-      gain: '增肌增重 (+300 kcal)'
+      lose: isEn ? 'Fat Loss (-500 kcal)' : '減脂雕塑 (-500 kcal)',
+      recomp: isEn ? 'Body Recomp (-200 kcal)' : '減脂增肌 (-200 kcal)',
+      maintain: isEn ? 'Maintain TDEE' : '維持體態 (TDEE)',
+      gain: isEn ? 'Muscle Gain (+300 kcal)' : '增肌增重 (+300 kcal)'
     };
 
     setCalcResult({
@@ -566,13 +593,14 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
       fat: suggestedFat,
       height: heightNum,
       weight: weightNum,
-      goalName: goalNames[calc.goal] || '客製目標'
+      goalName: goalNames[calc.goal] || (isEn ? 'Custom Goal' : '客製目標')
     });
     setShowCalculator(false);
   };
 
   const handleLanguageChange = async (lang) => {
     setLanguage(lang);
+    setActiveLang(lang);
     try {
       await db.settings.put({ key: 'app_language', value: lang });
     } catch (e) {}
@@ -1129,7 +1157,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 {lineProfile.pictureUrl && (
                                   <img src={lineProfile.pictureUrl} className="w-5 h-5 rounded-full border border-black" alt="avatar" />
                                 )}
-                                <span>LINE 暱稱: <span className="font-black">{lineProfile.displayName}</span></span>
+                                <span>{isEn ? 'LINE Name: ' : 'LINE 暱稱: '}<span className="font-black">{lineProfile.displayName}</span></span>
                               </div>
                               {!liffService.isInClient() && (
                                 <button
@@ -1137,14 +1165,16 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   onClick={() => liffService.logout()}
                                   className="px-2 py-1 rounded bg-rose-500 text-white font-black text-[9px] active:scale-95"
                                 >
-                                  解除連動
+                                  {isEn ? 'Disconnect' : '解除連動'}
                                 </button>
                               )}
                             </div>
                           ) : (
                             <div className="flex flex-col gap-2 mt-1">
                               <p className="text-[9px] text-zinc-500 font-bold leading-relaxed">
-                                💡 PWA 獨立模式下所有功能（AI 視覺辨識、歷史圖表、體重管理）皆已完整啟用，無需登入！若想在 LINE 聊天室同步飲食紀錄，請直接使用下方的 Gist 專屬綁定碼。
+                                {isEn
+                                  ? '💡 Standalone PWA mode fully enables AI photo logging, history charts, and weight tracking without logging in! To sync with LINE, simply use the Gist Sync ID below.'
+                                  : '💡 PWA 獨立模式下所有功能（AI 視覺辨識、歷史圖表、體重管理）皆已完整啟用，無需登入！若想在 LINE 聊天室同步飲食紀錄，請直接使用下方的 Gist 專屬綁定碼。'}
                               </p>
                               {!liffService.isInClient() && (
                                 <button
@@ -1152,7 +1182,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   onClick={() => liffService.login()}
                                   className="w-full bg-zinc-100 text-zinc-700 font-bold py-1.5 rounded-xl border border-black/20 text-[10px] hover:bg-zinc-200 active:scale-95 transition-all text-center"
                                 >
-                                  🔗 透過 LINE 網頁授權頭像與名稱（選填）
+                                  {isEn ? '🔗 Authorize LINE Avatar & Name (Optional)' : '🔗 透過 LINE 網頁授權頭像與名稱（選填）'}
                                 </button>
                               )}
                             </div>
@@ -1163,25 +1193,28 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="flex flex-col gap-2 p-3 bg-amber-50 rounded-xl border-2 border-black">
                           <div className="flex items-center justify-between">
                             <span className="font-black text-xs flex items-center gap-1.5 text-amber-950">
-                              ☁️ 雲端 Gist 同步 ID
+                              ☁️ {isEn ? 'Cloud Gist Sync ID' : '雲端 Gist 同步 ID'}
                             </span>
                             {currentGistId ? (
                               <span className="bg-amber-200 text-amber-900 border border-black/20 px-2 py-0.5 rounded-full text-[8px] font-black">
-                                專屬 ID 已就緒 🟢
+                                {isEn ? 'Dedicated ID Ready 🟢' : '專屬 ID 已就緒 🟢'}
                               </span>
                             ) : (
                               <span className="bg-zinc-200 text-zinc-600 px-2 py-0.5 rounded-full text-[8px] font-black">
-                                尚未建立 ⚪
+                                {isEn ? 'Not Created Yet ⚪' : '尚未建立 ⚪'}
                               </span>
                             )}
                           </div>
                           <p className="text-[9px] text-amber-900 font-bold leading-relaxed">
-                            在 LINE 官方帳號（@618iipof）聊天室傳送「<span className="text-black font-black">綁定 {currentGistId ? currentGistId.slice(0, 8) + '...' : '您的ID'}</span>」，即可在 LINE 隨時雙向同步您的飲食紀錄與目標！
-                            <br /><span className="text-[8px] opacity-80 mt-0.5 inline-block">💡 連動後使用者名稱將自動與您的 LINE 暱稱保持一致；若未連動 LINE 則沿用您最早自訂的設定名稱。</span>
+                            {isEn ? (
+                              <>Send &quot;<span className="text-black font-black">Bind {currentGistId ? currentGistId.slice(0, 8) + '...' : 'YOUR_ID'}</span>&quot; in our LINE Official Bot (@618iipof) to enable 2-way sync across devices!<br /><span className="text-[8px] opacity-80 mt-0.5 inline-block">💡 Once linked, your username syncs with your LINE nickname.</span></>
+                            ) : (
+                              <>在 LINE 官方帳號（@618iipof）聊天室傳送「<span className="text-black font-black">綁定 {currentGistId ? currentGistId.slice(0, 8) + '...' : '您的ID'}</span>」，即可在 LINE 隨時雙向同步您的飲食紀錄與目標！<br /><span className="text-[8px] opacity-80 mt-0.5 inline-block">💡 連動後使用者名稱將自動與您的 LINE 暱稱保持一致；若未連動 LINE 則沿用您最早自訂的設定名稱。</span></>
+                            )}
                           </p>
                           <div className="flex items-center gap-1.5">
                             <div className="flex-1 bg-white border-2 border-black p-2 rounded-lg font-mono text-[10px] font-black text-zinc-800 break-all select-all">
-                              {currentGistId || '尚未產生 (點擊資料管理進行備份)'}
+                              {currentGistId || (isEn ? 'Not created yet (Backup via Data tab)' : '尚未產生 (點擊資料管理進行備份)')}
                             </div>
                             {currentGistId && (
                               <button
@@ -1194,7 +1227,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                 className="bg-black text-white px-2.5 py-2 rounded-lg font-black text-[10px] active:scale-95 transition-transform flex items-center gap-1 shrink-0"
                               >
                                 {copiedGist ? <Check size={12} className="text-emerald-400" /> : <Copy size={12} />}
-                                <span>{copiedGist ? '已複製' : '複製'}</span>
+                                <span>{copiedGist ? (isEn ? 'Copied' : '已複製') : (isEn ? 'Copy' : '複製')}</span>
                               </button>
                             )}
                           </div>
@@ -1206,7 +1239,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               className="w-full bg-[#06C755] text-white py-1.5 rounded-lg border-2 border-black font-black text-[10px] flex items-center justify-center gap-1 hover:bg-[#05b34c] active:scale-95 transition-all text-center"
                             >
                               <MessageSquare size={12} />
-                              💬 在 LINE 一鍵送出「綁定」指令
+                              {isEn ? '💬 1-Tap Send "Bind" in LINE' : '💬 在 LINE 一鍵送出「綁定」指令'}
                             </a>
                           )}
                         </div>
@@ -1216,20 +1249,22 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                     {/* 飲控里程碑貼紙 */}
                     <div className="space-y-3 border-4 border-black p-4 rounded-[2rem] bg-zinc-50 shadow-neo-sm">
                       <div className="flex items-center justify-between">
-                        <h4 className="font-black italic text-sm">🏆 飲控里程碑與頭銜貼紙</h4>
+                        <h4 className="font-black italic text-sm">{isEn ? '🏆 Milestone & Title Badges' : '🏆 飲控里程碑與頭銜貼紙'}</h4>
                         <span className="bg-orange-50 text-orange-600 px-2.5 py-0.5 rounded-full border border-orange-200 text-[10px] font-black italic">
-                          連續記錄 {currentStreak} 天 🔥
+                          {isEn ? `${currentStreak}-Day Streak 🔥` : `連續記錄 ${currentStreak} 天 🔥`}
                         </span>
                       </div>
                       <p className="text-[10px] font-bold text-zinc-400 leading-tight">
-                        達標即可解鎖專屬頭銜貼紙，佩戴於熊貓教練名牌旁，快去打卡吧！
+                        {isEn
+                          ? 'Hit streak milestones to unlock badges displayed next to your Panda Coach name tag!'
+                          : '達標即可解鎖專屬頭銜貼紙，佩戴於熊貓教練名牌旁，快去打卡吧！'}
                       </p>
                       <div className="space-y-2.5 mt-2">
                         {[
-                          ...(isFounder ? [{ days: 0, title: "🎖️ 創始支持者", desc: "Daily Diet 創始支持會員尊榮特權", isFounderExclusive: true }] : []),
-                          { days: 3, title: "自律小萌新 🥗", desc: "連續打卡 3 天" },
-                          { days: 7, title: "爆卡剋星 ⚔️", desc: "連續打卡 7 天" },
-                          { days: 30, title: "飲控得道仙人 👑", desc: "連續打卡 30 天" }
+                          ...(isFounder ? [{ days: 0, title: isEn ? "🎖️ Founder Supporter" : "🎖️ 創始支持者", desc: isEn ? "Daily Diet Founder Supporter VIP" : "Daily Diet 創始支持會員尊榮特權", isFounderExclusive: true }] : []),
+                          { days: 3, title: isEn ? "Diet Novice 🥗" : "自律小萌新 🥗", desc: isEn ? "3-day streak" : "連續打卡 3 天" },
+                          { days: 7, title: isEn ? "Calorie Slayer ⚔️" : "爆卡剋星 ⚔️", desc: isEn ? "7-day streak" : "連續打卡 7 天" },
+                          { days: 30, title: isEn ? "Diet Master 👑" : "飲控得道仙人 👑", desc: isEn ? "30-day streak" : "連續打卡 30 天" }
                         ].map(item => {
                           const isUnlocked = item.isFounderExclusive ? true : currentStreak >= item.days;
                           const isWorn = activeTitle === item.title;
@@ -1249,7 +1284,9 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                   {item.title}
                                 </span>
                                 <span className="text-[9px] font-bold text-zinc-400 mt-0.5">
-                                  {item.isFounderExclusive ? '🌟 創始會員尊榮佩戴' : `${item.desc} ${isUnlocked ? '🔓 已解鎖' : `🔒 差 ${item.days - currentStreak} 天`}`}
+                                  {item.isFounderExclusive 
+                                    ? (isEn ? '🌟 Founder VIP Badge' : '🌟 創始會員尊榮佩戴')
+                                    : `${item.desc} ${isUnlocked ? (isEn ? '🔓 Unlocked' : '🔓 已解鎖') : (isEn ? `🔒 ${item.days - currentStreak} days left` : `🔒 差 ${item.days - currentStreak} 天`)}`}
                                 </span>
                               </div>
                               {isUnlocked ? (
@@ -1262,10 +1299,10 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                                       : 'bg-white text-black hover:bg-zinc-50'
                                   }`}
                                 >
-                                  {isWorn ? '卸下頭銜' : '佩戴頭銜'}
+                                  {isWorn ? (isEn ? 'Unequip' : '卸下頭銜') : (isEn ? 'Equip' : '佩戴頭銜')}
                                 </button>
                               ) : (
-                                <span className="text-[9px] font-black text-zinc-400 italic">未解鎖</span>
+                                <span className="text-[9px] font-black text-zinc-400 italic">{isEn ? 'Locked' : '未解鎖'}</span>
                               )}
                             </div>
                           );
@@ -1339,7 +1376,7 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               className="w-20 h-20 rounded-lg border border-black/10"
                             />
                             <span className="text-[9px] font-black text-black mt-1.5 flex items-center gap-1">
-                              <span>📱</span> 掃碼一秒加好友
+                              <span>📱</span> {isEn ? 'Scan QR to Add' : '掃碼一秒加好友'}
                             </span>
                           </div>
                         </div>
@@ -1352,11 +1389,13 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <span className="text-3xl shrink-0 -mt-1">🐼</span>
                           <div className="space-y-0.5 text-left">
                             <div className="font-black text-xs text-amber-950 flex items-center gap-1.5">
-                              <span>熊貓教練隨身盯盤：</span>
-                              <span className="bg-amber-200 text-amber-900 text-[9px] px-1.5 py-0.2 rounded border border-amber-400 font-bold">免開瀏覽器</span>
+                              <span>{isEn ? 'Panda Coach on LINE:' : '熊貓教練隨身盯盤：'}</span>
+                              <span className="bg-amber-200 text-amber-900 text-[9px] px-1.5 py-0.2 rounded border border-amber-400 font-bold">
+                                {isEn ? 'No Browser Needed' : '免開瀏覽器'}
+                              </span>
                             </div>
                             <p className="text-xs font-bold text-amber-900/90 leading-relaxed">
-                              {getLanguage() === 'en'
+                              {isEn
                                 ? 'Too busy to open a web browser? In LINE, simply snap food photos or send voice messages to log meals. Gemini AI calculates calories & macros with 100% two-way web sync!'
                                 : '出門吃飯懶得開網頁？在 LINE 聊天室隨手拍張食物照或傳送語音，Gemini AI 就會幫你估算熱量、蛋白質與水分，並與本網頁 100% 雙向即時同步！'}
                             </p>
@@ -1367,18 +1406,18 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                         <div className="grid grid-cols-3 gap-2 text-center">
                           <div className="p-2.5 bg-white border-2 border-black rounded-xl shadow-neo-xs space-y-0.5">
                             <span className="text-lg">📸</span>
-                            <div className="font-black text-[11px] text-black">照片 5 秒辨識</div>
-                            <div className="text-[9px] font-bold text-zinc-400">外食餐盤隨手拍</div>
+                            <div className="font-black text-[11px] text-black">{isEn ? '5-Sec Photo AI' : '照片 5 秒辨識'}</div>
+                            <div className="text-[9px] font-bold text-zinc-400">{isEn ? 'Snap food on the go' : '外食餐盤隨手拍'}</div>
                           </div>
                           <div className="p-2.5 bg-white border-2 border-black rounded-xl shadow-neo-xs space-y-0.5">
                             <span className="text-lg">🎙️</span>
-                            <div className="font-black text-[11px] text-black">語音免打字</div>
-                            <div className="text-[9px] font-bold text-zinc-400">長按說話即記錄</div>
+                            <div className="font-black text-[11px] text-black">{isEn ? 'Hands-Free Voice' : '語音免打字'}</div>
+                            <div className="text-[9px] font-bold text-zinc-400">{isEn ? 'Hold to speak & log' : '長按說話即記錄'}</div>
                           </div>
                           <div className="p-2.5 bg-white border-2 border-black rounded-xl shadow-neo-xs space-y-0.5">
                             <span className="text-lg">🔄</span>
-                            <div className="font-black text-[11px] text-black">雙向實時同步</div>
-                            <div className="text-[9px] font-bold text-zinc-400">跨裝置雲端資料庫</div>
+                            <div className="font-black text-[11px] text-black">{isEn ? 'Two-Way Sync' : '雙向實時同步'}</div>
+                            <div className="text-[9px] font-bold text-zinc-400">{isEn ? 'Cross-device cloud DB' : '跨裝置雲端資料庫'}</div>
                           </div>
                         </div>
 
@@ -1513,21 +1552,23 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                               </span>
                             </div>
                             <span className="text-[10px] font-black bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full border border-emerald-300">
-                              免刪除重打
+                              {isEn ? 'No Need to Delete' : '免刪除重打'}
                             </span>
                           </div>
                           <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1.5 text-xs">
                             <div className="text-zinc-600 font-bold flex items-center gap-1.5 flex-wrap">
-                              <span>🗣️ 您說：</span>
-                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">「這份只吃一半」</span>
-                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">「飯換成地瓜」</span>
+                              <span>{isEn ? '🗣️ You say: ' : '🗣️ 您說：'}</span>
+                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">{isEn ? '“Ate only half”' : '「這份只吃一半」'}</span>
+                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">{isEn ? '“Swapped rice for yam”' : '「飯換成地瓜」'}</span>
                             </div>
                             <div className="text-emerald-700 font-bold text-[11px]">
-                              🐼 熊貓：即時延續上下文記憶，等比例重算卡路里與蛋白質！
+                              {isEn ? '🐼 Panda: Maintains context and recalculates calories & protein proportionally!' : '🐼 熊貓：即時延續上下文記憶，等比例重算卡路里與蛋白質！'}
                             </div>
                           </div>
                           <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
-                            外食吃不完或臨時替換菜色，不用刪掉紀錄，像跟朋友傳訊息一樣講一句就修正完成。
+                            {isEn
+                              ? 'Leftovers or dish swaps? No need to delete. Just message naturally like chatting with a friend.'
+                              : '外食吃不完或臨時替換菜色，不用刪掉紀錄，像跟朋友傳訊息一樣講一句就修正完成。'}
                           </p>
                         </div>
 
@@ -1537,26 +1578,28 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             <div className="flex items-center gap-2">
                               <span className="text-base">🎭</span>
                               <span className="font-black text-xs text-black">
-                                {getLanguage() === 'en' ? 'Switch Coach Persona' : '3 種教練性格自由切換'}
+                                {isEn ? 'Switch Coach Persona' : '3 種教練性格自由切換'}
                               </span>
                             </div>
                             <span className="text-[10px] font-black bg-purple-100 text-purple-800 px-2 py-0.5 rounded-full border border-purple-300">
-                              輸入「切換性格」
+                              {isEn ? 'Type "Switch Persona"' : '輸入「切換性格」'}
                             </span>
                           </div>
                           <div className="grid grid-cols-3 gap-2 text-center text-xs font-black">
                             <div className="bg-red-50 text-red-800 py-1.5 px-1 rounded-xl border border-red-200">
-                              🐼 傲嬌毒舌
+                              {isEn ? '🐼 Tsundere' : '🐼 傲嬌毒舌'}
                             </div>
                             <div className="bg-pink-50 text-pink-800 py-1.5 px-1 rounded-xl border border-pink-200">
-                              🐼 治癒天使
+                              {isEn ? '🐼 Gentle Angel' : '🐼 治癒天使'}
                             </div>
                             <div className="bg-amber-50 text-amber-800 py-1.5 px-1 rounded-xl border border-amber-200">
-                              🐼 魔鬼士官
+                              {isEn ? '🐼 Drill Sergeant' : '🐼 魔鬼士官'}
                             </div>
                           </div>
                           <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
-                            在聊天室傳送「切換性格」隨時召喚專屬性格！想被毒舌吐槽還是被溫柔鼓勵，自由選擇。
+                            {isEn
+                              ? 'Type "Switch Persona" in LINE anytime! Choose between sharp roasts, warm encouragement, or hardcore discipline.'
+                              : '在聊天室傳送「切換性格」隨時召喚專屬性格！想被毒舌吐槽還是被溫柔鼓勵，自由選擇。'}
                           </p>
                         </div>
 
@@ -1566,24 +1609,26 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             <div className="flex items-center gap-2">
                               <span className="text-base">🥗</span>
                               <span className="font-black text-xs text-black">
-                                {getLanguage() === 'en' ? 'AI Meal Advisor' : '隨身外食挑選顧問'}
+                                {isEn ? 'AI Meal Advisor' : '隨身外食挑選顧問'}
                               </span>
                             </div>
                             <span className="text-[10px] font-black bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full border border-amber-300">
-                              直接提問
+                              {isEn ? 'Ask Directly' : '直接提問'}
                             </span>
                           </div>
                           <div className="bg-zinc-50 p-2.5 rounded-xl border border-zinc-200 space-y-1.5 text-xs">
                             <div className="text-zinc-600 font-bold flex items-center gap-1.5 flex-wrap">
-                              <span>🗣️ 您問：</span>
-                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">「蛋白質還差 25g，超商買啥？」</span>
+                              <span>{isEn ? '🗣️ You ask: ' : '🗣️ 您問：'}</span>
+                              <span className="bg-white px-2 py-0.5 rounded border border-zinc-300 text-black font-black">{isEn ? '“Need 25g more protein, what to buy at the store?”' : '「蛋白質還差 25g，超商買啥？」'}</span>
                             </div>
                             <div className="text-amber-800 font-bold text-[11px]">
-                              🐼 熊貓：調閱今日已攝取額度，精準推薦熱量與蛋白質達標組合！
+                              {isEn ? '🐼 Panda: Checks remaining allowance and suggests precise items to hit your goals!' : '🐼 熊貓：調閱今日已攝取額度，精準推薦熱量與蛋白質達標組合！'}
                             </div>
                           </div>
                           <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
-                            不知道下一餐吃什麼？直接問熊貓，它會調出你的今日剩餘預算給出具體採買建議。
+                            {isEn
+                              ? 'Not sure what to eat next? Ask Panda Coach to get recommendations based on your remaining daily budget.'
+                              : '不知道下一餐吃什麼？直接問熊貓，它會調出你的今日剩餘預算給出具體採買建議。'}
                           </p>
                         </div>
 
@@ -1593,21 +1638,23 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                             <div className="flex items-center gap-2">
                               <span className="text-base">🔢</span>
                               <span className="font-black text-xs text-black">
-                                {getLanguage() === 'en' ? 'Portion Multiplier' : 'Flex 卡片一秒縮放份量'}
+                                {isEn ? 'Portion Multiplier' : 'Flex 卡片一秒縮放份量'}
                               </span>
                             </div>
                             <span className="text-[10px] font-black bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full border border-blue-300">
-                              點按鈕即改
+                              {isEn ? '1-Tap Change' : '點按鈕即改'}
                             </span>
                           </div>
                           <div className="flex items-center justify-center gap-2.5 py-1 text-xs font-mono font-black">
                             <span className="px-3 py-1 bg-zinc-100 rounded-xl border border-black shadow-neo-xs">0.5x</span>
-                            <span className="px-3 py-1 bg-yellow-300 text-black rounded-xl border border-black shadow-neo-xs">1.0x (預設)</span>
+                            <span className="px-3 py-1 bg-yellow-300 text-black rounded-xl border border-black shadow-neo-xs">{isEn ? '1.0x (Default)' : '1.0x (預設)'}</span>
                             <span className="px-3 py-1 bg-zinc-100 rounded-xl border border-black shadow-neo-xs">1.5x</span>
                             <span className="px-3 py-1 bg-zinc-100 rounded-xl border border-black shadow-neo-xs">2.0x</span>
                           </div>
                           <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
-                            每筆餐點分析卡片底部都有倍數按鈕，聚餐分食或大胃王加量，點一下立即更新所有數據。
+                            {isEn
+                              ? 'Every meal card has portion multiplier buttons. Tap once to scale all nutrients immediately.'
+                              : '每筆餐點分析卡片底部都有倍數按鈕，聚餐分食或大胃王加量，點一下立即更新所有數據。'}
                           </p>
                         </div>
                       </div>
@@ -1618,12 +1665,12 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                       <div className="flex items-center gap-2">
                         <span className="text-xl">🔄</span>
                         <h4 className="font-black italic text-sm text-black">
-                          {getLanguage() === 'en' ? 'LINE + Web: The Ultimate Workflow' : '「手機 LINE ✕ 電腦 Web」雙效工作流'}
+                          {isEn ? 'LINE + Web: The Ultimate Workflow' : '「手機 LINE ✕ 電腦 Web」雙效工作流'}
                         </h4>
                       </div>
 
                       <p className="text-[11px] font-bold text-zinc-500 leading-relaxed">
-                        {getLanguage() === 'en'
+                        {isEn
                           ? 'Sync once, use everywhere! How to combine LINE and Web for the best diet tracking experience:'
                           : '綁定一次即可雙向同步！推薦這樣搭配使用，打造最輕鬆零負擔的飲食自律習慣：'}
                       </p>
@@ -1633,21 +1680,21 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div className="flex items-center gap-2">
                             <span className="text-base">📱</span>
                             <strong className="font-black text-xs text-emerald-950">
-                              {getLanguage() === 'en' ? 'Mobile LINE: Fast Ingest' : '出門在外用 LINE（秒速輸入神器）'}
+                              {isEn ? 'Mobile LINE: Fast Ingest' : '出門在外用 LINE（秒速輸入神器）'}
                             </strong>
                           </div>
                           <ul className="text-[11px] font-bold text-emerald-900/90 space-y-1.5 pl-1">
                             <li className="flex items-start gap-2">
                               <span>📸</span>
-                              <span><strong>外食開動前隨手拍</strong>：5 秒完成熱量拆解，不耽誤用餐。</span>
+                              <span>{isEn ? <><strong>Snap before eating</strong>: 5s calorie breakdown without meal delays.</> : <><strong>外食開動前隨手拍</strong>：5 秒完成熱量拆解，不耽誤用餐。</>}</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span>🎙️</span>
-                              <span><strong>通勤手忙用語音</strong>：長按說一句，免打字輕鬆登記。</span>
+                              <span>{isEn ? <><strong>Voice input on the go</strong>: Hold to speak, effortless hands-free logging.</> : <><strong>通勤手忙用語音</strong>：長按說一句，免打字輕鬆登記。</>}</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span>⚡</span>
-                              <span><strong>圖文選單單手打卡</strong>：喝水 500、體重、常用餐點一鍵完成。</span>
+                              <span>{isEn ? <><strong>1-Tap Rich Menu</strong>: Water +500, weight, and favorite meals in one tap.</> : <><strong>圖文選單單手打卡</strong>：喝水 500、體重、常用餐點一鍵完成。</>}</span>
                             </li>
                           </ul>
                         </div>
@@ -1656,21 +1703,21 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           <div className="flex items-center gap-2">
                             <span className="text-base">💻</span>
                             <strong className="font-black text-xs text-amber-950">
-                              {getLanguage() === 'en' ? 'Desktop Web: Deep Insights' : '晚上覆盤用 Web（深度分析中心）'}
+                              {isEn ? 'Desktop Web: Deep Insights' : '晚上覆盤用 Web（深度分析中心）'}
                             </strong>
                           </div>
                           <ul className="text-[11px] font-bold text-amber-900/90 space-y-1.5 pl-1">
                             <li className="flex items-start gap-2">
                               <span>📊</span>
-                              <span><strong>大螢幕全方位圖表</strong>：查看全週熱量赤字走勢與三大營養素。</span>
+                              <span>{isEn ? <><strong>Full-screen charts</strong>: View weekly calorie deficit trends and macros.</> : <><strong>大螢幕全方位圖表</strong>：查看全週熱量赤字走勢與三大營養素。</>}</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span>🎯</span>
-                              <span><strong>AI 自動目標推算</strong>：依據體態變化動態調整 BMR/TDEE。</span>
+                              <span>{isEn ? <><strong>AI Smart Goals</strong>: Dynamic BMR/TDEE adjustments based on body changes.</> : <><strong>AI 自動目標推算</strong>：依據體態變化動態調整 BMR/TDEE。</>}</span>
                             </li>
                             <li className="flex items-start gap-2">
                               <span>📂</span>
-                              <span><strong>資料私有備份匯出</strong>：無廣告、無後門，資料永久完整掌控。</span>
+                              <span>{isEn ? <><strong>Private backup & export</strong>: Zero ads, zero backdoors, full data ownership.</> : <><strong>資料私有備份匯出</strong>：無廣告、無後門，資料永久完整掌控。</>}</span>
                             </li>
                           </ul>
                         </div>
@@ -2330,9 +2377,19 @@ const GoalSettings = ({ onGoalsUpdated, onWatchTutorial, onLanguageChanged, user
                           >
                             <div className="p-3.5 bg-zinc-50 border-2 border-black rounded-2xl space-y-2 shadow-neo-xs">
                               <p className="text-[10px] font-bold text-zinc-600 leading-relaxed">
-                                💡 <b>雲端備份模式說明</b>：<br />
-                                • <b>預設模式（免 PAT）</b>：系統已內建雲端智慧代理，直接點選上方「手動同步」即可自動備份與還原，<b>一般用戶無需填寫此項</b>。<br />
-                                • <b>直連模式（個人 Token）</b>：若您無法使用 LINE、或希望資料 100% 直連您的個人 GitHub 帳號，可在此填寫具備 <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">gist</code> 權限之 Personal Access Token (PAT)。系統預設備份檔案名稱為 <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">daily-diet-backup.json</code>。
+                                {isEn ? (
+                                  <>
+                                    💡 <b>Cloud Backup Modes</b>:<br />
+                                    • <b>Default Mode (No PAT required)</b>: Built-in cloud agent auto-syncs when tapping &quot;Manual Sync&quot; above. <b>General users do not need this</b>.<br />
+                                    • <b>Direct Mode (Personal Token)</b>: If you prefer 100% direct connection to your personal GitHub account, enter a Personal Access Token (PAT) with <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">gist</code> scope here. The default backup file is <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">daily-diet-backup.json</code>.
+                                  </>
+                                ) : (
+                                  <>
+                                    💡 <b>雲端備份模式說明</b>：<br />
+                                    • <b>預設模式（免 PAT）</b>：系統已內建雲端智慧代理，直接點選上方「手動同步」即可自動備份與還原，<b>一般用戶無需填寫此項</b>。<br />
+                                    • <b>直連模式（個人 Token）</b>：若您無法使用 LINE、或希望資料 100% 直連您的個人 GitHub 帳號，可在此填寫具備 <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">gist</code> 權限之 Personal Access Token (PAT)。系統預設備份檔案名稱為 <code className="bg-zinc-200 px-1 rounded font-mono text-[9px]">daily-diet-backup.json</code>。
+                                  </>
+                                )}
                               </p>
 
                               <div className="flex gap-2 w-full pt-1">
