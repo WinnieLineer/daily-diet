@@ -158,7 +158,7 @@ function attachMealMultiplierQuickReply(message, meal, userId, props) {
             baseCarb: baseCarb,
             baseFat: baseFat,
             baseWat: baseWat,
-            baseName: encodeURIComponent(cleanBaseName)
+            baseName: cleanBaseName
           }),
           displayText: isEn ? `Adjust portion to ${opt.m}x` : `調整份量為 ${opt.m} 倍`
         }
@@ -171,9 +171,9 @@ function attachMealMultiplierQuickReply(message, meal, userId, props) {
       action: {
         type: "postback",
         label: isEn ? "✏️ Custom Portion" : "✏️ 自訂倍數",
-        data: JSON.stringify({ action: "fillCustomMult", id: mealId }),
+        data: JSON.stringify({ action: "fillCustomMult", id: mealId, name: cleanBaseName }),
         inputOption: "openKeyboard",
-        fillInText: isEn ? "1.2x" : "改 1.2倍"
+        fillInText: isEn ? `1.2x ${cleanBaseName}` : `改 ${cleanBaseName} 1.2倍`
       }
     });
 
@@ -368,11 +368,11 @@ function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
       if (typeof recordSystemLog === 'function') {
         recordSystemLog('LINE發送失敗', 'line_api', flexMessage.altText || 'Flex卡片', `HTTP ${code}`, errBody);
       }
-      // 🛡️ 備援機制：若 Flex 卡片發送失敗，自動主動推播 (push) 純文字降級版給用戶，絕不讓用戶以為機器人斷線或無回應
+      // 🛡️ 備援機制：若 replyToken 失效（如多事件並發或 Gemini 耗時較長），優先以 Push 主動推播原卡片，確保用戶一定收到卡片！
       if (userId && typeof userId === 'string' && userId.startsWith('U')) {
         try {
-          const fallbackText = (flexMessage && flexMessage.altText) ? flexMessage.altText : '飲食紀錄已更新';
-          UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+          console.warn(`🔄 [LINE Flex 轉主動推播] reply 失敗 (${code})，嘗試以 Push 模式推播卡片至 ${userId}`);
+          const pushRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
             method: "post",
             headers: {
               "Content-Type": "application/json",
@@ -380,10 +380,26 @@ function replyFlexMessage(replyToken, flexMessage, accessToken, userId, props) {
             },
             payload: JSON.stringify({
               to: userId,
-              messages: [{ type: "text", text: fallbackText }]
+              messages: messages
             }),
             muteHttpExceptions: true
           });
+          if (pushRes.getResponseCode() !== 200) {
+            console.warn("Flex Push 失敗，改用純文字推播降級:", pushRes.getContentText());
+            const fallbackText = (flexMessage && flexMessage.altText) ? flexMessage.altText : '飲食紀錄已更新';
+            UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+              method: "post",
+              headers: {
+                "Content-Type": "application/json",
+                Authorization: `Bearer ${accessToken}`
+              },
+              payload: JSON.stringify({
+                to: userId,
+                messages: [{ type: "text", text: fallbackText }]
+              }),
+              muteHttpExceptions: true
+            });
+          }
         } catch (pushErr) {
           console.warn("備援推播失敗:", pushErr);
         }

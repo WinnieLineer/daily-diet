@@ -2461,13 +2461,49 @@ function doPost(e) {
           const todayStr = getTodayDateString();
           const logs = getTodayLogs(userId, todayStr, props, userGistId);
           let targetMeal = null;
+          let targetIndex = -1;
+          const cleanRawName = payload.baseName 
+            ? (payload.baseName.includes('%') ? decodeURIComponent(payload.baseName) : payload.baseName).trim() 
+            : (payload.name ? (payload.name.includes('%') ? decodeURIComponent(payload.name) : payload.name).trim() : '');
+
           if (logs.length > 0) {
-            let targetIndex = logs.length - 1;
+            // 1. 優先以 ID 比對 (比對 id 或 timestamp)
             if (payload.id) {
-              const idx = logs.findIndex(l => String(l.id) === String(payload.id));
+              const idx = logs.findIndex(l => 
+                (l.id && String(l.id) === String(payload.id)) || 
+                (l.timestamp && String(l.timestamp) === String(payload.id))
+              );
               if (idx !== -1) targetIndex = idx;
             }
-            targetMeal = logs[targetIndex];
+
+            // 2. 若 ID 未能匹配，但有提供 baseName，則依餐點名稱比對，杜絕錯改其他餐點
+            if (targetIndex === -1 && cleanRawName) {
+              const cleanTarget = cleanRawName.replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+              const idx = logs.findIndex(l => {
+                const lName = String(l.baseDishName || l.dish_name || '').replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+                return lName && (lName === cleanTarget || lName.includes(cleanTarget) || cleanTarget.includes(lName));
+              });
+              if (idx !== -1) targetIndex = idx;
+            }
+
+            // 3. 若仍找不到，查詢用戶最後發送/查看卡片的餐點快取
+            if (targetIndex === -1) {
+              const cache = CacheService.getScriptCache();
+              const lastCardMealId = cache.get(`LAST_CARD_MEAL_${userId}`);
+              if (lastCardMealId) {
+                const idx = logs.findIndex(l => (l.id && String(l.id) === String(lastCardMealId)) || (l.timestamp && String(l.timestamp) === String(lastCardMealId)));
+                if (idx !== -1) targetIndex = idx;
+              }
+            }
+
+            // 4. 只有在完全未指定 ID 也未指定名稱時，才退回至最後一筆
+            if (targetIndex === -1 && !payload.id && !cleanRawName) {
+              targetIndex = logs.length - 1;
+            }
+
+            if (targetIndex !== -1) {
+              targetMeal = logs[targetIndex];
+            }
           }
 
           const baseCal = Number(payload.baseCal) || (targetMeal ? (Number(targetMeal.baseCalories) || Number(targetMeal.calories)) : 0);
@@ -2517,6 +2553,13 @@ function doPost(e) {
           };
 
           const updatedMeal = updateOrSaveMealLog(userId, updateFields, userGistId, GITHUB_PAT, props);
+          // 記錄最後調整之餐點快取，供後續文字調整精準定位
+          try {
+            const cache = CacheService.getScriptCache();
+            cache.put(`LAST_CARD_MEAL_${userId}`, String(updatedMeal.id || updatedMeal.timestamp), 900);
+            cache.put(`LAST_CARD_MEAL_NAME_${userId}`, String(updatedMeal.baseDishName || updatedMeal.dish_name).slice(0, 30), 900);
+          } catch (cErr) {}
+
           recordSystemLog('倍數調整', userId, `${baseName} -> x${m}`, `${newCal}卡 / ${newPro}g蛋`, `回傳調整卡片：【${newName}】${newCal} kcal · ${newPro}g 蛋 (${m}倍份量)`);
           replyMealConfirmCard(replyToken, updatedMeal, LIFF_ID, userGistId, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
@@ -2623,10 +2666,12 @@ function doPost(e) {
         // 💧 快速補水
         if (payload.action === 'quickWater') {
           const amount = Number(payload.amount) || 500;
+          const eventTimestamp = Number(event.timestamp) || Date.now();
           const meal = {
-            id: Date.now(),
+            id: eventTimestamp,
+            timestamp: eventTimestamp,
             date: getTodayDateString(),
-            time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+            time: Utilities.formatDate(new Date(eventTimestamp), 'Asia/Taipei', 'HH:mm'),
             dish_name: isEn ? `💧 Drink Water ${amount}ml` : `💧 喝水 ${amount}ml`,
             calories: 0,
             protein: 0,
@@ -2634,6 +2679,11 @@ function doPost(e) {
             comment: isEn ? '💧 Fast Hydration Log' : '💧 快速補水打卡'
           };
           console.log(`💧 [快速補水] +${amount}ml 用戶: ${userId}`);
+          try {
+            const cache = CacheService.getScriptCache();
+            cache.put(`LAST_CARD_MEAL_${userId}`, String(meal.id || meal.timestamp), 900);
+            if (meal.dish_name) cache.put(`LAST_CARD_MEAL_NAME_${userId}`, String(meal.baseDishName || meal.dish_name).slice(0, 30), 900);
+          } catch (cErr) {}
           saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
           const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
           let totWat = 0;
@@ -2663,10 +2713,12 @@ function doPost(e) {
 
         // ⚡ 一鍵記錄常用餐點
         if (payload.action === 'quickLogFavorite') {
+          const eventTimestamp = Number(event.timestamp) || Date.now();
           const meal = {
-            id: Date.now(),
+            id: eventTimestamp,
+            timestamp: eventTimestamp,
             date: getTodayDateString(),
-            time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+            time: Utilities.formatDate(new Date(eventTimestamp), 'Asia/Taipei', 'HH:mm'),
             dish_name: payload.name ? decodeURIComponent(payload.name) : (isEn ? 'Favorite Meal' : '常用餐點'),
             calories: Number(payload.cal) || 0,
             protein: Number(payload.pro) || 0,
@@ -2846,10 +2898,14 @@ function doPost(e) {
             }
           }
 
+          const eventTimestamp = Number(event.timestamp) || Date.now();
+          const mealDate = getTodayDateString();
+          const mealTime = Utilities.formatDate(new Date(eventTimestamp), "Asia/Taipei", "HH:mm");
           const meal = {
-            id: Date.now(),
-            date: getTodayDateString(),
-            time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+            id: eventTimestamp,
+            timestamp: eventTimestamp,
+            date: mealDate,
+            time: mealTime,
             dish_name: analysis.dish_name || (isEn ? 'Meal' : '美味餐點'),
             calories: Number(analysis.calories) || 0,
             protein: Number(analysis.protein) || 0,
@@ -3245,10 +3301,12 @@ function doPost(e) {
             }
             props.setProperty(lastWaterKey, String(nowMs));
 
+            const eventTimestamp = Number(event.timestamp) || Date.now();
             const meal = {
-              id: Date.now(),
+              id: eventTimestamp,
+              timestamp: eventTimestamp,
               date: getTodayDateString(),
-              time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+              time: Utilities.formatDate(new Date(eventTimestamp), 'Asia/Taipei', 'HH:mm'),
               dish_name: isEn ? `💧 Drink Water ${amount}ml` : `💧 喝水 ${amount}ml`,
               calories: 0,
               protein: 0,
@@ -3748,12 +3806,35 @@ function doPost(e) {
               /^(?:改|修改|改成)?\s*(?:整份)?(?:1倍|1\.0倍|原份|正常|原份量)$/.test(userText)) {
             detectedMultiplier = 1.0;
           } else {
-            const numMatch = userText.match(/^(?:改|修改|改成|change)?\s*(?:to\s+)?(?:x|X)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:倍|x|X)?(?:的)?(?:份量)?$/i);
-            if (numMatch && numMatch[1]) {
-              const parsedVal = parseFloat(numMatch[1]);
-              const hasKeyword = /倍|x|X|改|change/i.test(userText);
-              if (!isNaN(parsedVal) && parsedVal >= 0.1 && parsedVal <= 10 && (hasKeyword || userText.length <= 4)) {
+            // 🌟 增強：支援文字同時指定餐點與倍數 (例如: "改 牛肉麵 1.5倍"、"改牛肉麵2倍"、"牛肉麵 2倍"、"2倍的牛肉麵")
+            let explicitDishName = '';
+            const namedMultMatch1 = userText.match(/^(?:改|修改|改成)?\s*(.+?)\s*([0-9]+(?:\.[0-9]+)?)\s*(?:倍|x|X)(?:的)?(?:份量)?$/i);
+            const namedMultMatch2 = userText.match(/^(?:改|修改|改成)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:倍|x|X)(?:的)?\s*(.+?)(?:份量)?$/i);
+
+            if (namedMultMatch1 && namedMultMatch1[1] && namedMultMatch1[2]) {
+              const possibleName = namedMultMatch1[1].trim();
+              const parsedVal = parseFloat(namedMultMatch1[2]);
+              if (!isNaN(parsedVal) && parsedVal >= 0.1 && parsedVal <= 10 && possibleName && !/^(?:to|portion|整份)$/i.test(possibleName)) {
+                explicitDishName = possibleName;
                 detectedMultiplier = parsedVal;
+              }
+            } else if (namedMultMatch2 && namedMultMatch2[1] && namedMultMatch2[2]) {
+              const possibleName = namedMultMatch2[2].trim();
+              const parsedVal = parseFloat(namedMultMatch2[1]);
+              if (!isNaN(parsedVal) && parsedVal >= 0.1 && parsedVal <= 10 && possibleName && !/^(?:to|portion|份量|整份)$/i.test(possibleName)) {
+                explicitDishName = possibleName;
+                detectedMultiplier = parsedVal;
+              }
+            }
+
+            if (detectedMultiplier === null) {
+              const numMatch = userText.match(/^(?:改|修改|改成|change)?\s*(?:to\s+)?(?:x|X)?\s*([0-9]+(?:\.[0-9]+)?)\s*(?:倍|x|X)?(?:的)?(?:份量)?$/i);
+              if (numMatch && numMatch[1]) {
+                const parsedVal = parseFloat(numMatch[1]);
+                const hasKeyword = /倍|x|X|改|change/i.test(userText);
+                if (!isNaN(parsedVal) && parsedVal >= 0.1 && parsedVal <= 10 && (hasKeyword || userText.length <= 4)) {
+                  detectedMultiplier = parsedVal;
+                }
               }
             }
           }
@@ -3763,7 +3844,35 @@ function doPost(e) {
             const todayStr = getTodayDateString();
             const logs = getTodayLogs(userId, todayStr, props, userGistId);
             if (logs.length > 0) {
-              const lastMeal = logs[logs.length - 1];
+              let targetMeal = null;
+              let targetIndex = -1;
+
+              // 1. 若文字內帶有指定餐點名稱，優先比對指定餐點
+              if (typeof explicitDishName !== 'undefined' && explicitDishName) {
+                const cleanTarget = explicitDishName.replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+                const idx = logs.findIndex(l => {
+                  const lName = String(l.baseDishName || l.dish_name || '').replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+                  return lName && (lName === cleanTarget || lName.includes(cleanTarget) || cleanTarget.includes(lName));
+                });
+                if (idx !== -1) targetIndex = idx;
+              }
+
+              // 2. 若文字未指定餐點名稱，查詢用戶最後關注/發送卡片的餐點快取
+              if (targetIndex === -1) {
+                const cache = CacheService.getScriptCache();
+                const lastCardMealId = cache.get(`LAST_CARD_MEAL_${userId}`);
+                if (lastCardMealId) {
+                  const idx = logs.findIndex(l => (l.id && String(l.id) === String(lastCardMealId)) || (l.timestamp && String(l.timestamp) === String(lastCardMealId)));
+                  if (idx !== -1) targetIndex = idx;
+                }
+              }
+
+              // 3. 預設退回至最後一筆
+              if (targetIndex === -1) {
+                targetIndex = logs.length - 1;
+              }
+
+              const lastMeal = logs[targetIndex];
               const baseCal = Number(lastMeal.baseCalories) || Number(lastMeal.calories) || 0;
               const basePro = (lastMeal.baseProtein !== undefined && !isNaN(Number(lastMeal.baseProtein))) ? Number(lastMeal.baseProtein) : (Number(lastMeal.protein) || 0);
               const baseCarb = (lastMeal.baseCarbs !== undefined && !isNaN(Number(lastMeal.baseCarbs))) ? Number(lastMeal.baseCarbs) : (Number(lastMeal.carbs) || 0);
@@ -3949,10 +4058,15 @@ function doPost(e) {
               }
             }
 
+            const eventTimestamp = Number(event.timestamp) || Date.now();
+            const mealTime = (targetMealDate === getTodayDateString())
+              ? Utilities.formatDate(new Date(eventTimestamp), "Asia/Taipei", "HH:mm")
+              : '12:00';
             const meal = {
-              id: Date.now(),
+              id: eventTimestamp,
+              timestamp: eventTimestamp,
               date: targetMealDate,
-              time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+              time: mealTime,
               dish_name: analysis.dish_name || (isEn ? 'Meal' : '美味餐點'),
               calories: Number(analysis.calories) || 0,
               protein: Number(analysis.protein) || 0,
@@ -3974,6 +4088,11 @@ function doPost(e) {
               model_used: usedModel
             };
 
+            try {
+              const cache = CacheService.getScriptCache();
+              cache.put(`LAST_CARD_MEAL_${userId}`, String(meal.id || meal.timestamp), 900);
+              if (meal.dish_name) cache.put(`LAST_CARD_MEAL_NAME_${userId}`, String(meal.baseDishName || meal.dish_name).slice(0, 30), 900);
+            } catch (cErr) {}
             saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
             const isHistorical = targetMealDate !== getTodayDateString();
             const logType = event._isAudioInput ? '語音記餐' : (isHistorical ? '補記歷史' : '文字辨識');

@@ -259,7 +259,7 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
           baseCarb: baseCarb,
           baseFat: baseFat,
           baseWat: baseWat,
-          baseName: encodeURIComponent(cleanBaseName)
+          baseName: cleanBaseName
         }),
         displayText: isEn ? `Adjust portion to ${label}` : `調整份量為 ${label}`
       },
@@ -290,9 +290,9 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
     action: {
       type: "postback",
       label: isEn ? "Custom" : "自訂",
-      data: JSON.stringify({ action: "fillCustomMult", id: mealId }),
+      data: JSON.stringify({ action: "fillCustomMult", id: mealId, name: cleanBaseName }),
       inputOption: "openKeyboard",
-      fillInText: isEn ? "1.2x" : "改 1.2倍"
+      fillInText: isEn ? `1.2x ${cleanBaseName}` : `改 ${cleanBaseName} 1.2倍`
     },
     contents: [
       {
@@ -6239,7 +6239,7 @@ function generateMealInfoFlex(userId, targetMealOrId, targetDateStr, liffId, use
           baseCarb: baseCarb,
           baseFat: baseFat,
           baseWat: baseWat,
-          baseName: encodeURIComponent(cleanDishName)
+          baseName: cleanDishName
         }),
         displayText: isEn ? ("Adjust portion to " + label) : ("調整份量為 " + label)
       },

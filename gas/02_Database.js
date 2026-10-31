@@ -424,6 +424,7 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
   }
 
   try {
+    const freshProps = PropertiesService.getScriptProperties();
     const isGeneric = isGenericUserId(userId);
     const todayKey = isGeneric
       ? (userGistId ? `DIET_LOGS_GIST_${userGistId}_${meal.date}` : null)
@@ -432,7 +433,7 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
     let logs = [];
     if (todayKey) {
       try {
-        const raw = props.getProperty(todayKey);
+        const raw = freshProps.getProperty(todayKey);
         if (raw) logs = JSON.parse(raw);
       } catch (e) {
         logs = [];
@@ -442,12 +443,15 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
       const mealId = meal.id || meal.timestamp;
       let existingIdx = -1;
       if (mealId) {
-        existingIdx = logs.findIndex(l => l.id && String(l.id) === String(mealId));
+        existingIdx = logs.findIndex(l => 
+          (l.id && String(l.id) === String(mealId)) || 
+          (l.timestamp && String(l.timestamp) === String(mealId))
+        );
       }
       if (existingIdx === -1 && meal.dish_name && (meal.dish_name.includes('水') || meal.dish_name.toLowerCase().includes('water'))) {
         const isRecentWater = logs.findIndex(l => 
           l.dish_name && (l.dish_name.includes('水') || l.dish_name.toLowerCase().includes('water')) && 
-          (Math.abs((l.id || 0) - (mealId || 0)) < 3 * 60 * 1000 || l.time === meal.time)
+          (Math.abs((Number(l.timestamp || l.id) || 0) - (Number(meal.timestamp || mealId) || 0)) < 3 * 60 * 1000 || l.time === meal.time)
         );
         if (isRecentWater !== -1) existingIdx = isRecentWater;
       }
@@ -457,7 +461,16 @@ function saveMealLog(userId, meal, userGistId, pat, props) {
       } else {
         logs.push(meal);
       }
-      props.setProperty(todayKey, JSON.stringify(logs));
+
+      // 🌟 嚴格時序排序：依據時間戳與時間排序，防止並發 Gemini AI 非同步回傳時餐點順序錯亂
+      logs.sort((a, b) => {
+        const tA = Number(a.timestamp || a.id || 0);
+        const tB = Number(b.timestamp || b.id || 0);
+        if (tA && tB && tA !== tB) return tA - tB;
+        return String(a.time || '').localeCompare(String(b.time || ''));
+      });
+
+      freshProps.setProperty(todayKey, JSON.stringify(logs));
     }
 
     // 同步寫入該用戶專屬 Gist
@@ -486,77 +499,128 @@ function updateOrSaveMealLog(userId, updateFields, userGistId, pat, props) {
   if (updateFields.dish_name) updateFields.dish_name = String(updateFields.dish_name).slice(0, 100);
   if (updateFields.comment) updateFields.comment = String(updateFields.comment).slice(0, 200);
 
-  const todayStr = getTodayDateString();
-  const todayKey = `DIET_LOGS_${userId}_${todayStr}`;
-  let logs = getTodayLogs(userId, todayStr, props, userGistId);
-
-  let targetMeal = null;
-  if (logs.length > 0) {
-    let targetIndex = logs.length - 1;
-    if (updateFields.id) {
-      const foundIdx = logs.findIndex(l => String(l.id) === String(updateFields.id));
-      if (foundIdx !== -1) targetIndex = foundIdx;
-    } else if (updateFields.dish_name) {
-      const foundIdx = logs.findIndex(l => l.dish_name && (l.dish_name.includes(updateFields.dish_name) || updateFields.dish_name.includes(l.dish_name)));
-      if (foundIdx !== -1) targetIndex = foundIdx;
-    }
-
-    targetMeal = logs[targetIndex];
-    if (updateFields.dish_name && updateFields.dish_name !== targetMeal.dish_name) {
-      targetMeal.dish_name = updateFields.dish_name;
-    }
-    if (updateFields.calories !== undefined) targetMeal.calories = Number(updateFields.calories);
-    if (updateFields.protein !== undefined) targetMeal.protein = Number(updateFields.protein);
-    if (updateFields.carbs !== undefined) targetMeal.carbs = Number(updateFields.carbs);
-    if (updateFields.fat !== undefined) targetMeal.fat = Number(updateFields.fat);
-    if (updateFields.water !== undefined) targetMeal.water = Number(updateFields.water);
-    if (updateFields.comment !== undefined) targetMeal.comment = updateFields.comment;
-    if (updateFields.breakdown !== undefined) targetMeal.breakdown = updateFields.breakdown;
-    if (updateFields.baseBreakdown !== undefined) targetMeal.baseBreakdown = updateFields.baseBreakdown;
-    if (updateFields.baseDishName !== undefined) targetMeal.baseDishName = updateFields.baseDishName;
-    if (updateFields.baseCalories !== undefined) targetMeal.baseCalories = updateFields.baseCalories;
-    if (updateFields.baseProtein !== undefined) targetMeal.baseProtein = updateFields.baseProtein;
-    if (updateFields.baseCarbs !== undefined) targetMeal.baseCarbs = updateFields.baseCarbs;
-    if (updateFields.baseFat !== undefined) targetMeal.baseFat = updateFields.baseFat;
-    if (updateFields.baseWater !== undefined) targetMeal.baseWater = updateFields.baseWater;
-    if (updateFields.multiplier !== undefined) targetMeal.multiplier = updateFields.multiplier;
-
-    logs[targetIndex] = targetMeal;
-    props.setProperty(todayKey, JSON.stringify(logs));
-
-    if (pat && userGistId) {
-      try {
-        updateMealInUserGist(targetMeal, userGistId, pat);
-      } catch (e) {
-        console.error("更新 Gist 失敗:", e);
-      }
-    }
-  } else {
-    targetMeal = {
-      id: updateFields.id || Date.now(),
-      date: todayStr,
-      time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
-      dish_name: updateFields.dish_name || '餐點',
-      calories: Number(updateFields.calories) || 0,
-      protein: Number(updateFields.protein) || 0,
-      carbs: Number(updateFields.carbs) || 0,
-      fat: Number(updateFields.fat) || 0,
-      water: Number(updateFields.water) || 0,
-      breakdown: updateFields.breakdown || [],
-      baseBreakdown: updateFields.baseBreakdown || updateFields.breakdown || [],
-      comment: updateFields.comment || '',
-      baseDishName: updateFields.baseDishName || updateFields.dish_name || '餐點',
-      baseCalories: updateFields.baseCalories !== undefined ? updateFields.baseCalories : Number(updateFields.calories) || 0,
-      baseProtein: updateFields.baseProtein !== undefined ? updateFields.baseProtein : Number(updateFields.protein) || 0,
-      baseCarbs: updateFields.baseCarbs !== undefined ? updateFields.baseCarbs : Number(updateFields.carbs) || 0,
-      baseFat: updateFields.baseFat !== undefined ? updateFields.baseFat : Number(updateFields.fat) || 0,
-      baseWater: updateFields.baseWater !== undefined ? updateFields.baseWater : Number(updateFields.water) || 0,
-      multiplier: updateFields.multiplier || 1
-    };
-    saveMealLog(userId, targetMeal, userGistId, pat, props);
+  const lock = LockService.getScriptLock();
+  try {
+    lock.waitLock(30000);
+  } catch (e) {
+    console.warn("⚠️ 獲取 LockService 鎖超時，直接更新");
   }
 
-  return targetMeal;
+  try {
+    const freshProps = PropertiesService.getScriptProperties();
+    const isGeneric = isGenericUserId(userId);
+    const todayStr = getTodayDateString();
+    const todayKey = isGeneric
+      ? (userGistId ? `DIET_LOGS_GIST_${userGistId}_${todayStr}` : null)
+      : `DIET_LOGS_${userId}_${todayStr}`;
+    let logs = getTodayLogs(userId, todayStr, freshProps, userGistId);
+
+    let targetMeal = null;
+    if (logs.length > 0) {
+      let targetIndex = -1;
+      if (updateFields.id) {
+        const foundIdx = logs.findIndex(l => 
+          (l.id && String(l.id) === String(updateFields.id)) || 
+          (l.timestamp && String(l.timestamp) === String(updateFields.id))
+        );
+        if (foundIdx !== -1) targetIndex = foundIdx;
+      }
+      
+      // 🛡️ 若以 ID 未能匹配，嘗試以原始餐點名稱比對，避免誤改其他無關餐點 (例如誤改為後續發送的餐點)
+      if (targetIndex === -1 && updateFields.baseDishName) {
+        const cleanTarget = String(updateFields.baseDishName).replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+        const foundIdx = logs.findIndex(l => {
+          const lName = String(l.baseDishName || l.dish_name || '').replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+          return lName && (lName === cleanTarget || lName.includes(cleanTarget) || cleanTarget.includes(lName));
+        });
+        if (foundIdx !== -1) targetIndex = foundIdx;
+      } else if (targetIndex === -1 && updateFields.dish_name) {
+        const cleanTarget = String(updateFields.dish_name).replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+        const foundIdx = logs.findIndex(l => {
+          const lName = String(l.baseDishName || l.dish_name || '').replace(/^[0-9]+(?:.[0-9]+)?(?:倍的|x\s*)/i, '').replace(/\s*\(.*倍.*份量\)/g, '').trim().toLowerCase();
+          return lName && (lName === cleanTarget || lName.includes(cleanTarget) || cleanTarget.includes(lName));
+        });
+        if (foundIdx !== -1) targetIndex = foundIdx;
+      }
+
+      // 只有在完全未提供 id 也未提供任何名稱時，才退回至最後一筆
+      if (targetIndex === -1 && !updateFields.id && !updateFields.baseDishName && !updateFields.dish_name) {
+        targetIndex = logs.length - 1;
+      }
+
+      if (targetIndex !== -1) {
+        targetMeal = logs[targetIndex];
+        if (updateFields.dish_name && updateFields.dish_name !== targetMeal.dish_name) {
+          targetMeal.dish_name = updateFields.dish_name;
+        }
+        if (updateFields.calories !== undefined) targetMeal.calories = Number(updateFields.calories);
+        if (updateFields.protein !== undefined) targetMeal.protein = Number(updateFields.protein);
+        if (updateFields.carbs !== undefined) targetMeal.carbs = Number(updateFields.carbs);
+        if (updateFields.fat !== undefined) targetMeal.fat = Number(updateFields.fat);
+        if (updateFields.water !== undefined) targetMeal.water = Number(updateFields.water);
+        if (updateFields.comment !== undefined) targetMeal.comment = updateFields.comment;
+        if (updateFields.breakdown !== undefined) targetMeal.breakdown = updateFields.breakdown;
+        if (updateFields.baseBreakdown !== undefined) targetMeal.baseBreakdown = updateFields.baseBreakdown;
+        if (updateFields.baseDishName !== undefined) targetMeal.baseDishName = updateFields.baseDishName;
+        if (updateFields.baseCalories !== undefined) targetMeal.baseCalories = updateFields.baseCalories;
+        if (updateFields.baseProtein !== undefined) targetMeal.baseProtein = updateFields.baseProtein;
+        if (updateFields.baseCarbs !== undefined) targetMeal.baseCarbs = updateFields.baseCarbs;
+        if (updateFields.baseFat !== undefined) targetMeal.baseFat = updateFields.baseFat;
+        if (updateFields.baseWater !== undefined) targetMeal.baseWater = updateFields.baseWater;
+        if (updateFields.multiplier !== undefined) targetMeal.multiplier = updateFields.multiplier;
+
+        logs[targetIndex] = targetMeal;
+
+        // 重新時序排序
+        logs.sort((a, b) => {
+          const tA = Number(a.timestamp || a.id || 0);
+          const tB = Number(b.timestamp || b.id || 0);
+          if (tA && tB && tA !== tB) return tA - tB;
+          return String(a.time || '').localeCompare(String(b.time || ''));
+        });
+
+        if (todayKey) freshProps.setProperty(todayKey, JSON.stringify(logs));
+
+        if (pat && userGistId) {
+          try {
+            updateMealInUserGist(targetMeal, userGistId, pat);
+          } catch (e) {
+            console.error("更新 Gist 失敗:", e);
+          }
+        }
+      }
+    }
+
+    if (!targetMeal) {
+      targetMeal = {
+        id: updateFields.id || Date.now(),
+        timestamp: updateFields.timestamp || updateFields.id || Date.now(),
+        date: todayStr,
+        time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit', hour12: false, timeZone: 'Asia/Taipei' }),
+        dish_name: updateFields.dish_name || '餐點',
+        calories: Number(updateFields.calories) || 0,
+        protein: Number(updateFields.protein) || 0,
+        carbs: Number(updateFields.carbs) || 0,
+        fat: Number(updateFields.fat) || 0,
+        water: Number(updateFields.water) || 0,
+        breakdown: updateFields.breakdown || [],
+        baseBreakdown: updateFields.baseBreakdown || updateFields.breakdown || [],
+        comment: updateFields.comment || '',
+        baseDishName: updateFields.baseDishName || updateFields.dish_name || '餐點',
+        baseCalories: updateFields.baseCalories !== undefined ? updateFields.baseCalories : Number(updateFields.calories) || 0,
+        baseProtein: updateFields.baseProtein !== undefined ? updateFields.baseProtein : Number(updateFields.protein) || 0,
+        baseCarbs: updateFields.baseCarbs !== undefined ? updateFields.baseCarbs : Number(updateFields.carbs) || 0,
+        baseFat: updateFields.baseFat !== undefined ? updateFields.baseFat : Number(updateFields.fat) || 0,
+        baseWater: updateFields.baseWater !== undefined ? updateFields.baseWater : Number(updateFields.water) || 0,
+        multiplier: updateFields.multiplier || 1
+      };
+      saveMealLog(userId, targetMeal, userGistId, pat, freshProps);
+    }
+
+    return targetMeal;
+  } finally {
+    try { lock.releaseLock(); } catch (e) {}
+  }
 }
 
 function updateMealInUserGist(updatedMeal, gistId, pat) {
@@ -576,14 +640,19 @@ function updateMealInUserGist(updatedMeal, gistId, pat) {
     if (backupData.dietLogs && backupData.dietLogs.length > 0) {
       let found = false;
       for (let i = 0; i < backupData.dietLogs.length; i++) {
-        if (backupData.dietLogs[i].id && updatedMeal.id && String(backupData.dietLogs[i].id) === String(updatedMeal.id)) {
-          backupData.dietLogs[i].calories = Number(updatedMeal.calories) || 0;
-          backupData.dietLogs[i].protein = Number(updatedMeal.protein) || 0;
-          if (updatedMeal.carbs !== undefined) backupData.dietLogs[i].carbs = Number(updatedMeal.carbs) || 0;
-          if (updatedMeal.fat !== undefined) backupData.dietLogs[i].fat = Number(updatedMeal.fat) || 0;
-          if (updatedMeal.water !== undefined) backupData.dietLogs[i].water = Number(updatedMeal.water) || 0;
-          if (updatedMeal.dish_name) backupData.dietLogs[i].dish_name = updatedMeal.dish_name;
-          if (updatedMeal.comment) backupData.dietLogs[i].comment = updatedMeal.comment;
+        const bId = backupData.dietLogs[i].id || backupData.dietLogs[i].timestamp;
+        const uId = updatedMeal.id || updatedMeal.timestamp;
+        const idMatched = (bId && uId && String(bId) === String(uId));
+        const nameMatched = (backupData.dietLogs[i].date === updatedMeal.date && 
+          (backupData.dietLogs[i].dish_name === updatedMeal.baseDishName || 
+           backupData.dietLogs[i].dish_name === updatedMeal.dish_name ||
+           (updatedMeal.baseDishName && backupData.dietLogs[i].dish_name && backupData.dietLogs[i].dish_name.includes(updatedMeal.baseDishName))));
+
+        if (idMatched || (!uId && nameMatched)) {
+          backupData.dietLogs[i] = {
+            ...backupData.dietLogs[i],
+            ...updatedMeal
+          };
           found = true;
           break;
         }
@@ -821,6 +890,13 @@ function getTodayLogs(userId, dateStr, props, userGistId) {
       } catch (ae) {}
     }
   }
+
+  localLogs.sort((a, b) => {
+    const tA = Number(a.timestamp || a.id || 0);
+    const tB = Number(b.timestamp || b.id || 0);
+    if (tA && tB && tA !== tB) return tA - tB;
+    return String(a.time || '').localeCompare(String(b.time || ''));
+  });
 
   return localLogs;
 }
@@ -1087,7 +1163,9 @@ function syncLogToUserGist(meal, gistId, pat) {
       };
     } else {
       backupData.dietLogs.unshift({
-        id: mealId || Date.now(),
+        ...meal,
+        id: mealId || meal.timestamp || Date.now(),
+        timestamp: meal.timestamp || mealId || Date.now(),
         date: meal.date,
         dish_name: meal.dish_name,
         calories: Number(meal.calories) || 0,
@@ -1095,8 +1173,6 @@ function syncLogToUserGist(meal, gistId, pat) {
         carbs: Number(meal.carbs) || 0,
         fat: Number(meal.fat) || 0,
         water: Number(meal.water) || 0,
-        timestamp: meal.timestamp || Date.now(),
-        comment: meal.comment || '',
         source: meal.source || 'LINE_BOT'
       });
     }
