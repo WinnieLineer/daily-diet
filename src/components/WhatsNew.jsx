@@ -86,12 +86,12 @@ const WhatsNew = ({ version = APP_VERSION, onClose }) => {
             </div>
             
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-950 leading-tight">
-              {isEn ? 'Slim Header, Dialogue Fix & Smarter Sync' : '選單清爽瘦身、話框遮蔽修復與全新同步體驗'}
+              {isEn ? 'Gemini 3.x AI Engine Upgrade & Zero-Downtime Failover' : 'Gemini 3.x 智能核心升級、AI 引擎全面復原與多重容錯輪替'}
             </h2>
             <p className="text-xs sm:text-[13px] text-zinc-800 font-bold leading-relaxed">
               {isEn 
-                ? 'Thank you for using Daily-Diet! We have tuned the top navigation, resolved visual overlapping, and smoothed out multi-screen responsiveness.' 
-                : '親愛的 Daily-Diet 用戶您好！本次更新帶來了頂部導航瘦身、修復了話框遮擋與多項介面調校，讓您的日常飲食紀錄更清爽流暢！'}
+                ? 'Thank you for using Daily-Diet! We have fully upgraded the AI vision and text engine to Gemini 3.x, added intelligent failover cascade, and restored all photo/text diet tracking.' 
+                : '親愛的 Daily-Diet 用戶您好！本次更新帶來了全系統 Gemini 3.x 智能核心升級、多模型故障轉移機制與全線照片、文字記餐全面復原，守護您的健康飲食旅程！'}
             </p>
           </div>
 
@@ -103,58 +103,47 @@ const WhatsNew = ({ version = APP_VERSION, onClose }) => {
             </div>
             
             <FeatureItem 
-              icon={Feather}
-              title={isEn ? "Slim & Light Top Header" : "頂部導航選單極簡瘦身"}
+              icon={Sparkles}
+              title={isEn ? "Gemini 3.x Vision & Text Upgrade" : "Gemini 3.x 智能模型核心升級"}
               desc={isEn 
-                ? "Reduced header height by ~40% and softened borders. Branding is now compactly arranged on a single line, granting more screen space for your diary."
-                : "告別過去厚重的黑底邊框！頂部選單高度大幅縮減約 40%，品牌與名稱改為同行緊湊排列，將最寶貴的手機視野留給飲食日記與紀錄操作。"}
-              badge={isEn ? "UI Refresh" : "視覺瘦身"}
+                ? "Upgraded the AI engine to Gemini 3.x for lightning-fast analysis, sharper dish recognition, and more precise macronutrient breakdown."
+                : "全面升級至最新世代 Gemini 3.x 視覺與語言模型，餐點辨識更精準、語意理解更細膩、熱量與蛋白質推算更迅速。"}
+              badge={isEn ? "Core Upgrade" : "核心升級"}
               iconBg="bg-amber-100"
               iconColor="text-amber-800"
             />
 
             <FeatureItem 
-              icon={MessageSquare}
-              title={isEn ? "Panda Speech Bubble Overlap Fixed" : "熊貓教練話框遮蔽修復"}
+              icon={RefreshCw}
+              title={isEn ? "Intelligent Failover & Auto-Rotation" : "雙重模型智慧容錯輪替"}
               desc={isEn 
-                ? "Resolved issue where the sticky header overlapped Panda Coach speech bubbles. Dialogue area now automatically adapts with clean vertical headroom."
-                : "徹底解決置頂固定選單遮擋熊貓金句與語音話框的問題！已加入自適應防遮擋間距與動態貼合機制，對話泡泡不再被裁切。"}
-              badge={isEn ? "Bug Fix" : "重大修復"}
+                ? "Implemented dynamic multi-model rotation. If any model experiences high traffic, the system seamlessly cascades to healthy backups within milliseconds."
+                : "全新實裝多模型與備援金鑰雙層故障轉移架構，即使單一模型或尖峰流量波動，系統毫秒級自動容錯輪替，記餐體驗零中斷。"}
+              badge={isEn ? "Reliability" : "高可用架構"}
               iconBg="bg-emerald-100"
               iconColor="text-emerald-800"
             />
 
             <FeatureItem 
-              icon={RefreshCw}
-              title={isEn ? "Compact Live Sync Micro-Dot" : "LINE 雲端同步短字與微燈號"}
+              icon={MessageSquare}
+              title={isEn ? "Coach Panda Fully Back Online" : "熊貓教練點評與語音全線回歸"}
               desc={isEn 
-                ? "Sync status is now neatly integrated next to the version label without occupying extra lines. Tap the micro-dot anytime to manually trigger sync."
-                : "同步狀態不再額外佔據整行版面，直接精簡融入版本號旁，並以靈動小燈號即時呈現連線與同步進度（支援隨時點擊立即手動重整）。"}
-              badge={isEn ? "Live Sync" : "即時狀態"}
-              iconBg="bg-sky-100"
-              iconColor="text-sky-800"
-            />
-
-            <FeatureItem 
-              icon={Languages}
-              title={isEn ? "Modern Neo-Brutalist Bilingual Switch" : "簡約雙語切換新開關"}
-              desc={isEn 
-                ? "Replaced the legacy blue globe icon with a sleek neo-brutalist dual slider (中 / EN) for instant, seamless language switching."
-                : "移除原本突兀的藍色地球圖標，重新打造成俐落的新野獸派黑白黃滑動切換器（中 / EN），視覺協調且手感流暢。"}
-              badge={isEn ? "Redesign" : "風格煥新"}
+                ? "Panda Coach witty roasts, personalized nutritional advice, and live coaching calls are fully operational with improved response quality."
+                : "熊貓教練毒舌吐槽、貼心營養小叮嚀、即時通話語音諮詢已全線復原上線，互動更幽默流暢！"}
+              badge={isEn ? "Coach Ready" : "教練回歸"}
               iconBg="bg-purple-100"
               iconColor="text-purple-800"
             />
 
             <FeatureItem 
-              icon={BarChart2}
-              title={isEn ? "Weekly Report Mobile Overflow Fix" : "週報彈窗手機邊界防溢出"}
+              icon={Feather}
+              title={isEn ? "Slim & Light Top Header" : "頂部導航選單極簡瘦身"}
               desc={isEn 
-                ? "Fixed edge cases where weekly summary reports might exceed boundaries on narrow mobile screens. Smooth multi-axis scrolling assured."
-                : "修復週結算報告在部分小螢幕或高縮放比例手機上彈窗可能超出畫面或破版的問題，全螢幕多維度滾動更平穩。"}
-              badge={isEn ? "Layout Fix" : "佈局修復"}
-              iconBg="bg-rose-100"
-              iconColor="text-rose-800"
+                ? "Reduced header height by ~40% and softened borders. Branding is compactly arranged on a single line, granting more screen space for your diary."
+                : "頂部選單高度大幅縮減約 40%，品牌與名稱改為同行緊湊排列，將最寶貴的手機視野留給飲食日記與紀錄操作。"}
+              badge={isEn ? "UI Refresh" : "視覺瘦身"}
+              iconBg="bg-sky-100"
+              iconColor="text-sky-800"
             />
           </div>
 

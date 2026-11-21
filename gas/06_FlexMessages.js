@@ -5712,7 +5712,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
 
   return {
     type: "flex",
-    altText: isEn ? "🟢 Official Notice: Service Fully Restored 🐼" : "🟢 官方通報：雲端通訊閘道已全面修復完成 🐼",
+    altText: isEn ? "🟢 Official Notice: Gemini AI Fully Restored & Upgraded 🐼" : "🟢 官方通報：Gemini AI 智能核心已全面修復並升級 🐼",
     contents: {
       type: "bubble",
       size: "mega",
@@ -5762,7 +5762,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               },
               {
                 type: "text",
-                text: "2026.09.17",
+                text: "2026.11.22",
                 color: "#71717A",
                 size: "xxs",
                 align: "end",
@@ -5773,7 +5773,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
           },
           {
             type: "text",
-            text: isEn ? "System Operational & Restored" : "雲端通訊閘道已全面修復完成",
+            text: isEn ? "Gemini AI Core Restored & Upgraded" : "Gemini AI 智能核心全面修復完成",
             color: "#FAFAFA",
             weight: "bold",
             size: "md",
@@ -5783,8 +5783,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
           {
             type: "text",
             text: isEn 
-              ? "All LINE bot messaging & cloud sync channels are verified and running normally."
-              : "LINE 訊息接收、智能回傳與雲端雙向同步服務已全線檢測通過並穩定運作。",
+              ? "AI food photo analysis, text parser & Panda Coach are verified and running normally."
+              : "AI 照片辨識、文字分析與熊貓教練點評已全線檢測通過並穩定運作。",
             color: "#A1A1AA",
             size: "xxs",
             margin: "xs",
@@ -5820,8 +5820,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               {
                 type: "text",
                 text: isEn
-                  ? "Dear user, due to a cloud credential gateway issue over the past two days, some LINE messages and sync requests experienced timeouts. We sincerely apologize for any inconvenience caused during this period."
-                  : "親愛的用戶您好：日前因雲端中繼通訊閘道權限與連線憑證異常，導致部分時段 LINE 官方帳號未能即時回覆訊息及同步記錄。團隊已完成全面修復與架構加固，對造成的不便致上最深切的歉意！",
+                  ? "Dear user, due to an AI model credential update, some food analysis requests temporarily timed out. The team has completed the Gemini 3.x core upgrade and failover architecture. We apologize for the inconvenience!"
+                  : "親愛的用戶您好：日前因 AI 雲端授權憑證更新與維護，導致部分時段飲食分析未能即時回覆。團隊已完成 Gemini 3.x 核心升級與多模型故障轉移機制，對造成的不便致上最深切的歉意！",
                 size: "xxs",
                 color: "#475569",
                 margin: "xs",
@@ -5852,7 +5852,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: isEn ? "🛡️ Key Resolutions" : "🛡️ 修復進度與資料保障", weight: "bold", size: "xs", color: "#166534", flex: 1, wrap: true },
+                      { type: "text", text: isEn ? "🛡️ Key Resolutions" : "🛡️ 修復進度與技術升級", weight: "bold", size: "xs", color: "#166534", flex: 1, wrap: true },
                       {
                         type: "box",
                         layout: "vertical",
@@ -5864,7 +5864,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                         paddingBottom: "2px",
                         flex: 0,
                         contents: [
-                          { type: "text", text: isEn ? "100% SECURED" : "已全數解決", size: "xxs", color: "#FFFFFF", weight: "bold", wrap: true }
+                          { type: "text", text: isEn ? "100% SECURED" : "已全數升級", size: "xxs", color: "#FFFFFF", weight: "bold", wrap: true }
                         ]
                       }
                     ]
@@ -5880,8 +5880,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                       {
                         type: "text",
                         text: isEn 
-                          ? "Data Integrity: 100% of your diary logs on device/web remain fully intact with zero loss, and are now re-synced."
-                          : "資料完整性：期間您於手機或網頁端的所有飲食記錄均完整妥善保存，未有任何遺失，現已自動完成雲端對齊。",
+                          ? "Gemini 3.x Upgrade: Upgraded to state-of-the-art Gemini 3.x intelligence engine for faster and more accurate nutrition analysis."
+                          : "AI 核心升級：全面導入全新世代 Gemini 3.x 視覺與文字辨識引擎，速度與營養推算精準度大幅提升。",
                         size: "xxs",
                         color: "#14532D",
                         flex: 1,
@@ -5900,8 +5900,28 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                       {
                         type: "text",
                         text: isEn
-                          ? "Pipeline Hardened: Regenerated API tokens, updated GAS deployment gateway, and added automatic retry mechanisms."
-                          : "連線加固：全面重構 API 通信權限憑證，升級 Google Apps Script 閘道與通訊容錯重試機制。",
+                          ? "Failover Cascade: Built-in multi-model auto-rotation ensures uninterrupted diary logging even during single-model traffic surges."
+                          : "雙重容錯輪替：內建多模型智慧降級與多金鑰容錯輪替機制，徹底杜絕單點故障與停機中斷。",
+                        size: "xxs",
+                        color: "#14532D",
+                        flex: 1,
+                        wrap: true
+                      }
+                    ]
+                  },
+                  // 項目 3
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    alignItems: "flex-start",
+                    contents: [
+                      { type: "text", text: "•", size: "xs", color: "#15803D", weight: "bold", flex: 0 },
+                      {
+                        type: "text",
+                        text: isEn
+                          ? "Data Integrity: 100% of your diary logs on device/web remain fully intact with zero loss."
+                          : "資料完整性：期間所有手機本機與雲端的飲食記錄均完好保存，未有任何遺失。",
                         size: "xxs",
                         color: "#14532D",
                         flex: 1,
@@ -5937,7 +5957,25 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 layout: "horizontal",
                 alignItems: "center",
                 contents: [
-                  { type: "text", text: isEn ? "💬 LINE Messaging & Bot" : "💬 LINE 訊息回覆與解析", size: "xxs", color: "#27272A", flex: 3, wrap: true },
+                  { type: "text", text: isEn ? "📸 AI Food Photo Analysis" : "📸 AI 照片辨識與營養推算", size: "xxs", color: "#27272A", flex: 3, wrap: true },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "📝 Text & Voice Food Parser" : "📝 文字與語音自然記餐", size: "xxs", color: "#27272A", flex: 3, wrap: true },
+                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                alignItems: "center",
+                contents: [
+                  { type: "text", text: isEn ? "🐼 Coach Panda Live Roast & Tips" : "🐼 熊貓教練點評與建議", size: "xxs", color: "#27272A", flex: 3, wrap: true },
                   { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
                 ]
               },
@@ -5947,15 +5985,6 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                 alignItems: "center",
                 contents: [
                   { type: "text", text: isEn ? "🔄 Cloud Two-way Sync" : "🔄 雲端雙向資料同步", size: "xxs", color: "#27272A", flex: 3, wrap: true },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "📊 Daily Summary & Charts" : "📊 每日飲食與蛋白質總結", size: "xxs", color: "#27272A", flex: 3, wrap: true },
                   { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
                 ]
               }
