@@ -1599,6 +1599,7 @@ function doPost(e) {
   let currentUserId = 'system';
   let currentOperation = '接收請求';
   let currentUserInput = '';
+  let incomingAction = e?.parameter?.action || '';
 
   try {
     let data = {};
@@ -1608,7 +1609,9 @@ function doPost(e) {
       data = {};
     }
 
-    const action = e.parameter?.action || data?.action;
+    const action = e.parameter?.action || data?.action || incomingAction;
+    incomingAction = action;
+
     const GEMINI_API_KEY = data?.apiKey || e?.parameter?.apiKey || props.getProperty('GEMINI_API_KEY');
     const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN') || '';
     const GITHUB_PAT = props.getProperty('GITHUB_PAT');
@@ -4181,7 +4184,7 @@ function doPost(e) {
     }
 
     // 若為 Web API 請求 (如 analyzeText, analyzeMeal 等)，回傳標準 JSON 錯誤狀態
-    if (action) {
+    if (incomingAction) {
       return ContentService.createTextOutput(JSON.stringify({ 
         status: 'error', 
         message: err.message || '伺服器處理請求時發生異常，請稍後重試 🐼' 

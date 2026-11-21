@@ -2,16 +2,16 @@ import { db } from "../db";
 import { getOrCreateClientId } from "./syncService";
 
 const GEMINI_MODELS = [
-  'gemini-3.5-flash-lite',
   'gemini-3.1-flash-lite',
+  'gemini-3.5-flash-lite',
   'gemini-3.5-flash',
   'gemini-3.7-flash',
   'gemini-3.6-flash',
   'gemini-3-flash',
+  'gemini-flash-latest',
+  'gemini-flash-lite-latest',
   'gemini-2.5-flash-lite',
-  'gemini-2.5-flash',
-  'gemini-2.0-flash',
-  'gemini-1.5-flash'
+  'gemini-2.5-flash'
 ];
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
