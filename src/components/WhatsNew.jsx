@@ -86,13 +86,19 @@ const WhatsNew = ({ version = APP_VERSION, onClose }) => {
             </div>
             
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-950 leading-tight">
-              {isEn ? 'Gemini 3.x AI Engine Upgrade & Zero-Downtime Failover' : 'Gemini 3.x 智能核心升級、AI 引擎全面復原與多重容錯輪替'}
+              {isEn ? 'Gemini AI Fully Restored & Sincere Apology' : 'Gemini AI 智能核心全面修復、升級與致歉說明'}
             </h2>
-            <p className="text-xs sm:text-[13px] text-zinc-800 font-bold leading-relaxed">
-              {isEn 
-                ? 'Thank you for using Daily-Diet! We have fully upgraded the AI vision and text engine to Gemini 3.x, added intelligent failover cascade, and restored all photo/text diet tracking.' 
-                : '親愛的 Daily-Diet 用戶您好！本次更新帶來了全系統 Gemini 3.x 智能核心升級、多模型故障轉移機制與全線照片、文字記餐全面復原，守護您的健康飲食旅程！'}
-            </p>
+            <div className="p-3 bg-red-50 border-2 border-red-300 rounded-2xl text-[11px] sm:text-xs text-red-900 font-bold leading-relaxed space-y-1 shadow-neo-xs">
+              <div className="flex items-center gap-1.5 font-black text-xs sm:text-[13px] text-red-950">
+                <span>🙇‍♂️</span>
+                <span>{isEn ? 'Sincere Apology for 2-Day AI Outage' : '致用戶：過去兩天 AI 異常中斷誠摯致歉'}</span>
+              </div>
+              <p>
+                {isEn 
+                  ? 'Over the past two days (Nov 20–21), Gemini AI cloud service experienced an unexpected outage, causing food photo and text analysis to be unavailable. We deeply apologize for the disruption! The team has overhauled the engine to Gemini 3.x with zero-downtime multi-model failover.' 
+                  : '過去兩天（11/20～11/21）因 Gemini AI 雲端授權異常，導致飲食照片辨識與文字分析中斷了整整兩天，造成大家記餐極大的困擾與不便，團隊致上最深切的歉意！我們已徹夜完成 Gemini 3.x 核心全面升級與雙重備援容錯架構。'}
+              </p>
+            </div>
           </div>
 
           {/* 今日更新亮點列表 */}

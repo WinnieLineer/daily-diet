@@ -5803,27 +5803,27 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#F8FAFC",
-            borderColor: "#E2E8F0",
+            backgroundColor: "#FEF2F2",
+            borderColor: "#FECACA",
             borderWidth: "1.5px",
             cornerRadius: "12px",
             paddingAll: "12px",
             contents: [
               {
                 type: "text",
-                text: isEn ? "📋 Incident Brief & Apology" : "📋 異常概述與致歉說明",
+                text: isEn ? "🙇‍♂️ Outage Notice & Sincere Apology" : "🙇‍♂️ 故障通報與誠摯致歉",
                 weight: "bold",
                 size: "xs",
-                color: "#334155",
+                color: "#991B1B",
                 wrap: true
               },
               {
                 type: "text",
                 text: isEn
-                  ? "Dear user, due to an AI model credential update, some food analysis requests temporarily timed out. The team has completed the Gemini 3.x core upgrade and failover architecture. We apologize for the inconvenience!"
-                  : "親愛的用戶您好：日前因 AI 雲端授權憑證更新與維護，導致部分時段飲食分析未能即時回覆。團隊已完成 Gemini 3.x 核心升級與多模型故障轉移機制，對造成的不便致上最深切的歉意！",
+                  ? "Dear Users: We deeply apologize! Over the past two days (Nov 20–21), a Gemini AI cloud credential issue caused meal photo analysis and text parsing to experience an outage. We sincerely regret any disruption to your daily diet logging! The team has completed a full upgrade to Gemini 3.x with dual failover cascades, and Coach Panda is fully back online! ❤️"
+                  : "親愛的用戶您好：非常抱歉！過去兩天（11/20～11/21）因 Gemini AI 雲端授權異常，導致飲食照片辨識與文字分析中斷了整整兩天，造成大家記餐極大的困擾與不便，團隊在此致上最誠摯的歉意！🙇‍♂️\n\n團隊已徹夜排查並完成 Gemini 3.x 核心全面升級與雙重備援容錯架構，熊貓教練已滿血回歸！",
                 size: "xxs",
-                color: "#475569",
+                color: "#7F1D1D",
                 margin: "xs",
                 wrap: true
               }
