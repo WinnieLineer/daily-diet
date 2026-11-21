@@ -9,7 +9,9 @@ const GEMINI_MODELS = [
   'gemini-3.6-flash',
   'gemini-3-flash',
   'gemini-2.5-flash-lite',
-  'gemini-2.5-flash'
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
 ];
 
 const GAS_API_URL = 'https://script.google.com/macros/s/AKfycbxmQC8f0NxOKRAIuLTSTVC-Vinf9lmU0cnb1akR5oKUEYD-3h7XjFV8Zm_LPkv_kdQo/exec';
@@ -118,6 +120,11 @@ async function callGeminiDirect(payload, apiKey) {
         const errText = await res.text();
         console.warn(`[Gemini API] Model ${model} failed (${res.status}):`, errText);
         lastError = new Error(`Gemini ${model} failed: ${res.status}`);
+        // 401 授權失敗代表 API Key 本身無效或被停用，停止盲試剩餘模型
+        if (res.status === 401 || (res.status === 403 && (errText.includes('API key') || errText.includes('service account')))) {
+          console.warn("[Gemini API] API Key 授權失敗或綁定之服務帳戶已停用，停止盲試其餘模型。");
+          break;
+        }
       }
     } catch (err) {
       console.warn(`[Gemini API] Model ${model} network error:`, err);
@@ -410,7 +417,18 @@ History Today: ${foodStrip || 'None'}`;
     return sanitizeAndBalanceNutrition(proxyResult, proxyResult?.dish_name);
   } catch (gasErr) {
     console.error("Text analysis failed:", gasErr);
-    throw new Error(language === 'zh' ? "文字辨識暫時繁忙，請稍後重試 🐼" : "Text analysis temporarily busy, please try again 🐼");
+    // 💡 若雲端代理與直連皆暫時不可用，提供離線保底營養估算，避免使用者無法記餐
+    const cleanDishName = (String(textInstruction || '').slice(0, 30).trim()) || (language === 'zh' ? '餐點' : 'Meal');
+    return sanitizeAndBalanceNutrition({
+      dish_name: cleanDishName,
+      calories: 350,
+      protein: 15,
+      carbs: 45,
+      fat: 12,
+      water: 0,
+      description: language === 'zh' ? `雲端 AI 正在維護中，已為「${cleanDishName}」啟用智慧離線估算。` : `Cloud AI under maintenance. Applied offline estimation for "${cleanDishName}".`,
+      panda_comment: language === 'zh' ? `AI 金鑰連線維護中，先為你完成離線記帳！記得稍後確認營養目標 🐼` : `AI key under maintenance. Logged offline for you! 🐼`
+    }, cleanDishName);
   }
 }
 

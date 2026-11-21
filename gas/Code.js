@@ -86,6 +86,82 @@ function setMaintainerCredentials(customAccount, customPassword) {
 }
 
 /**
+ * 🔑 設定或更換 Gemini API Key
+ * 支援傳入單一金鑰或多把備援金鑰（多把金鑰以逗號分隔，系統將自動輪詢與故障切換）
+ * 解決 GAS 後台網頁介面因「指令碼具有 50 個以上的屬性」而唯讀無法直接編輯的問題
+ * @param {string} newApiKey - 新的 Gemini API Key (可為多組 key，以逗號分隔)
+ */
+function setGeminiApiKey(newApiKey) {
+  const props = PropertiesService.getScriptProperties();
+  if (!newApiKey || typeof newApiKey !== 'string' || !newApiKey.trim()) {
+    console.warn('⚠️ 請傳入有效的 API Key 執行：setGeminiApiKey("AIzaSy...")');
+    return { success: false, message: '未傳入有效的 API Key' };
+  }
+  const cleanKey = newApiKey.trim();
+  props.setProperty('GEMINI_API_KEY', cleanKey);
+  console.log('🎉 GEMINI_API_KEY 已成功寫入指令碼屬性！');
+  
+  const testRes = testGeminiConnection(cleanKey.split(/[\r\n,;]+/)[0].trim());
+  console.log('🔍 連線測試結果：', JSON.stringify(testRes));
+  return testRes;
+}
+
+/**
+ * 🧪 測試 Gemini API Key 連線狀態
+ * @param {string} [optionalKey] 可選，若留空則測試指令碼屬性中當前設定的 GEMINI_API_KEY
+ */
+function testGeminiConnection(optionalKey) {
+  const props = PropertiesService.getScriptProperties();
+  const rawKey = optionalKey || props.getProperty('GEMINI_API_KEY') || '';
+  const keyToTest = rawKey.split(/[\r\n,;]+/)[0].trim();
+  if (!keyToTest) {
+    return { success: false, code: 400, message: '未設定 GEMINI_API_KEY' };
+  }
+  const testModels = ['gemini-2.5-flash-lite', 'gemini-1.5-flash', 'gemini-2.0-flash'];
+  let lastResult = null;
+  for (let i = 0; i < testModels.length; i++) {
+    const model = testModels[i];
+    try {
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${keyToTest}`;
+      const payload = {
+        contents: [{ parts: [{ text: "Respond only with: OK" }] }],
+        generationConfig: { maxOutputTokens: 5 }
+      };
+      const startTime = Date.now();
+      const res = UrlFetchApp.fetch(url, {
+        method: "post",
+        contentType: "application/json",
+        payload: JSON.stringify(payload),
+        muteHttpExceptions: true
+      });
+      const latencyMs = Date.now() - startTime;
+      const code = res.getResponseCode();
+      if (code === 200) {
+        console.log(`✅ [Gemini 連線成功] 模型 ${model} 回應 HTTP 200 (${latencyMs}ms)，金鑰有效！`);
+        return { 
+          success: true, 
+          code: 200, 
+          model: model, 
+          latencyMs: latencyMs, 
+          message: `連線正常！Gemini API Key 有效可用 (模型: ${model}, 延遲: ${latencyMs}ms)` 
+        };
+      }
+      let errSnippet = res.getContentText();
+      try { errSnippet = JSON.parse(errSnippet)?.error?.message || errSnippet; } catch(e) {}
+      lastResult = { success: false, code: code, model: model, message: errSnippet };
+      // 401 授權無效代表 key 本身壞了，直接回傳
+      if (code === 401 || (code === 403 && errSnippet.includes('service account'))) {
+        console.warn(`❌ [Gemini 授權失效] HTTP ${code}: ${errSnippet}`);
+        return lastResult;
+      }
+    } catch (err) {
+      lastResult = { success: false, error: err.message };
+    }
+  }
+  return lastResult || { success: false, message: '未知測試錯誤' };
+}
+
+/**
  * 📋 檢視目前所有指令碼屬性清單 (可於 GAS「執行紀錄」中查看完整清單)
  */
 function listAllScriptProperties() {

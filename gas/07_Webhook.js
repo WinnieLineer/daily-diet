@@ -1609,7 +1609,7 @@ function doPost(e) {
     }
 
     const action = e.parameter?.action || data?.action;
-    const GEMINI_API_KEY = props.getProperty('GEMINI_API_KEY');
+    const GEMINI_API_KEY = data?.apiKey || e?.parameter?.apiKey || props.getProperty('GEMINI_API_KEY');
     const CHANNEL_ACCESS_TOKEN = props.getProperty('LINE_CHANNEL_ACCESS_TOKEN') || props.getProperty('CHANNEL_ACCESS_TOKEN') || '';
     const GITHUB_PAT = props.getProperty('GITHUB_PAT');
     const LIFF_ID = props.getProperty('LINE_LIFF_ID') || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
@@ -1625,6 +1625,59 @@ function doPost(e) {
       const authRes = handleMaintainerAuthActions(action, paramData, props);
       return ContentService.createTextOutput(JSON.stringify(authRes))
         .setMimeType(ContentService.MimeType.JSON);
+    }
+
+    // 🔑 0.3 維護者 Gemini API Key 管理與連線診斷端點 (POST 支援)
+    if (action === 'updateGeminiApiKey' || action === 'setGeminiApiKey' || action === 'testGemini' || action === 'getGeminiStatus') {
+      const incomingPass = String(data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token || '').trim();
+      const configuredPass = props.getProperty('MAINTAINER_PASS') || props.getProperty('MAINTAINER_PASSWORD');
+      const configuredUser = (props.getProperty('MAINTAINER_USER') || 'Winnie').trim();
+      const todayToken = generateSessionToken(configuredUser, configuredPass, 0);
+      const yesterdayToken = generateSessionToken(configuredUser, configuredPass, -1);
+
+      const isAuthValid = incomingPass && (incomingPass === configuredPass || incomingPass === todayToken || incomingPass === yesterdayToken);
+      if (!isAuthValid) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '未經授權：維護者密碼或權杖錯誤' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      if (action === 'getGeminiStatus') {
+        const keys = (typeof getCandidateGeminiApiKeys === 'function') ? getCandidateGeminiApiKeys(null, props) : [];
+        const primaryRaw = props.getProperty('GEMINI_API_KEY') || '';
+        const maskedPrimary = primaryRaw.length > 8 ? `${primaryRaw.slice(0, 4)}...${primaryRaw.slice(-4)}` : (primaryRaw ? '已設定' : '未設定');
+        const testRes = (typeof testGeminiConnection === 'function') ? testGeminiConnection(primaryRaw) : { success: false, message: '測試函式未定義' };
+        return ContentService.createTextOutput(JSON.stringify({
+          status: 'ok',
+          isConfigured: keys.length > 0,
+          keyCount: keys.length,
+          maskedKey: maskedPrimary,
+          connection: testRes
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      if (action === 'testGemini') {
+        const testKey = data?.apiKey || e?.parameter?.apiKey || props.getProperty('GEMINI_API_KEY');
+        const testRes = (typeof testGeminiConnection === 'function') ? testGeminiConnection(testKey) : { success: false, message: '測試函式未定義' };
+        return ContentService.createTextOutput(JSON.stringify({ 
+          status: testRes.success ? 'ok' : 'error', 
+          ...testRes 
+        })).setMimeType(ContentService.MimeType.JSON);
+      }
+
+      const newKey = String(data?.apiKey || data?.key || e?.parameter?.apiKey || e?.parameter?.key || '').trim();
+      if (!newKey) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '請提供 apiKey 參數' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+
+      props.setProperty('GEMINI_API_KEY', newKey);
+      const testRes = (typeof testGeminiConnection === 'function') ? testGeminiConnection(newKey.split(/[\r\n,;]+/)[0].trim()) : { success: true };
+      recordSystemLog('維護者金鑰更新', 'Maintainer', '更新 GEMINI_API_KEY', testRes.success ? '成功' : '連線測試未通過', `測試結果: ${testRes.code || 'ERR'} - ${testRes.message || ''}`, configuredUser);
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'ok', 
+        message: 'GEMINI_API_KEY 已成功更新！', 
+        test: testRes 
+      })).setMimeType(ContentService.MimeType.JSON);
     }
 
     // 📬 0.2 Web 用戶反饋 / 問題回報端點 (POST 支援，具備 Cache 5 分鐘冷卻鎖與長度截斷防護)
@@ -4125,6 +4178,14 @@ function doPost(e) {
       try {
         replyTextMessage(currentReplyToken, `⚠️ 熊貓教練提示 / Panda Coach Notice:\n\n${err.message || err.toString()}`, currentToken);
       } catch (replyErr) { }
+    }
+
+    // 若為 Web API 請求 (如 analyzeText, analyzeMeal 等)，回傳標準 JSON 錯誤狀態
+    if (action) {
+      return ContentService.createTextOutput(JSON.stringify({ 
+        status: 'error', 
+        message: err.message || '伺服器處理請求時發生異常，請稍後重試 🐼' 
+      })).setMimeType(ContentService.MimeType.JSON);
     }
   }
 

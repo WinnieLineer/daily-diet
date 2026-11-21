@@ -13,7 +13,9 @@ const VISION_GEMINI_MODELS = [
   'gemini-3.6-flash',
   'gemini-3-flash',
   'gemini-2.5-flash-lite',
-  'gemini-2.5-flash'
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
 ];
 
 // 📝 純文字自然語言記餐模型清單 (文字解析 JSON，優先以 3.1-flash-lite 為主，分流減輕 3.5 的負擔)
@@ -23,7 +25,10 @@ const TEXT_GEMINI_MODELS = [
   'gemini-3.5-flash',
   'gemini-3.7-flash',
   'gemini-3.6-flash',
-  'gemini-2.5-flash-lite'
+  'gemini-2.5-flash-lite',
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
 ];
 
 // 🐼 教練諮詢與即時通話模型清單 (優先使用 RPD 500 之 3.5-flash-lite / 3.1-flash-lite，次選 2.5 系列)
@@ -32,7 +37,9 @@ const ADVICE_GEMINI_MODELS = [
   'gemini-3.1-flash-lite',
   'gemini-3.5-flash',
   'gemini-2.5-flash-lite',
-  'gemini-2.5-flash'
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
 ];
 
 // 🎙️ 語音多模態辨識模型清單 (必須支援 Audio 多模態輸入，優先使用 RPD 500 之 3.5-flash-lite / 3.1-flash-lite)
@@ -41,7 +48,9 @@ const AUDIO_GEMINI_MODELS = [
   'gemini-3.1-flash-lite',
   'gemini-3.5-transcribe',
   'gemini-3.5-flash',
-  'gemini-2.5-flash'
+  'gemini-2.5-flash',
+  'gemini-2.0-flash',
+  'gemini-1.5-flash'
 ];
 
 // 🔄 通用預設模型清單 (相容性與全域預設)

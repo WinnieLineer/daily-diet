@@ -395,6 +395,14 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   const [lineQuota, setLineQuota] = useState(null); // { totalQuota, usedMessages, remainingMessages }
   const [isLoadingQuota, setIsLoadingQuota] = useState(false);
 
+  // 🔑 Gemini API Key Management States
+  const [showApiKeyModal, setShowApiKeyModal] = useState(false);
+  const [newGeminiKeyInput, setNewGeminiKeyInput] = useState('');
+  const [isTestingGeminiKey, setIsTestingGeminiKey] = useState(false);
+  const [isSavingGeminiKey, setIsSavingGeminiKey] = useState(false);
+  const [geminiStatus, setGeminiStatus] = useState(null);
+  const [geminiActionFeedback, setGeminiActionFeedback] = useState(null);
+
   // 💌 VIP Reply Assistant States
   const [showReplyModal, setShowReplyModal] = useState(false);
   const [replyModalData, setReplyModalData] = useState({
@@ -1348,6 +1356,89 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
       alert(isEn ? `Error: ${err.message}` : `送出發生錯誤：${err.message}`);
     } finally {
       setIsSendingBroadcast(false);
+    }
+  };
+
+  // 🔑 Gemini API Key Management Handlers
+  const fetchGeminiStatus = async () => {
+    try {
+      const activeToken = token || safeGetStorage(PERMANENT_TOKEN_KEY) || maintainerPassword;
+      const res = await fetch(`${GAS_API_URL}?action=getGeminiStatus&token=${encodeURIComponent(activeToken)}`);
+      if (res.ok) {
+        const data = await res.json();
+        setGeminiStatus(data);
+      }
+    } catch (e) {
+      console.warn('讀取 Gemini 狀態失敗:', e);
+    }
+  };
+
+  const handleTestGeminiKey = async (customKey) => {
+    setIsTestingGeminiKey(true);
+    setGeminiActionFeedback(null);
+    try {
+      const activeToken = token || safeGetStorage(PERMANENT_TOKEN_KEY) || maintainerPassword;
+      const res = await fetch(`${GAS_API_URL}?action=testGemini`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          token: activeToken,
+          apiKey: customKey || newGeminiKeyInput.trim()
+        })
+      });
+      const data = await res.json();
+      setGeminiActionFeedback({
+        type: data.status === 'ok' ? 'success' : 'error',
+        message: data.message || (data.status === 'ok' ? '連線測試成功！' : '連線測試失敗')
+      });
+    } catch (err) {
+      setGeminiActionFeedback({
+        type: 'error',
+        message: `測試連線例外: ${err.message}`
+      });
+    } finally {
+      setIsTestingGeminiKey(false);
+    }
+  };
+
+  const handleSaveGeminiKey = async () => {
+    if (!newGeminiKeyInput.trim()) {
+      setGeminiActionFeedback({ type: 'error', message: '請輸入有效的 Gemini API Key！' });
+      return;
+    }
+    setIsSavingGeminiKey(true);
+    setGeminiActionFeedback(null);
+    try {
+      const activeToken = token || safeGetStorage(PERMANENT_TOKEN_KEY) || maintainerPassword;
+      const res = await fetch(`${GAS_API_URL}?action=updateGeminiApiKey`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          token: activeToken,
+          apiKey: newGeminiKeyInput.trim()
+        })
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        setGeminiActionFeedback({
+          type: 'success',
+          message: data.message + (data.test?.message ? ` (${data.test.message})` : '')
+        });
+        setNewGeminiKeyInput('');
+        fetchGeminiStatus();
+      } else {
+        setGeminiActionFeedback({
+          type: 'error',
+          message: data.message || '更新失敗'
+        });
+      }
+    } catch (err) {
+      setGeminiActionFeedback({
+        type: 'error',
+        message: `儲存金鑰例外: ${err.message}`
+      });
+    } finally {
+      setIsSavingGeminiKey(false);
     }
   };
 
@@ -4141,6 +4232,175 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                         )
                     }
                   </span>
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+
+        {/* 🔑 Gemini AI Key Manager Modal */}
+        {showApiKeyModal && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm overflow-y-auto">
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="bg-white border-4 border-black rounded-[2.5rem] p-6 shadow-neo-lg max-w-xl w-full my-8 space-y-5 relative max-h-[90vh] overflow-y-auto"
+            >
+              {/* Modal Header */}
+              <div className="flex items-center justify-between pb-3 border-b-2 border-zinc-100">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-indigo-600 border-2 border-black flex items-center justify-center shadow-neo-xs">
+                    <KeyRound size={20} className="text-white" />
+                  </div>
+                  <div>
+                    <h2 className="text-lg font-black text-black tracking-tight">
+                      {isEn ? 'Gemini AI Key Manager' : '🔑 Gemini AI Key 智能管理與熱更新'}
+                    </h2>
+                    <p className="text-[11px] font-bold text-zinc-400">
+                      {isEn ? 'Centralized API Key pool & live diagnostics' : '雲端金鑰池熱插拔與即時連線診斷 · 支援多備援容錯'}
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={() => setShowApiKeyModal(false)}
+                  className="w-8 h-8 rounded-full border-2 border-black flex items-center justify-center hover:bg-zinc-100 transition-colors"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+
+              {/* 📊 Live Status Card */}
+              <div className="bg-zinc-50 border-2 border-black rounded-2xl p-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-black text-zinc-700">
+                    {isEn ? 'Current Key Status' : '當前雲端金鑰狀態'}
+                  </span>
+                  <button
+                    onClick={fetchGeminiStatus}
+                    className="text-[11px] font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1"
+                  >
+                    <RefreshCw size={11} />
+                    <span>{isEn ? 'Refresh' : '重新整理'}</span>
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div className="bg-white border border-zinc-200 rounded-xl p-2.5">
+                    <div className="text-[10px] font-bold text-zinc-400">{isEn ? 'Active Key' : '啟用中金鑰'}</div>
+                    <div className="font-mono font-black text-zinc-800 truncate">
+                      {geminiStatus ? geminiStatus.maskedKey : '查詢中...'}
+                    </div>
+                  </div>
+                  <div className="bg-white border border-zinc-200 rounded-xl p-2.5">
+                    <div className="text-[10px] font-bold text-zinc-400">{isEn ? 'Key Pool Count' : '備援池容量'}</div>
+                    <div className="font-mono font-black text-zinc-800">
+                      {geminiStatus ? `${geminiStatus.keyCount} 把金鑰` : '—'}
+                    </div>
+                  </div>
+                </div>
+
+                {geminiStatus?.connection && (
+                  <div className={`p-2.5 rounded-xl border text-xs font-bold flex items-start gap-2 ${
+                    geminiStatus.connection.success 
+                      ? 'bg-emerald-50 border-emerald-300 text-emerald-800'
+                      : 'bg-rose-50 border-rose-300 text-rose-800'
+                  }`}>
+                    {geminiStatus.connection.success ? (
+                      <CheckCircle2 size={16} className="text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertTriangle size={16} className="text-rose-600 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1">
+                      <div className="font-black">
+                        {geminiStatus.connection.success 
+                          ? (isEn ? 'API Connection Healthy' : 'Gemini API 連線正常！') 
+                          : (isEn ? 'API Key Connection Failed' : 'Gemini API 金鑰失效或異常！')}
+                      </div>
+                      <div className="text-[11px] mt-0.5 opacity-90 font-mono">
+                        {geminiStatus.connection.message}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* 💡 Troubleshooting Info Box */}
+              <div className="bg-amber-50 border-2 border-amber-300 rounded-2xl p-3 text-xs text-amber-900 space-y-1">
+                <div className="font-black flex items-center gap-1.5 text-amber-800">
+                  <AlertTriangle size={14} className="text-amber-600" />
+                  <span>{isEn ? 'How to fix "service account deleted or disabled" error?' : '如何修復「服務帳號已遭刪除/停用」錯誤？'}</span>
+                </div>
+                <p className="text-[11px] leading-relaxed">
+                  {isEn 
+                    ? 'When a Google Cloud project or service account linked to an API key is shut down, calls fail with HTTP 401. Simply create a fresh API key at Google AI Studio, paste it below, and click "Save & Apply"!' 
+                    : '當 API Key 所綁定的 Google Cloud 專案或服務帳號遭關閉或刪除時，Google 會回傳 401 錯誤。只要至 Google AI Studio 產生全新免費 API Key，貼在下方點擊「儲存並套用金鑰」即可瞬間修復！'}
+                </p>
+                <div className="pt-1">
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1 font-black text-indigo-700 hover:text-indigo-900 underline text-[11px]"
+                  >
+                    <span>👉 {isEn ? 'Get free API Key at Google AI Studio' : '前往 Google AI Studio 建立新金鑰 (免費)'}</span>
+                    <ExternalLink size={11} />
+                  </a>
+                </div>
+              </div>
+
+              {/* ✍️ Key Input Form */}
+              <div className="space-y-2">
+                <label className="text-xs font-black text-zinc-800 block">
+                  {isEn ? 'New Gemini API Key(s)' : '輸入新 Gemini API Key (支援逗號分隔多把備援金鑰)'}
+                </label>
+                <textarea
+                  rows={2}
+                  value={newGeminiKeyInput}
+                  onChange={(e) => setNewGeminiKeyInput(e.target.value)}
+                  placeholder={isEn ? "AIzaSy... (or paste multiple keys separated by commas)" : "AIzaSy... (若有多組金鑰可用逗號或換行分隔，系統將自動輪詢與故障轉移)"}
+                  className="w-full p-3 bg-zinc-50 border-2 border-black rounded-2xl text-xs font-mono resize-none focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
+
+              {/* Action Feedback Banner */}
+              {geminiActionFeedback && (
+                <div className={`p-3 rounded-2xl border-2 text-xs font-bold flex items-center gap-2 ${
+                  geminiActionFeedback.type === 'success' 
+                    ? 'bg-emerald-50 border-emerald-500 text-emerald-800'
+                    : 'bg-rose-50 border-rose-500 text-rose-800'
+                }`}>
+                  {geminiActionFeedback.type === 'success' ? <CheckCircle2 size={16} /> : <XCircle size={16} />}
+                  <span>{geminiActionFeedback.message}</span>
+                </div>
+              )}
+
+              {/* Modal Footer Buttons */}
+              <div className="flex items-center justify-end gap-2 pt-2 border-t-2 border-zinc-100">
+                <button
+                  type="button"
+                  onClick={() => setShowApiKeyModal(false)}
+                  className="px-4 py-2 border-2 border-black rounded-xl text-xs font-black hover:bg-zinc-100"
+                >
+                  {isEn ? 'Close' : '關閉'}
+                </button>
+                <button
+                  type="button"
+                  disabled={isTestingGeminiKey || (!newGeminiKeyInput.trim() && !geminiStatus?.isConfigured)}
+                  onClick={() => handleTestGeminiKey()}
+                  className="px-4 py-2 bg-amber-400 hover:bg-amber-300 border-2 border-black rounded-xl text-xs font-black flex items-center gap-1.5 shadow-neo-xs hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50"
+                >
+                  <RefreshCw size={13} className={isTestingGeminiKey ? 'animate-spin' : ''} />
+                  <span>{isTestingGeminiKey ? (isEn ? 'Testing...' : '測試連線中...') : (isEn ? 'Test Connection' : '測試連線')}</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingGeminiKey || !newGeminiKeyInput.trim()}
+                  onClick={handleSaveGeminiKey}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white border-2 border-black rounded-xl text-xs font-black flex items-center gap-1.5 shadow-neo-xs hover:shadow-neo active:translate-x-0.5 active:translate-y-0.5 disabled:opacity-50"
+                >
+                  <Check size={13} className={isSavingGeminiKey ? 'animate-spin' : ''} />
+                  <span>{isSavingGeminiKey ? (isEn ? 'Saving...' : '儲存中...') : (isEn ? 'Save & Apply Key' : '儲存並套用金鑰')}</span>
                 </button>
               </div>
             </motion.div>
