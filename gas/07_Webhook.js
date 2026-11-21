@@ -1630,6 +1630,29 @@ function doPost(e) {
         .setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 📢 0.2 管理員測試推播維護公告 (僅推播至指定管理員帳號，絕不外流)
+    if (action === 'testAnnouncementPush') {
+      const targetUser = (data?.userId || e?.parameter?.userId || props.getProperty('ADMIN_LINE_USER_ID') || 'U3f46f4967396654a938c4146a4497c66').trim();
+      if (!targetUser || !targetUser.startsWith('U')) {
+        return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '無效的 LINE User ID' }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      const flexMsg = generateFeatureAnnouncementFlex(targetUser, LIFF_ID, '', props, 'zh');
+      let pushRes = null;
+      let pushError = null;
+      try {
+        pushRes = pushFlexMessage(targetUser, flexMsg, CHANNEL_ACCESS_TOKEN, props);
+      } catch (pushErr) {
+        pushError = pushErr.message || String(pushErr);
+      }
+      return ContentService.createTextOutput(JSON.stringify({
+        status: pushError ? 'error' : 'ok',
+        targetUser,
+        pushRes,
+        error: pushError
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 🔑 0.3 維護者 Gemini API Key 管理與連線診斷端點 (POST 支援)
     if (action === 'updateGeminiApiKey' || action === 'setGeminiApiKey' || action === 'testGemini' || action === 'getGeminiStatus') {
       const incomingPass = String(data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token || '').trim();
