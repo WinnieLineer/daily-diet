@@ -6994,7 +6994,7 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
       type: 'box',
       layout: 'vertical',
       backgroundColor: '#FFFFFF',
-      borderColor: '#E4E4E7',
+      borderColor: '#000000',
       borderWidth: '2px',
       cornerRadius: '14px',
       paddingAll: '12px',
@@ -7012,8 +7012,8 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
               layout: 'horizontal',
               backgroundColor: '#000000',
               cornerRadius: '6px',
-              paddingStart: '6px',
-              paddingEnd: '6px',
+              paddingStart: '8px',
+              paddingEnd: '8px',
               paddingTop: '2px',
               paddingBottom: '2px',
               contents: [
@@ -7048,29 +7048,71 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
         {
           type: 'box',
           layout: 'horizontal',
-          spacing: 'md',
+          spacing: 'xs',
           margin: 'xs',
           contents: [
             {
-              type: 'text',
-              text: isEn ? `🍖 ${pro}g Pro` : `🍖 蛋白 ${pro}g`,
-              size: 'xxs',
-              color: '#059669',
-              weight: 'bold'
+              type: 'box',
+              layout: 'horizontal',
+              backgroundColor: '#EFF6FF',
+              borderColor: '#BFDBFE',
+              borderWidth: '1px',
+              cornerRadius: '6px',
+              paddingStart: '6px',
+              paddingEnd: '6px',
+              paddingTop: '2px',
+              paddingBottom: '2px',
+              contents: [
+                {
+                  type: 'text',
+                  text: isEn ? `🥩 ${pro}g Pro` : `🥩 蛋白 ${pro}g`,
+                  size: 'xxs',
+                  color: '#2563EB',
+                  weight: 'bold'
+                }
+              ]
             },
             {
-              type: 'text',
-              text: isEn ? `🍞 ${carbs}g Carb` : `🍞 碳水 ${carbs}g`,
-              size: 'xxs',
-              color: '#D97706',
-              weight: 'bold'
+              type: 'box',
+              layout: 'horizontal',
+              backgroundColor: '#FFFBEB',
+              borderColor: '#FDE68A',
+              borderWidth: '1px',
+              cornerRadius: '6px',
+              paddingStart: '6px',
+              paddingEnd: '6px',
+              paddingTop: '2px',
+              paddingBottom: '2px',
+              contents: [
+                {
+                  type: 'text',
+                  text: isEn ? `🍞 ${carbs}g Carb` : `🍞 碳水 ${carbs}g`,
+                  size: 'xxs',
+                  color: '#D97706',
+                  weight: 'bold'
+                }
+              ]
             },
             {
-              type: 'text',
-              text: isEn ? `🥑 ${fat}g Fat` : `🥑 脂肪 ${fat}g`,
-              size: 'xxs',
-              color: '#71717A',
-              weight: 'bold'
+              type: 'box',
+              layout: 'horizontal',
+              backgroundColor: '#F4F4F5',
+              borderColor: '#E4E4E7',
+              borderWidth: '1px',
+              cornerRadius: '6px',
+              paddingStart: '6px',
+              paddingEnd: '6px',
+              paddingTop: '2px',
+              paddingBottom: '2px',
+              contents: [
+                {
+                  type: 'text',
+                  text: isEn ? `🥑 ${fat}g Fat` : `🥑 脂肪 ${fat}g`,
+                  size: 'xxs',
+                  color: '#52525B',
+                  weight: 'bold'
+                }
+              ]
             }
           ]
         },
@@ -7082,15 +7124,14 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
           wrap: true,
           margin: 'xs'
         }] : []),
-        {
-          type: 'button',
-          style: 'primary',
-          color: '#F59E0B',
-          height: 'sm',
+        createNeoFlexButton({
+          label: isEn ? `➕ Log This Meal (${cal} kcal)` : `➕ 一鍵記下此餐 (${cal} kcal)`,
+          variant: 'accent',
+          size: 'md',
           margin: 'sm',
           action: {
             type: 'postback',
-            label: isEn ? `➕ Log This Meal (${cal} kcal)` : `➕ 一鍵記下此餐 (${cal}卡)`,
+            label: isEn ? `➕ Log This Meal` : `➕ 一鍵記下此餐`,
             data: JSON.stringify({
               action: 'quickLogRecommendation',
               dish: dishName,
@@ -7101,7 +7142,7 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
             }),
             displayText: isEn ? `Log: ${dishName}` : `記下「${dishName}」`
           }
-        }
+        })
       ]
     };
   });
@@ -7117,28 +7158,45 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
         layout: 'vertical',
         backgroundColor: '#18181B',
         paddingAll: '16px',
-        spacing: 'xs',
+        spacing: 'sm',
         contents: [
           {
             type: 'box',
             layout: 'horizontal',
             alignItems: 'center',
-            spacing: 'sm',
+            justifyContent: 'space-between',
             contents: [
               {
-                type: 'text',
-                text: '🍽️ AI NUTRITION ADVISOR',
-                size: 'xxs',
-                weight: 'bold',
-                color: '#FBBF24'
+                type: 'box',
+                layout: 'horizontal',
+                alignItems: 'center',
+                spacing: 'xs',
+                contents: [
+                  {
+                    type: 'text',
+                    text: '🍽️',
+                    size: 'xs'
+                  },
+                  {
+                    type: 'text',
+                    text: isEn ? 'AI NUTRITION ADVISOR' : 'AI 智能配餐',
+                    size: 'xxs',
+                    weight: 'bold',
+                    color: '#FBBF24'
+                  }
+                ]
               },
               {
                 type: 'box',
                 layout: 'horizontal',
                 backgroundColor: '#FDE047',
-                cornerRadius: '4px',
-                paddingStart: '4px',
-                paddingEnd: '4px',
+                borderColor: '#000000',
+                borderWidth: '1.5px',
+                cornerRadius: '6px',
+                paddingStart: '8px',
+                paddingEnd: '8px',
+                paddingTop: '2px',
+                paddingBottom: '2px',
                 contents: [
                   {
                     type: 'text',
@@ -7156,8 +7214,7 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
             text: isEn ? 'What Should I Eat Next?' : '接下來吃什麼？智能菜單',
             size: 'lg',
             weight: 'bold',
-            color: '#FFFFFF',
-            margin: 'xs'
+            color: '#FFFFFF'
           }
         ]
       },
@@ -7168,37 +7225,53 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
         paddingAll: '14px',
         spacing: 'sm',
         contents: [
-          // 📊 今日已吃與剩餘額度儀表
+          // 📊 今日已吃與剩餘額度儀表（Neo-Brutalist 高對比雙格卡片）
           {
             type: 'box',
             layout: 'vertical',
-            backgroundColor: '#FEF9C3',
-            borderColor: '#FACC15',
-            borderWidth: '1.5px',
-            cornerRadius: '12px',
-            paddingAll: '10px',
+            backgroundColor: '#FFFFFF',
+            borderColor: '#000000',
+            borderWidth: '2px',
+            cornerRadius: '14px',
+            paddingAll: '12px',
+            spacing: 'xs',
             contents: [
               {
                 type: 'box',
                 layout: 'horizontal',
+                spacing: 'sm',
                 contents: [
                   {
                     type: 'box',
                     layout: 'vertical',
                     flex: 1,
+                    backgroundColor: '#FEF9C3',
+                    borderColor: '#FACC15',
+                    borderWidth: '1px',
+                    cornerRadius: '10px',
+                    paddingAll: '8px',
+                    alignItems: 'center',
                     contents: [
                       {
                         type: 'text',
-                        text: isEn ? 'Calories Left' : '剩餘熱量額度',
+                        text: isEn ? '🔥 Calories Left' : '🔥 剩餘熱量額度',
                         size: 'xxs',
-                        color: '#713F12',
+                        color: '#854D0E',
                         weight: 'bold'
                       },
                       {
                         type: 'text',
-                        text: remCal > 0 ? `${remCal} kcal` : (remCal === 0 ? '0 kcal' : `超標 ${Math.abs(remCal)}k`),
-                        size: 'md',
+                        text: remCal > 0 ? `${remCal}` : (remCal === 0 ? '0' : `-${Math.abs(remCal)}`),
+                        size: 'xl',
                         color: remCal >= 0 ? '#000000' : '#DC2626',
+                        weight: 'bold',
+                        margin: 'xs'
+                      },
+                      {
+                        type: 'text',
+                        text: remCal >= 0 ? 'kcal' : (isEn ? 'exceeded' : '超標'),
+                        size: 'xxs',
+                        color: remCal >= 0 ? '#713F12' : '#DC2626',
                         weight: 'bold'
                       }
                     ]
@@ -7207,19 +7280,33 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
                     type: 'box',
                     layout: 'vertical',
                     flex: 1,
+                    backgroundColor: '#EFF6FF',
+                    borderColor: '#BFDBFE',
+                    borderWidth: '1px',
+                    cornerRadius: '10px',
+                    paddingAll: '8px',
+                    alignItems: 'center',
                     contents: [
                       {
                         type: 'text',
-                        text: isEn ? 'Protein Needed' : '尚缺蛋白質',
+                        text: isEn ? '🥩 Protein Needed' : '🥩 尚缺蛋白質',
                         size: 'xxs',
-                        color: '#713F12',
+                        color: '#1E40AF',
                         weight: 'bold'
                       },
                       {
                         type: 'text',
-                        text: remPro > 0 ? `${remPro} g` : (isEn ? 'Met! 🎉' : '已達標 🎉'),
-                        size: 'md',
-                        color: '#059669',
+                        text: remPro > 0 ? `${remPro}` : '0',
+                        size: 'xl',
+                        color: remPro > 0 ? '#2563EB' : '#059669',
+                        weight: 'bold',
+                        margin: 'xs'
+                      },
+                      {
+                        type: 'text',
+                        text: remPro > 0 ? 'g' : (isEn ? 'Goal Met! 🎉' : '已達標 🎉'),
+                        size: 'xxs',
+                        color: remPro > 0 ? '#1D4ED8' : '#059669',
                         weight: 'bold'
                       }
                     ]
@@ -7229,38 +7316,49 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
               {
                 type: 'text',
                 text: isEn
-                  ? `Logged: ${consumedCal} kcal / ${consumedPro}g pro`
+                  ? `Logged today: ${consumedCal} kcal · ${consumedPro}g protein`
                   : `今日已吃：${consumedCal} 大卡 · 蛋白質 ${consumedPro}g`,
                 size: 'xxs',
-                color: '#854D0E',
-                margin: 'xs'
+                color: '#71717A',
+                align: 'center',
+                margin: 'sm'
               }
             ]
           },
-          // 💬 熊貓教練短評
+          // 💬 熊貓教練短評（精緻氣泡對話框）
           ...(coachComment ? [{
             type: 'box',
-            layout: 'horizontal',
+            layout: 'vertical',
             backgroundColor: '#FFFFFF',
             borderColor: '#E4E4E7',
-            borderWidth: '1px',
-            cornerRadius: '10px',
-            paddingAll: '8px',
-            spacing: 'sm',
-            alignItems: 'center',
+            borderWidth: '1.5px',
+            cornerRadius: '12px',
+            paddingAll: '10px',
+            spacing: 'xs',
             contents: [
               {
-                type: 'text',
-                text: '🐼',
-                size: 'lg'
+                type: 'box',
+                layout: 'horizontal',
+                alignItems: 'center',
+                spacing: 'xs',
+                contents: [
+                  { type: 'text', text: '🐼', size: 'xs' },
+                  {
+                    type: 'text',
+                    text: isEn ? 'Coach Panda Advice' : '熊貓教練叮嚀',
+                    size: 'xxs',
+                    weight: 'bold',
+                    color: '#18181B'
+                  }
+                ]
               },
               {
                 type: 'text',
                 text: coachComment,
                 size: 'xs',
-                color: '#18181B',
+                color: '#3F3F46',
                 wrap: true,
-                flex: 1
+                lineSpacing: '3px'
               }
             ]
           }] : []),
@@ -7272,32 +7370,33 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
         type: 'box',
         layout: 'horizontal',
         backgroundColor: '#FFFFFF',
-        borderColor: '#F4F4F5',
+        borderColor: '#E4E4E7',
         borderWidth: '1px',
-        paddingAll: '10px',
+        paddingAll: '12px',
         spacing: 'sm',
         contents: [
-          {
-            type: 'button',
-            style: 'secondary',
-            height: 'sm',
+          createNeoFlexButton({
+            label: isEn ? '🔄 Another 3' : '🔄 換一批推薦',
+            variant: 'secondary',
+            size: 'sm',
+            flex: 1,
             action: {
               type: 'message',
               label: isEn ? '🔄 Another 3' : '🔄 換一批推薦',
               text: isEn ? 'What to eat next' : '接下來吃什麼'
             }
-          },
-          {
-            type: 'button',
-            style: 'link',
-            height: 'sm',
-            color: '#18181B',
+          }),
+          createNeoFlexButton({
+            label: isEn ? '📖 Web App' : '📖 開啟日記',
+            variant: 'white',
+            size: 'sm',
+            flex: 1,
             action: {
               type: 'uri',
               label: isEn ? '📖 Web App' : '📖 開啟日記',
               uri: appUrl
             }
-          }
+          })
         ]
       }
     }
