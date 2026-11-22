@@ -1021,6 +1021,18 @@ function doGet(e) {
       }
     }
 
+    // 1.5 下一餐吃什麼？AI 智能推薦與計算建議 (GET 支援)
+    if (action === 'getMealRecommendation' || action === 'recommendNextMeal') {
+      const targetUid = (userId || e?.parameter?.userId || '').trim();
+      const userGoals = getUserGoals(targetUid, props, incomingGist);
+      const todayLogs = getTodayLogs(targetUid, getTodayDateString(), props, incomingGist);
+      const persona = getUserPersona(targetUid, props, incomingGist, pat);
+      const userLang = getUserLanguage(targetUid, props, incomingGist, pat);
+      const recData = getMealRecommendationWithAI(targetUid, todayLogs, userGoals, e?.parameter?.userText || '', persona, userLang, props, GEMINI_API_KEY, incomingGist, pat);
+      return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: recData }))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 2. 查詢個人今日飲食紀錄、目標與 Gist (支援 Web App 開啟時即時雙向同步)
     if (action === 'getLogs' && userId) {
       if (incomingGist && !isGenericUserId(userId)) {
@@ -2213,7 +2225,7 @@ function doPost(e) {
     }
 
     // 🌟 1. Web App 專屬安全通道：Gemini AI 辨識 API (含防盜刷、時戳驗證與頻率防護)
-    if (action === 'analyzeMeal' || action === 'analyzeFoodImage' || action === 'analyzeText' || action === 'analyzeFoodText' || action === 'completeText' || action === 'getPandaAdvice') {
+    if (action === 'analyzeMeal' || action === 'analyzeFoodImage' || action === 'analyzeText' || action === 'analyzeFoodText' || action === 'completeText' || action === 'getPandaAdvice' || action === 'getMealRecommendation' || action === 'recommendNextMeal') {
       const sec = verifyWebAIRequest(data, e);
       if (!sec.valid) {
         console.warn(`🚨 [Web AI 安全攔截] ${sec.reason}`);
@@ -2317,6 +2329,26 @@ function doPost(e) {
           );
         }
         return ContentService.createTextOutput(JSON.stringify({ status: 'ok', text: result }))
+          .setMimeType(ContentService.MimeType.JSON);
+      }
+      if (action === 'getMealRecommendation' || action === 'recommendNextMeal') {
+        const customGoals = data?.goals || null;
+        const userGoals = customGoals || getUserGoals(webUserId, props, incomingGist);
+        const todayLogs = data?.todayLogs || getTodayLogs(webUserId, getTodayDateString(), props, incomingGist);
+        const persona = (data?.persona || getUserPersona(webUserId, props, incomingGist, GITHUB_PAT) || 'tsundere');
+        const lang = data?.lang || getUserLanguage(webUserId, props, incomingGist, GITHUB_PAT);
+        const recData = getMealRecommendationWithAI(webUserId, todayLogs, userGoals, data?.userText || e?.parameter?.userText || '', persona, lang, props, GEMINI_API_KEY, incomingGist, GITHUB_PAT);
+        if (typeof recordSystemLog === 'function') {
+          recordSystemLog(
+            'Web下一餐推薦',
+            webUserId,
+            data?.userText || '下一餐推薦',
+            recData?.meal_period || '推薦成功',
+            '回傳 3 道餐點方案與缺額分析',
+            webCaller
+          );
+        }
+        return ContentService.createTextOutput(JSON.stringify({ status: 'ok', data: recData }))
           .setMimeType(ContentService.MimeType.JSON);
       }
     }
@@ -2809,6 +2841,45 @@ function doPost(e) {
           recordSystemLog('週報趨勢', userId, '點擊7日週報', '', '回傳近 7 日飲食趨勢與熱量分析卡片');
           const weeklyFlex = generateWeeklyTrendsFlex(userId, LIFF_ID, userGistId, props, userLang);
           replyFlexMessage(replyToken, weeklyFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
+        // 🍽️ 下一餐推薦一鍵記餐 (Postback)
+        if (payload.action === 'quickLogRecommendation') {
+          const dishName = payload.dish || (isEn ? 'Recommended Meal' : '推薦餐點');
+          const cal = Number(payload.calories) || 0;
+          const pro = Number(payload.protein) || 0;
+          const carbs = Number(payload.carbs) || 0;
+          const fat = Number(payload.fat) || 0;
+          const eventTimestamp = Number(event.timestamp) || Date.now();
+          const meal = {
+            id: eventTimestamp,
+            timestamp: eventTimestamp,
+            date: getTodayDateString(),
+            time: Utilities.formatDate(new Date(eventTimestamp), "Asia/Taipei", "HH:mm"),
+            dish_name: dishName,
+            calories: cal,
+            protein: pro,
+            carbs: carbs,
+            fat: fat,
+            water: 0,
+            comment: isEn ? '🤖 Logged via AI Next Meal Recommendation' : '🤖 AI 下一餐推薦一鍵記帳',
+            baseDishName: dishName,
+            baseCalories: cal,
+            baseProtein: pro,
+            baseCarbs: carbs,
+            baseFat: fat,
+            multiplier: 1
+          };
+          try {
+            const cache = CacheService.getScriptCache();
+            cache.put(`LAST_CARD_MEAL_${userId}`, String(meal.id || meal.timestamp), 900);
+            if (meal.dish_name) cache.put(`LAST_CARD_MEAL_NAME_${userId}`, String(meal.baseDishName || meal.dish_name).slice(0, 30), 900);
+          } catch (cErr) {}
+          saveMealLog(userId, meal, userGistId, GITHUB_PAT, props);
+          recordSystemLog('推薦快捷記餐', userId, dishName, `${cal}卡 / ${pro}g蛋`, '用戶透過推薦卡片一鍵記下餐點');
+          const summaryFlex = generateDailySummaryFlex(userId, meal, LIFF_ID, userGistId, props);
+          replyFlexMessage(replyToken, summaryFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -3935,6 +4006,25 @@ function doPost(e) {
             sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
             recordSystemLog('體態目標', userId, userText, '計算BMR/TDEE中', '正在呼叫 AI 計算體態目標與個人化教練建議');
             handleGoalSettingWithAI(replyToken, userId, userText, userGistId, GITHUB_PAT, props, LIFF_ID, CHANNEL_ACCESS_TOKEN, GEMINI_API_KEY, userLang);
+            continue;
+          }
+
+          // 🍽️ 3.1 接下來吃什麼 / 下一餐推薦 (AI 智能菜單推薦與缺額計算)
+          const isNextMealQuery = /^(?:接下來|下一餐|晚餐|午餐|早餐|宵夜|消夜|點心|現在|今天)?\s*(?:吃什麼|推薦吃什麼|該吃什麼|吃啥|有什麼好吃|飲食推薦|餐點推薦|下一餐推薦|飲食建議)/i.test(userText) ||
+            userText === '吃什麼' || userText === '吃啥' || userText === '推薦' || userText === '下一餐' || userText === '推薦餐點' || userText === '推薦菜單' ||
+            /^(?:what\s+to\s+eat|what\s+should\s+i\s+eat|what\s+can\s+i\s+eat|suggest\s+meal|next\s+meal|meal\s+recommendation)/i.test(userText) ||
+            (userText.includes('推薦') && (userText.includes('吃') || userText.includes('餐'))) ||
+            (userText.includes('吃什麼') || userText.includes('吃啥'));
+
+          if (isNextMealQuery) {
+            sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
+            const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+            const userGoals = getUserGoals(userId, props, userGistId);
+            const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
+            recordSystemLog('下一餐推薦', userId, userText, '計算缺額與生成菜單中', '呼叫 AI 推薦下一餐餐點與計算建議');
+            const recData = getMealRecommendationWithAI(userId, todayLogs, userGoals, userText, persona, userLang, props, GEMINI_API_KEY, userGistId, GITHUB_PAT);
+            const recFlex = generateNextMealRecommendationFlex(recData, recData.stats, userGoals, LIFF_ID, userGistId, userLang, persona);
+            replyFlexMessage(replyToken, recFlex, CHANNEL_ACCESS_TOKEN, userId, props);
             continue;
           }
 

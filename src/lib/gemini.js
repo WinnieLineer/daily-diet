@@ -136,7 +136,7 @@ async function callGeminiDirect(payload, apiKey) {
 
 const WEB_AI_SECRET = "DD_WEB_AI_SECURE_KEY_2026";
 
-function createWebAIPayload(data) {
+export function createWebAIPayload(data) {
   const timestamp = Date.now();
   const nonce = Math.random().toString(36).substring(2, 10);
   const signatureRaw = `DD_AI_${timestamp}_${nonce}_${WEB_AI_SECRET}`;

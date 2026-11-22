@@ -6993,3 +6993,343 @@ function generateSponsorFlex(persona = 'tsundere', userLang = 'zh') {
     }
   };
 }
+
+/**
+ * 🍽️ 下一餐吃什麼？AI 智能推薦卡片 (LINE Flex Message)
+ */
+function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userGistId, lang, persona) {
+  const isEn = lang === 'en';
+  const period = recData.meal_period || (isEn ? 'Next Meal' : '下一餐');
+  const coachComment = recData.coach_comment || recData.analysis_summary || '';
+  const options = recData.options || [];
+
+  const remCal = stats?.remaining?.calories !== undefined ? stats.remaining.calories : (Number(goals?.calories || 2000) - (stats?.consumed?.calories || 0));
+  const remPro = stats?.remaining?.protein !== undefined ? stats.remaining.protein : (Number(goals?.protein || 100) - (stats?.consumed?.protein || 0));
+  const consumedCal = stats?.consumed?.calories || 0;
+  const consumedPro = stats?.consumed?.protein || 0;
+
+  const appUrl = `https://liff.line.me/${liffId}?userId=${stats?.userId || ''}${userGistId ? '&gistId=' + userGistId : ''}`;
+
+  // Option box builder
+  const optionBoxes = options.slice(0, 3).map((opt, idx) => {
+    const dishName = opt.dish_name || (isEn ? `Option ${idx + 1}` : `精選方案 ${idx + 1}`);
+    const cal = Number(opt.calories) || 0;
+    const pro = Number(opt.protein) || 0;
+    const carbs = Number(opt.carbs) || 0;
+    const fat = Number(opt.fat) || 0;
+    const tag = opt.tag || (idx === 0 ? (isEn ? 'Convenience' : '超商便利選') : (idx === 1 ? (isEn ? 'Takeout' : '外食健康選') : (isEn ? 'Home Prep' : '自煮輕食')));
+    const reason = opt.reason || '';
+
+    return {
+      type: 'box',
+      layout: 'vertical',
+      backgroundColor: '#FFFFFF',
+      borderColor: '#E4E4E7',
+      borderWidth: '2px',
+      cornerRadius: '14px',
+      paddingAll: '12px',
+      margin: 'md',
+      spacing: 'xs',
+      contents: [
+        {
+          type: 'box',
+          layout: 'horizontal',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          contents: [
+            {
+              type: 'box',
+              layout: 'horizontal',
+              backgroundColor: '#000000',
+              cornerRadius: '6px',
+              paddingStart: '6px',
+              paddingEnd: '6px',
+              paddingTop: '2px',
+              paddingBottom: '2px',
+              contents: [
+                {
+                  type: 'text',
+                  text: tag,
+                  size: 'xxs',
+                  color: '#FDE047',
+                  weight: 'bold'
+                }
+              ]
+            },
+            {
+              type: 'text',
+              text: `${cal} kcal`,
+              size: 'sm',
+              color: '#E11D48',
+              weight: 'bold',
+              align: 'end'
+            }
+          ]
+        },
+        {
+          type: 'text',
+          text: dishName,
+          size: 'md',
+          weight: 'bold',
+          color: '#000000',
+          wrap: true,
+          margin: 'sm'
+        },
+        {
+          type: 'box',
+          layout: 'horizontal',
+          spacing: 'md',
+          margin: 'xs',
+          contents: [
+            {
+              type: 'text',
+              text: isEn ? `🍖 ${pro}g Pro` : `🍖 蛋白 ${pro}g`,
+              size: 'xxs',
+              color: '#059669',
+              weight: 'bold'
+            },
+            {
+              type: 'text',
+              text: isEn ? `🍞 ${carbs}g Carb` : `🍞 碳水 ${carbs}g`,
+              size: 'xxs',
+              color: '#D97706',
+              weight: 'bold'
+            },
+            {
+              type: 'text',
+              text: isEn ? `🥑 ${fat}g Fat` : `🥑 脂肪 ${fat}g`,
+              size: 'xxs',
+              color: '#71717A',
+              weight: 'bold'
+            }
+          ]
+        },
+        ...(reason ? [{
+          type: 'text',
+          text: `💡 ${reason}`,
+          size: 'xxs',
+          color: '#52525B',
+          wrap: true,
+          margin: 'xs'
+        }] : []),
+        {
+          type: 'button',
+          style: 'primary',
+          color: '#F59E0B',
+          height: 'sm',
+          margin: 'sm',
+          action: {
+            type: 'postback',
+            label: isEn ? `➕ Log This Meal (${cal} kcal)` : `➕ 一鍵記下此餐 (${cal}卡)`,
+            data: JSON.stringify({
+              action: 'quickLogRecommendation',
+              dish: dishName,
+              calories: cal,
+              protein: pro,
+              carbs: carbs,
+              fat: fat
+            }),
+            displayText: isEn ? `Log: ${dishName}` : `記下「${dishName}」`
+          }
+        }
+      ]
+    };
+  });
+
+  return {
+    type: 'flex',
+    altText: isEn ? `🍽️ Next Meal Recommendation (${period})` : `🍽️ 下一餐吃什麼推薦 (${period})`,
+    contents: {
+      type: 'bubble',
+      size: 'mega',
+      header: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#18181B',
+        paddingAll: '16px',
+        spacing: 'xs',
+        contents: [
+          {
+            type: 'box',
+            layout: 'horizontal',
+            alignItems: 'center',
+            spacing: 'sm',
+            contents: [
+              {
+                type: 'text',
+                text: '🍽️ AI NUTRITION ADVISOR',
+                size: 'xxs',
+                weight: 'bold',
+                color: '#FBBF24'
+              },
+              {
+                type: 'box',
+                layout: 'horizontal',
+                backgroundColor: '#FDE047',
+                cornerRadius: '4px',
+                paddingStart: '4px',
+                paddingEnd: '4px',
+                contents: [
+                  {
+                    type: 'text',
+                    text: period,
+                    size: 'xxs',
+                    weight: 'bold',
+                    color: '#000000'
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            type: 'text',
+            text: isEn ? 'What Should I Eat Next?' : '接下來吃什麼？智能菜單',
+            size: 'lg',
+            weight: 'bold',
+            color: '#FFFFFF',
+            margin: 'xs'
+          }
+        ]
+      },
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        backgroundColor: '#FAFAFA',
+        paddingAll: '14px',
+        spacing: 'sm',
+        contents: [
+          // 📊 今日已吃與剩餘額度儀表
+          {
+            type: 'box',
+            layout: 'vertical',
+            backgroundColor: '#FEF9C3',
+            borderColor: '#FACC15',
+            borderWidth: '1.5px',
+            cornerRadius: '12px',
+            paddingAll: '10px',
+            contents: [
+              {
+                type: 'box',
+                layout: 'horizontal',
+                contents: [
+                  {
+                    type: 'box',
+                    layout: 'vertical',
+                    flex: 1,
+                    contents: [
+                      {
+                        type: 'text',
+                        text: isEn ? 'Calories Left' : '剩餘熱量額度',
+                        size: 'xxs',
+                        color: '#713F12',
+                        weight: 'bold'
+                      },
+                      {
+                        type: 'text',
+                        text: remCal > 0 ? `${remCal} kcal` : (remCal === 0 ? '0 kcal' : `超標 ${Math.abs(remCal)}k`),
+                        size: 'md',
+                        color: remCal >= 0 ? '#000000' : '#DC2626',
+                        weight: 'bold'
+                      }
+                    ]
+                  },
+                  {
+                    type: 'box',
+                    layout: 'vertical',
+                    flex: 1,
+                    contents: [
+                      {
+                        type: 'text',
+                        text: isEn ? 'Protein Needed' : '尚缺蛋白質',
+                        size: 'xxs',
+                        color: '#713F12',
+                        weight: 'bold'
+                      },
+                      {
+                        type: 'text',
+                        text: remPro > 0 ? `${remPro} g` : (isEn ? 'Met! 🎉' : '已達標 🎉'),
+                        size: 'md',
+                        color: '#059669',
+                        weight: 'bold'
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                type: 'text',
+                text: isEn
+                  ? `Logged: ${consumedCal} kcal / ${consumedPro}g pro`
+                  : `今日已吃：${consumedCal} 大卡 · 蛋白質 ${consumedPro}g`,
+                size: 'xxs',
+                color: '#854D0E',
+                margin: 'xs'
+              }
+            ]
+          },
+          // 💬 熊貓教練短評
+          ...(coachComment ? [{
+            type: 'box',
+            layout: 'horizontal',
+            backgroundColor: '#FFFFFF',
+            borderColor: '#E4E4E7',
+            borderWidth: '1px',
+            cornerRadius: '10px',
+            paddingAll: '8px',
+            spacing: 'sm',
+            alignItems: 'center',
+            contents: [
+              {
+                type: 'text',
+                text: '🐼',
+                size: 'lg'
+              },
+              {
+                type: 'text',
+                text: coachComment,
+                size: 'xs',
+                color: '#18181B',
+                wrap: true,
+                flex: 1
+              }
+            ]
+          }] : []),
+          // 🍲 3 個推薦方案
+          ...optionBoxes
+        ]
+      },
+      footer: {
+        type: 'box',
+        layout: 'horizontal',
+        backgroundColor: '#FFFFFF',
+        borderColor: '#F4F4F5',
+        borderWidth: '1px',
+        paddingAll: '10px',
+        spacing: 'sm',
+        contents: [
+          {
+            type: 'button',
+            style: 'secondary',
+            height: 'sm',
+            action: {
+              type: 'message',
+              label: isEn ? '🔄 Another 3' : '🔄 換一批推薦',
+              text: isEn ? 'What to eat next' : '接下來吃什麼'
+            }
+          },
+          {
+            type: 'button',
+            style: 'link',
+            height: 'sm',
+            color: '#18181B',
+            action: {
+              type: 'uri',
+              label: isEn ? '📖 Web App' : '📖 開啟日記',
+              uri: appUrl
+            }
+          }
+        ]
+      }
+    }
+  };
+}

@@ -1205,3 +1205,415 @@ function verifyWebAIRequest(data, e) {
 
   return { valid: true };
 }
+
+/**
+ * 🍽️ 下一餐吃什麼？AI 智能推薦與缺額計算
+ * 根據使用者目標、今日已攝入營養、當前時段與斷食狀態，推薦最佳餐點組合
+ */
+function getMealRecommendationWithAI(userId, todayLogs, goals, userText, persona, lang, props, apiKey, userGistId, pat) {
+  if (!props) props = PropertiesService.getScriptProperties();
+  const userLang = lang || getUserLanguage(userId, props, userGistId, pat);
+  const isEn = userLang === 'en';
+  const activePersona = persona || getUserPersona(userId, props, userGistId, pat) || 'tsundere';
+
+  // 1. 計算今日已攝取與目標缺額
+  let consumedCal = 0, consumedPro = 0, consumedCarbs = 0, consumedFat = 0, consumedWater = 0;
+  const eatenDishes = [];
+  (todayLogs || []).forEach(function(log) {
+    consumedCal += Number(log.calories) || 0;
+    consumedPro += Number(log.protein) || 0;
+    consumedCarbs += Number(log.carbs) || 0;
+    consumedFat += Number(log.fat) || 0;
+    consumedWater += Number(log.water) || 0;
+    if (log.dish_name) eatenDishes.push(log.dish_name);
+  });
+
+  const targetCal = Number(goals?.calories) || 2000;
+  const targetPro = Number(goals?.protein) || 100;
+  const targetCarbs = Number(goals?.carbs) || 200;
+  const targetFat = Number(goals?.fat) || 60;
+  const targetWater = Number(goals?.water) || 2500;
+
+  const remCal = targetCal - consumedCal;
+  const remPro = targetPro - consumedPro;
+  const remCarbs = targetCarbs - consumedCarbs;
+  const remFat = targetFat - consumedFat;
+
+  // 2. 判斷時段 (台北時間)
+  const now = new Date();
+  const currentHour = Number(Utilities.formatDate(now, "Asia/Taipei", "H"));
+  let period = '晚餐';
+  let periodEn = 'Dinner';
+
+  if (currentHour >= 5 && currentHour < 11) {
+    period = '早餐';
+    periodEn = 'Breakfast';
+  } else if (currentHour >= 11 && currentHour < 14) {
+    period = '午餐';
+    periodEn = 'Lunch';
+  } else if (currentHour >= 14 && currentHour < 17) {
+    period = '下午點心/補給';
+    periodEn = 'Afternoon Snack';
+  } else if (currentHour >= 17 && currentHour < 21) {
+    period = '晚餐';
+    periodEn = 'Dinner';
+  } else {
+    period = '宵夜/睡前補給';
+    periodEn = 'Late-Night Snack';
+  }
+
+  const queryText = String(userText || '');
+  if (queryText.includes('早')) { period = '早餐'; periodEn = 'Breakfast'; }
+  else if (queryText.includes('午')) { period = '午餐'; periodEn = 'Lunch'; }
+  else if (queryText.includes('下午茶') || queryText.includes('點心')) { period = '下午點心/補給'; periodEn = 'Afternoon Snack'; }
+  else if (queryText.includes('晚')) { period = '晚餐'; periodEn = 'Dinner'; }
+  else if (queryText.includes('宵夜') || queryText.includes('消夜') || queryText.includes('睡前')) { period = '宵夜/睡前補給'; periodEn = 'Late-Night Snack'; }
+
+  // 3. 檢查斷食
+  let isFastingActive = false;
+  if (goals?.fasting_enabled && typeof isOutsideEatingWindow === 'function') {
+    isFastingActive = isOutsideEatingWindow(now, goals.fasting_start, goals.fasting_end);
+  }
+
+  // 4. 教練性格指令
+  const personaInstruction = getPersonaInstruction(activePersona, userLang);
+
+  // 5. 組裝 Gemini Prompt
+  const prompt = isEn
+    ? `You are an expert sports nutritionist and elite diet coach panda for Daily Diet.
+The user is asking: "What should I eat next?" or asking for meal recommendations based on today's intake.
+User's input message: "${queryText || 'What to eat next'}"
+
+User's Daily Targets:
+- Calories: ${targetCal} kcal
+- Protein: ${targetPro} g
+- Carbs: ${targetCarbs} g
+- Fat: ${targetFat} g
+
+Today's Consumed So Far:
+- Calories: ${consumedCal} kcal
+- Protein: ${consumedPro} g
+- Carbs: ${consumedCarbs} g
+- Fat: ${consumedFat} g
+- Dishes already eaten today: ${eatenDishes.length > 0 ? eatenDishes.join(', ') : 'None logged yet'}
+
+Remaining Budget Gap:
+- Calories remaining: ${remCal} kcal ${remCal < 0 ? '(ALREADY OVER BUDGET by ' + Math.abs(remCal) + ' kcal!)' : ''}
+- Protein still needed: ${remPro > 0 ? remPro + ' g needed' : 'Already met protein goal!'}
+- Carbs remaining: ${remCarbs} g
+- Fat remaining: ${remFat} g
+
+Context & Time:
+- Current meal period: ${periodEn} (Hour: ${currentHour}:00)
+- Fasting status: ${isFastingActive ? 'Currently OUTSIDE eating window (' + goals.fasting_start + '~' + goals.fasting_end + '). Fasting is active!' : 'Inside eating window'}
+
+${personaInstruction}
+
+Guidelines:
+1. Provide 3 distinct, realistic, practical meal options tailored to this exact gap:
+   - Option 1 (Convenience Store): Easily bought at 7-Eleven / FamilyMart.
+   - Option 2 (Restaurant / Takeout): Healthy bento, Poke, salad, steak, or hot pot options.
+   - Option 3 (Quick Prep / Cooking / Light meal): 5-10 min home cooking or clean snack.
+2. Nutrition numbers must realistically fit the remaining deficit/surplus. If calories are tight, prioritize lean protein and fibrous greens. If protein is already met, focus on clean energy.
+3. Do NOT recommend the same dishes already eaten today!
+4. Respond in strictly valid JSON:
+{
+  "meal_period": "${periodEn}",
+  "analysis_summary": "1 sentence summarizing today's budget status and focus for this meal",
+  "coach_comment": "1-2 punchy sentences in character matching persona",
+  "options": [
+    {
+      "tag": "Convenience Store",
+      "dish_name": "Specific dish name with portion",
+      "calories": 380,
+      "protein": 36,
+      "carbs": 25,
+      "fat": 10,
+      "reason": "Why this option fits the gap perfectly"
+    },
+    {
+      "tag": "Healthy Takeout",
+      "dish_name": "Specific dish name with portion",
+      "calories": 480,
+      "protein": 38,
+      "carbs": 42,
+      "fat": 14,
+      "reason": "Why this option fits the gap perfectly"
+    },
+    {
+      "tag": "Quick Home Prep",
+      "dish_name": "Specific dish name with portion",
+      "calories": 320,
+      "protein": 34,
+      "carbs": 12,
+      "fat": 12,
+      "reason": "Why this option fits the gap perfectly"
+    }
+  ]
+}`
+    : `你是一位頂尖運動營養師與 Daily Diet 隨身飲食教練熊貓。
+用戶正在詢問：「接下來吃什麼？」或尋求下一餐的智能推薦與計算建議。
+用戶輸入文字：「${queryText || '接下來吃什麼'}」
+
+【用戶每日設定目標】
+- 熱量目標：${targetCal} 大卡 (kcal)
+- 蛋白質目標：${targetPro} 克 (g)
+- 碳水目標：${targetCarbs} 克 (g)
+- 脂肪目標：${targetFat} 克 (g)
+
+【今日已攝入營養統計】
+- 已攝入熱量：${consumedCal} kcal
+- 已攝入蛋白質：${consumedPro} g
+- 已攝入碳水：${consumedCarbs} g
+- 已攝入脂肪：${consumedFat} g
+- 今日已吃過的餐點：${eatenDishes.length > 0 ? eatenDishes.join('、') : '今日尚無記錄'}
+
+【目前剩餘預算與缺口】
+- 剩餘熱量：${remCal} kcal ${remCal < 0 ? '（⚠️ 熱量已超標 ' + Math.abs(remCal) + ' 大卡！）' : ''}
+- 尚缺蛋白質：${remPro > 0 ? remPro + ' g（需補足）' : '🎉 蛋白質已順利達標！'}
+- 剩餘碳水：${remCarbs} g
+- 剩餘脂肪：${remFat} g
+
+【情境與時間條件】
+- 目前用餐時段：${period}（台北時間約 ${currentHour}:00）
+- 斷食狀態：${isFastingActive ? '目前處於斷食窗口外（設定窗口 ' + goals.fasting_start + '~' + goals.fasting_end + '，斷食進行中）' : '處於正常進食窗口內'}
+
+${personaInstruction}
+
+【推薦指導原則】
+1. 請提供 3 種不同情境、極度接地氣且可行的餐點推薦：
+   - 選項 1（超商便利選）：台灣 7-11 或全家便利商店隨手買的組合（如舒肥雞胸、茶葉蛋、無糖豆漿、地瓜）。
+   - 選項 2（外食健康選）：健康水煮餐盒、便當夾菜原則、鐵板燒、火鍋、Poke 碗等。
+   - 選項 3（自煮／輕食極速搞定）：5～10分鐘自煮或超低負擔高飽足餐點。
+2. 營養數值必須具體且符合物理常理，熱量與蛋白質需精準配合剩餘缺口（若剩餘熱量吃緊，主打低卡高蛋白；若已超標，給予極低負擔刮油補水方案）。
+3. 絕不可重複推薦用戶今日已經吃過的相同餐點！
+4. 必須以嚴格合法的 JSON 格式輸出：
+{
+  "meal_period": "${period}",
+  "analysis_summary": "一句話總結今日攝入狀態與這餐的主要策略（例：今日熱量還剩 520 卡，但蛋白質落後 32g，晚餐需全力鎖定高蛋白！）",
+  "coach_comment": "1~2句符合教練性格的生動叮嚀",
+  "options": [
+    {
+      "tag": "超商便利選",
+      "dish_name": "餐點名稱與組合（如：舒肥雞胸肉 + 雙茶葉蛋 + 芭樂）",
+      "calories": 360,
+      "protein": 38,
+      "carbs": 22,
+      "fat": 9,
+      "reason": "推薦理由（說明為何能完美補足當前缺口）"
+    },
+    {
+      "tag": "外食健康選",
+      "dish_name": "餐點名稱（如：低脂嫩牛/鮭魚水煮餐盒(半飯)）",
+      "calories": 480,
+      "protein": 36,
+      "carbs": 42,
+      "fat": 14,
+      "reason": "推薦理由"
+    },
+    {
+      "tag": "自煮快炒選",
+      "dish_name": "餐點名稱（如：清蒸鱸魚豆腐 + 炒綜合時蔬）",
+      "calories": 320,
+      "protein": 35,
+      "carbs": 10,
+      "fat": 12,
+      "reason": "推薦理由"
+    }
+  ]
+}`;
+
+  const baseModels = (typeof TEXT_GEMINI_MODELS !== 'undefined' && TEXT_GEMINI_MODELS.length) 
+    ? TEXT_GEMINI_MODELS 
+    : ['gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-3.5-flash', 'gemini-flash-latest'];
+
+  try {
+    const cascadeRes = callGeminiRequestCascade({
+      models: baseModels,
+      apiKey: apiKey,
+      props: props,
+      payload: {
+        contents: [{ role: "user", parts: [{ text: prompt }] }],
+        generationConfig: {
+          temperature: 0.4,
+          maxOutputTokens: 1200,
+          responseMimeType: "application/json"
+        }
+      },
+      operationName: '下一餐推薦AI',
+      userId: userId
+    });
+
+    if (cascadeRes && cascadeRes.rawText) {
+      const parsed = extractAndParseJson(cascadeRes.rawText);
+      if (parsed && Array.isArray(parsed.options) && parsed.options.length > 0) {
+        return {
+          meal_period: parsed.meal_period || (isEn ? periodEn : period),
+          analysis_summary: parsed.analysis_summary || '',
+          coach_comment: parsed.coach_comment || '',
+          options: parsed.options,
+          stats: {
+            consumed: { calories: consumedCal, protein: consumedPro, carbs: consumedCarbs, fat: consumedFat, water: consumedWater },
+            remaining: { calories: remCal, protein: remPro, carbs: remCarbs, fat: remFat },
+            goals: { calories: targetCal, protein: targetPro, carbs: targetCarbs, fat: targetFat }
+          },
+          model_used: cascadeRes.model_used
+        };
+      }
+    }
+  } catch (err) {
+    console.error("AI 推薦生成失敗，切換至備援演算法:", err);
+  }
+
+  // 備援演算法 (Fallback)
+  return generateFallbackMealRecommendation(
+    { calories: consumedCal, protein: consumedPro, carbs: consumedCarbs, fat: consumedFat, water: consumedWater },
+    { calories: remCal, protein: remPro, carbs: remCarbs, fat: remFat },
+    { calories: targetCal, protein: targetPro, carbs: targetCarbs, fat: targetFat },
+    isEn ? periodEn : period,
+    activePersona,
+    isEn
+  );
+}
+
+/**
+ * 🛡️ 智能備援下一餐推薦生成器 (無須依賴網路與外部 API)
+ */
+function generateFallbackMealRecommendation(consumed, remaining, goals, period, persona, isEn) {
+  const remCal = remaining.calories;
+  const remPro = remaining.protein;
+
+  let coachComment = '';
+  if (persona === 'gentle') {
+    coachComment = isEn
+      ? "You're doing great today! Listen to your body and nourish it with quality proteins and clean fuel 🐼💕"
+      : "今天辛苦了！聽聽身體的聲音，選一道能好好善待自己的優質餐點吧 🐼🥰";
+  } else if (persona === 'hardcore') {
+    coachComment = isEn
+      ? "Eyes on the target! Don't let late-night cravings destroy your hard-earned gains! Lock in the protein! 🐼🔥"
+      : "目標就在眼前！給我乖乖把蛋白質補滿，少看那些高油高糖的垃圾食物！🐼🔥";
+  } else {
+    // tsundere
+    coachComment = isEn
+      ? (remPro > 20 
+          ? "Hmph! You're still falling behind on protein! Pick one of these high-protein options and eat properly! 🐼"
+          : "Don't think you can slack off just because calories are on track! Choose wisely! 🐼")
+      : (remPro > 20
+          ? "哼！今天蛋白質明明還差那麼多，少給我吃甜點，乖乖把優質蛋白補足！🐼"
+          : "可別以為還有熱量額度就能亂吃炸物，給我選乾淨的原型食物！🐼");
+  }
+
+  const analysisSummary = isEn
+    ? `Consumed ${consumed.calories} kcal so far. Remaining: ${remCal > 0 ? remCal + ' kcal' : '0 kcal'}. Protein gap: ${remPro > 0 ? remPro + 'g' : 'Goal met!'}.`
+    : `今日已攝取 ${consumed.calories} 大卡，熱量剩餘 ${remCal > 0 ? remCal : 0} kcal，蛋白質尚差 ${remPro > 0 ? remPro + 'g' : '已達標 🎉'}。`;
+
+  // 針對不同缺額調整推薦組合
+  let options = [];
+  if (remPro >= 30) {
+    // 蛋白質嚴重落後
+    options = [
+      {
+        tag: isEn ? "Convenience Store" : "超商便利選",
+        dish_name: isEn ? "Sous-vide Chicken Breast + 2 Tea Eggs + Sugar-free Soy Milk" : "7-11 舒肥雞胸肉 + 雙茶葉蛋 + 光泉無糖濃豆漿",
+        calories: 390,
+        protein: 46,
+        carbs: 12,
+        fat: 12,
+        reason: isEn ? "Ultra-high protein (46g) with low calories to quickly close your daily protein deficit!" : "蛋白質高達 46g，熱量不到 400 大卡，超商 2 分鐘買齊，極速補滿今日蛋白質缺口！"
+      },
+      {
+        tag: isEn ? "Healthy Bento" : "外食健康選",
+        dish_name: isEn ? "Grilled Salmon / Lean Steak Salad Bento (Half Rice)" : "水煮健康餐盒：香煎嫩鮭魚或牛腱 (紫米飯半份)",
+        calories: 480,
+        protein: 38,
+        carbs: 45,
+        fat: 14,
+        reason: isEn ? "Rich in Omega-3 anti-inflammatory fats and premium protein for lasting fullness." : "優質 Omega-3 抗發炎好油與豐富蛋白質，半份紫米飯控制升糖與澱粉負擔。"
+      },
+      {
+        tag: isEn ? "Quick Home Cooking" : "自煮快炒選",
+        dish_name: isEn ? "Steamed Sea Bass Tofu + Boiled Vegetables & Egg Soup" : "清蒸鱸魚/嫩豆腐 + 炒綜合時蔬 + 蛋花湯",
+        calories: 310,
+        protein: 36,
+        carbs: 10,
+        fat: 11,
+        reason: isEn ? "Clean, digestible protein with rich dietary fiber to keep night digestion light." : "超高蛋白質、極低碳水與高纖蔬菜，夜晚好消化不囤積脂肪！"
+      }
+    ];
+  } else if (remCal <= 250) {
+    // 熱量預算極緊
+    options = [
+      {
+        tag: isEn ? "Low Calorie High Protein" : "極低卡高蛋白",
+        dish_name: isEn ? "Sugar-free High Fiber Soy Milk + 1 Tea Egg" : "全家無糖高纖豆漿 + 茶葉蛋 1 顆",
+        calories: 195,
+        protein: 21,
+        carbs: 9,
+        fat: 8,
+        reason: isEn ? "Fits safely within your remaining 200 kcal budget while providing 21g clean protein." : "完美壓在 200 卡預算內，精準提供 21g 蛋白質與膳食纖維，安心無負擔！"
+      },
+      {
+        tag: isEn ? "Light Snack" : "超商輕食選",
+        dish_name: isEn ? "Plain Greek Yogurt + Small Guava" : "希臘式無糖優格 + 珍珠芭樂半顆",
+        calories: 160,
+        protein: 15,
+        carbs: 18,
+        fat: 3,
+        reason: isEn ? "Low glycemic index, rich in vitamin C and probiotics to curb nighttime hunger." : "低 GI、富含維生素 C 與益生菌，高飽足感且徹底避開熱量超標地雷。"
+      },
+      {
+        tag: isEn ? "Cleansing Broth" : "暖胃清爽選",
+        dish_name: isEn ? "Clear Clam & Ginger Soup + Warm Tofu" : "薑絲蛤蜊湯 + 清燙嫩豆腐 (佐薄鹽醬油)",
+        calories: 140,
+        protein: 16,
+        carbs: 4,
+        fat: 5,
+        reason: isEn ? "Warm, comforting, hydrating, and zero grease burden before bedtime." : "暖胃補水無油脂，豐富牛磺酸與鋅加速代謝，深夜安心好眠！"
+      }
+    ];
+  } else {
+    // 均衡標準推薦
+    options = [
+      {
+        tag: isEn ? "Convenience Store" : "超商便利選",
+        dish_name: isEn ? "Roasted Sweet Potato (Small) + Chicken Breast + Black Tea" : "現烤小地瓜 + 舒肥嫩雞胸 + 無糖冷萃黑茶",
+        calories: 350,
+        protein: 32,
+        carbs: 38,
+        fat: 6,
+        reason: isEn ? "Clean complex carbs paired with lean poultry for sustained, crash-free energy." : "低 GI 複合碳水化合物搭配低脂雞肉，穩定血糖與提供持續飽足感。"
+      },
+      {
+        tag: isEn ? "Restaurant Choice" : "外食健康選",
+        dish_name: isEn ? "Custom Poke Bowl: Salmon & Tofu with Mixed Greens Base" : "客製化夏威夷 Poke 碗：生魚片鮭魚 + 嫩豆腐 (全生菜基底)",
+        calories: 420,
+        protein: 34,
+        carbs: 26,
+        fat: 16,
+        reason: isEn ? "Fresh, micronutrient-dense with healthy fats and diverse plant-based phytonutrients." : "多色生菜提供豐富微量元素與抗氧化物，低加工高營養密度！"
+      },
+      {
+        tag: isEn ? "Quick Cooking" : "5分鐘極速自煮",
+        dish_name: isEn ? "Garlic Shrimp Stir-fry with Broccoli & Brown Rice" : "蒜香鮮蝦炒青花菜 (佐微量糙米飯)",
+        calories: 360,
+        protein: 35,
+        carbs: 28,
+        fat: 8,
+        reason: isEn ? "Super lean marine protein and high-fiber cruciferous vegetables for peak satiety." : "極致鮮甜的海鮮純蛋白與十字花科高纖蔬菜，5分鐘快速上桌！"
+      }
+    ];
+  }
+
+  return {
+    meal_period: period,
+    analysis_summary: analysisSummary,
+    coach_comment: coachComment,
+    options: options,
+    stats: {
+      consumed: consumed,
+      remaining: remaining,
+      goals: goals
+    },
+    model_used: 'RuleBased-Fallback'
+  };
+}

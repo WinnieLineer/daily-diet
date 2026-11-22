@@ -57,7 +57,7 @@ const ProgressRing = ({ value, max, label }) => {
   );
 };
 
-const Dashboard = ({ summary, goals }) => {
+const Dashboard = ({ summary, goals, onOpenRecommendation }) => {
   const CALORIE_GOAL = goals.calories || 2000;
   const PROTEIN_GOAL = goals.protein || 100;
   const WATER_GOAL   = goals.water   || 2500;
@@ -158,6 +158,22 @@ const Dashboard = ({ summary, goals }) => {
           <ProgressRing value={summary.calories} max={CALORIE_GOAL} label={`🔥${t('dashboard_calories')}`} />
           <ProgressRing value={summary.protein} max={PROTEIN_GOAL} label={`🍖${t('dashboard_protein')}`} />
           <ProgressRing value={summary.water} max={WATER_GOAL} label={`🚰${t('dashboard_water')}`} />
+        </div>
+      )}
+      {/* 🍽️ 下一餐吃什麼？AI 智能推薦按鈕 */}
+      {onOpenRecommendation && (
+        <div className="mt-5 pt-4 border-t-2 border-dashed border-black/10">
+          <button
+            type="button"
+            onClick={onOpenRecommendation}
+            className="w-full py-2.5 px-4 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-500 hover:to-yellow-400 text-black border-2 border-black rounded-2xl shadow-neo-sm active:translate-x-0.5 active:translate-y-0.5 font-black text-xs sm:text-sm flex items-center justify-center gap-2 transition-all cursor-pointer"
+          >
+            <span className="text-base sm:text-lg">🍽️</span>
+            <span>{t('what_to_eat_next') || '接下來吃什麼？AI 智能推薦'}</span>
+            <span className="text-[10px] bg-black text-amber-300 px-2 py-0.5 rounded-full font-bold ml-1 uppercase">
+              AI Coach
+            </span>
+          </button>
         </div>
       )}
     </NeoCard>

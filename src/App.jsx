@@ -72,6 +72,7 @@ const Theme520 = lazyWithRetry(() => import('./components/Theme520'));
 const LogMonitorDashboard = lazyWithRetry(() => import('./components/LogMonitorDashboard'));
 const PandaLiveCallModal = lazyWithRetry(() => import('./components/PandaLiveCallModal'));
 const FounderPassModal = lazyWithRetry(() => import('./components/FounderPassModal'));
+const NextMealRecommendationModal = lazyWithRetry(() => import('./components/NextMealRecommendationModal'));
 
 export const isNewer = (newVer, oldVer) => {
   if (!oldVer) return true;
@@ -926,6 +927,7 @@ function App() {
   const [founderData, setFounderData] = useState(() => getFounderData());
   const [founderGlow, setFounderGlow] = useState(() => isFounderGlowEnabled());
   const [showFounderPassModal, setShowFounderPassModal] = useState(false);
+  const [showMealRecommendationModal, setShowMealRecommendationModal] = useState(false);
 
   useEffect(() => {
     const handleFounderStatus = (e) => {
@@ -2479,7 +2481,11 @@ function App() {
           } else if (item === 'dashboard') {
             blockContent = (
               <div className="space-y-6">
-                <Dashboard summary={summary} goals={goals} />
+                <Dashboard 
+                  summary={summary} 
+                  goals={goals} 
+                  onOpenRecommendation={() => setShowMealRecommendationModal(true)}
+                />
                 {goals.fasting_enabled && <FastingTimer goals={goals} />}
               </div>
             );
@@ -2758,6 +2764,21 @@ function App() {
           onClose={() => setShowFounderPassModal(false)}
           userName={userName}
         />
+      </Suspense>
+
+      {/* 🍽️ 下一餐吃什麼？AI 智能推薦彈窗 */}
+      <Suspense fallback={null}>
+        {showMealRecommendationModal && (
+          <NextMealRecommendationModal
+            isOpen={showMealRecommendationModal}
+            onClose={() => setShowMealRecommendationModal(false)}
+            summary={summary}
+            goals={goals}
+            recentLogs={recentLogs}
+            onLogAdded={(type) => refreshData(type)}
+            userName={userName}
+          />
+        )}
       </Suspense>
 
       {/* Detail Modal */}

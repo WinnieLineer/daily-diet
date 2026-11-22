@@ -563,7 +563,16 @@ const translations = {
     live_call_coach_thinking_tsundere: "正在想怎麼吐槽你... 💭",
     live_call_coach_thinking_gentle: "正在用心整理溫暖叮嚀... 💖",
     live_call_coach_thinking_hardcore: "正在計算燃脂菜單... 🔥",
-    live_call_replying: "教練正在組織回覆中..."
+    live_call_replying: "教練正在組織回覆中...",
+    what_to_eat_next: "接下來吃什麼？AI 智能推薦",
+    next_meal_title: "🍽️ 下一餐吃什麼？",
+    next_meal_subtitle: "AI 根據今日攝入與體態目標客製化菜單",
+    next_meal_calories_left: "剩餘熱量額度",
+    next_meal_protein_left: "尚缺蛋白質",
+    next_meal_refresh: "🔄 換一批推薦",
+    next_meal_log_now: "➕ 一鍵記下此餐",
+    next_meal_logged: "✅ 已成功記錄此餐！",
+    next_meal_analyzing: "🐼 熊貓教練正在為您計算最佳下一餐..."
   },
   en: {
     app_title: "DAILY DIET",
@@ -1129,7 +1138,16 @@ const translations = {
     live_call_coach_thinking_tsundere: "Scrutinizing your food logs... 💭",
     live_call_coach_thinking_gentle: "Preparing sweet advice... 💖",
     live_call_coach_thinking_hardcore: "Calculating burn routine... 🔥",
-    live_call_replying: "Coach is preparing response..."
+    live_call_replying: "Coach is preparing response...",
+    what_to_eat_next: "What to Eat Next? AI Recommendation",
+    next_meal_title: "🍽️ What Should I Eat Next?",
+    next_meal_subtitle: "AI customized meal tailored to your remaining budget & targets",
+    next_meal_calories_left: "Calories Left",
+    next_meal_protein_left: "Protein Needed",
+    next_meal_refresh: "🔄 Another 3 Options",
+    next_meal_log_now: "➕ Log This Meal",
+    next_meal_logged: "✅ Meal logged successfully!",
+    next_meal_analyzing: "🐼 Panda Coach is calculating your optimal next meal..."
   }
 };
 
