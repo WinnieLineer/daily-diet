@@ -1690,6 +1690,39 @@ function doPost(e) {
       })).setMimeType(ContentService.MimeType.JSON);
     }
 
+    // 📢 0.25 一鍵正式全員廣播維護與更新公告 (Broadcast to all LINE friends)
+    if (action === 'broadcastAnnouncementOfficial') {
+      const flexMsg = generateFeatureAnnouncementFlex('all_users', LIFF_ID, '', props, 'zh');
+      if (flexMsg.altText && flexMsg.altText.length > 400) {
+        flexMsg.altText = flexMsg.altText.slice(0, 397) + '...';
+      }
+
+      // 檢查本月配額
+      const quotaData = getLineQuotaInfo(CHANNEL_ACCESS_TOKEN);
+
+      // 執行 LINE 官方全員廣播 (Broadcast API)
+      const bRes = broadcastFlexMessage(flexMsg, CHANNEL_ACCESS_TOKEN);
+
+      // 同步回報結果至管理員個人 LINE
+      const adminId = props.getProperty('ADMIN_LINE_USER_ID') || 'U1f5434ad962dfd74e5223a8dfc497c66';
+      if (adminId && adminId.startsWith('U')) {
+        try {
+          const reportText = bRes.success 
+            ? `🎉 【全員公告廣播成功】\nGemini 核心修復與故障致歉卡片已送達全體 LINE 好友！\n📊 狀態：HTTP ${bRes.code}\n本月發送額度：已用 ${quotaData.usedMessages} / 總額度 ${quotaData.totalQuota}`
+            : `⚠️ 【全員廣播失敗或受限】\n狀態碼：${bRes.code}\n回應：${bRes.response || bRes.error}`;
+          pushTextMessage(adminId, reportText, CHANNEL_ACCESS_TOKEN, props);
+        } catch (_) {}
+      }
+
+      recordSystemLog('LINE官方全員廣播', adminId, 'broadcastFlexMessage', JSON.stringify(bRes), bRes.success ? '全體用戶公告廣播成功' : '廣播失敗', '系統核心');
+
+      return ContentService.createTextOutput(JSON.stringify({
+        status: bRes.success ? 'ok' : 'error',
+        broadcastResult: bRes,
+        quota: quotaData
+      })).setMimeType(ContentService.MimeType.JSON);
+    }
+
     // 🔑 0.3 維護者 Gemini API Key 管理與連線診斷端點 (POST 支援)
     if (action === 'updateGeminiApiKey' || action === 'setGeminiApiKey' || action === 'testGemini' || action === 'getGeminiStatus') {
       const incomingPass = String(data?.pass || data?.password || data?.token || e?.parameter?.pass || e?.parameter?.password || e?.parameter?.token || '').trim();
