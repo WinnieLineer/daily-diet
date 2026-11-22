@@ -5712,7 +5712,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
 
   return {
     type: "flex",
-    altText: isEn ? "🟢 Official Notice: Gemini AI Fully Restored & Upgraded 🐼" : "🟢 官方通報：Gemini AI 智能核心已全面修復並升級 🐼",
+    altText: isEn ? "🍽️ New Feature: 'What to Eat Next?' AI Meal Advisor is Live! 🐼" : "🍽️ 全新重磅功能：「接下來吃什麼？」AI 智能菜單推薦正式上線！ 🐼",
     contents: {
       type: "bubble",
       size: "mega",
@@ -5730,8 +5730,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               {
                 type: "box",
                 layout: "horizontal",
-                backgroundColor: "#064E3B",
-                borderColor: "#059669",
+                backgroundColor: "#78350F",
+                borderColor: "#F59E0B",
                 borderWidth: "1px",
                 cornerRadius: "10px",
                 paddingStart: "8px",
@@ -5744,7 +5744,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                   {
                     type: "box",
                     layout: "vertical",
-                    backgroundColor: "#34D399",
+                    backgroundColor: "#FBBF24",
                     cornerRadius: "10px",
                     width: "6px",
                     height: "6px",
@@ -5752,8 +5752,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                   },
                   {
                     type: "text",
-                    text: isEn ? "OFFICIAL NOTICE" : "官方維護通報",
-                    color: "#A7F3D0",
+                    text: isEn ? "MAJOR NEW FEATURE" : "重磅新功能登場",
+                    color: "#FDE68A",
                     weight: "bold",
                     size: "xxs",
                     wrap: true
@@ -5773,7 +5773,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
           },
           {
             type: "text",
-            text: isEn ? "Gemini AI Core Restored & Upgraded" : "Gemini AI 智能核心全面修復完成",
+            text: isEn ? "“What to Eat Next?” AI Smart Meal Advisor" : "「接下來吃什麼？」AI 智能菜單推薦",
             color: "#FAFAFA",
             weight: "bold",
             size: "md",
@@ -5783,8 +5783,8 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
           {
             type: "text",
             text: isEn 
-              ? "AI food photo analysis, text parser & Panda Coach are verified and running normally."
-              : "AI 照片辨識、文字分析與熊貓教練點評已全線檢測通過並穩定運作。",
+              ? "No more food dilemma! Customized to your daily remaining calorie & protein budget."
+              : "不再為每餐糾結！AI 根據今日攝入與體態目標，精準計算專屬菜單。",
             color: "#A1A1AA",
             size: "xxs",
             margin: "xs",
@@ -5799,37 +5799,37 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         paddingAll: "14px",
         backgroundColor: "#FFFFFF",
         contents: [
-          // 區塊 1: 故障說明與誠摯致歉
+          // 區塊 1: 功能核心理念
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#FEF2F2",
-            borderColor: "#FECACA",
+            backgroundColor: "#FEF9C3",
+            borderColor: "#FACC15",
             borderWidth: "1.5px",
             cornerRadius: "12px",
             paddingAll: "12px",
             contents: [
               {
                 type: "text",
-                text: isEn ? "🙇‍♂️ Outage Notice & Sincere Apology" : "🙇‍♂️ 故障通報與誠摯致歉",
+                text: isEn ? "🍽️ Instant Meal Answers Tailored to You" : "🍽️ 不再糾結！AI 隨身營養師秒出菜單",
                 weight: "bold",
                 size: "xs",
-                color: "#991B1B",
+                color: "#713F12",
                 wrap: true
               },
               {
                 type: "text",
                 text: isEn
-                  ? "Dear Users: We deeply apologize! Over the past two days (Nov 20–21), a Gemini AI cloud credential issue caused meal photo analysis and text parsing to experience an outage. We sincerely regret any disruption to your daily diet logging! The team has completed a full upgrade to Gemini 3.x with dual failover cascades, and Coach Panda is fully back online! ❤️"
-                  : "親愛的用戶您好：非常抱歉！過去兩天（11/20～11/21）因 Gemini AI 雲端授權異常，導致飲食照片辨識與文字分析中斷了整整兩天，造成大家記餐極大的困擾與不便，團隊在此致上最誠摯的歉意！🙇‍♂️\n\n團隊已徹夜排查並完成 Gemini 3.x 核心全面升級與雙重備援容錯架構，熊貓教練已滿血回歸！",
+                  ? "“What should I eat for dinner?” “How much protein do I still need?” Just ask in chat! Coach Panda analyzes your remaining calorie & protein budget in real-time, instantly delivering 3 practical, tailored choices with 1-click logging!"
+                  : "每到用餐時間總在想「午餐吃什麼？」、「今天蛋白質還差多少？」現在只要一句話，熊貓教練即時分析您今天的剩餘熱量與蛋白質缺口，秒出 3 大超接地氣美味方案！",
                 size: "xxs",
-                color: "#7F1D1D",
+                color: "#854D0E",
                 margin: "xs",
                 wrap: true
               }
             ]
           },
-          // 區塊 2: 處置與承諾重點清單 (細緻專業)
+          // 區塊 2: 4大核心亮點清單
           {
             type: "box",
             layout: "vertical",
@@ -5841,7 +5841,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               {
                 type: "box",
                 layout: "vertical",
-                backgroundColor: "#F0FDF4",
+                backgroundColor: "#FFFBEB",
                 borderColor: "#000000",
                 borderWidth: "2px",
                 cornerRadius: "10px",
@@ -5852,11 +5852,11 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     type: "box",
                     layout: "horizontal",
                     contents: [
-                      { type: "text", text: isEn ? "🛡️ Key Resolutions" : "🛡️ 修復進度與技術升級", weight: "bold", size: "xs", color: "#166534", flex: 1, wrap: true },
+                      { type: "text", text: isEn ? "✨ 4 Major Highlights" : "✨ 4 大核心特色一覽", weight: "bold", size: "xs", color: "#92400E", flex: 1, wrap: true },
                       {
                         type: "box",
                         layout: "vertical",
-                        backgroundColor: "#16A34A",
+                        backgroundColor: "#D97706",
                         cornerRadius: "8px",
                         paddingStart: "6px",
                         paddingEnd: "6px",
@@ -5864,7 +5864,7 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                         paddingBottom: "2px",
                         flex: 0,
                         contents: [
-                          { type: "text", text: isEn ? "100% SECURED" : "已全數升級", size: "xxs", color: "#FFFFFF", weight: "bold", wrap: true }
+                          { type: "text", text: isEn ? "LIVE NOW" : "全面上線", size: "xxs", color: "#FFFFFF", weight: "bold", wrap: true }
                         ]
                       }
                     ]
@@ -5876,14 +5876,14 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     spacing: "xs",
                     alignItems: "flex-start",
                     contents: [
-                      { type: "text", text: "•", size: "xs", color: "#15803D", weight: "bold", flex: 0 },
+                      { type: "text", text: "•", size: "xs", color: "#B45309", weight: "bold", flex: 0 },
                       {
                         type: "text",
                         text: isEn 
-                          ? "Gemini 3.x Upgrade: Upgraded to state-of-the-art Gemini 3.x intelligence engine for faster and more accurate nutrition analysis."
-                          : "AI 核心升級：全面導入全新世代 Gemini 3.x 視覺與文字辨識引擎，速度與營養推算精準度大幅提升。",
+                          ? "Dynamic Budget Gap: Automatically deducts logged meals to compute remaining calories and protein gap—guaranteed not to recommend duplicate dishes!"
+                          : "缺額精準運算：自動扣除今日已吃熱量與三大營養素，算出剩餘熱量與蛋白質缺口，絕不推薦重複菜色！",
                         size: "xxs",
-                        color: "#14532D",
+                        color: "#78350F",
                         flex: 1,
                         wrap: true
                       }
@@ -5896,14 +5896,14 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     spacing: "xs",
                     alignItems: "flex-start",
                     contents: [
-                      { type: "text", text: "•", size: "xs", color: "#15803D", weight: "bold", flex: 0 },
+                      { type: "text", text: "•", size: "xs", color: "#B45309", weight: "bold", flex: 0 },
                       {
                         type: "text",
                         text: isEn
-                          ? "Failover Cascade: Built-in multi-model auto-rotation ensures uninterrupted diary logging even during single-model traffic surges."
-                          : "雙重容錯輪替：內建多模型智慧降級與多金鑰容錯輪替機制，徹底杜絕單點故障與停機中斷。",
+                          ? "Time-of-Day Context: Automatically adapts whether it's breakfast, lunch, snack, dinner, or healthy late-night craving."
+                          : "時段情境感應：自動識別早午晚餐、下午補給或深夜暖胃，給予最符合當下的飲食策略。",
                         size: "xxs",
-                        color: "#14532D",
+                        color: "#78350F",
                         flex: 1,
                         wrap: true
                       }
@@ -5916,14 +5916,34 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
                     spacing: "xs",
                     alignItems: "flex-start",
                     contents: [
-                      { type: "text", text: "•", size: "xs", color: "#15803D", weight: "bold", flex: 0 },
+                      { type: "text", text: "•", size: "xs", color: "#B45309", weight: "bold", flex: 0 },
                       {
                         type: "text",
                         text: isEn
-                          ? "Data Integrity: 100% of your diary logs on device/web remain fully intact with zero loss."
-                          : "資料完整性：期間所有手機本機與雲端的飲食記錄均完好保存，未有任何遺失。",
+                          ? "3 Practical Scenarios: 7-Eleven/FamilyMart grab-and-go, healthy takeout bentos, or 5-min home prep."
+                          : "3大情境菜單：超商隨手買、外食健康水煮便當、5分鐘自煮，附熱量、蛋白質與營養推薦理由！",
                         size: "xxs",
-                        color: "#14532D",
+                        color: "#78350F",
+                        flex: 1,
+                        wrap: true
+                      }
+                    ]
+                  },
+                  // 項目 4
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    spacing: "xs",
+                    alignItems: "flex-start",
+                    contents: [
+                      { type: "text", text: "•", size: "xs", color: "#B45309", weight: "bold", flex: 0 },
+                      {
+                        type: "text",
+                        text: isEn
+                          ? "1-Click Direct Log: Tap “Log This Meal” on the card to log it into your diary instantly with zero typing!"
+                          : "一鍵極速記餐：在推薦卡片點擊「➕ 一鍵記下此餐」，系統直接登錄日記，連打字都省了！",
+                        size: "xxs",
+                        color: "#78350F",
                         flex: 1,
                         wrap: true
                       }
@@ -5933,11 +5953,11 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
               }
             ]
           },
-          // 區塊 3: 核心服務監控狀態矩陣 (極簡、細緻、具科技感)
+          // 區塊 3: 快速體驗教學
           {
             type: "box",
             layout: "vertical",
-            backgroundColor: "#FAFAFA",
+            backgroundColor: "#F4F4F5",
             borderColor: "#E4E4E7",
             borderWidth: "1.5px",
             cornerRadius: "10px",
@@ -5945,69 +5965,20 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
             spacing: "xs",
             contents: [
               {
-                type: "box",
-                layout: "horizontal",
-                contents: [
-                  { type: "text", text: isEn ? "SERVICE STATUS" : "核心服務狀態驗證", size: "xxs", color: "#71717A", weight: "bold", flex: 1, wrap: true },
-                  { type: "text", text: isEn ? "ALL GREEN" : "全數正常", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 1, wrap: true }
-                ]
+                type: "text",
+                text: isEn ? "💬 HOW TO USE" : "💬 兩種極速體驗方式",
+                size: "xxs",
+                color: "#71717A",
+                weight: "bold",
+                wrap: true
               },
-              {
-                type: "box",
-                layout: "horizontal",
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "📸 AI Food Photo Analysis" : "📸 AI 照片辨識與營養推算", size: "xxs", color: "#27272A", flex: 3, wrap: true },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "📝 Text & Voice Food Parser" : "📝 文字與語音自然記餐", size: "xxs", color: "#27272A", flex: 3, wrap: true },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "🐼 Coach Panda Live Roast & Tips" : "🐼 熊貓教練點評與建議", size: "xxs", color: "#27272A", flex: 3, wrap: true },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
-                ]
-              },
-              {
-                type: "box",
-                layout: "horizontal",
-                alignItems: "center",
-                contents: [
-                  { type: "text", text: isEn ? "🔄 Cloud Two-way Sync" : "🔄 雲端雙向資料同步", size: "xxs", color: "#27272A", flex: 3, wrap: true },
-                  { type: "text", text: isEn ? "Operational" : "正常運作", size: "xxs", color: "#16A34A", weight: "bold", align: "end", flex: 2, wrap: true }
-                ]
-              }
-            ]
-          },
-          // 區塊 4: 暖心收尾小結
-          {
-            type: "box",
-            layout: "vertical",
-            backgroundColor: "#FEFCE8",
-            borderColor: "#FDE047",
-            borderWidth: "1.5px",
-            cornerRadius: "10px",
-            paddingAll: "8px",
-            contents: [
               {
                 type: "text",
                 text: isEn
-                  ? "🐼 Coach Panda is ready! Thank you for staying with Daily-Diet. You can now use all functions normally ✨"
-                  : "🐼 熊貓教練已精神百倍回歸！感謝您的包容與支持，現在可繼續正常記錄與查詢每一餐 ✨",
+                  ? "1. In LINE Chat: Type “What should I eat next?” or “Dinner recommendation”.\n2. In Web App: Click the “🍽️ What to Eat Next?” button on Dashboard."
+                  : "1. LINE 聊天室：直接在對話框輸入「接下來吃什麼」或「晚餐吃什麼」\n2. Web 網頁端：首頁今日進度下方點擊「🍽️ 接下來吃什麼？」按鈕",
                 size: "xxs",
-                color: "#713F12",
-                weight: "bold",
+                color: "#27272A",
                 wrap: true
               }
             ]
@@ -6021,24 +5992,23 @@ function generateFeatureAnnouncementFlex(userId, liffId, userGistId, props, lang
         paddingAll: "14px",
         contents: [
           createNeoFlexButton({
-            label: isEn ? "📱 Open Diet Diary" : "📱 開啟個人飲食日記",
+            label: isEn ? "🍽️ Ask Panda What to Eat" : "🍽️ 立即體驗（問熊貓接下來吃什麼）",
             variant: "accent",
+            size: "md",
+            action: {
+              type: "message",
+              label: isEn ? "What to eat" : "接下來吃什麼",
+              text: isEn ? "What should I eat next" : "接下來吃什麼"
+            }
+          }),
+          createNeoFlexButton({
+            label: isEn ? "📱 Open Web Diet Diary" : "📱 開啟 Web 個人飲食日記",
+            variant: "white",
             size: "md",
             action: {
               type: "uri",
               label: isEn ? "Open Diary" : "開啟個人飲食日記",
               uri: appTargetUrl
-            }
-          }),
-          createNeoFlexButton({
-            label: isEn ? "📊 View Today's Summary" : "📊 查看今日總結",
-            variant: "white",
-            size: "md",
-            action: {
-              type: "postback",
-              label: isEn ? "Summary" : "今日總結",
-              data: JSON.stringify({ action: 'daily_summary' }),
-              displayText: isEn ? "Daily Summary" : "今日總結"
             }
           })
         ]

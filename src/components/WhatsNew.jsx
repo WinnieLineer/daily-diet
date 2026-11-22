@@ -10,7 +10,11 @@ import {
   Feather, 
   BarChart2, 
   CheckCircle2,
-  Sliders
+  Sliders,
+  Utensils,
+  Flame,
+  Clock,
+  Dumbbell
 } from 'lucide-react';
 import NeoButton from './NeoButton';
 import { APP_VERSION, CURRENT_WHATSNEW_ID } from '../lib/constants';
@@ -78,7 +82,7 @@ const WhatsNew = ({ version = APP_VERSION, onClose }) => {
             <div className="flex flex-wrap items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-black text-accent rounded-xl text-[10.5px] sm:text-[11px] font-black tracking-wider uppercase border-2 border-black shadow-neo-xs">
                 <span className="w-2 h-2 rounded-full bg-accent animate-ping" />
-                {isEn ? '🎉 Fixes & Upgrade Highlights' : '🎉 最新修復與升級公告'}
+                {isEn ? '🎉 Major Feature Release' : '🎉 重磅新功能發布'}
               </span>
               <span className="inline-block px-2.5 py-1 bg-white text-zinc-900 rounded-xl text-[10.5px] sm:text-[11px] font-black border-2 border-black shadow-neo-xs">
                 v{version}
@@ -86,17 +90,17 @@ const WhatsNew = ({ version = APP_VERSION, onClose }) => {
             </div>
             
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-950 leading-tight">
-              {isEn ? 'Gemini AI Fully Restored & Sincere Apology' : 'Gemini AI 智能核心全面修復、升級與致歉說明'}
+              {isEn ? '“What to Eat Next?” AI Smart Meal Advisor is Live!' : '「接下來吃什麼？」AI 智能菜單推薦全新登場！'}
             </h2>
-            <div className="p-3 bg-red-50 border-2 border-red-300 rounded-2xl text-[11px] sm:text-xs text-red-900 font-bold leading-relaxed space-y-1 shadow-neo-xs">
-              <div className="flex items-center gap-1.5 font-black text-xs sm:text-[13px] text-red-950">
-                <span>🙇‍♂️</span>
-                <span>{isEn ? 'Sincere Apology for 2-Day AI Outage' : '致用戶：過去兩天 AI 異常中斷誠摯致歉'}</span>
+            <div className="p-3 bg-amber-50 border-2 border-amber-300 rounded-2xl text-[11px] sm:text-xs text-amber-950 font-bold leading-relaxed space-y-1 shadow-neo-xs">
+              <div className="flex items-center gap-1.5 font-black text-xs sm:text-[13px] text-amber-950">
+                <span>🍽️</span>
+                <span>{isEn ? 'No More Food Dilemma! Customized to Your Daily Gap' : '不再為每餐糾結！AI 根據今日攝入與體態目標客製化菜單'}</span>
               </div>
               <p>
                 {isEn 
-                  ? 'Over the past two days (Nov 20–21), Gemini AI cloud service experienced an unexpected outage, causing food photo and text analysis to be unavailable. We deeply apologize for the disruption! The team has overhauled the engine to Gemini 3.x with zero-downtime multi-model failover.' 
-                  : '過去兩天（11/20～11/21）因 Gemini AI 雲端授權異常，導致飲食照片辨識與文字分析中斷了整整兩天，造成大家記餐極大的困擾與不便，團隊致上最深切的歉意！我們已徹夜完成 Gemini 3.x 核心全面升級與雙重備援容錯架構。'}
+                  ? 'Wondering what to eat for lunch, dinner, or a healthy late-night snack? Panda Coach now calculates your remaining calorie & protein budget in real-time, instantly recommending 3 tailored, practical meals with 1-click logging! Available on both Web & LINE chat!' 
+                  : '每到用餐時間總在想「午餐吃什麼？」、「今天蛋白質還差多少？」現在只要打開 Web 或在 LINE 輸入「接下來吃什麼」，AI 熊貓教練即刻計算剩餘熱量與蛋白質缺口，秒出 3 大超實用方案，還能一鍵直接記帳！'}
               </p>
             </div>
           </div>
@@ -105,66 +109,64 @@ const WhatsNew = ({ version = APP_VERSION, onClose }) => {
           <div className="space-y-2.5">
             <div className="text-[11px] font-black uppercase tracking-wider text-zinc-800 flex items-center gap-1.5 ml-1">
               <Sparkles size={14} className="text-amber-800" strokeWidth={3} />
-              {isEn ? 'Update & Fix Details' : '本次升級與修復項目一覽'}
+              {isEn ? 'Feature Highlights' : '新功能核心亮點一覽'}
             </div>
             
             <FeatureItem 
-              icon={Sparkles}
-              title={isEn ? "Gemini 3.x Vision & Text Upgrade" : "Gemini 3.x 智能模型核心升級"}
+              icon={Utensils}
+              title={isEn ? "Time-of-Day Context & 3 Scenarios" : "時段情境感應 × 超商/外食/自煮 3 大方案"}
               desc={isEn 
-                ? "Upgraded the AI engine to Gemini 3.x for lightning-fast analysis, sharper dish recognition, and more precise macronutrient breakdown."
-                : "全面升級至最新世代 Gemini 3.x 視覺與語言模型，餐點辨識更精準、語意理解更細膩、熱量與蛋白質推算更迅速。"}
-              badge={isEn ? "Core Upgrade" : "核心升級"}
+                ? "Intelligently detects whether it's breakfast, lunch, snack, dinner, or late-night craving. Delivers 3 distinct choices: 7-Eleven/FamilyMart grab-and-go, healthy takeout, or 5-min quick prep!"
+                : "自動識別早午晚餐、下午補給或深夜暖胃時段，每餐給予：超商隨手買、外食健康便當、5分鐘快煮自煮，每道均附熱量、蛋白質與推薦理由！"}
+              badge={isEn ? "Smart Menu" : "智能菜單"}
               iconBg="bg-amber-100"
               iconColor="text-amber-800"
             />
 
             <FeatureItem 
-              icon={RefreshCw}
-              title={isEn ? "Intelligent Failover & Auto-Rotation" : "雙重模型智慧容錯輪替"}
+              icon={BarChart2}
+              title={isEn ? "Dynamic Calorie & Protein Budget Gap" : "動態營養缺額精算（不推重複菜色）"}
               desc={isEn 
-                ? "Implemented dynamic multi-model rotation. If any model experiences high traffic, the system seamlessly cascades to healthy backups within milliseconds."
-                : "全新實裝多模型與備援金鑰雙層故障轉移架構，即使單一模型或尖峰流量波動，系統毫秒級自動容錯輪替，記餐體驗零中斷。"}
-              badge={isEn ? "Reliability" : "高可用架構"}
+                ? "Deducts what you've already eaten today from your daily targets to precisely compute remaining calories, protein, carbs, and fat—guaranteed not to suggest duplicate meals!"
+                : "自動扣除今日已吃熱量與三大營養素，即時算出剩餘熱量與蛋白質缺口。若熱量吃緊主打高蛋白低負擔，絕不重複推薦今日吃過的餐點！"}
+              badge={isEn ? "Gap Calculation" : "缺額精算"}
               iconBg="bg-emerald-100"
               iconColor="text-emerald-800"
             />
 
             <FeatureItem 
-              icon={MessageSquare}
-              title={isEn ? "Coach Panda Fully Back Online" : "熊貓教練點評與語音全線回歸"}
+              icon={CheckCircle2}
+              title={isEn ? "1-Click Direct Logging" : "➕ 一鍵極速記下此餐"}
               desc={isEn 
-                ? "Panda Coach witty roasts, personalized nutritional advice, and live coaching calls are fully operational with improved response quality."
-                : "熊貓教練毒舌吐槽、貼心營養小叮嚀、即時通話語音諮詢已全線復原上線，互動更幽默流暢！"}
-              badge={isEn ? "Coach Ready" : "教練回歸"}
-              iconBg="bg-purple-100"
-              iconColor="text-purple-800"
+                ? "Found a meal you like? Simply tap “Log This Meal” on either the Web modal or LINE Flex card to write it directly into today's diary with zero typing needed."
+                : "在 Web 彈窗或 LINE 卡片中看到喜歡的方案，點擊「➕ 一鍵記下此餐」，系統立即自動登錄至今日日記並重新計算進度，連打字都省了！"}
+              badge={isEn ? "1-Click Log" : "極速記餐"}
+              iconBg="bg-rose-100"
+              iconColor="text-rose-800"
             />
 
             <FeatureItem 
-              icon={Feather}
-              title={isEn ? "Slim & Light Top Header" : "頂部導航選單極簡瘦身"}
+              icon={MessageSquare}
+              title={isEn ? "Ask Directly in LINE Chat" : "LINE 聊天室直接發問（自然語言支援）"}
               desc={isEn 
-                ? "Reduced header height by ~40% and softened borders. Branding is compactly arranged on a single line, granting more screen space for your diary."
-                : "頂部選單高度大幅縮減約 40%，品牌與名稱改為同行緊湊排列，將最寶貴的手機視野留給飲食日記與紀錄操作。"}
-              badge={isEn ? "UI Refresh" : "視覺瘦身"}
+                ? "Send “What should I eat next?”, “Dinner recommendation”, or “What can I eat?” in LINE chat, and Coach Panda replies with an interactive Flex card in seconds!"
+                : "在 LINE 官方帳號直接傳送「接下來吃什麼」、「晚餐吃什麼」、「我還能吃什麼」，教練即刻以精美互動式 Flex 卡片為您秒算回覆！"}
+              badge={isEn ? "LINE Bot" : "LINE直達"}
               iconBg="bg-sky-100"
               iconColor="text-sky-800"
             />
           </div>
 
-          {/* 資料安全 100% 承諾卡片 */}
+          {/* 快速體驗導引卡片 */}
           <div className="p-3.5 sm:p-4 bg-white/95 border-2 sm:border-3 border-black rounded-2xl shadow-neo-xs space-y-1.5">
-            <div className="flex items-center gap-2 text-indigo-950 font-black text-xs">
-              <div className="w-5.5 h-5.5 rounded-lg bg-indigo-100 border-1.5 border-black flex items-center justify-center shrink-0 shadow-xs">
-                <Lock size={12} className="text-indigo-700" strokeWidth={3} />
-              </div>
-              <span>{isEn ? 'Offline-First Local Storage · 100% Safe' : '本機優先離線儲存 · 零記錄遺失承諾'}</span>
+            <div className="flex items-center gap-2 text-zinc-950 font-black text-xs">
+              <span className="text-base">💡</span>
+              <span>{isEn ? 'How to Try It Right Now' : '如何立即體驗？'}</span>
             </div>
             <p className="text-[11px] text-zinc-700 font-bold leading-relaxed">
               {isEn 
-                ? 'Your meal photos, water logs, and weight trends are safely stored in your device local database (IndexedDB) and automatically synchronized with LINE when connected.'
-                : '您的每一筆飲食相片、營養素、水分與體重數據均完好儲存於您手機本機 IndexedDB 資料庫中，網路不穩或離線時均可正常記錄，連線後自動雙向同步。'}
+                ? '• On Web: Tap the shiny “🍽️ What to Eat Next? AI Recommendation” button right below your dashboard rings!\n• On LINE: Simply type “What should I eat next” in the chat!'
+                : '• Web 網頁端：在首頁今日進度圓環下方，點擊「🍽️ 接下來吃什麼？AI 智能推薦」按鈕！\n• LINE 聊天室：直接在對話框輸入「接下來吃什麼」或「晚餐吃什麼」即可立即體驗！'}
             </p>
           </div>
 
@@ -174,7 +176,7 @@ const WhatsNew = ({ version = APP_VERSION, onClose }) => {
             className="w-full py-3 sm:py-3.5 text-sm sm:text-base rounded-2xl shadow-neo font-black cursor-pointer"
             onClick={onClose}
           >
-            {isEn ? 'Got it, let’s explore! 🥗✨' : '我知道了，立即體驗 🥗✨'}
+            {isEn ? 'Awesome! Let’s explore 🍽️✨' : '太棒了，立即體驗 🍽️✨'}
           </NeoButton>
         </div>
       </motion.div>
