@@ -7016,13 +7016,15 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
               paddingEnd: '8px',
               paddingTop: '2px',
               paddingBottom: '2px',
+              flex: 0,
               contents: [
                 {
                   type: 'text',
                   text: tag,
                   size: 'xxs',
                   color: '#FDE047',
-                  weight: 'bold'
+                  weight: 'bold',
+                  flex: 0
                 }
               ]
             },
@@ -7032,7 +7034,8 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
               size: 'sm',
               color: '#E11D48',
               weight: 'bold',
-              align: 'end'
+              align: 'end',
+              flex: 0
             }
           ]
         },
@@ -7062,13 +7065,15 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
               paddingEnd: '6px',
               paddingTop: '2px',
               paddingBottom: '2px',
+              flex: 0,
               contents: [
                 {
                   type: 'text',
                   text: isEn ? `🥩 ${pro}g Pro` : `🥩 蛋白 ${pro}g`,
                   size: 'xxs',
                   color: '#2563EB',
-                  weight: 'bold'
+                  weight: 'bold',
+                  flex: 0
                 }
               ]
             },
@@ -7083,13 +7088,15 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
               paddingEnd: '6px',
               paddingTop: '2px',
               paddingBottom: '2px',
+              flex: 0,
               contents: [
                 {
                   type: 'text',
                   text: isEn ? `🍞 ${carbs}g Carb` : `🍞 碳水 ${carbs}g`,
                   size: 'xxs',
                   color: '#D97706',
-                  weight: 'bold'
+                  weight: 'bold',
+                  flex: 0
                 }
               ]
             },
@@ -7104,13 +7111,15 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
               paddingEnd: '6px',
               paddingTop: '2px',
               paddingBottom: '2px',
+              flex: 0,
               contents: [
                 {
                   type: 'text',
                   text: isEn ? `🥑 ${fat}g Fat` : `🥑 脂肪 ${fat}g`,
                   size: 'xxs',
                   color: '#52525B',
-                  weight: 'bold'
+                  weight: 'bold',
+                  flex: 0
                 }
               ]
             }
@@ -7329,34 +7338,25 @@ function generateNextMealRecommendationFlex(recData, stats, goals, liffId, userG
           ...(coachComment ? [{
             type: 'box',
             layout: 'vertical',
-            backgroundColor: '#FFFFFF',
-            borderColor: '#E4E4E7',
+            backgroundColor: '#F8FAFC',
+            borderColor: '#E2E8F0',
             borderWidth: '1.5px',
             cornerRadius: '12px',
             paddingAll: '10px',
             spacing: 'xs',
             contents: [
               {
-                type: 'box',
-                layout: 'horizontal',
-                alignItems: 'center',
-                spacing: 'xs',
-                contents: [
-                  { type: 'text', text: '🐼', size: 'xs' },
-                  {
-                    type: 'text',
-                    text: isEn ? 'Coach Panda Advice' : '熊貓教練叮嚀',
-                    size: 'xxs',
-                    weight: 'bold',
-                    color: '#18181B'
-                  }
-                ]
+                type: 'text',
+                text: isEn ? '🐼 Coach Panda' : '🐼 熊貓教練叮嚀',
+                size: 'xxs',
+                weight: 'bold',
+                color: '#0F172A'
               },
               {
                 type: 'text',
                 text: coachComment,
                 size: 'xs',
-                color: '#3F3F46',
+                color: '#334155',
                 wrap: true,
                 lineSpacing: '3px'
               }
