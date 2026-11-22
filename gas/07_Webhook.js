@@ -1632,24 +1632,61 @@ function doPost(e) {
 
     // 📢 0.2 管理員測試推播維護公告 (僅推播至指定管理員帳號，絕不外流)
     if (action === 'testAnnouncementPush') {
-      const targetUser = (data?.userId || e?.parameter?.userId || props.getProperty('ADMIN_LINE_USER_ID') || 'U3f46f4967396654a938c4146a4497c66').trim();
+      const targetUser = (data?.userId || e?.parameter?.userId || props.getProperty('ADMIN_LINE_USER_ID') || 'U1f5434ad962dfd74e5223a8dfc497c66').trim();
       if (!targetUser || !targetUser.startsWith('U')) {
         return ContentService.createTextOutput(JSON.stringify({ status: 'error', message: '無效的 LINE User ID' }))
           .setMimeType(ContentService.MimeType.JSON);
       }
+
+      // 1. 先用 LINE validate API 檢查 Flex 結構細節錯誤
       const flexMsg = generateFeatureAnnouncementFlex(targetUser, LIFF_ID, '', props, 'zh');
-      let pushRes = null;
-      let pushError = null;
-      try {
-        pushRes = pushFlexMessage(targetUser, flexMsg, CHANNEL_ACCESS_TOKEN, props);
-      } catch (pushErr) {
-        pushError = pushErr.message || String(pushErr);
+      if (flexMsg.altText && flexMsg.altText.length > 400) {
+        flexMsg.altText = flexMsg.altText.slice(0, 397) + '...';
       }
+
+      let validateResBody = '';
+      try {
+        const vRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/validate/push", {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`
+          },
+          payload: JSON.stringify({ messages: [flexMsg] }),
+          muteHttpExceptions: true
+        });
+        validateResBody = vRes.getContentText();
+      } catch (ve) {
+        validateResBody = ve.message;
+      }
+
+      // 2. 發送正式 Flex 公告卡片
+      let flexCode = 0;
+      let flexBody = '';
+      try {
+        const fRes = UrlFetchApp.fetch("https://api.line.me/v2/bot/message/push", {
+          method: "post",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${CHANNEL_ACCESS_TOKEN}`
+          },
+          payload: JSON.stringify({
+            to: targetUser,
+            messages: [flexMsg]
+          }),
+          muteHttpExceptions: true
+        });
+        flexCode = fRes.getResponseCode();
+        flexBody = fRes.getContentText();
+      } catch (fe) {
+        flexBody = fe.message;
+      }
+
       return ContentService.createTextOutput(JSON.stringify({
-        status: pushError ? 'error' : 'ok',
+        status: flexCode === 200 ? 'ok' : 'error',
         targetUser,
-        pushRes,
-        error: pushError
+        flexCode,
+        flexBody
       })).setMimeType(ContentService.MimeType.JSON);
     }
 

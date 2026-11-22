@@ -387,7 +387,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
   // 📢 LINE Official Broadcast & Push States (Encrypted Auth)
   const [showLineBroadcastModal, setShowLineBroadcastModal] = useState(false);
   const [broadcastTarget, setBroadcastTarget] = useState('TEST'); // 'TEST' | 'ALL'
-  const [testTargetUserId, setTestTargetUserId] = useState('U3f46f4967396654a938c4146a4497c66'); // Winnie's admin LINE ID
+  const [testTargetUserId, setTestTargetUserId] = useState('U1f5434ad962dfd74e5223a8dfc497c66'); // Winnie's admin LINE ID
   const [broadcastType, setBroadcastType] = useState('FLEX'); // 'FLEX' | 'TEXT'
   const [customBroadcastText, setCustomBroadcastText] = useState('');
   const [isSendingBroadcast, setIsSendingBroadcast] = useState(false);
@@ -4082,7 +4082,7 @@ export default function LogMonitorDashboard({ onBack, lang = 'zh' }) {
                       <span>{isEn ? 'Target LINE User ID:' : '目標 LINE 用戶識別碼 (User ID)：'}</span>
                       <button
                         type="button"
-                        onClick={() => setTestTargetUserId('U3f46f4967396654a938c4146a4497c66')}
+                        onClick={() => setTestTargetUserId('U1f5434ad962dfd74e5223a8dfc497c66')}
                         className="text-[10px] text-emerald-600 hover:underline"
                       >
                         {isEn ? 'Fill Admin ID' : '填入管理員預設 ID'}
