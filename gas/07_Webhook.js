@@ -3295,9 +3295,29 @@ function doPost(e) {
             }
           }
 
-          // 🐛 問題回報 / Bug Report / 意見反饋 (直接在 LINE 聊天室回報，並發送信件給開發團隊)
-          const reportPrefixRegex = /^(?:問題回報|bug\s*report|回報|bug|問題|建議|反饋|報錯)[\s:：、,]*(.*)$/is;
-          const reportMatch = userText.match(reportPrefixRegex);
+          // 🍽️ 3.1 接下來吃什麼 / 待會吃什麼 / 建議吃什麼 / 下一餐推薦 (AI 智能菜單推薦與缺額計算，優先於問題回報)
+          const isNextMealQuery = /^(?:接下來|下一餐|待會|等下|等一下|晚餐|午餐|早餐|宵夜|消夜|點心|現在|今天)?\s*(?:吃什麼|推薦吃什麼|該吃什麼|吃啥|吃什麼好|有什麼好吃|飲食推薦|餐點推薦|下一餐推薦|飲食建議|建議吃什麼|建議吃啥|吃點什麼)/i.test(userText) ||
+            userText === '吃什麼' || userText === '吃啥' || userText === '待會吃什麼' || userText === '待會吃啥' || userText === '推薦' || userText === '下一餐' || userText === '推薦餐點' || userText === '推薦菜單' || userText === '建議吃什麼' || userText === '飲食建議' ||
+            /^(?:what\s+to\s+eat|what\s+should\s+i\s+eat|what\s+can\s+i\s+eat|suggest\s+meal|next\s+meal|meal\s+recommendation)/i.test(userText) ||
+            (userText.includes('推薦') && (userText.includes('吃') || userText.includes('餐'))) ||
+            (userText.includes('吃什麼') || userText.includes('吃啥') || userText.includes('建議吃'));
+
+          if (isNextMealQuery) {
+            sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
+            const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+            const userGoals = getUserGoals(userId, props, userGistId);
+            const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
+            recordSystemLog('下一餐推薦', userId, userText, '計算缺額與生成菜單中', '呼叫 AI 推薦下一餐餐點與計算建議');
+            const recData = getMealRecommendationWithAI(userId, todayLogs, userGoals, userText, persona, userLang, props, GEMINI_API_KEY, userGistId, GITHUB_PAT);
+            const recFlex = generateNextMealRecommendationFlex(recData, recData.stats, userGoals, LIFF_ID, userGistId, userLang, persona);
+            replyFlexMessage(replyToken, recFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+            continue;
+          }
+
+          // 🐛 問題回報 / Bug Report / 意見反饋 (直接在 LINE 聊天室回報，並發送信件給開發團隊，排除飲食相關指令)
+          const isMealRelated = /(?:吃|餐|喝|熱量|蛋白質|水|飲食)/i.test(userText);
+          const reportPrefixRegex = /^(?:問題回報|bug\s*report|回報|bug|報錯|反饋|意見反饋|功能建議|系統建議)[\s:：、,]*(.*)$/is;
+          const reportMatch = !isMealRelated && userText.match(reportPrefixRegex);
           if (reportMatch) {
             const issueDetails = (reportMatch[1] || '').trim();
             if (!issueDetails) {
@@ -4027,24 +4047,6 @@ function doPost(e) {
             continue;
           }
 
-          // 🍽️ 3.1 接下來吃什麼 / 待會吃什麼 / 下一餐推薦 (AI 智能菜單推薦與缺額計算)
-          const isNextMealQuery = /^(?:接下來|下一餐|待會|等下|等一下|晚餐|午餐|早餐|宵夜|消夜|點心|現在|今天)?\s*(?:吃什麼|推薦吃什麼|該吃什麼|吃啥|吃什麼好|有什麼好吃|飲食推薦|餐點推薦|下一餐推薦|飲食建議|建議吃什麼|建議吃啥)/i.test(userText) ||
-            userText === '吃什麼' || userText === '吃啥' || userText === '待會吃什麼' || userText === '待會吃啥' || userText === '推薦' || userText === '下一餐' || userText === '推薦餐點' || userText === '推薦菜單' || userText === '建議吃什麼' || userText === '飲食建議' ||
-            /^(?:what\s+to\s+eat|what\s+should\s+i\s+eat|what\s+can\s+i\s+eat|suggest\s+meal|next\s+meal|meal\s+recommendation)/i.test(userText) ||
-            (userText.includes('推薦') && (userText.includes('吃') || userText.includes('餐'))) ||
-            (userText.includes('吃什麼') || userText.includes('吃啥') || userText.includes('建議吃'));
-
-          if (isNextMealQuery) {
-            sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
-            const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
-            const userGoals = getUserGoals(userId, props, userGistId);
-            const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
-            recordSystemLog('下一餐推薦', userId, userText, '計算缺額與生成菜單中', '呼叫 AI 推薦下一餐餐點與計算建議');
-            const recData = getMealRecommendationWithAI(userId, todayLogs, userGoals, userText, persona, userLang, props, GEMINI_API_KEY, userGistId, GITHUB_PAT);
-            const recFlex = generateNextMealRecommendationFlex(recData, recData.stats, userGoals, LIFF_ID, userGistId, userLang, persona);
-            replyFlexMessage(replyToken, recFlex, CHANNEL_ACCESS_TOKEN, userId, props);
-            continue;
-          }
 
           // 🔢 整份倍數調整 (支援: 兩倍, 雙倍, 一半, 半份, 吃一半, 整份兩倍, 0.5x, 1.5倍, 改 2倍, double, half, x0.5 等)
           let detectedMultiplier = null;
