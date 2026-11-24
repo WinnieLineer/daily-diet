@@ -2898,23 +2898,23 @@ function App() {
             <button
               type="button"
               onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer"
+              className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-zinc-800 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer min-w-[54px]"
             >
-              <Home size={18} strokeWidth={2.5} />
-              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_home')}</span>
+              <Home size={20} strokeWidth={2.5} />
+              <span className="text-xs font-black mt-0.5 tracking-tight">{t('bottom_menu_home')}</span>
             </button>
 
             {/* 2. 待會吃什麼 (核心焦點按鈕) */}
             <button
               type="button"
               onClick={() => setShowMealRecommendationModal(true)}
-              className="flex items-center gap-1.5 py-1.5 px-3 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-500 hover:to-yellow-400 text-black border-2 border-black rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:scale-95 transition-all cursor-pointer shrink-0"
+              className="flex items-center gap-2 py-2 px-4 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-500 hover:to-yellow-400 text-black border-2 border-black rounded-full shadow-[2.5px_2.5px_0px_0px_rgba(0,0,0,1)] active:scale-95 transition-all cursor-pointer shrink-0"
               title={t('what_to_eat_next')}
             >
-              <span className="text-base sm:text-lg">🍽️</span>
+              <span className="text-lg">🍽️</span>
               <div className="flex flex-col items-start leading-none text-left">
-                <span className="text-[11px] sm:text-xs font-black tracking-tight">{t('bottom_menu_eat')}</span>
-                <span className="text-[7.5px] font-black uppercase text-amber-950/80">AI Coach</span>
+                <span className="text-xs sm:text-[13px] font-black tracking-tight">{t('bottom_menu_eat')}</span>
+                <span className="text-[8.5px] font-black uppercase text-amber-950/80 mt-0.5">AI Coach</span>
               </div>
             </button>
 
@@ -2933,23 +2933,23 @@ function App() {
                   window.scrollTo({ top: 200, behavior: 'smooth' });
                 }
               }}
-              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer"
+              className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-zinc-800 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer min-w-[54px]"
             >
-              <Camera size={18} strokeWidth={2.5} />
-              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_camera')}</span>
+              <Camera size={20} strokeWidth={2.5} />
+              <span className="text-xs font-black mt-0.5 tracking-tight">{t('bottom_menu_camera')}</span>
             </button>
 
             {/* 4. 一鍵補水 +250ml */}
             <button
               type="button"
               onClick={handleQuickWater}
-              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer relative"
+              className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-zinc-800 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer relative min-w-[54px]"
               title="+250ml"
             >
-              <Droplets size={18} strokeWidth={2.5} className="text-sky-500" />
-              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_water')}</span>
+              <Droplets size={20} strokeWidth={2.5} className="text-sky-500" />
+              <span className="text-xs font-black mt-0.5 tracking-tight">{t('bottom_menu_water')}</span>
               {quickWaterToast && (
-                <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-sky-500 text-white font-black text-[9px] px-2 py-0.5 rounded-full border border-black shadow-xs whitespace-nowrap animate-bounce">
+                <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-sky-500 text-white font-black text-[10px] px-2 py-0.5 rounded-full border border-black shadow-xs whitespace-nowrap animate-bounce">
                   +250ml 💧
                 </span>
               )}
@@ -2962,10 +2962,10 @@ function App() {
                 setSettingsTab('profile');
                 window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'profile' } }));
               }}
-              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer"
+              className="flex flex-col items-center justify-center py-1.5 px-3 rounded-xl text-zinc-800 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer min-w-[54px]"
             >
-              <Settings size={18} strokeWidth={2.5} />
-              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_goals')}</span>
+              <Settings size={20} strokeWidth={2.5} />
+              <span className="text-xs font-black mt-0.5 tracking-tight">{t('bottom_menu_goals')}</span>
             </button>
           </motion.nav>
         </div>
