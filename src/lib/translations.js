@@ -572,7 +572,18 @@ const translations = {
     next_meal_refresh: "🔄 換一批推薦",
     next_meal_log_now: "➕ 一鍵記下此餐",
     next_meal_logged: "✅ 已成功記錄此餐！",
-    next_meal_analyzing: "🐼 熊貓教練正在為您計算最佳下一餐..."
+    next_meal_analyzing: "🐼 熊貓教練正在為您計算最佳下一餐...",
+    bottom_menu_home: "首頁",
+    bottom_menu_eat: "待會吃什麼",
+    bottom_menu_camera: "拍食物",
+    bottom_menu_water: "補水",
+    bottom_menu_goals: "目標",
+    period_auto: "⚡ 智能時段",
+    period_breakfast: "🍳 早餐",
+    period_lunch: "🍱 午餐",
+    period_snack: "☕ 點心/補給",
+    period_dinner: "🍲 晚餐",
+    period_latenight: "🌙 宵夜"
   },
   en: {
     app_title: "DAILY DIET",
@@ -1147,7 +1158,18 @@ const translations = {
     next_meal_refresh: "🔄 Another 3 Options",
     next_meal_log_now: "➕ Log This Meal",
     next_meal_logged: "✅ Meal logged successfully!",
-    next_meal_analyzing: "🐼 Panda Coach is calculating your optimal next meal..."
+    next_meal_analyzing: "🐼 Panda Coach is calculating your optimal next meal...",
+    bottom_menu_home: "Home",
+    bottom_menu_eat: "What to Eat",
+    bottom_menu_camera: "Camera",
+    bottom_menu_water: "+250ml",
+    bottom_menu_goals: "Goals",
+    period_auto: "⚡ Auto",
+    period_breakfast: "🍳 Breakfast",
+    period_lunch: "🍱 Lunch",
+    period_snack: "☕ Snack",
+    period_dinner: "🍲 Dinner",
+    period_latenight: "🌙 Late Night"
   }
 };
 

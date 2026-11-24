@@ -4027,9 +4027,9 @@ function doPost(e) {
             continue;
           }
 
-          // 🍽️ 3.1 接下來吃什麼 / 下一餐推薦 (AI 智能菜單推薦與缺額計算)
-          const isNextMealQuery = /^(?:接下來|下一餐|晚餐|午餐|早餐|宵夜|消夜|點心|現在|今天)?\s*(?:吃什麼|推薦吃什麼|該吃什麼|吃啥|有什麼好吃|飲食推薦|餐點推薦|下一餐推薦|飲食建議|建議吃什麼|建議吃啥)/i.test(userText) ||
-            userText === '吃什麼' || userText === '吃啥' || userText === '推薦' || userText === '下一餐' || userText === '推薦餐點' || userText === '推薦菜單' || userText === '建議吃什麼' || userText === '飲食建議' ||
+          // 🍽️ 3.1 接下來吃什麼 / 待會吃什麼 / 下一餐推薦 (AI 智能菜單推薦與缺額計算)
+          const isNextMealQuery = /^(?:接下來|下一餐|待會|等下|等一下|晚餐|午餐|早餐|宵夜|消夜|點心|現在|今天)?\s*(?:吃什麼|推薦吃什麼|該吃什麼|吃啥|吃什麼好|有什麼好吃|飲食推薦|餐點推薦|下一餐推薦|飲食建議|建議吃什麼|建議吃啥)/i.test(userText) ||
+            userText === '吃什麼' || userText === '吃啥' || userText === '待會吃什麼' || userText === '待會吃啥' || userText === '推薦' || userText === '下一餐' || userText === '推薦餐點' || userText === '推薦菜單' || userText === '建議吃什麼' || userText === '飲食建議' ||
             /^(?:what\s+to\s+eat|what\s+should\s+i\s+eat|what\s+can\s+i\s+eat|suggest\s+meal|next\s+meal|meal\s+recommendation)/i.test(userText) ||
             (userText.includes('推薦') && (userText.includes('吃') || userText.includes('餐'))) ||
             (userText.includes('吃什麼') || userText.includes('吃啥') || userText.includes('建議吃'));

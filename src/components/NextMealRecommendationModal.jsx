@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
-import { X, RefreshCw, Check, Sparkles, Utensils, Flame, Dumbbell, Clock } from 'lucide-react';
+import { X, RefreshCw, Check, Sparkles, Utensils, Flame, Dumbbell, Clock, Copy, ArrowRight, Share2 } from 'lucide-react';
 import { db } from '../db';
 import { t, getLanguage } from '../lib/translations';
 import { getOrCreateClientId } from '../lib/syncService';
@@ -22,11 +22,23 @@ export default function NextMealRecommendationModal({
   const isEn = getLanguage() === 'en';
   const [loading, setLoading] = useState(false);
   const [recData, setRecData] = useState(null);
-  const [error, setError] = useState(null);
   const [loggingIdx, setLoggingIdx] = useState(null);
   const [successToast, setSuccessToast] = useState(null);
+  const [copyToast, setCopyToast] = useState(null);
+  const [selectedPeriod, setSelectedPeriod] = useState('auto');
+  const [refreshSeed, setRefreshSeed] = useState(0);
 
-  // 計算今日缺額與目前用餐時段
+  // 時段選項
+  const periodTabs = useMemo(() => [
+    { id: 'auto', label: t('period_auto') || '⚡ 智能時段' },
+    { id: 'breakfast', label: t('period_breakfast') || '🍳 早餐' },
+    { id: 'lunch', label: t('period_lunch') || '🍱 午餐' },
+    { id: 'snack', label: t('period_snack') || '☕ 點心/補給' },
+    { id: 'dinner', label: t('period_dinner') || '🍲 晚餐' },
+    { id: 'latenight', label: t('period_latenight') || '🌙 宵夜' },
+  ], []);
+
+  // 計算今日缺額與用餐時段
   const calculateLocalStats = useCallback(() => {
     const targetCal = Number(goals.calories) || 2000;
     const targetPro = Number(goals.protein) || 100;
@@ -44,23 +56,31 @@ export default function NextMealRecommendationModal({
     const remFat = targetFat - consumedFat;
 
     const currentHour = new Date().getHours();
-    let period = isEn ? 'Dinner' : '晚餐';
-    if (currentHour >= 5 && currentHour < 11) period = isEn ? 'Breakfast' : '早餐';
-    else if (currentHour >= 11 && currentHour < 14) period = isEn ? 'Lunch' : '午餐';
-    else if (currentHour >= 14 && currentHour < 17) period = isEn ? 'Afternoon Snack' : '下午點心/補給';
-    else if (currentHour >= 17 && currentHour < 21) period = isEn ? 'Dinner' : '晚餐';
-    else period = isEn ? 'Late-Night Snack' : '宵夜/睡前補給';
+    let autoPeriod = isEn ? 'Dinner' : '晚餐';
+    if (currentHour >= 5 && currentHour < 11) autoPeriod = isEn ? 'Breakfast' : '早餐';
+    else if (currentHour >= 11 && currentHour < 14) autoPeriod = isEn ? 'Lunch' : '午餐';
+    else if (currentHour >= 14 && currentHour < 17) autoPeriod = isEn ? 'Afternoon Snack' : '下午點心/補給';
+    else if (currentHour >= 17 && currentHour < 21) autoPeriod = isEn ? 'Dinner' : '晚餐';
+    else autoPeriod = isEn ? 'Late-Night Snack' : '宵夜/睡前補給';
+
+    let displayPeriod = autoPeriod;
+    if (selectedPeriod === 'breakfast') displayPeriod = isEn ? 'Breakfast' : '早餐';
+    else if (selectedPeriod === 'lunch') displayPeriod = isEn ? 'Lunch' : '午餐';
+    else if (selectedPeriod === 'snack') displayPeriod = isEn ? 'Afternoon Snack' : '下午點心/補給';
+    else if (selectedPeriod === 'dinner') displayPeriod = isEn ? 'Dinner' : '晚餐';
+    else if (selectedPeriod === 'latenight') displayPeriod = isEn ? 'Late-Night Snack' : '宵夜/睡前補給';
 
     return {
-      period,
+      period: displayPeriod,
+      autoPeriod,
       consumed: { calories: consumedCal, protein: consumedPro, carbs: consumedCarbs, fat: consumedFat },
       remaining: { calories: remCal, protein: remPro, carbs: remCarbs, fat: remFat },
       goals: { calories: targetCal, protein: targetPro, carbs: targetCarbs, fat: targetFat }
     };
-  }, [goals, summary, isEn]);
+  }, [goals, summary, isEn, selectedPeriod]);
 
-  // 本地規則備援生成 (當斷網或 GAS 忙線時確保秒開)
-  const generateLocalFallback = useCallback(() => {
+  // 本地規則備援生成 (支援多套菜色循環輪轉，斷網或 GAS 忙線時秒開)
+  const generateLocalFallback = useCallback((seed = 0) => {
     const stats = calculateLocalStats();
     const remCal = stats.remaining.calories;
     const remPro = stats.remaining.protein;
@@ -82,98 +102,192 @@ export default function NextMealRecommendationModal({
         : (remPro > 20 ? "哼！今天蛋白質明明還差那麼多，少給我吃甜點，乖乖把蛋白質補足！🐼" : "可別以為還有熱量額度就能亂吃炸物，給我選乾淨的原型食物！🐼");
     }
 
-    let options = [];
-    if (remPro >= 30) {
-      options = [
-        {
-          tag: isEn ? "Convenience Store" : "超商便利選",
-          dish_name: isEn ? "Sous-vide Chicken Breast + 2 Tea Eggs + Sugar-free Soy Milk" : "7-11 舒肥雞胸肉 + 雙茶葉蛋 + 光泉無糖濃豆漿",
-          calories: 390,
-          protein: 46,
-          carbs: 12,
-          fat: 12,
-          reason: isEn ? "High protein (46g) under 400 kcal to rapidly close your protein gap!" : "蛋白質高達 46g，熱量不到 400 大卡，超商 2 分鐘買齊，極速補滿今日蛋白質缺口！"
-        },
-        {
-          tag: isEn ? "Healthy Bento" : "外食健康選",
-          dish_name: isEn ? "Grilled Salmon / Lean Steak Salad Bento (Half Rice)" : "水煮健康餐盒：香煎嫩鮭魚或牛腱 (紫米飯半份)",
-          calories: 480,
-          protein: 38,
-          carbs: 45,
-          fat: 14,
-          reason: isEn ? "Rich in Omega-3 anti-inflammatory fats and premium protein for lasting fullness." : "優質 Omega-3 抗發炎好油與豐富蛋白質，半份紫米飯控制升糖與澱粉負擔。"
-        },
-        {
-          tag: isEn ? "Quick Home Cooking" : "自煮快炒選",
-          dish_name: isEn ? "Steamed Sea Bass Tofu + Boiled Vegetables & Egg Soup" : "清蒸鱸魚/嫩豆腐 + 炒綜合時蔬 + 蛋花湯",
-          calories: 310,
-          protein: 36,
-          carbs: 10,
-          fat: 11,
-          reason: isEn ? "Clean, digestible protein with rich dietary fiber to keep night digestion light." : "超高蛋白質、極低碳水與高纖蔬菜，夜晚好消化不囤積脂肪！"
-        }
-      ];
-    } else if (remCal <= 250) {
-      options = [
-        {
-          tag: isEn ? "Low Calorie High Protein" : "極低卡高蛋白",
-          dish_name: isEn ? "Sugar-free High Fiber Soy Milk + 1 Tea Egg" : "全家無糖高纖豆漿 + 茶葉蛋 1 顆",
-          calories: 195,
-          protein: 21,
-          carbs: 9,
-          fat: 8,
-          reason: isEn ? "Fits safely within your remaining 200 kcal budget with 21g protein." : "完美壓在 200 卡預算內，精準提供 21g 蛋白質與膳食纖維，安心無負擔！"
-        },
-        {
-          tag: isEn ? "Light Snack" : "超商輕食選",
-          dish_name: isEn ? "Plain Greek Yogurt + Small Guava" : "希臘式無糖優格 + 珍珠芭樂半顆",
-          calories: 160,
-          protein: 15,
-          carbs: 18,
-          fat: 3,
-          reason: isEn ? "Low glycemic index, rich in vitamin C and probiotics to curb nighttime hunger." : "低 GI、富含維生素 C 與益生菌，高飽足感且徹底避開熱量超標地雷。"
-        },
-        {
-          tag: isEn ? "Cleansing Broth" : "暖胃清爽選",
-          dish_name: isEn ? "Clear Clam & Ginger Soup + Warm Tofu" : "薑絲蛤蜊湯 + 清燙嫩豆腐 (佐薄鹽醬油)",
-          calories: 140,
-          protein: 16,
-          carbs: 4,
-          fat: 5,
-          reason: isEn ? "Warm, comforting, hydrating, and zero grease burden before bedtime." : "暖胃補水無油脂，豐富牛磺酸與鋅加速代謝，深夜安心好眠！"
-        }
-      ];
-    } else {
-      options = [
-        {
-          tag: isEn ? "Convenience Store" : "超商便利選",
-          dish_name: isEn ? "Roasted Sweet Potato (Small) + Chicken Breast + Black Tea" : "現烤小地瓜 + 舒肥嫩雞胸 + 無糖冷萃黑茶",
-          calories: 350,
-          protein: 32,
-          carbs: 38,
-          fat: 6,
-          reason: isEn ? "Clean complex carbs paired with lean poultry for sustained energy." : "低 GI 複合碳水化合物搭配低脂雞肉，穩定血糖與提供持續飽足感。"
-        },
-        {
-          tag: isEn ? "Restaurant Choice" : "外食健康選",
-          dish_name: isEn ? "Custom Poke Bowl: Salmon & Tofu with Mixed Greens Base" : "客製化夏威夷 Poke 碗：生魚片鮭魚 + 嫩豆腐 (全生菜基底)",
-          calories: 420,
-          protein: 34,
-          carbs: 26,
-          fat: 16,
-          reason: isEn ? "Fresh, micronutrient-dense with healthy fats and diverse plant nutrients." : "多色生菜提供豐富微量元素與抗氧化物，低加工高營養密度！"
-        },
-        {
-          tag: isEn ? "Quick Cooking" : "5分鐘極速自煮",
-          dish_name: isEn ? "Garlic Shrimp Stir-fry with Broccoli & Brown Rice" : "蒜香鮮蝦炒青花菜 (佐微量糙米飯)",
-          calories: 360,
-          protein: 35,
-          carbs: 28,
-          fat: 8,
-          reason: isEn ? "Super lean marine protein and high-fiber cruciferous vegetables." : "極致鮮甜的海鮮純蛋白與十字花科高纖蔬菜，5分鐘快速上桌！"
-        }
-      ];
-    }
+    // 豐富的多元菜色庫 (依據時段與種子輪轉)
+    const mealPools = {
+      breakfast: [
+        [
+          {
+            tag: isEn ? "High Protein" : "超商經典高蛋白",
+            dish_name: isEn ? "Sugar-free Rich Soy Milk + 2 Tea Eggs + Small Sweet Potato" : "光泉無糖濃豆漿 + 雙茶葉蛋 + 蒸地瓜(小)",
+            calories: 360, protein: 32, carbs: 36, fat: 10,
+            reason: isEn ? "32g high-absorption morning protein to boost metabolism." : "早晨極速補充 32g 優質純蛋白，搭配低 GI 複合碳水穩定供能！"
+          },
+          {
+            tag: isEn ? "Energizing Breakfast" : "活力輕食選",
+            dish_name: isEn ? "Smoked Chicken Salad Whole Wheat Toast + Black Coffee" : "燻雞生菜全麥三明治 + 美式黑咖啡 (少醬/不加美乃滋)",
+            calories: 310, protein: 24, carbs: 32, fat: 8,
+            reason: isEn ? "Light, whole-grain carbs with lean poultry for clear-headed focus." : "全麥原粒高纖維，燻雞純蛋白清爽無油，早晨提神不昏睡！"
+          },
+          {
+            tag: isEn ? "Quick Probiotics" : "腸道順暢選",
+            dish_name: isEn ? "Greek Yogurt Bowl with Mixed Berries & 15g Almonds" : "無糖希臘優格碗 (佐綜合藍莓 + 堅果一把)",
+            calories: 270, protein: 22, carbs: 20, fat: 11,
+            reason: isEn ? "Dense casein protein with antioxidant berries and healthy plant fats." : "高純度酪蛋白持久飽足，花青素抗氧化，早晨腸道極順暢！"
+          }
+        ],
+        [
+          {
+            tag: isEn ? "Convenience Store" : "超商秒買選",
+            dish_name: isEn ? "Subway 6-inch Turkey Breast Sandwich (Honey Mustard, No Mayo)" : "Subway 6 吋火雞胸肉堡 (全麥麵包/芥末醬/雙倍生菜)",
+            calories: 340, protein: 28, carbs: 42, fat: 5,
+            reason: isEn ? "Extremely lean, fresh vegetables with almost zero saturated fats." : "極致低脂純肉，海量蔬菜填滿膳食纖維，熱量僅 340 卡！"
+          },
+          {
+            tag: isEn ? "Home Cooking" : "3分鐘快煎",
+            dish_name: isEn ? "3 Scrambled Eggs with Tomato & 1 Slice Sourdough" : "蕃茄炒雙蛋 (微油) + 歐式酸種麵包 1 片",
+            calories: 330, protein: 23, carbs: 26, fat: 14,
+            reason: isEn ? "Rich lutein and high bioavailability egg protein for muscle maintenance." : "高生物價完整胺基酸與葉黃素，暖胃又兼顧高飽足！"
+          },
+          {
+            tag: isEn ? "Protein Shake" : "極速趕上班",
+            dish_name: isEn ? "Whey Protein Shake (1 Scoop) + 1 Medium Banana" : "金牌乳清蛋白飲 1 份 + 熟香蕉 1 根",
+            calories: 230, protein: 26, carbs: 29, fat: 2,
+            reason: isEn ? "Fast 30-second prep with rapid amino acid delivery into muscles." : "30秒快速搖勻帶出門，極速補滿蛋白質與天然果糖能量！"
+          }
+        ]
+      ],
+      lunch: [
+        [
+          {
+            tag: isEn ? "Convenience Store" : "超商便利選",
+            dish_name: isEn ? "Sous-vide Chicken Breast + 2 Tea Eggs + Sugar-free Soy Milk" : "7-11 舒肥雞胸肉 + 雙茶葉蛋 + 光泉無糖濃豆漿",
+            calories: 390, protein: 46, carbs: 12, fat: 12,
+            reason: isEn ? "Huge 46g protein hit under 400 kcal to rapidly shrink your protein gap!" : "蛋白質高達 46g，熱量不到 400 大卡，超商 2 分鐘買齊，極速補滿缺口！"
+          },
+          {
+            tag: isEn ? "Healthy Bento" : "外食健康選",
+            dish_name: isEn ? "Grilled Salmon / Lean Steak Salad Bento (Half Rice)" : "水煮健康餐盒：香煎嫩鮭魚或牛腱 (紫米飯半份，蔬菜雙倍)",
+            calories: 480, protein: 38, carbs: 45, fat: 14,
+            reason: isEn ? "Rich in Omega-3 anti-inflammatory fats and premium protein for lasting fullness." : "優質 Omega-3 抗發炎好油與豐富蛋白質，半份紫米飯控制升糖負擔。"
+          },
+          {
+            tag: isEn ? "Quick Cooking" : "自煮快炒選",
+            dish_name: isEn ? "Steamed Sea Bass Tofu + Boiled Vegetables & Egg Soup" : "清蒸鱸魚/嫩豆腐 + 炒綜合時蔬 + 蛋花湯",
+            calories: 310, protein: 36, carbs: 10, fat: 11,
+            reason: isEn ? "Clean, digestible protein with rich dietary fiber to keep night digestion light." : "超高蛋白質、極低碳水與高纖蔬菜，好消化不囤積脂肪！"
+          }
+        ],
+        [
+          {
+            tag: isEn ? "Poke Bowl" : "夏威夷波奇選",
+            dish_name: isEn ? "Salmon & Tofu Poke Bowl (Mixed Greens Base, Light Ponzu)" : "夏威夷 Poke 碗：生魚片鮮鮭 + 嫩豆腐 (生菜半基底/日式和風油醋)",
+            calories: 420, protein: 35, carbs: 28, fat: 15,
+            reason: isEn ? "Loaded with fresh micronutrients, clean fish fats and crunchy greens." : "生魚片高純蛋白質與多色抗氧化時蔬，清爽無油膩負擔！"
+          },
+          {
+            tag: isEn ? "Office Worker Bento" : "上班族外食選",
+            dish_name: isEn ? "Braised Beef Shank Bento + Blanched Vegetables (Skip Gravy)" : "滷牛腱腱子肉便當 (白飯吃半份 + 燙青菜不淋肉燥)",
+            calories: 510, protein: 40, carbs: 52, fat: 12,
+            reason: isEn ? "Lean braised beef provides rich iron and creatine for sustained afternoon energy." : "低脂滷牛腱富含血紅素鐵與肌酸，下午開會神清氣爽！"
+          },
+          {
+            tag: isEn ? "Japanese Choice" : "日式定食選",
+            dish_name: isEn ? "Grilled Mackerel Set with Miso Soup & Seaweed Salad" : "大戶屋/定食8：鹽烤鯖魚定食 (飯吃半碗 + 茶碗蒸)",
+            calories: 490, protein: 34, carbs: 40, fat: 18,
+            reason: isEn ? "Heart-healthy EPA/DHA fatty acids paired with steamed egg protein." : "天然深海魚油護心血管，茶碗蒸溫潤好吸收！"
+          }
+        ]
+      ],
+      snack: [
+        [
+          {
+            tag: isEn ? "Pre-Workout" : "運動補給選",
+            dish_name: isEn ? "Whey Protein Shake + 1 Golden Kiwi" : "乳清蛋白飲 1 杯 + 黃金奇異果 1 顆",
+            calories: 190, protein: 25, carbs: 18, fat: 2,
+            reason: isEn ? "Rapidly absorbable protein and vitamin C to protect muscle tissue." : "極速吸收高蛋白與滿滿維生素 C，快速消除疲勞！"
+          },
+          {
+            tag: isEn ? "Convenience Store" : "超商輕點心",
+            dish_name: isEn ? "Steamed Edamame Pods (1 Pack) + Sugar-free Green Tea" : "7-11 水煮毛豆一包 + 原萃冷萃綠茶",
+            calories: 140, protein: 14, carbs: 10, fat: 4,
+            reason: isEn ? "Rich in plant protein, dietary fiber, and natural minerals." : "天然原型植物大豆蛋白與豐富膳食纖維，咀嚼感超足！"
+          },
+          {
+            tag: isEn ? "Craving Buster" : "解饞無罪惡",
+            dish_name: isEn ? "Chilled Japanese Chawanmushi (Steamed Egg) + 1 Tea Egg" : "超商茶碗蒸 1 碗 + 茶葉蛋 1 顆",
+            calories: 155, protein: 16, carbs: 5, fat: 7,
+            reason: isEn ? "Smooth, warm savory snack packed with 16g protein under 160 kcal." : "溫熱滑嫩鹹點，蛋白質 16g，徹底壓制想吃甜食下午茶的慾望！"
+          }
+        ]
+      ],
+      dinner: [
+        [
+          {
+            tag: isEn ? "Light & Clean" : "減脂輕盈選",
+            dish_name: isEn ? "Pan-seared White Fish / Tofu with Steamed Veggies" : "香煎鯛魚排/板豆腐 + 清燙綜合時蔬 (紫米半份)",
+            calories: 360, protein: 36, carbs: 26, fat: 9,
+            reason: isEn ? "Lean white-meat fish digests gently before sleep without fat buildup." : "白肉純蛋白超好吸收，夜晚腸胃零負擔，安心入睡！"
+          },
+          {
+            tag: isEn ? "Personal Hotpot" : "暖心小火鍋選",
+            dish_name: isEn ? "Kombu Clear Broth Hotpot: Lean Beef + Double Veggies (No fried goods)" : "昆布清湯個人鍋：低脂板腱牛 + 蔬菜盤 (火鍋料全換青菜，不喝濃湯)",
+            calories: 450, protein: 42, carbs: 18, fat: 14,
+            reason: isEn ? "High volume, rich micronutrients with virtually no processed additives." : "蔬菜份量爆表、大量高纖維與低脂牛肉，飽足感直達隔天早晨！"
+          },
+          {
+            tag: isEn ? "Fast Cooking" : "10分鐘極速自煮",
+            dish_name: isEn ? "Garlic Shrimp Stir-fry with Broccoli & Tofu Miso Soup" : "蒜香白蝦炒綠花椰菜 + 豆腐海帶味噌湯",
+            calories: 320, protein: 38, carbs: 14, fat: 8,
+            reason: isEn ? "Super lean marine protein and high-fiber cruciferous vegetables." : "極致鮮甜的海鮮純蛋白與十字花科蔬菜，兼具排毒與飽足！"
+          }
+        ],
+        [
+          {
+            tag: isEn ? "Convenience Store" : "超商夜間選",
+            dish_name: isEn ? "7-11 Herb Chicken Breast + Corn Cob + High Fiber Soy Milk" : "7-11 義式香草雞胸肉 + 金黃雙色甜玉米 1 支 + 無糖高纖豆漿",
+            calories: 380, protein: 42, carbs: 32, fat: 8,
+            reason: isEn ? "Instant healthy dinner ready in 2 minutes right after leaving the gym." : "下班健身後 2 分鐘買齊，超高蛋白 42g 即刻啟動肌肉修復！"
+          },
+          {
+            tag: isEn ? "Warm Bento" : "外食低卡選",
+            dish_name: isEn ? "Braised Chicken Leg Bento (Skin Removed) + Double Greens" : "便當店：滷雞腿便當 (去皮 + 青菜 2 格 + 飯吃一半)",
+            calories: 430, protein: 35, carbs: 38, fat: 12,
+            reason: isEn ? "Traditional takeout modified easily: peeling chicken skin saves 120 kcal instantly!" : "傳統外食聰明點法：雞腿去皮立刻省下 120 大卡油脂！"
+          },
+          {
+            tag: isEn ? "Seafood Delight" : "海鮮飽足選",
+            dish_name: isEn ? "Steamed Clams & Tofu with Wilted Spinach" : "酒蒸蛤蜊嫩豆腐 + 蒜炒菠菜",
+            calories: 280, protein: 29, carbs: 12, fat: 8,
+            reason: isEn ? "Taurine and zinc from fresh shellfish accelerate evening metabolism." : "牛磺酸與鋅加速代謝，深夜暖胃無罪惡！"
+          }
+        ]
+      ],
+      latenight: [
+        [
+          {
+            tag: isEn ? "Zero Guilt" : "暖胃清爽選",
+            dish_name: isEn ? "Clear Clam & Ginger Soup + Warm Silken Tofu" : "薑絲蛤蜊湯 + 清燙嫩豆腐 (佐薄鹽醬油)",
+            calories: 140, protein: 16, carbs: 4, fat: 5,
+            reason: isEn ? "Warm, comforting, hydrating, and zero grease burden before bedtime." : "暖胃補水無油脂，豐富牛磺酸與鋅加速代謝，深夜安心好眠！"
+          },
+          {
+            tag: isEn ? "Low Calorie High Protein" : "極低卡高蛋白",
+            dish_name: isEn ? "Sugar-free High Fiber Soy Milk + 1 Tea Egg" : "全家無糖高纖豆漿 + 茶葉蛋 1 顆",
+            calories: 195, protein: 21, carbs: 9, fat: 8,
+            reason: isEn ? "Fits safely within your remaining 200 kcal budget with 21g protein." : "完美壓在 200 卡預算內，精準提供 21g 蛋白質，安心不挨餓！"
+          },
+          {
+            tag: isEn ? "Light Snack" : "低 GI 水果選",
+            dish_name: isEn ? "Half Guava with Salted Plum Powder + Chamomile Tea" : "珍珠芭樂半顆 (微灑梅粉) + 洋甘菊熱茶 1 杯",
+            calories: 85, protein: 2, carbs: 20, fat: 0,
+            reason: isEn ? "Crunchy high-fiber snack that satisfies late cravings without insulin spikes." : "脆口高纖維維生素 C，洋甘菊舒緩神經，完全不怕血糖波動飆升！"
+          }
+        ]
+      ]
+    };
+
+    // 依據當前時段選取適配的 pool
+    let activeKey = 'dinner';
+    const periodLower = stats.period.toLowerCase();
+    if (periodLower.includes('早') || periodLower.includes('breakfast')) activeKey = 'breakfast';
+    else if (periodLower.includes('午') || periodLower.includes('lunch')) activeKey = 'lunch';
+    else if (periodLower.includes('點心') || periodLower.includes('snack') || periodLower.includes('補給')) activeKey = 'snack';
+    else if (periodLower.includes('宵夜') || periodLower.includes('消夜') || periodLower.includes('late')) activeKey = 'latenight';
+    else activeKey = 'dinner';
+
+    const pool = mealPools[activeKey] || mealPools.dinner;
+    const poolIndex = Math.abs(seed) % pool.length;
+    const chosenOptions = pool[poolIndex];
 
     return {
       meal_period: stats.period,
@@ -181,15 +295,14 @@ export default function NextMealRecommendationModal({
         ? `Consumed ${stats.consumed.calories} kcal. Remaining: ${remCal > 0 ? remCal + ' kcal' : '0 kcal'}. Protein needed: ${remPro > 0 ? remPro + 'g' : 'Goal met!'}.`
         : `今日已攝取 ${stats.consumed.calories} 大卡，熱量剩餘 ${remCal > 0 ? remCal : 0} kcal，蛋白質尚差 ${remPro > 0 ? remPro + 'g' : '已達標 🎉'}。`,
       coach_comment: coachComment,
-      options: options,
+      options: chosenOptions,
       stats: stats
     };
   }, [calculateLocalStats, isEn]);
 
   // 向後端調用推薦
-  const fetchRecommendation = useCallback(async () => {
+  const fetchRecommendation = useCallback(async (seed = 0) => {
     setLoading(true);
-    setError(null);
 
     const stats = calculateLocalStats();
     const cleanLogs = (recentLogs || []).map(l => ({
@@ -209,12 +322,14 @@ export default function NextMealRecommendationModal({
         goals: goals,
         todayLogs: cleanLogs,
         persona: activePersona,
-        lang: isEn ? 'en' : 'zh'
+        lang: isEn ? 'en' : 'zh',
+        mealPeriod: stats.period,
+        seed: seed
       };
       const signedPayload = createWebAIPayload(rawPayload);
 
       const controller = new AbortController();
-      const timeoutId = setTimeout(() => controller.abort(), 9000);
+      const timeoutId = setTimeout(() => controller.abort(), 8500);
 
       const res = await fetch(GAS_API_URL, {
         method: 'POST',
@@ -225,15 +340,18 @@ export default function NextMealRecommendationModal({
       clearTimeout(timeoutId);
 
       const json = await res.json();
-      if (json && json.status === 'ok' && json.data) {
-        setRecData(json.data);
+      if (json && json.status === 'ok' && json.data && json.data.options && json.data.options.length > 0) {
+        setRecData({
+          ...json.data,
+          meal_period: stats.period,
+          stats: json.data.stats || stats
+        });
       } else {
-        // Fallback to local
-        setRecData(generateLocalFallback());
+        setRecData(generateLocalFallback(seed));
       }
     } catch (err) {
-      console.warn("GAS 推薦請求逾時或連線受限，切換至本地智能計算:", err.message);
-      setRecData(generateLocalFallback());
+      console.warn("GAS 推薦調用超時或離線，切換為本地智能菜單:", err.message);
+      setRecData(generateLocalFallback(seed));
     } finally {
       setLoading(false);
     }
@@ -241,9 +359,31 @@ export default function NextMealRecommendationModal({
 
   useEffect(() => {
     if (isOpen) {
-      fetchRecommendation();
+      fetchRecommendation(refreshSeed);
     }
-  }, [isOpen, fetchRecommendation]);
+  }, [isOpen, selectedPeriod, fetchRecommendation, refreshSeed]);
+
+  // 切換時段
+  const handlePeriodChange = (tabId) => {
+    setSelectedPeriod(tabId);
+    setRefreshSeed(0);
+  };
+
+  // 換一批推薦
+  const handleShuffle = () => {
+    const nextSeed = refreshSeed + 1;
+    setRefreshSeed(nextSeed);
+    fetchRecommendation(nextSeed);
+  };
+
+  // 複製菜色名稱
+  const handleCopyDish = (dishName) => {
+    try {
+      navigator.clipboard.writeText(dishName);
+      setCopyToast(dishName);
+      setTimeout(() => setCopyToast(null), 1800);
+    } catch (_) {}
+  };
 
   // 一鍵直接記下此餐
   const handleQuickLog = async (opt, idx) => {
@@ -270,7 +410,7 @@ export default function NextMealRecommendationModal({
 
       await db.dietLogs.add(newLog);
 
-      // 同步 Gist (若有配置)
+      // 同步 Gist
       const gistId = getCurrentGistId();
       if (gistId) {
         try {
@@ -298,7 +438,7 @@ export default function NextMealRecommendationModal({
       setTimeout(() => {
         setSuccessToast(null);
         onClose();
-      }, 1200);
+      }, 1100);
     } catch (err) {
       console.error("記餐失敗:", err);
       alert(isEn ? `Failed to log meal: ${err.message}` : `記餐失敗：${err.message}`);
@@ -320,7 +460,7 @@ export default function NextMealRecommendationModal({
         initial={{ opacity: 0, scale: 0.95, y: 15 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
         exit={{ opacity: 0, scale: 0.95, y: 15 }}
-        className="bg-white border-4 border-black rounded-[2rem] shadow-neo-xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden my-auto"
+        className="bg-white border-4 border-black rounded-[2rem] shadow-neo-xl max-w-lg w-full max-h-[92vh] flex flex-col overflow-hidden my-auto relative"
       >
         {/* Header */}
         <div className="p-4 sm:p-5 bg-amber-300 border-b-4 border-black flex items-center justify-between shrink-0">
@@ -343,11 +483,33 @@ export default function NextMealRecommendationModal({
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="w-9 h-9 bg-white hover:bg-zinc-100 border-2 border-black rounded-xl flex items-center justify-center text-black font-black shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer"
           >
             <X size={18} />
           </button>
+        </div>
+
+        {/* 🧭 時段快捷篩選標籤 (Meal Period Horizontal Tabs) */}
+        <div className="bg-zinc-100 border-b-2 border-black px-3 py-2 flex items-center gap-1.5 overflow-x-auto no-scrollbar shrink-0">
+          {periodTabs.map((tab) => {
+            const isActive = selectedPeriod === tab.id;
+            return (
+              <button
+                key={tab.id}
+                type="button"
+                onClick={() => handlePeriodChange(tab.id)}
+                className={`px-3 py-1 rounded-full text-xs font-black whitespace-nowrap transition-all border-2 border-black cursor-pointer active:scale-95 ${
+                  isActive
+                    ? 'bg-amber-300 text-black shadow-neo-xs scale-[1.02]'
+                    : 'bg-white text-zinc-700 hover:bg-zinc-50'
+                }`}
+              >
+                {tab.label}
+              </button>
+            );
+          })}
         </div>
 
         {/* Body */}
@@ -371,7 +533,7 @@ export default function NextMealRecommendationModal({
                   <span>{t('next_meal_protein_left')}</span>
                 </div>
                 <div className="text-xl font-black italic text-emerald-700 mt-0.5">
-                  {remPro > 0 ? `${remPro}` : (isEn ? 'Met!' : '已達標')}
+                  {remPro > 0 ? `${remPro}` : (isEn ? 'Met!' : '已達標 🎉')}
                   {remPro > 0 && <span className="text-xs font-bold text-zinc-500 ml-1">g</span>}
                 </div>
               </div>
@@ -406,20 +568,30 @@ export default function NextMealRecommendationModal({
               {options.map((opt, idx) => (
                 <div
                   key={idx}
-                  className="bg-white border-3 border-black rounded-2xl p-3.5 shadow-neo hover:translate-x-0.5 hover:translate-y-0.5 transition-all"
+                  className="bg-white border-3 border-black rounded-2xl p-3.5 shadow-neo hover:translate-x-0.5 hover:translate-y-0.5 transition-all relative overflow-hidden"
                 >
                   <div className="flex items-center justify-between mb-1.5">
                     <span className="text-[10px] font-black uppercase tracking-wider bg-black text-amber-300 px-2 py-0.5 rounded-lg">
-                      {opt.tag || (idx === 0 ? '超商便利' : (idx === 1 ? '外食精選' : '自煮輕食'))}
+                      {opt.tag || (idx === 0 ? (isEn ? 'Convenience' : '超商便利') : (idx === 1 ? (isEn ? 'Healthy Choice' : '外食精選') : (isEn ? 'Home Cooking' : '自煮輕食')))}
                     </span>
                     <span className="text-sm font-black text-rose-600 font-mono">
                       🔥 {opt.calories} <span className="text-[10px] text-zinc-400">kcal</span>
                     </span>
                   </div>
 
-                  <h4 className="font-black text-sm text-black leading-snug">
-                    {opt.dish_name}
-                  </h4>
+                  <div className="flex items-start justify-between gap-2">
+                    <h4 className="font-black text-sm text-black leading-snug">
+                      {opt.dish_name}
+                    </h4>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyDish(opt.dish_name)}
+                      className="p-1 hover:bg-zinc-100 rounded-lg text-zinc-400 hover:text-black transition-colors shrink-0"
+                      title={isEn ? "Copy dish name" : "複製菜名"}
+                    >
+                      <Copy size={13} />
+                    </button>
+                  </div>
 
                   {/* 營養素 Pills */}
                   <div className="flex flex-wrap items-center gap-1.5 mt-2">
@@ -440,7 +612,10 @@ export default function NextMealRecommendationModal({
                     </p>
                   )}
 
-                  <div className="mt-3 pt-2.5 border-t-2 border-dashed border-black/10 flex items-center justify-end">
+                  <div className="mt-3 pt-2.5 border-t-2 border-dashed border-black/10 flex items-center justify-between">
+                    <span className="text-[10px] font-bold text-zinc-400">
+                      #{idx + 1} {isEn ? 'Recommendation' : '方案推薦'}
+                    </span>
                     <button
                       type="button"
                       disabled={loggingIdx !== null}
@@ -466,6 +641,14 @@ export default function NextMealRecommendationModal({
           )}
         </div>
 
+        {/* Copy Toast */}
+        {copyToast && (
+          <div className="absolute top-16 left-1/2 -translate-x-1/2 bg-black text-white text-[11px] font-black px-3 py-1 rounded-full border border-black shadow-neo-sm z-50 flex items-center gap-1">
+            <Check size={12} />
+            <span>{isEn ? 'Copied dish name!' : '已複製菜名！'}</span>
+          </div>
+        )}
+
         {/* Success Toast */}
         {successToast && (
           <div className="bg-emerald-500 text-white font-black text-xs py-2 px-4 text-center border-t-2 border-black flex items-center justify-center gap-1.5 animate-bounce">
@@ -479,7 +662,7 @@ export default function NextMealRecommendationModal({
           <button
             type="button"
             disabled={loading}
-            onClick={fetchRecommendation}
+            onClick={handleShuffle}
             className="px-3 py-2 bg-white hover:bg-zinc-100 border-2 border-black rounded-xl text-xs font-black flex items-center gap-1.5 shadow-neo-xs active:translate-x-0.5 active:translate-y-0.5 transition-all cursor-pointer disabled:opacity-50"
           >
             <RefreshCw size={13} className={loading ? 'animate-spin' : ''} />

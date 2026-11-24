@@ -31,35 +31,45 @@ function setupChineseNativeCameraRichMenu(channelAccessToken, liffId, props) {
 
   const actualLiffId = liffId || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
 
-  // 1. 定義 6 宮格 Rich Menu 物件 (2500 x 1686)
+  // 1. 定義 8 宮格 Rich Menu 物件 (2500 x 1686, 4 欄 x 2 列)
   const richMenuPayload = {
     size: { width: 2500, height: 1686 },
     selected: true,
-    name: "Daily Diet 6-Grid Native Menu (ZH)",
+    name: "Daily Diet 8-Grid Native Menu (ZH)",
     chatBarText: t('menuChatBar', 'zh'),
     areas: [
+      // 第一列：核心高頻操作
       {
-        bounds: { x: 0, y: 0, width: 833, height: 843 },
+        bounds: { x: 0, y: 0, width: 625, height: 843 },
         action: { type: "camera" }
       },
       {
-        bounds: { x: 833, y: 0, width: 834, height: 843 },
+        bounds: { x: 625, y: 0, width: 625, height: 843 },
+        action: { type: "message", text: "建議吃什麼" }
+      },
+      {
+        bounds: { x: 1250, y: 0, width: 625, height: 843 },
         action: { type: "message", text: "常用" }
       },
       {
-        bounds: { x: 1667, y: 0, width: 833, height: 843 },
+        bounds: { x: 1875, y: 0, width: 625, height: 843 },
         action: { type: "message", text: "喝水 500" }
       },
+      // 第二列：統計與管理工具
       {
-        bounds: { x: 0, y: 843, width: 833, height: 843 },
+        bounds: { x: 0, y: 843, width: 625, height: 843 },
         action: { type: "message", text: "今日總結" }
       },
       {
-        bounds: { x: 833, y: 843, width: 834, height: 843 },
+        bounds: { x: 625, y: 843, width: 625, height: 843 },
+        action: { type: "message", text: "目標" }
+      },
+      {
+        bounds: { x: 1250, y: 843, width: 625, height: 843 },
         action: { type: "message", text: "說明" }
       },
       {
-        bounds: { x: 1667, y: 843, width: 833, height: 843 },
+        bounds: { x: 1875, y: 843, width: 625, height: 843 },
         action: { type: "uri", uri: `https://liff.line.me/${actualLiffId}` }
       }
     ]
@@ -134,35 +144,45 @@ function setupEnglishNativeCameraRichMenu(channelAccessToken, liffId, props) {
 
   const actualLiffId = liffId || props.getProperty('LIFF_ID') || '2011098313-nFOisgmf';
 
-  // 1. 定義英文 6 宮格 Rich Menu 物件 (2500 x 1686)
+  // 1. 定義英文 8 宮格 Rich Menu 物件 (2500 x 1686, 4 cols x 2 rows)
   const richMenuPayload = {
     size: { width: 2500, height: 1686 },
     selected: true,
-    name: "Daily Diet 6-Grid Native Menu (EN)",
+    name: "Daily Diet 8-Grid Native Menu (EN)",
     chatBarText: t('menuChatBar', 'en'),
     areas: [
+      // Row 1: Core quick actions
       {
-        bounds: { x: 0, y: 0, width: 833, height: 843 },
+        bounds: { x: 0, y: 0, width: 625, height: 843 },
         action: { type: "camera" }
       },
       {
-        bounds: { x: 833, y: 0, width: 834, height: 843 },
+        bounds: { x: 625, y: 0, width: 625, height: 843 },
+        action: { type: "message", text: "What to eat" }
+      },
+      {
+        bounds: { x: 1250, y: 0, width: 625, height: 843 },
         action: { type: "message", text: "Favorites" }
       },
       {
-        bounds: { x: 1667, y: 0, width: 833, height: 843 },
+        bounds: { x: 1875, y: 0, width: 625, height: 843 },
         action: { type: "message", text: "+500ml Water" }
       },
+      // Row 2: Stats and tools
       {
-        bounds: { x: 0, y: 843, width: 833, height: 843 },
+        bounds: { x: 0, y: 843, width: 625, height: 843 },
         action: { type: "message", text: "Daily Summary" }
       },
       {
-        bounds: { x: 833, y: 843, width: 834, height: 843 },
+        bounds: { x: 625, y: 843, width: 625, height: 843 },
+        action: { type: "message", text: "Goals" }
+      },
+      {
+        bounds: { x: 1250, y: 843, width: 625, height: 843 },
         action: { type: "message", text: "Guide" }
       },
       {
-        bounds: { x: 1667, y: 843, width: 833, height: 843 },
+        bounds: { x: 1875, y: 843, width: 625, height: 843 },
         action: { type: "uri", uri: `https://liff.line.me/${actualLiffId}` }
       }
     ]

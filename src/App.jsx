@@ -12,7 +12,7 @@ import { db, getDailySummary, calculateStreak } from './db';
 import { getCurrentGistId, uploadToGist, downloadFromGist } from './lib/gistService';
 import { syncMealToCloud, syncDeleteMealToCloud, syncLanguageToCloud, syncAddFavorite, getOrCreateClientId } from './lib/syncService';
 import { getPandaAdvice, analyzeFoodText } from './lib/groq';
-import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart, Sparkles, Loader2, RefreshCw, AlertCircle } from 'lucide-react';
+import { Trash2, History, ChevronDown, ChevronUp, ChevronRight, Pencil, Check, X, Clock, MapPin, Share2, BarChart2, Star, LayoutGrid, GripHorizontal, Info, Zap, MessageSquareQuote, Heart, Sparkles, Loader2, RefreshCw, AlertCircle, Home, Camera, Droplets, Settings } from 'lucide-react';
 import { motion, AnimatePresence, Reorder } from 'framer-motion';
 import { twMerge } from 'tailwind-merge';
 import { t, getLanguage, setLanguage } from './lib/translations';
@@ -928,6 +928,31 @@ function App() {
   const [founderGlow, setFounderGlow] = useState(() => isFounderGlowEnabled());
   const [showFounderPassModal, setShowFounderPassModal] = useState(false);
   const [showMealRecommendationModal, setShowMealRecommendationModal] = useState(false);
+  const [quickWaterToast, setQuickWaterToast] = useState(false);
+
+  const handleQuickWater = async () => {
+    try {
+      const now = new Date();
+      const timestamp = now.getTime();
+      const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      const twoMinutesAgo = timestamp - (2 * 60 * 1000);
+      const lastWaterLog = await db.dietLogs.where('timestamp').above(twoMinutesAgo).filter(log => log.dish_name.includes(t('water'))).last();
+      if (lastWaterLog) {
+        const updatedWater = (Number(lastWaterLog.water) || 0) + 250;
+        await db.dietLogs.update(lastWaterLog.id, { water: updatedWater, timestamp: timestamp });
+        syncMealToCloud({ ...lastWaterLog, water: updatedWater, timestamp });
+      } else {
+        const waterLog = { dish_name: `🚰 ${t('water')}`, calories: 0, protein: 0, water: 250, date: localDate, timestamp: timestamp, location: null };
+        await db.dietLogs.add(waterLog);
+        syncMealToCloud(waterLog);
+      }
+      refreshData('fetch');
+      setQuickWaterToast(true);
+      setTimeout(() => setQuickWaterToast(false), 2000);
+    } catch (err) {
+      console.warn("Quick water log failed:", err);
+    }
+  };
 
   useEffect(() => {
     const handleFounderStatus = (e) => {
@@ -2491,16 +2516,18 @@ function App() {
             );
           } else if (item === 'detective') {
             blockContent = (
-              <FoodDetective 
-                onLogAdded={(type) => refreshData(type)} 
-                recentLogs={recentLogs}
-                summary={summary}
-                goals={goals}
-                setAdvice={setAdvice}
-                adviceUpdateLockRef={adviceUpdateLockRef}
-                favoriteUpdateTrigger={favoriteUpdateTrigger}
-                userName={userName}
-              />
+              <div id="food-detective-section">
+                <FoodDetective 
+                  onLogAdded={(type) => refreshData(type)} 
+                  recentLogs={recentLogs}
+                  summary={summary}
+                  goals={goals}
+                  setAdvice={setAdvice}
+                  adviceUpdateLockRef={adviceUpdateLockRef}
+                  favoriteUpdateTrigger={favoriteUpdateTrigger}
+                  userName={userName}
+                />
+              </div>
             );
           } else if (item === 'today') {
             blockContent = (
@@ -2854,8 +2881,95 @@ function App() {
       </motion.div>
 
       {/* Navigation Footer Spacer */}
-      <div className="h-20" />
+      <div className="h-24 sm:h-20" />
       </main>
+
+      {/* 🧭 常駐底部快速導航選單 (Neo-Brutalist Bottom Dock) */}
+      {!isEditingLayout && (
+        <div className="fixed bottom-3 left-0 right-0 z-40 flex justify-center px-3 pointer-events-none">
+          <motion.nav
+            initial={{ y: 80, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            className="pointer-events-auto bg-white/95 backdrop-blur-md border-3 border-black rounded-2xl sm:rounded-full shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] px-3 py-1.5 flex items-center justify-between sm:justify-center gap-1 sm:gap-3 max-w-md w-full relative"
+            style={{ paddingBottom: 'calc(0.375rem + env(safe-area-inset-bottom, 0px))' }}
+            aria-label="Bottom Quick Navigation"
+          >
+            {/* 1. 首頁 */}
+            <button
+              type="button"
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer"
+            >
+              <Home size={18} strokeWidth={2.5} />
+              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_home')}</span>
+            </button>
+
+            {/* 2. 待會吃什麼 (核心焦點按鈕) */}
+            <button
+              type="button"
+              onClick={() => setShowMealRecommendationModal(true)}
+              className="flex items-center gap-1.5 py-1.5 px-3 bg-gradient-to-r from-amber-400 via-yellow-300 to-amber-400 hover:from-amber-500 hover:to-yellow-400 text-black border-2 border-black rounded-full shadow-[2px_2px_0px_0px_rgba(0,0,0,1)] active:scale-95 transition-all cursor-pointer shrink-0"
+              title={t('what_to_eat_next')}
+            >
+              <span className="text-base sm:text-lg">🍽️</span>
+              <div className="flex flex-col items-start leading-none text-left">
+                <span className="text-[11px] sm:text-xs font-black tracking-tight">{t('bottom_menu_eat')}</span>
+                <span className="text-[7.5px] font-black uppercase text-amber-950/80">AI Coach</span>
+              </div>
+            </button>
+
+            {/* 3. 快速記餐 (拍照/手動) */}
+            <button
+              type="button"
+              onClick={() => {
+                const el = document.getElementById('food-detective-section');
+                if (el) {
+                  el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                  setTimeout(() => {
+                    const inp = el.querySelector('input[type="text"]');
+                    if (inp) inp.focus();
+                  }, 400);
+                } else {
+                  window.scrollTo({ top: 200, behavior: 'smooth' });
+                }
+              }}
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer"
+            >
+              <Camera size={18} strokeWidth={2.5} />
+              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_camera')}</span>
+            </button>
+
+            {/* 4. 一鍵補水 +250ml */}
+            <button
+              type="button"
+              onClick={handleQuickWater}
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer relative"
+              title="+250ml"
+            >
+              <Droplets size={18} strokeWidth={2.5} className="text-sky-500" />
+              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_water')}</span>
+              {quickWaterToast && (
+                <span className="absolute -top-7 left-1/2 -translate-x-1/2 bg-sky-500 text-white font-black text-[9px] px-2 py-0.5 rounded-full border border-black shadow-xs whitespace-nowrap animate-bounce">
+                  +250ml 💧
+                </span>
+              )}
+            </button>
+
+            {/* 5. 目標設定 */}
+            <button
+              type="button"
+              onClick={() => {
+                setSettingsTab('profile');
+                window.dispatchEvent(new CustomEvent('open-settings', { detail: { tab: 'profile' } }));
+              }}
+              className="flex flex-col items-center justify-center py-1 px-2.5 rounded-xl text-zinc-700 hover:text-black hover:bg-zinc-100 active:scale-95 transition-all cursor-pointer"
+            >
+              <Settings size={18} strokeWidth={2.5} />
+              <span className="text-[10px] font-black mt-0.5">{t('bottom_menu_goals')}</span>
+            </button>
+          </motion.nav>
+        </div>
+      )}
     </div>
   );
 }
