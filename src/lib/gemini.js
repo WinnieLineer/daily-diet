@@ -286,7 +286,7 @@ Required Schema:
   "description": "<Brief nutritional overview in ${langDisplay}>",
   "fun_fact": "<Science-based nutritional fact in ${langDisplay}>",
   "roast": "<Sarcastic but expert nutritional roast in ${langDisplay}>",
-  "panda_comment": "<Professional evaluation with 1 actionable tip, max 35 words in ${langDisplay}>"
+  "panda_comment": "<Highly individualized, actionable nutritional coaching tip specifically evaluating this dish's ingredients, cooking method, and relating to remaining daily macros, max 35 words in ${langDisplay}. Strictly avoid generic boilerplate!>"
 }
 Context: ${timeContext}, User: ${userName || 'User'}, Cal:${calories || 0}/${calorieGoal || 2000}, Pro:${protein || 0}/${proteinGoal || 100}
 History Today: ${foodStrip || 'None'}`;
@@ -307,7 +307,7 @@ History Today: ${foodStrip || 'None'}`;
           ]
         }],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.6,
           response_mime_type: "application/json"
         }
       };
@@ -378,7 +378,7 @@ Required Schema:
   "description": "<Brief nutritional overview in ${langDisplay}>",
   "fun_fact": "<Science-based nutritional fact in ${langDisplay}>",
   "roast": "<Sarcastic but expert nutritional roast in ${langDisplay}>",
-  "panda_comment": "<Professional evaluation with 1 actionable tip, max 35 words in ${langDisplay}>"
+  "panda_comment": "<Highly individualized, actionable nutritional coaching tip specifically evaluating this dish's ingredients, cooking method, and relating to remaining daily macros, max 35 words in ${langDisplay}. Strictly avoid generic boilerplate!>"
 }
 Context: ${timeContext}, User: ${userName || 'User'}, Cal:${calories || 0}/${calorieGoal || 2000}, Pro:${protein || 0}/${proteinGoal || 100}
 History Today: ${foodStrip || 'None'}`;
@@ -392,7 +392,7 @@ History Today: ${foodStrip || 'None'}`;
           parts: [{ text: customPrompt }]
         }],
         generationConfig: {
-          temperature: 0.2,
+          temperature: 0.6,
           response_mime_type: "application/json"
         }
       };

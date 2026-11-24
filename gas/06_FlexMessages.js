@@ -130,12 +130,15 @@ function replyMealConfirmCard(replyToken, analysis, liffId, userGistId, accessTo
   });
 
   const encodedName = encodeURIComponent(analysis.dish_name || (isEn ? 'Meal' : '餐點'));
-  const encodedCmt = encodeURIComponent(analysis.panda_comment || '');
+  const rawComment = (analysis.panda_comment && analysis.panda_comment.trim()) 
+    ? analysis.panda_comment.trim() 
+    : (analysis.comment && analysis.comment.trim()) 
+      ? analysis.comment.trim() 
+      : '';
+  const encodedCmt = encodeURIComponent(rawComment);
   const appTargetUrl = `https://liff.line.me/${liffId}?action=editMeal&name=${encodedName}&cal=${Number(analysis.calories) || 0}&pro=${Number(analysis.protein) || 0}&wat=${Number(analysis.water) || 0}&cmt=${encodedCmt}${userId ? `&userId=${userId}` : ''}${userGistId ? `&gistId=${userGistId}` : ''}`;
 
-  let displayComment = (analysis.panda_comment && analysis.panda_comment.trim()) 
-    ? analysis.panda_comment.trim() 
-    : '';
+  let displayComment = rawComment;
 
   if (isEn && /[\u4e00-\u9fa5]/.test(displayComment)) {
     console.warn("⚠️ [FlexMessages] Detected Chinese characters in displayComment under English mode! Replacing with English fallback.");
@@ -4876,9 +4879,80 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
               }
             ]
           },
+          // 🍽️ 智能推薦下一餐提示
+          {
+            type: "box",
+            layout: "vertical",
+            backgroundColor: "#000000",
+            cornerRadius: "14px",
+            paddingBottom: "3px",
+            paddingEnd: "3px",
+            contents: [
+              {
+                type: "box",
+                layout: "vertical",
+                backgroundColor: "#FEF08A",
+                borderColor: "#000000",
+                borderWidth: "2px",
+                cornerRadius: "12px",
+                paddingAll: "10px",
+                contents: [
+                  {
+                    type: "box",
+                    layout: "horizontal",
+                    alignItems: "center",
+                    contents: [
+                      {
+                        type: "text",
+                        text: isEn ? "🍽️ Smart Meal Advisor (What to Eat?)" : "🍽️ 智能菜單推薦：建議吃什麼",
+                        weight: "bold",
+                        size: "xs",
+                        color: "#000000",
+                        flex: 1,
+                        wrap: true
+                      },
+                      {
+                        type: "box",
+                        layout: "vertical",
+                        backgroundColor: "#000000",
+                        cornerRadius: "8px",
+                        width: isEn ? "52px" : "44px",
+                        height: "20px",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        flex: 0,
+                        contents: [
+                          {
+                            type: "text",
+                            text: isEn ? "SMART" : "超貼心",
+                            size: "xxs",
+                            color: "#FDE047",
+                            weight: "bold",
+                            align: "center",
+                            gravity: "center",
+                            wrap: true
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    type: "text",
+                    text: isEn
+                      ? "Don't know what to eat next? Tap the '🍽️ What to Eat' quick reply button anytime or type 'What should I eat'. AI calculates your remaining calories & protein and gives 3 targeted meal plans!"
+                      : "不知道下一餐吃什麼？點擊下方常駐快捷鍵「🍽️ 建議吃什麼」或直接輸入「吃什麼」，AI 自動調閱今日剩餘熱量與蛋白質缺口，秒出精準外食方案！",
+                    size: "xxs",
+                    color: "#713F12",
+                    margin: "xs",
+                    wrap: true
+                  }
+                ]
+              }
+            ]
+          },
           buildMenuSection(
             "⚡",
-            isEn ? "Quick Log & Hydration" : "快速記錄與補水",
+            isEn ? "Quick Log & Recommendations" : "快速記錄與智能推薦",
             [
               {
                 type: "box",
@@ -4896,14 +4970,13 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     "#FEF08A"
                   ),
                   buildMenuBtn(
-                    isEn ? "📸 AI Camera" : "📸 拍照指引",
+                    isEn ? "🍽️ What to Eat" : "🍽️ 建議吃什麼",
                     {
-                      type: "postback",
-                      label: isEn ? "Camera" : "拍照指引",
-                      data: JSON.stringify({ action: 'guideCamera' }),
-                      displayText: isEn ? "Camera" : "拍照"
+                      type: "message",
+                      label: isEn ? "What to Eat" : "建議吃什麼",
+                      text: isEn ? "What should I eat" : "建議吃什麼"
                     },
-                    "#FEE2E2"
+                    "#DCFCE7"
                   )
                 ]
               },
@@ -4932,6 +5005,23 @@ function generateCommandMenuFlex(userId, liffId, userGistId, props) {
                     },
                     "#000000",
                     "#FFFFFF"
+                  )
+                ]
+              },
+              {
+                type: "box",
+                layout: "horizontal",
+                spacing: "sm",
+                contents: [
+                  buildMenuBtn(
+                    isEn ? "📸 AI Camera" : "📸 拍照指引",
+                    {
+                      type: "postback",
+                      label: isEn ? "Camera" : "拍照指引",
+                      data: JSON.stringify({ action: 'guideCamera' }),
+                      displayText: isEn ? "Camera" : "拍照"
+                    },
+                    "#FEE2E2"
                   )
                 ]
               }

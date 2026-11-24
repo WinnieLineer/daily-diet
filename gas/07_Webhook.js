@@ -2713,6 +2713,9 @@ function doPost(e) {
             protein: Number(((item.protein || 0) * m).toFixed(1))
           }));
 
+          const updatedComment = (targetMeal && targetMeal.comment ? targetMeal.comment.replace(/\s*\(.*倍.*份量\)/g, '').replace(/\s*\(.*x portion\)/gi, '') : '') + (m === 1 ? '' : (isEn ? ` (${m}x portion)` : ` (${m}倍份量)`));
+          const updatedPandaComment = targetMeal && (targetMeal.panda_comment || targetMeal.comment) ? (targetMeal.panda_comment || targetMeal.comment).replace(/\s*\(.*倍.*份量\)/g, '').replace(/\s*\(.*x portion\)/gi, '') : '';
+
           const updateFields = {
             id: payload.id || (targetMeal ? targetMeal.id : Date.now()),
             dish_name: newName,
@@ -2723,7 +2726,8 @@ function doPost(e) {
             water: newWat,
             breakdown: scaledBreakdown.length > 0 ? scaledBreakdown : (targetMeal ? targetMeal.breakdown : []),
             baseBreakdown: baseBreakdown.length > 0 ? baseBreakdown : undefined,
-            comment: (targetMeal && targetMeal.comment ? targetMeal.comment.replace(/\s*\(.*倍.*份量\)/g, '').replace(/\s*\(.*x portion\)/gi, '') : '') + (m === 1 ? '' : (isEn ? ` (${m}x portion)` : ` (${m}倍份量)`)),
+            comment: updatedComment,
+            panda_comment: updatedPandaComment,
             baseDishName: baseName,
             baseCalories: baseCal,
             baseProtein: basePro,
@@ -2841,6 +2845,19 @@ function doPost(e) {
           recordSystemLog('週報趨勢', userId, '點擊7日週報', '', '回傳近 7 日飲食趨勢與熱量分析卡片');
           const weeklyFlex = generateWeeklyTrendsFlex(userId, LIFF_ID, userGistId, props, userLang);
           replyFlexMessage(replyToken, weeklyFlex, CHANNEL_ACCESS_TOKEN, userId, props);
+          continue;
+        }
+
+        // 🍽️ 下一餐吃什麼 / 建議吃什麼快捷查詢 (Postback)
+        if (payload.action === 'recommendNextMeal' || payload.action === 'whatToEat') {
+          sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
+          const todayLogs = getTodayLogs(userId, getTodayDateString(), props, userGistId);
+          const userGoals = getUserGoals(userId, props, userGistId);
+          const persona = getUserPersona(userId, props, userGistId, GITHUB_PAT);
+          recordSystemLog('下一餐推薦', userId, '點擊快捷推薦下一餐', '計算缺額與生成菜單中', '呼叫 AI 推薦下一餐餐點與計算建議');
+          const recData = getMealRecommendationWithAI(userId, todayLogs, userGoals, isEn ? "What should I eat next" : "建議吃什麼", persona, userLang, props, GEMINI_API_KEY, userGistId, GITHUB_PAT);
+          const recFlex = generateNextMealRecommendationFlex(recData, recData.stats, userGoals, LIFF_ID, userGistId, userLang, persona);
+          replyFlexMessage(replyToken, recFlex, CHANNEL_ACCESS_TOKEN, userId, props);
           continue;
         }
 
@@ -3135,6 +3152,7 @@ function doPost(e) {
             breakdown: analysis.breakdown || [],
             calculation_note: analysis.calculation_note || '',
             comment: analysis.panda_comment || '',
+            panda_comment: analysis.panda_comment || '',
             baseDishName: analysis.dish_name || (isEn ? 'Meal' : '美味餐點'),
             baseCalories: Number(analysis.calories) || 0,
             baseProtein: Number(analysis.protein) || 0,
@@ -4010,11 +4028,11 @@ function doPost(e) {
           }
 
           // 🍽️ 3.1 接下來吃什麼 / 下一餐推薦 (AI 智能菜單推薦與缺額計算)
-          const isNextMealQuery = /^(?:接下來|下一餐|晚餐|午餐|早餐|宵夜|消夜|點心|現在|今天)?\s*(?:吃什麼|推薦吃什麼|該吃什麼|吃啥|有什麼好吃|飲食推薦|餐點推薦|下一餐推薦|飲食建議)/i.test(userText) ||
-            userText === '吃什麼' || userText === '吃啥' || userText === '推薦' || userText === '下一餐' || userText === '推薦餐點' || userText === '推薦菜單' ||
+          const isNextMealQuery = /^(?:接下來|下一餐|晚餐|午餐|早餐|宵夜|消夜|點心|現在|今天)?\s*(?:吃什麼|推薦吃什麼|該吃什麼|吃啥|有什麼好吃|飲食推薦|餐點推薦|下一餐推薦|飲食建議|建議吃什麼|建議吃啥)/i.test(userText) ||
+            userText === '吃什麼' || userText === '吃啥' || userText === '推薦' || userText === '下一餐' || userText === '推薦餐點' || userText === '推薦菜單' || userText === '建議吃什麼' || userText === '飲食建議' ||
             /^(?:what\s+to\s+eat|what\s+should\s+i\s+eat|what\s+can\s+i\s+eat|suggest\s+meal|next\s+meal|meal\s+recommendation)/i.test(userText) ||
             (userText.includes('推薦') && (userText.includes('吃') || userText.includes('餐'))) ||
-            (userText.includes('吃什麼') || userText.includes('吃啥'));
+            (userText.includes('吃什麼') || userText.includes('吃啥') || userText.includes('建議吃'));
 
           if (isNextMealQuery) {
             sendLineLoadingAnimation(userId, CHANNEL_ACCESS_TOKEN, 15);
@@ -4150,6 +4168,7 @@ function doPost(e) {
                 breakdown: scaledBreakdown.length > 0 ? scaledBreakdown : lastMeal.breakdown,
                 baseBreakdown: baseBreakdown.length > 0 ? baseBreakdown : undefined,
                 comment: (lastMeal.comment ? lastMeal.comment.replace(/\s*\(.*倍.*份量\)/g, '').replace(/\s*\(.*x portion\)/gi, '') : '') + (m === 1 ? '' : (isEn ? ` (${m}x portion)` : ` (${m}倍份量)`)),
+                panda_comment: lastMeal && (lastMeal.panda_comment || lastMeal.comment) ? (lastMeal.panda_comment || lastMeal.comment).replace(/\s*\(.*倍.*份量\)/g, '').replace(/\s*\(.*x portion\)/gi, '') : '',
                 baseDishName: baseName,
                 baseCalories: baseCal,
                 baseProtein: basePro,
@@ -4317,6 +4336,7 @@ function doPost(e) {
               comment: (event._isAudioInput && analysis.panda_comment)
                 ? `🎙️「${event._rawAudioText}」\n${analysis.panda_comment}`
                 : (analysis.panda_comment || ''),
+              panda_comment: analysis.panda_comment || '',
               baseDishName: analysis.dish_name || (isEn ? 'Meal' : '美味餐點'),
               baseCalories: Number(analysis.calories) || 0,
               baseProtein: Number(analysis.protein) || 0,

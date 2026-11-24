@@ -177,7 +177,15 @@ function attachMealMultiplierQuickReply(message, meal, userId, props) {
       }
     });
 
-
+    // 3. 🍽️ 建議吃什麼 (快捷推薦下一餐)
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: isEn ? "🍽️ What to Eat" : "🍽️ 建議吃什麼",
+        text: isEn ? "What should I eat" : "建議吃什麼"
+      }
+    });
 
     // 4. ⭐ 存為常用
     items.push({
@@ -238,7 +246,7 @@ function attachMealMultiplierQuickReply(message, meal, userId, props) {
 
 /**
  * 為一般訊息掛載常用快速回復氣泡
- * (常用、前4顆常用餐點、補水500、今日總結、查日期、使用手冊)
+ * (常用、建議吃什麼、前3顆常用餐點、補水500、今日總結、查日期、使用手冊)
  */
 function attachQuickReply(message, userId, props) {
   if (!userId || !props) return message;
@@ -262,9 +270,19 @@ function attachQuickReply(message, userId, props) {
       }
     });
 
-    // 🌟 2. 前 3~4 顆自訂常用膠囊
+    // 🍽️ 2. 建議吃什麼 (常駐快捷鍵)
+    items.push({
+      type: "action",
+      action: {
+        type: "message",
+        label: isEn ? "🍽️ What to Eat" : "🍽️ 建議吃什麼",
+        text: isEn ? "What should I eat" : "建議吃什麼"
+      }
+    });
+
+    // 🌟 3. 前 2~3 顆自訂常用膠囊
     if (favorites && favorites.length > 0) {
-      favorites.slice(0, 4).forEach(fav => {
+      favorites.slice(0, 3).forEach(fav => {
         items.push({
           type: "action",
           action: {

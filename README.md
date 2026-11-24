@@ -22,7 +22,8 @@ Snap a photo of your meal and let **Google Gemini** instantly analyze:
 
 ### 🐼 The Panda Coach
 Interact with a sassy, motivational, and adorable Panda coach.
-- **AI-Powered Advice**: Powered by Gemini — gives a unique, personalized comment every time based on your actual calorie, protein, and water data.
+- **AI-Powered Advice**: Powered by Gemini — gives a unique, personalized comment every time based on your actual intake, progress, and meal components.
+- **🍽️ "What to Eat Next?" Smart Meal Advisor**: Calculates remaining calories and protein deficit to recommend targeted meals in both Web and LINE (via quick replies or text).
 - **🔥 Streak Tracker**: Tracks how many consecutive days you've logged your diet.
 
 ### 📸 Daily War Report (Sharing Card)
